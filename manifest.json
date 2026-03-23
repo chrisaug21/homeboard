@@ -1,0 +1,24 @@
+{
+  "name": "Homeboard",
+  "short_name": "Homeboard",
+  "description": "A household command center PWA for a shared kitchen display.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F0E8",
+  "theme_color": "#F5F0E8",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='38' fill='%23F5F0E8'/%3E%3Crect x='24' y='28' width='144' height='136' rx='26' fill='%23FFF9F2' stroke='%23B45309' stroke-width='6'/%3E%3Cpath d='M48 74h96M64 20v28M128 20v28M56 98h28M104 98h28M56 126h28' stroke='%2315803D' stroke-width='10' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23F5F0E8'/%3E%3Crect x='64' y='76' width='384' height='360' rx='70' fill='%23FFF9F2' stroke='%23B45309' stroke-width='18'/%3E%3Cpath d='M128 196h256M170 54v74M342 54v74M148 258h74M290 258h74M148 332h74' stroke='%2315803D' stroke-width='24' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

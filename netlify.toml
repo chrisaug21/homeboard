@@ -1,0 +1,8 @@
+[build]
+  command = "echo 'No build step configured yet'"
+  publish = "."
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
