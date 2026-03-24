@@ -1909,7 +1909,7 @@
     function shouldHideRsvpScreen() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      return formatDateKey(today) >= RSVP_RETIRE_AFTER_DATE;
+      return formatDateKey(today) > RSVP_RETIRE_AFTER_DATE;
     }
 
     function removeRsvpScreen() {
