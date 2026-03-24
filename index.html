@@ -597,23 +597,23 @@
     }
 
     .meal-type--cooking {
-      background: rgba(21, 128, 61, 0.15);
-      color: #15803d;
-    }
-
-    .meal-type--hellofresh {
       background: rgba(180, 83, 9, 0.15);
       color: #b45309;
     }
 
+    .meal-type--hellofresh {
+      background: rgba(21, 128, 61, 0.15);
+      color: #15803d;
+    }
+
     .meal-type--going-out {
-      background: rgba(29, 78, 216, 0.15);
-      color: #1d4ed8;
+      background: rgba(79, 70, 229, 0.15);
+      color: #4338ca;
     }
 
     .meal-type--delivery {
-      background: rgba(124, 58, 237, 0.15);
-      color: #7c3aed;
+      background: rgba(234, 88, 12, 0.15);
+      color: #ea580c;
     }
 
     .meal-type--fend-for-yourself {
@@ -863,36 +863,75 @@
     .names-list {
       min-height: 0;
       overflow: hidden;
+      position: relative;
     }
 
     .names-scroll {
       display: grid;
       gap: 10px;
       grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-content: start;
+      min-height: 100%;
     }
 
     .name-pill {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
       padding: 12px 14px;
       border-radius: 18px;
       background: rgba(255, 255, 255, 0.74);
       font-size: 1rem;
       font-weight: 700;
       min-height: 56px;
-      text-align: center;
+      text-align: left;
     }
 
     .name-status {
-      display: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+      background: rgba(28, 25, 23, 0.08);
+      color: var(--ink);
     }
 
     .name-pill--more {
       justify-content: center;
       color: var(--rose);
       background: rgba(248, 220, 227, 0.4);
+    }
+
+    .name-pill--attending {
+      background: rgba(229, 246, 234, 0.92);
+    }
+
+    .name-pill--attending .name-status {
+      background: rgba(21, 128, 61, 0.16);
+      color: #15803d;
+    }
+
+    .name-pill--declined {
+      background: rgba(255, 243, 232, 0.92);
+    }
+
+    .name-pill--declined .name-status {
+      background: rgba(234, 88, 12, 0.16);
+      color: #c2410c;
+    }
+
+    .name-pill--pending {
+      background: rgba(244, 232, 236, 0.92);
+    }
+
+    .name-pill--pending .name-status {
+      background: rgba(107, 114, 128, 0.16);
+      color: #6b7280;
     }
 
     .progress-bar {
@@ -1048,17 +1087,17 @@
               <div class="hero-card">
                 <div>
                   <div class="summary-label" style="color:var(--rose);">Confirmed Guests</div>
-                  <div class="hero-number">34</div>
-                  <div class="hero-label">attending so far</div>
+                  <div class="hero-number" id="rsvp-total">34</div>
+                  <div class="hero-label" id="rsvp-total-label">attending so far</div>
                 </div>
               </div>
               <div class="breakdown-card">
-                <div class="breakdown-row"><span>Attending</span><strong>34</strong></div>
-                <div class="breakdown-row"><span>Declined</span><strong>8</strong></div>
-                <div class="breakdown-row"><span>Pending</span><strong>10</strong></div>
+                <div class="breakdown-row"><span>Attending</span><strong id="rsvp-attending-count">34</strong></div>
+                <div class="breakdown-row"><span>Declined</span><strong id="rsvp-declined-count">8</strong></div>
+                <div class="breakdown-row"><span>Pending</span><strong id="rsvp-pending-count">10</strong></div>
               </div>
               <div class="names-card">
-                <div class="names-title">Attending Names</div>
+                <div class="names-title" id="rsvp-names-title">Attending Names</div>
                 <div class="names-list">
                   <div class="names-scroll" id="rsvp-names"></div>
                 </div>
@@ -1091,6 +1130,7 @@
       init();
     });
 
+    const VERSION = "3";
     const rotationIntervalMs = 30000;
     const track = document.getElementById("screen-track");
     const viewport = document.getElementById("viewport");
@@ -1139,6 +1179,8 @@
       { title: "Book dog groomer", assignee: "", meta: "No due date", badge: "Unassigned" }
     ];
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    const RSVP_RETIRE_AFTER_DATE = "2026-10-10";
 
     const meals = [
       { name: "Pesto chicken bowls", type: "Cooking" },
@@ -1157,25 +1199,37 @@
       { name: "Lake weekend", icon: "trees", days: 33, caption: "Cabin key pickup on Friday" }
     ];
 
-    const rsvpNames = [
-      "Alex & Jordan",
-      "Megan Hall",
-      "Priya Shah",
-      "Uncle Mike",
-      "Sam Rivera",
-      "Nina & Theo",
-      "Taylor Brooks",
-      "Lauren Kim",
-      "Maddie Price",
-      "Owen Clarke",
-      "Rachel Long",
-      "Emma Diaz"
-    ];
-
     let currentIndex = 0;
     let autoRotateId = null;
     let pointerStartX = null;
     let pointerDeltaX = 0;
+    let rsvpScrollId = null;
+    const mealTypeConfig = {
+      cooking: {
+        label: "Cooking 🍳",
+        className: "meal-type--cooking"
+      },
+      hellofresh: {
+        label: "HelloFresh 📦",
+        className: "meal-type--hellofresh"
+      },
+      going_out: {
+        label: "Going Out 🍽️",
+        className: "meal-type--going-out"
+      },
+      delivery: {
+        label: "Delivery 🛵",
+        className: "meal-type--delivery"
+      },
+      fend_for_yourself: {
+        label: "Fend for Yourself 😅",
+        className: "meal-type--fend-for-yourself"
+      },
+      date_night: {
+        label: "Date Night 💫",
+        className: "meal-type--date-night"
+      }
+    };
 
     function getMonday(date) {
       const next = new Date(date);
@@ -1190,6 +1244,30 @@
         hour: "numeric",
         minute: "2-digit"
       }).format(date);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function formatDateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function parseLocalDateString(dateString) {
+      if (!dateString) {
+        return null;
+      }
+
+      return new Date(dateString + "T00:00:00");
     }
 
     function formatHeaderDate(date) {
@@ -1222,6 +1300,33 @@
       }).format(date);
     }
 
+    function formatLongDate(dateString) {
+      const parsedDate = parseLocalDateString(dateString);
+
+      if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
+        return "Date TBD";
+      }
+
+      return new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric"
+      }).format(parsedDate);
+    }
+
+    function getDaysUntil(dateString) {
+      const parsedDate = parseLocalDateString(dateString);
+
+      if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
+        return null;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      parsedDate.setHours(0, 0, 0, 0);
+      return Math.round((parsedDate - today) / 86400000);
+    }
+
     function getCalendarEventsForDate(date) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -1242,8 +1347,20 @@
       return start;
     }
 
-    function getMealTypeClass(type) {
-      return "meal-type meal-type--" + type.toLowerCase().replaceAll(" ", "-");
+    function normalizeMealType(type) {
+      return String(type || "")
+        .trim()
+        .toLowerCase()
+        .replaceAll("-", "_")
+        .replaceAll(" ", "_");
+    }
+
+    function getMealTypePresentation(type) {
+      const normalizedType = normalizeMealType(type);
+      return mealTypeConfig[normalizedType] || {
+        label: type || "Dinner",
+        className: "meal-type--fend-for-yourself"
+      };
     }
 
     function getScreenCount() {
@@ -1360,11 +1477,11 @@
         <article class="todo-card">
           <div class="todo-check" aria-hidden="true"></div>
           <div class="todo-copy">
-            <div class="todo-title">${todo.title}</div>
-            <div class="todo-meta">${todo.meta}</div>
+            <div class="todo-title">${escapeHtml(todo.title)}</div>
+            <div class="todo-meta">${escapeHtml(todo.meta)}</div>
           </div>
-          ${todo.assignee ? `<div class="${getAssigneeClass(todo.assignee)}">${todo.assignee}</div>` : '<div></div>'}
-          <div class="todo-badge">${todo.badge}</div>
+          ${todo.assignee ? `<div class="${getAssigneeClass(todo.assignee)}">${escapeHtml(todo.assignee)}</div>` : '<div></div>'}
+          <div class="todo-badge">${escapeHtml(todo.badge)}</div>
         </article>
       `).join("");
 
@@ -1392,6 +1509,95 @@
       }
 
       return data.map(mapSupabaseTodo);
+    }
+
+    function mapSupabaseMeal(meal) {
+      return {
+        dayOfWeek: Number(meal.day_of_week),
+        name: meal.meal_name || "—",
+        type: meal.meal_type || "fend_for_yourself"
+      };
+    }
+
+    async function fetchMeals() {
+      if (!sb) {
+        return null;
+      }
+
+      const monday = getMonday(new Date());
+      const { data, error } = await sb
+        .from("meal_plan")
+        .select("day_of_week, meal_name, meal_type")
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("week_start", formatDateKey(monday))
+        .eq("meal_slot", "dinner")
+        .is("user_id", null)
+        .order("day_of_week", { ascending: true });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      return data.map(mapSupabaseMeal);
+    }
+
+    function mapSupabaseCountdown(countdown) {
+      return {
+        name: countdown.name || "Upcoming Event",
+        icon: countdown.icon || "calendar",
+        eventDate: countdown.event_date,
+        days: getDaysUntil(countdown.event_date),
+        caption: formatLongDate(countdown.event_date)
+      };
+    }
+
+    async function fetchCountdowns() {
+      if (!sb) {
+        return null;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { data, error } = await sb
+        .from("countdowns")
+        .select("name, icon, event_date")
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .gte("event_date", formatDateKey(today))
+        .order("event_date", { ascending: true });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      return data.map(mapSupabaseCountdown);
+    }
+
+    function mapSupabaseRsvp(row) {
+      const guestCount = Number(row.guest_count);
+
+      return {
+        name: row.name || "Unnamed Guest",
+        attending: row.attending,
+        guestCount: Number.isFinite(guestCount) && guestCount > 0 ? guestCount : 1
+      };
+    }
+
+    async function fetchRsvps() {
+      if (!sb) {
+        return null;
+      }
+
+      const { data, error } = await sb
+        .from("rsvps")
+        .select("name, attending, guest_count")
+        .order("name", { ascending: true });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      return data.map(mapSupabaseRsvp);
     }
 
     function renderCalendar() {
@@ -1481,37 +1687,151 @@
       renderTodoItems(remoteTodos || todos);
     }
 
-    function renderMeals() {
+    function refreshIcons() {
+      if (window.lucide && typeof window.lucide.createIcons === "function") {
+        window.lucide.createIcons();
+      }
+    }
+
+    function stopRsvpAutoScroll() {
+      if (rsvpScrollId !== null) {
+        window.cancelAnimationFrame(rsvpScrollId);
+        rsvpScrollId = null;
+      }
+    }
+
+    function startRsvpAutoScroll() {
+      stopRsvpAutoScroll();
+
+      const container = document.querySelector(".names-list");
+      const list = document.getElementById("rsvp-names");
+
+      if (!container || !list) {
+        return;
+      }
+
+      const maxScroll = Math.max(list.scrollHeight - container.clientHeight, 0);
+      container.scrollTop = 0;
+
+      if (!maxScroll) {
+        return;
+      }
+
+      let direction = 1;
+      let lastTimestamp = 0;
+      let pauseUntil = 0;
+      const speed = 18;
+
+      const step = (timestamp) => {
+        if (!lastTimestamp) {
+          lastTimestamp = timestamp;
+          pauseUntil = timestamp + 1600;
+        }
+
+        const delta = timestamp - lastTimestamp;
+        lastTimestamp = timestamp;
+
+        if (timestamp >= pauseUntil) {
+          const nextScrollTop = container.scrollTop + direction * speed * (delta / 1000);
+
+          if (nextScrollTop >= maxScroll) {
+            container.scrollTop = maxScroll;
+            direction = -1;
+            pauseUntil = timestamp + 1600;
+          } else if (nextScrollTop <= 0) {
+            container.scrollTop = 0;
+            direction = 1;
+            pauseUntil = timestamp + 1600;
+          } else {
+            container.scrollTop = nextScrollTop;
+          }
+        }
+
+        rsvpScrollId = window.requestAnimationFrame(step);
+      };
+
+      rsvpScrollId = window.requestAnimationFrame(step);
+    }
+
+    function reconcileRotationState() {
+      const screenCount = getScreenCount();
+
+      if (!screenCount) {
+        return;
+      }
+
+      currentIndex = Math.min(currentIndex, screenCount - 1);
+      track.style.transform = "translateX(-" + (currentIndex * 100) + "%)";
+      renderProgress();
+      refreshIcons();
+    }
+
+    function renderMeals(mealItems) {
       const mealGrid = document.getElementById("meal-grid");
       const monday = getMonday(new Date());
       const todayKey = new Date().toDateString();
+      const mealsByDay = new Map();
 
-      mealGrid.innerHTML = meals.map((meal, index) => {
+      mealItems.forEach((meal) => {
+        mealsByDay.set(meal.dayOfWeek, meal);
+      });
+
+      mealGrid.innerHTML = Array.from({ length: 7 }, (_, index) => {
         const date = new Date(monday);
         date.setDate(monday.getDate() + index);
         const isToday = date.toDateString() === todayKey;
         const isWide = index === 6;
+        const meal = mealsByDay.get(index);
+        const mealType = meal ? getMealTypePresentation(meal.type) : null;
+        const mealName = meal ? meal.name : "—";
 
         return `
           <article class="meal-card${isToday ? " today" : ""}${isWide ? " meal-card--wide" : ""}">
             <div class="meal-card-top">
               <div class="meal-day">${formatCalendarLabel(date).toUpperCase()}</div>
-              <div class="${getMealTypeClass(meal.type)}">${meal.type}</div>
+              <div class="meal-type ${mealType ? mealType.className : "meal-type--fend-for-yourself"}">${escapeHtml(mealType ? mealType.label : "Open Slot")}</div>
             </div>
-            <div class="meal-name">${meal.name}</div>
+            <div class="meal-name">${escapeHtml(mealName)}</div>
           </article>
         `;
       }).join("");
     }
 
-    function renderCountdowns() {
+    async function renderMealsWithData() {
+      const remoteMeals = await fetchMeals();
+
+      if (remoteMeals === null) {
+        renderMeals(meals.map((meal, index) => ({
+          dayOfWeek: index,
+          name: meal.name,
+          type: meal.type
+        })));
+        return;
+      }
+
+      renderMeals(remoteMeals);
+    }
+
+    function renderCountdowns(countdownItems) {
       const existingCountdownScreens = Array.from(track.querySelectorAll(".countdown-screen"));
-      existingCountdownScreens.slice(1).forEach((screen) => screen.remove());
+      existingCountdownScreens.forEach((screen, index) => {
+        if (index > 0) {
+          screen.remove();
+        }
+      });
+
+      if (!countdownItems.length) {
+        existingCountdownScreens.forEach((screen) => screen.remove());
+        reconcileRotationState();
+        return;
+      }
 
       const firstCountdownScreen = existingCountdownScreens[0];
       const countdownTemplate = (item, index) => {
         const hasImage = Boolean(item.image_url);
-        const variantClass = index > 0 ? ` countdown-card--variant-${index + 1}` : "";
+        const variantIndex = index % 4;
+        const variantClass = variantIndex > 0 ? ` countdown-card--variant-${variantIndex + 1}` : "";
+        const daysLabel = item.days === 1 ? "day" : "days";
 
         return `
         <div class="panel">
@@ -1523,15 +1843,15 @@
           </div>
           <div class="countdown-layout">
             <article class="countdown-card${variantClass}${hasImage ? " countdown-card--photo" : ""}">
-              ${hasImage ? `<img class="countdown-photo" src="${item.image_url}" alt="${item.name}" onerror="this.closest('.countdown-card').classList.remove('countdown-card--photo'); this.remove();">` : ""}
+              ${hasImage ? `<img class="countdown-photo" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" onerror="this.closest('.countdown-card').classList.remove('countdown-card--photo'); this.remove();">` : ""}
               <div class="countdown-copy">
-                <div class="countdown-icon"><i data-lucide="${item.icon}"></i></div>
-                <div class="countdown-name">${item.name}</div>
+                <div class="countdown-icon"><i data-lucide="${escapeHtml(item.icon || "calendar")}"></i></div>
+                <div class="countdown-name">${escapeHtml(item.name)}</div>
                 <div class="countdown-days">
-                  <span class="countdown-value">${item.days}</span>
-                  <span class="countdown-unit">days</span>
+                  <span class="countdown-value">${escapeHtml(item.days)}</span>
+                  <span class="countdown-unit">${daysLabel}</span>
                 </div>
-                <div class="countdown-caption">${item.caption}</div>
+                <div class="countdown-caption">${escapeHtml(item.caption)}</div>
               </div>
             </article>
           </div>
@@ -1539,28 +1859,137 @@
       `;
       };
 
-      firstCountdownScreen.innerHTML = countdownTemplate(countdowns[0], 0);
+      firstCountdownScreen.innerHTML = countdownTemplate(countdownItems[0], 0);
 
-      countdowns.slice(1).forEach((item, index) => {
+      countdownItems.slice(1).forEach((item, index) => {
         const section = document.createElement("section");
         section.className = "screen countdown-screen";
         section.innerHTML = countdownTemplate(item, index + 1);
         track.insertBefore(section, document.querySelector(".rsvp-screen"));
       });
+
+      reconcileRotationState();
     }
 
-    function renderRsvpNames() {
-      const list = document.getElementById("rsvp-names");
-      const visibleNames = rsvpNames.slice(0, 8);
-      const remainingCount = Math.max(rsvpNames.length - visibleNames.length, 0);
+    async function renderCountdownsWithData() {
+      const remoteCountdowns = await fetchCountdowns();
 
-      list.innerHTML = visibleNames.map((name) => `
-        <div class="name-pill">
-          <span>${name}</span>
+      if (remoteCountdowns === null) {
+        renderCountdowns(countdowns);
+        return;
+      }
+
+      renderCountdowns(remoteCountdowns);
+    }
+
+    function getRsvpStatusLabel(attending) {
+      if (attending === true) {
+        return "Attending";
+      }
+
+      if (attending === false) {
+        return "Declined";
+      }
+
+      return "Pending";
+    }
+
+    function getRsvpStatusClass(attending) {
+      if (attending === true) {
+        return " name-pill--attending";
+      }
+
+      if (attending === false) {
+        return " name-pill--declined";
+      }
+
+      return " name-pill--pending";
+    }
+
+    function shouldHideRsvpScreen() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return formatDateKey(today) >= RSVP_RETIRE_AFTER_DATE;
+    }
+
+    function removeRsvpScreen() {
+      const rsvpScreen = document.querySelector(".rsvp-screen");
+
+      stopRsvpAutoScroll();
+
+      if (rsvpScreen) {
+        rsvpScreen.remove();
+        reconcileRotationState();
+      }
+    }
+
+    function renderRsvpUnavailable() {
+      const list = document.getElementById("rsvp-names");
+      stopRsvpAutoScroll();
+      document.getElementById("rsvp-total").textContent = "—";
+      document.getElementById("rsvp-total-label").textContent = "RSVP data unavailable";
+      document.getElementById("rsvp-attending-count").textContent = "—";
+      document.getElementById("rsvp-declined-count").textContent = "—";
+      document.getElementById("rsvp-pending-count").textContent = "—";
+      document.getElementById("rsvp-names-title").textContent = "Guest List";
+      list.innerHTML = `
+        <div class="name-pill name-pill--pending">
+          <span>RSVP data unavailable</span>
         </div>
-      `).join("") + (remainingCount ? `
-        <div class="name-pill name-pill--more">and ${remainingCount} more</div>
-      ` : "");
+      `;
+    }
+
+    function renderRsvpBoard(rows) {
+      const list = document.getElementById("rsvp-names");
+      const attendingTotal = rows
+        .filter((row) => row.attending === true)
+        .reduce((sum, row) => sum + row.guestCount, 0);
+      const attendingCount = rows.filter((row) => row.attending === true).length;
+      const declinedCount = rows.filter((row) => row.attending === false).length;
+      const pendingCount = rows.filter((row) => row.attending === null).length;
+
+      document.getElementById("rsvp-total").textContent = String(attendingTotal);
+      document.getElementById("rsvp-total-label").textContent = "attending so far";
+      document.getElementById("rsvp-attending-count").textContent = String(attendingCount);
+      document.getElementById("rsvp-declined-count").textContent = String(declinedCount);
+      document.getElementById("rsvp-pending-count").textContent = String(pendingCount);
+      document.getElementById("rsvp-names-title").textContent = "Guest List";
+
+      if (!rows.length) {
+        stopRsvpAutoScroll();
+        list.innerHTML = `
+          <div class="name-pill name-pill--pending">
+            <span>No RSVPs yet</span>
+            <span class="name-status">Pending</span>
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = rows.map((row) => `
+        <div class="name-pill${getRsvpStatusClass(row.attending)}">
+          <span>${escapeHtml(row.name)}</span>
+          <span class="name-status">${escapeHtml(getRsvpStatusLabel(row.attending))}</span>
+        </div>
+      `).join("");
+
+      startRsvpAutoScroll();
+    }
+
+    async function renderRsvpBoardWithData() {
+      if (shouldHideRsvpScreen()) {
+        removeRsvpScreen();
+        return;
+      }
+
+      const remoteRsvps = await fetchRsvps();
+
+      if (remoteRsvps === null) {
+        renderRsvpUnavailable();
+        return;
+      }
+
+      renderRsvpBoard(remoteRsvps);
     }
 
     function renderProgress() {
@@ -1651,7 +2080,7 @@
     function registerServiceWorker() {
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-          navigator.serviceWorker.register("./sw.js").catch(() => {});
+          navigator.serviceWorker.register(`./sw.js?v=${VERSION}`).catch(() => {});
         });
       }
     }
@@ -1660,9 +2089,9 @@
       renderCalendar();
       renderMonthCalendar();
       renderTodos();
-      renderMeals();
-      renderCountdowns();
-      renderRsvpNames();
+      renderMealsWithData();
+      renderCountdownsWithData();
+      renderRsvpBoardWithData();
       updateHeaderTime();
       renderProgress();
       resetAutoRotate();
@@ -1678,9 +2107,7 @@
 
       window.setInterval(updateHeaderTime, 1000);
 
-      if (window.lucide && typeof window.lucide.createIcons === "function") {
-        window.lucide.createIcons();
-      }
+      refreshIcons();
 
       registerServiceWorker();
     }
