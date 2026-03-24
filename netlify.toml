@@ -1,0 +1,6 @@
+[build]
+  command = "sed -i \"s|%%SUPABASE_URL%%|${SUPABASE_URL}|g; s|%%SUPABASE_KEY%%|${SUPABASE_KEY}|g\" index.html"
+  publish = "."
+
+[build.environment]
+  SECRETS_SCAN_OMIT_PATHS = "index.html"
