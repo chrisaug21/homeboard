@@ -694,17 +694,17 @@
       max-width: 14ch;
     }
 
-    .countdown-card:nth-child(2) {
+    .countdown-card--variant-2 {
       background: linear-gradient(180deg, rgba(220, 239, 220, 0.94), rgba(247, 252, 245, 0.94));
       border-color: rgba(21, 128, 61, 0.14);
     }
 
-    .countdown-card:nth-child(3) {
+    .countdown-card--variant-3 {
       background: linear-gradient(180deg, rgba(248, 220, 227, 0.94), rgba(255, 247, 249, 0.94));
       border-color: rgba(166, 76, 99, 0.14);
     }
 
-    .countdown-card:nth-child(4) {
+    .countdown-card--variant-4 {
       background: linear-gradient(180deg, rgba(235, 229, 250, 0.94), rgba(251, 249, 255, 0.94));
       border-color: rgba(88, 84, 154, 0.14);
     }
@@ -1495,7 +1495,7 @@
         return `
           <article class="meal-card${isToday ? " today" : ""}${isWide ? " meal-card--wide" : ""}">
             <div class="meal-card-top">
-              <div class="meal-day">${formatCalendarLabel(date).toUpperCase().replace(" ", ", ")}</div>
+              <div class="meal-day">${formatCalendarLabel(date).toUpperCase()}</div>
               <div class="${getMealTypeClass(meal.type)}">${meal.type}</div>
             </div>
             <div class="meal-name">${meal.name}</div>
@@ -1509,8 +1509,9 @@
       existingCountdownScreens.slice(1).forEach((screen) => screen.remove());
 
       const firstCountdownScreen = existingCountdownScreens[0];
-      const countdownTemplate = (item) => {
+      const countdownTemplate = (item, index) => {
         const hasImage = Boolean(item.image_url);
+        const variantClass = index > 0 ? ` countdown-card--variant-${index + 1}` : "";
 
         return `
         <div class="panel">
@@ -1521,7 +1522,7 @@
             </div>
           </div>
           <div class="countdown-layout">
-            <article class="countdown-card${hasImage ? " countdown-card--photo" : ""}">
+            <article class="countdown-card${variantClass}${hasImage ? " countdown-card--photo" : ""}">
               ${hasImage ? `<img class="countdown-photo" src="${item.image_url}" alt="${item.name}" onerror="this.closest('.countdown-card').classList.remove('countdown-card--photo'); this.remove();">` : ""}
               <div class="countdown-copy">
                 <div class="countdown-icon"><i data-lucide="${item.icon}"></i></div>
@@ -1538,12 +1539,12 @@
       `;
       };
 
-      firstCountdownScreen.innerHTML = countdownTemplate(countdowns[0]);
+      firstCountdownScreen.innerHTML = countdownTemplate(countdowns[0], 0);
 
-      countdowns.slice(1).forEach((item) => {
+      countdowns.slice(1).forEach((item, index) => {
         const section = document.createElement("section");
         section.className = "screen countdown-screen";
-        section.innerHTML = countdownTemplate(item);
+        section.innerHTML = countdownTemplate(item, index + 1);
         track.insertBefore(section, document.querySelector(".rsvp-screen"));
       });
     }

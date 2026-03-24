@@ -1,4 +1,4 @@
-const CACHE_NAME = "homeboard-v1";
+const CACHE_NAME = "homeboard-v2";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -38,14 +38,22 @@ self.addEventListener("fetch", (event) => {
       }
 
       return fetch(event.request).then((networkResponse) => {
-        const responseClone = networkResponse.clone();
+        if (networkResponse.ok && networkResponse.type === "basic") {
+          const responseClone = networkResponse.clone();
 
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseClone);
-        });
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
 
         return networkResponse;
-      }).catch(() => caches.match("./index.html"));
+      }).catch(() => {
+        if (event.request.mode === "navigate") {
+          return caches.match("./index.html");
+        }
+
+        throw new Error("Network request failed");
+      });
     })
   );
 });
