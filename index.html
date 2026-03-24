@@ -1138,6 +1138,7 @@
       { title: "Set out recycling bins", assignee: "Shared", meta: "Thursday night", badge: "Routine" },
       { title: "Book dog groomer", assignee: "", meta: "No due date", badge: "Unassigned" }
     ];
+    const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
     const meals = [
       { name: "Pesto chicken bowls", type: "Cooking" },
@@ -1265,6 +1266,134 @@
       return "";
     }
 
+    function formatTodoDueDate(dueDate) {
+      if (!dueDate) {
+        return "No due date";
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const parsedDate = new Date(dueDate + "T00:00:00");
+      parsedDate.setHours(0, 0, 0, 0);
+      const diffInDays = Math.round((parsedDate - today) / 86400000);
+
+      if (diffInDays === 0) {
+        return "Due today";
+      }
+
+      if (diffInDays === 1) {
+        return "Due tomorrow";
+      }
+
+      if (diffInDays > 1 && diffInDays < 7) {
+        return "Due " + new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(parsedDate);
+      }
+
+      if (diffInDays < 0) {
+        return "Past due";
+      }
+
+      return "Due " + new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric"
+      }).format(parsedDate);
+    }
+
+    function getTodoBadge(todo) {
+      if (todo.due_date) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const parsedDate = new Date(todo.due_date + "T00:00:00");
+        parsedDate.setHours(0, 0, 0, 0);
+        const diffInDays = Math.round((parsedDate - today) / 86400000);
+
+        if (diffInDays <= 0) {
+          return "Due Today";
+        }
+
+        if (diffInDays < 7) {
+          return "Upcoming";
+        }
+      }
+
+      if (todo.assignee) {
+        return "Assigned";
+      }
+
+      return "Unassigned";
+    }
+
+    function mapSupabaseTodo(todo) {
+      const normalizedAssignee = todo.assignee || "";
+
+      return {
+        title: todo.title || "Untitled task",
+        assignee: normalizedAssignee,
+        meta: normalizedAssignee ? formatTodoDueDate(todo.due_date) : (todo.due_date ? formatTodoDueDate(todo.due_date) : "Shared task"),
+        badge: getTodoBadge(todo)
+      };
+    }
+
+    function renderTodoItems(todoItems) {
+      const list = document.getElementById("todo-list");
+
+      if (!todoItems.length) {
+        list.innerHTML = `
+          <article class="todo-card">
+            <div class="todo-check" aria-hidden="true"></div>
+            <div class="todo-copy">
+              <div class="todo-title">No open tasks</div>
+              <div class="todo-meta">Everything is cleared for now.</div>
+            </div>
+            <div></div>
+            <div class="todo-badge">Clear</div>
+          </article>
+        `;
+
+        document.getElementById("todo-open-count").textContent = "0";
+        document.getElementById("todo-next-up").textContent = "All Set";
+        document.getElementById("todo-next-text").textContent = "No active household tasks right now.";
+        return;
+      }
+
+      list.innerHTML = todoItems.map((todo) => `
+        <article class="todo-card">
+          <div class="todo-check" aria-hidden="true"></div>
+          <div class="todo-copy">
+            <div class="todo-title">${todo.title}</div>
+            <div class="todo-meta">${todo.meta}</div>
+          </div>
+          ${todo.assignee ? `<div class="${getAssigneeClass(todo.assignee)}">${todo.assignee}</div>` : '<div></div>'}
+          <div class="todo-badge">${todo.badge}</div>
+        </article>
+      `).join("");
+
+      document.getElementById("todo-open-count").textContent = String(todoItems.length);
+      document.getElementById("todo-next-up").textContent = "Today";
+      document.getElementById("todo-next-text").textContent = todoItems.length
+        ? todoItems[0].title + "."
+        : "No open tasks right now.";
+    }
+
+    async function fetchTodos() {
+      if (!sb) {
+        return null;
+      }
+
+      const { data, error } = await sb
+        .from("todos")
+        .select("title, due_date, assignee, archived_at, created_at")
+        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("archived_at", null)
+        .order("created_at", { ascending: true });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      return data.map(mapSupabaseTodo);
+    }
+
     function renderCalendar() {
       const grid = document.getElementById("calendar-grid");
       const startDate = new Date();
@@ -1331,23 +1460,25 @@
       monthGridEl.innerHTML = cells.join("");
     }
 
-    function renderTodos() {
+    async function renderTodos() {
       const list = document.getElementById("todo-list");
-      list.innerHTML = todos.map((todo) => `
+      list.innerHTML = `
         <article class="todo-card">
           <div class="todo-check" aria-hidden="true"></div>
           <div class="todo-copy">
-            <div class="todo-title">${todo.title}</div>
-            <div class="todo-meta">${todo.meta}</div>
+            <div class="todo-title">Loading tasks...</div>
+            <div class="todo-meta">Syncing the latest household to-dos.</div>
           </div>
-          ${todo.assignee ? `<div class="${getAssigneeClass(todo.assignee)}">${todo.assignee}</div>` : '<div></div>'}
-          <div class="todo-badge">${todo.badge}</div>
+          <div></div>
+          <div class="todo-badge">Loading</div>
         </article>
-      `).join("");
+      `;
+      document.getElementById("todo-open-count").textContent = "…";
+      document.getElementById("todo-next-up").textContent = "Syncing";
+      document.getElementById("todo-next-text").textContent = "Checking Supabase for the latest open tasks.";
 
-      document.getElementById("todo-open-count").textContent = String(todos.length);
-      document.getElementById("todo-next-up").textContent = "Today";
-      document.getElementById("todo-next-text").textContent = "Chris needs to grab the dry cleaning before pickup closes.";
+      const remoteTodos = await fetchTodos();
+      renderTodoItems(remoteTodos || todos);
     }
 
     function renderMeals() {
