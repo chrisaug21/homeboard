@@ -1,8 +1,6 @@
 [build]
-  command = "echo 'No build step configured yet'"
+  command = "sed -i \"s|%%SUPABASE_URL%%|${SUPABASE_URL}|g; s|%%SUPABASE_KEY%%|${SUPABASE_KEY}|g\" index.html"
   publish = "."
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[build.environment]
+  SECRETS_SCAN_OMIT_PATHS = "index.html"
