@@ -1075,7 +1075,22 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer crossorigin="anonymous"></script>
   <script>
+    const SUPABASE_URL = '%%SUPABASE_URL%%';
+    const SUPABASE_KEY = '%%SUPABASE_KEY%%';
+    let sb = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      try {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      } catch(e) {
+        console.warn('Supabase unavailable, running with hardcoded data.', e);
+      }
+
+      init();
+    });
+
     const rotationIntervalMs = 30000;
     const track = document.getElementById("screen-track");
     const viewport = document.getElementById("viewport");
@@ -1538,7 +1553,6 @@
       registerServiceWorker();
     }
 
-    init();
   </script>
 </body>
 </html>
