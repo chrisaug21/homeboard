@@ -65,6 +65,8 @@
     let pointerDeltaX = 0;
     let rsvpScrollId = null;
     let calendarEventsMap = new Map();
+    let cachedHouseholdConfig = null;
+    let cachedSupabaseCountdowns = null;
 
     function getScreenCount() {
       return track.children.length;
@@ -670,49 +672,64 @@
       reconcileRotationState();
     }
 
+    async function refreshCalendarData() {
+      if (!cachedHouseholdConfig || !cachedHouseholdConfig.google_cal_id) {
+        return;
+      }
+
+      const apiKey = cachedHouseholdConfig.google_cal_key || GOOGLE_CAL_KEY;
+
+      if (!apiKey || apiKey.startsWith("%%")) {
+        return;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const timeMin = getMonthGridStart(today);
+      const timeMax = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      timeMax.setDate(timeMax.getDate() + 5);
+
+      const items = await fetchGoogleCalendarEvents(cachedHouseholdConfig.google_cal_id, apiKey, timeMin, timeMax);
+
+      if (!items) {
+        return;
+      }
+
+      calendarEventsMap = buildCalendarEventsMap(items);
+      const calendarCountdowns = extractCalendarCountdowns(items);
+
+      renderCalendar();
+      renderMonthCalendar();
+
+      const baseCountdowns = cachedSupabaseCountdowns !== null ? cachedSupabaseCountdowns : countdowns;
+      const merged = [...baseCountdowns, ...calendarCountdowns]
+        .sort((a, b) => (a.days ?? Infinity) - (b.days ?? Infinity));
+
+      renderCountdowns(merged.length > 0 ? merged : countdowns);
+    }
+
     async function renderCalendarAndCountdowns() {
       // Render immediately with hardcoded fallback data so screens aren't blank.
       renderCalendar();
       renderMonthCalendar();
 
-      // Fetch household config (for Google Cal credentials) and Supabase countdowns concurrently.
+      // Fetch household config and Supabase countdowns once; cache both for background refreshes.
       const [householdConfig, supabaseCountdowns] = await Promise.all([
         fetchHouseholdConfig(),
         fetchCountdowns()
       ]);
 
-      // Attempt to load Google Calendar events if we have a calendar ID.
-      let calendarCountdowns = [];
+      cachedHouseholdConfig = householdConfig;
+      cachedSupabaseCountdowns = supabaseCountdowns;
 
-      if (householdConfig && householdConfig.google_cal_id) {
-        const apiKey = householdConfig.google_cal_key || GOOGLE_CAL_KEY;
+      // First real render — reuses refreshCalendarData so refresh and initial load are identical.
+      await refreshCalendarData();
 
-        if (apiKey && !apiKey.startsWith("%%")) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          // Cover the month grid start through end-of-month plus 5 days for the week view.
-          const timeMin = getMonthGridStart(today);
-          const timeMax = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-          timeMax.setDate(timeMax.getDate() + 5);
-
-          const items = await fetchGoogleCalendarEvents(householdConfig.google_cal_id, apiKey, timeMin, timeMax);
-
-          if (items) {
-            calendarEventsMap = buildCalendarEventsMap(items);
-            calendarCountdowns = extractCalendarCountdowns(items);
-            // Re-render calendar screens now that we have real data.
-            renderCalendar();
-            renderMonthCalendar();
-          }
-        }
+      // If Google Cal didn't load (no config or failed), still render countdowns from Supabase.
+      if (!cachedHouseholdConfig || !cachedHouseholdConfig.google_cal_id || !calendarEventsMap.size) {
+        const baseCountdowns = cachedSupabaseCountdowns !== null ? cachedSupabaseCountdowns : countdowns;
+        renderCountdowns(baseCountdowns.length > 0 ? baseCountdowns : countdowns);
       }
-
-      // Merge Supabase countdowns with any calendar-derived countdowns, sorted by days remaining.
-      const baseCountdowns = supabaseCountdowns !== null ? supabaseCountdowns : countdowns;
-      const merged = [...baseCountdowns, ...calendarCountdowns]
-        .sort((a, b) => (a.days ?? Infinity) - (b.days ?? Infinity));
-
-      renderCountdowns(merged.length > 0 ? merged : countdowns);
     }
 
     function getRsvpStatusLabel(attending) {
@@ -931,6 +948,7 @@
       window.addEventListener("keydown", handleKeydown);
 
       window.setInterval(updateHeaderTime, 1000);
+      window.setInterval(refreshCalendarData, 5 * 60 * 1000);
 
       refreshIcons();
     }
