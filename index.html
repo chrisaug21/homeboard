@@ -995,6 +995,17 @@
       display: grid;
       gap: 16px;
       align-content: start;
+      padding-bottom: 120px;
+    }
+
+    .admin-content {
+      display: grid;
+      gap: 16px;
+    }
+
+    .admin-screen {
+      display: grid;
+      gap: 16px;
     }
 
     .admin-topbar {
@@ -1092,6 +1103,7 @@
     .admin-actions {
       display: flex;
       justify-content: flex-end;
+      gap: 10px;
     }
 
     .admin-button {
@@ -1140,6 +1152,83 @@
       margin-top: 16px;
       display: grid;
       gap: 12px;
+    }
+
+    .admin-meal-list {
+      margin-top: 16px;
+    }
+
+    .admin-meal-card {
+      width: 100%;
+      border: 1px solid rgba(124, 96, 69, 0.12);
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      display: grid;
+      gap: 10px;
+      transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+    }
+
+    .admin-meal-card:hover,
+    .admin-meal-card:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(180, 83, 9, 0.28);
+    }
+
+    .admin-meal-card:focus-visible {
+      outline: 3px solid var(--ink);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+    }
+
+    .admin-meal-card.is-selected {
+      background: rgba(247, 217, 170, 0.34);
+      border-color: rgba(180, 83, 9, 0.24);
+      box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
+    }
+
+    .admin-meal-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .admin-meal-day {
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+    }
+
+    .admin-meal-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .admin-meal-name--empty {
+      color: var(--muted);
+    }
+
+    .admin-field select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid rgba(124, 96, 69, 0.16);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.84);
+      color: var(--ink);
+      font: inherit;
+      appearance: none;
+    }
+
+    .admin-field select:focus-visible {
+      outline: 2px solid rgba(180, 83, 9, 0.22);
+      outline-offset: 2px;
+      border-color: rgba(180, 83, 9, 0.3);
     }
 
     .admin-todo-card {
@@ -1194,6 +1283,31 @@
       color: var(--muted);
       text-align: center;
       background: rgba(255, 255, 255, 0.4);
+    }
+
+    .admin-placeholder {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      gap: 10px;
+    }
+
+    .admin-placeholder-icon {
+      width: 64px;
+      height: 64px;
+      margin-inline: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20px;
+      background: rgba(121, 106, 94, 0.1);
+      color: var(--muted);
+    }
+
+    .admin-placeholder-icon svg {
+      width: 30px;
+      height: 30px;
     }
 
     .admin-drawer {
@@ -1270,6 +1384,60 @@
     .toast.is-visible {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
+    }
+
+    .admin-nav {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: 16px;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 10px;
+      border-radius: 24px;
+      background: rgba(255, 250, 243, 0.94);
+      border: 1px solid rgba(124, 96, 69, 0.14);
+      box-shadow: 0 18px 36px rgba(98, 73, 46, 0.14);
+      backdrop-filter: blur(18px);
+    }
+
+    .admin-nav-button {
+      border: 0;
+      border-radius: 18px;
+      padding: 10px 6px;
+      background: transparent;
+      color: var(--muted);
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      font: inherit;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+    }
+
+    .admin-nav-button:hover,
+    .admin-nav-button:focus-visible {
+      transform: translateY(-1px);
+    }
+
+    .admin-nav-button:focus-visible {
+      outline: 3px solid var(--ink);
+      outline-offset: 2px;
+    }
+
+    .admin-nav-button.is-active {
+      background: rgba(180, 83, 9, 0.14);
+      color: var(--amber);
+    }
+
+    .admin-nav-button svg {
+      width: 20px;
+      height: 20px;
     }
 
     @media (max-width: 1120px) {
@@ -1424,54 +1592,136 @@
   <div class="admin-shell" id="admin-app" hidden>
     <header class="admin-topbar">
       <div class="admin-label">Admin Mode</div>
-      <h1 class="admin-title">Household Todos</h1>
-      <p class="admin-subtitle">Manage shared household tasks from your phone. Completed items move into the archive drawer.</p>
+      <h1 class="admin-title">Household Admin</h1>
+      <p class="admin-subtitle">Manage shared household plans from your phone with quick tabs for todos, meals, countdowns, and settings.</p>
     </header>
 
-    <section class="admin-panel" aria-labelledby="todo-form-title">
-      <h2 class="admin-panel-title" id="todo-form-title">Add a Todo</h2>
-      <p class="admin-panel-note">Title is required. Assignee and due date are optional.</p>
-      <form class="admin-todo-form" id="admin-todo-form">
-        <div class="admin-field">
-          <label for="admin-todo-title">Title</label>
-          <input id="admin-todo-title" name="title" type="text" maxlength="140" required>
-        </div>
-        <div class="admin-form-row">
-          <div class="admin-field">
-            <label for="admin-todo-assignee">Assignee</label>
-            <input id="admin-todo-assignee" name="assignee" type="text" maxlength="60">
-          </div>
-          <div class="admin-field">
-            <label for="admin-todo-due-date">Due date</label>
-            <input id="admin-todo-due-date" name="due_date" type="date">
-          </div>
-        </div>
-        <div class="admin-actions">
-          <button class="admin-button admin-button--primary" id="admin-submit-button" type="submit">Add Todo</button>
-        </div>
-      </form>
-    </section>
+    <div class="admin-content">
+      <section class="admin-screen" id="admin-screen-todos" data-admin-screen="todos">
+        <section class="admin-panel" aria-labelledby="todo-form-title">
+          <h2 class="admin-panel-title" id="todo-form-title">Add a Todo</h2>
+          <p class="admin-panel-note">Title is required. Assignee and due date are optional.</p>
+          <form class="admin-todo-form" id="admin-todo-form">
+            <div class="admin-field">
+              <label for="admin-todo-title">Title</label>
+              <input id="admin-todo-title" name="title" type="text" maxlength="140" required>
+            </div>
+            <div class="admin-form-row">
+              <div class="admin-field">
+                <label for="admin-todo-assignee">Assignee</label>
+                <input id="admin-todo-assignee" name="assignee" type="text" maxlength="60">
+              </div>
+              <div class="admin-field">
+                <label for="admin-todo-due-date">Due date</label>
+                <input id="admin-todo-due-date" name="due_date" type="date">
+              </div>
+            </div>
+            <div class="admin-actions">
+              <button class="admin-button admin-button--primary" id="admin-submit-button" type="submit">Add Todo</button>
+            </div>
+          </form>
+        </section>
 
-    <section class="admin-panel" aria-labelledby="active-todos-title">
-      <h2 class="admin-panel-title" id="active-todos-title">Active Todos</h2>
-      <p class="admin-panel-note" id="admin-active-summary">Loading household tasks…</p>
-      <div class="admin-list" id="admin-active-list"></div>
-    </section>
+        <section class="admin-panel" aria-labelledby="active-todos-title">
+          <h2 class="admin-panel-title" id="active-todos-title">Active Todos</h2>
+          <p class="admin-panel-note" id="admin-active-summary">Loading household tasks…</p>
+          <div class="admin-list" id="admin-active-list"></div>
+        </section>
 
-    <details class="admin-panel admin-drawer" id="admin-archived-drawer">
-      <summary>
-        <div class="admin-drawer-label">
-          <span class="admin-drawer-title">Archived</span>
-          <span class="admin-drawer-note" id="admin-archived-summary">Completed household tasks</span>
-        </div>
-        <span class="admin-drawer-icon" aria-hidden="true">
-          <i data-lucide="chevron-down"></i>
-        </span>
-      </summary>
-      <div class="admin-drawer-body">
-        <div class="admin-list" id="admin-archived-list"></div>
-      </div>
-    </details>
+        <details class="admin-panel admin-drawer" id="admin-archived-drawer">
+          <summary>
+            <div class="admin-drawer-label">
+              <span class="admin-drawer-title">Archived</span>
+              <span class="admin-drawer-note" id="admin-archived-summary">Completed household tasks</span>
+            </div>
+            <span class="admin-drawer-icon" aria-hidden="true">
+              <i data-lucide="chevron-down"></i>
+            </span>
+          </summary>
+          <div class="admin-drawer-body">
+            <div class="admin-list" id="admin-archived-list"></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="admin-screen" id="admin-screen-meal-plan" data-admin-screen="meal-plan" hidden>
+        <section class="admin-panel" aria-labelledby="admin-meal-plan-title">
+          <h2 class="admin-panel-title" id="admin-meal-plan-title">Meal Plan</h2>
+          <p class="admin-panel-note" id="admin-meal-week-label">Loading this week’s dinners…</p>
+          <div class="admin-list admin-meal-list" id="admin-meal-list"></div>
+        </section>
+
+        <section class="admin-panel" aria-labelledby="admin-meal-editor-title">
+          <h2 class="admin-panel-title" id="admin-meal-editor-title">Edit Dinner</h2>
+          <p class="admin-panel-note" id="admin-meal-editor-note">Tap a day above to add or edit that night’s dinner.</p>
+          <form class="admin-todo-form" id="admin-meal-form">
+            <input id="admin-meal-day-of-week" name="day_of_week" type="hidden" value="0">
+            <div class="admin-field">
+              <label for="admin-meal-name">Meal name</label>
+              <input id="admin-meal-name" name="meal_name" type="text" maxlength="140" required>
+            </div>
+            <div class="admin-field">
+              <label for="admin-meal-type">Meal type</label>
+              <select id="admin-meal-type" name="meal_type" required>
+                <option value="cooking">Cooking</option>
+                <option value="hellofresh">HelloFresh</option>
+                <option value="going_out">Going Out</option>
+                <option value="delivery">Delivery</option>
+                <option value="fend_for_yourself">Fend for Yourself</option>
+                <option value="date_night">Date Night</option>
+              </select>
+            </div>
+            <div class="admin-actions">
+              <button class="admin-button admin-button--secondary" id="admin-meal-cancel-button" type="button">Reset</button>
+              <button class="admin-button admin-button--primary" id="admin-meal-submit-button" type="submit">Save Dinner</button>
+            </div>
+          </form>
+        </section>
+      </section>
+
+      <section class="admin-screen" id="admin-screen-countdowns" data-admin-screen="countdowns" hidden>
+        <section class="admin-panel admin-placeholder" aria-labelledby="admin-countdowns-title">
+          <div class="admin-placeholder-icon" aria-hidden="true">
+            <i data-lucide="sparkles"></i>
+          </div>
+          <div>
+            <h2 class="admin-panel-title" id="admin-countdowns-title">Countdowns</h2>
+            <p class="admin-panel-note">Countdown management will live here next.</p>
+          </div>
+        </section>
+      </section>
+
+      <section class="admin-screen" id="admin-screen-settings" data-admin-screen="settings" hidden>
+        <section class="admin-panel admin-placeholder" aria-labelledby="admin-settings-title">
+          <div class="admin-placeholder-icon" aria-hidden="true">
+            <i data-lucide="settings-2"></i>
+          </div>
+          <div>
+            <h2 class="admin-panel-title" id="admin-settings-title">Settings</h2>
+            <p class="admin-panel-note">Household settings will live here next.</p>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <nav class="admin-nav" aria-label="Admin navigation">
+      <button class="admin-nav-button is-active" type="button" data-admin-nav="todos" aria-current="page">
+        <i data-lucide="list-todo"></i>
+        <span>Todos</span>
+      </button>
+      <button class="admin-nav-button" type="button" data-admin-nav="meal-plan">
+        <i data-lucide="utensils-crossed"></i>
+        <span>Meal Plan</span>
+      </button>
+      <button class="admin-nav-button" type="button" data-admin-nav="countdowns">
+        <i data-lucide="sparkles"></i>
+        <span>Countdowns</span>
+      </button>
+      <button class="admin-nav-button" type="button" data-admin-nav="settings">
+        <i data-lucide="settings-2"></i>
+        <span>Settings</span>
+      </button>
+    </nav>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1512,7 +1762,7 @@
       init();
     });
 
-    const VERSION = "4";
+    const VERSION = "5";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1530,6 +1780,18 @@
     const adminArchivedList = document.getElementById("admin-archived-list");
     const adminActiveSummary = document.getElementById("admin-active-summary");
     const adminArchivedSummary = document.getElementById("admin-archived-summary");
+    const adminScreens = Array.from(document.querySelectorAll("[data-admin-screen]"));
+    const adminNavButtons = Array.from(document.querySelectorAll("[data-admin-nav]"));
+    const adminMealList = document.getElementById("admin-meal-list");
+    const adminMealForm = document.getElementById("admin-meal-form");
+    const adminMealWeekLabel = document.getElementById("admin-meal-week-label");
+    const adminMealEditorTitle = document.getElementById("admin-meal-editor-title");
+    const adminMealEditorNote = document.getElementById("admin-meal-editor-note");
+    const adminMealDayOfWeek = document.getElementById("admin-meal-day-of-week");
+    const adminMealName = document.getElementById("admin-meal-name");
+    const adminMealType = document.getElementById("admin-meal-type");
+    const adminMealSubmitButton = document.getElementById("admin-meal-submit-button");
+    const adminMealCancelButton = document.getElementById("admin-meal-cancel-button");
     const toastEl = document.getElementById("toast");
 
     const now = new Date();
@@ -1596,7 +1858,11 @@
     let pointerDeltaX = 0;
     let rsvpScrollId = null;
     let toastTimeoutId = null;
-    let adminWritePending = false;
+    let adminTodoWritePending = false;
+    let adminMealWritePending = false;
+    let adminScreen = "todos";
+    let adminSelectedMealDay = 0;
+    let adminMealPlanRows = [];
     const mealTypeConfig = {
       cooking: {
         label: "Cooking 🍳",
@@ -1826,6 +2092,27 @@
       }).format(parsedDate);
     }
 
+    function formatAdminWeekRange(monday) {
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      return `Week of ${new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric"
+      }).format(monday)} to ${new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric"
+      }).format(sunday)}`;
+    }
+
+    function formatAdminDayLabel(date) {
+      return new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric"
+      }).format(date);
+    }
+
     function getTodoBadge(todo) {
       if (todo.due_date) {
         const today = new Date();
@@ -1969,9 +2256,15 @@
     }
 
     function setAdminBusyState(isBusy) {
-      adminWritePending = isBusy;
+      adminTodoWritePending = isBusy;
       adminSubmitButton.disabled = isBusy;
       adminSubmitButton.textContent = isBusy ? "Saving…" : "Add Todo";
+    }
+
+    function setAdminMealBusyState(isBusy) {
+      adminMealWritePending = isBusy;
+      adminMealSubmitButton.disabled = isBusy;
+      adminMealSubmitButton.textContent = isBusy ? "Saving…" : "Save Dinner";
     }
 
     function renderAdminTodoCard(todo, options) {
@@ -2047,7 +2340,7 @@
       const assignee = String(formData.get("assignee") || "").trim();
       const dueDate = String(formData.get("due_date") || "").trim();
 
-      if (!title || adminWritePending) {
+      if (!title || adminTodoWritePending) {
         return;
       }
 
@@ -2076,14 +2369,14 @@
     async function archiveAdminTodo(todoId) {
       const client = getSupabaseClient();
 
-      if (!client || adminWritePending) {
+      if (!client || adminTodoWritePending) {
         if (!client) {
           showToast("Couldn’t complete todo. Supabase is unavailable.");
         }
         return;
       }
 
-      adminWritePending = true;
+      adminTodoWritePending = true;
 
       const { error } = await client
         .from("todos")
@@ -2095,13 +2388,13 @@
         .is("archived_at", null);
 
       if (error) {
-        adminWritePending = false;
+        adminTodoWritePending = false;
         showToast("Couldn’t complete todo. Please try again.");
         return;
       }
 
       await loadAdminTodos();
-      adminWritePending = false;
+      adminTodoWritePending = false;
     }
 
     function handleAdminTodoSubmit(event) {
@@ -2117,6 +2410,237 @@
       }
 
       archiveAdminTodo(button.getAttribute("data-todo-id"));
+    }
+
+    async function fetchAdminMealPlan() {
+      const client = getSupabaseClient();
+
+      if (!client) {
+        return null;
+      }
+
+      const monday = getMonday(new Date());
+      const { data, error } = await client
+        .from("meal_plan")
+        .select("id, day_of_week, meal_name, meal_type, week_start")
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("week_start", formatDateKey(monday))
+        .eq("meal_slot", "dinner")
+        .is("user_id", null)
+        .order("day_of_week", { ascending: true });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      return data.map((meal) => ({
+        id: meal.id,
+        dayOfWeek: Number(meal.day_of_week),
+        mealName: meal.meal_name || "",
+        mealType: normalizeMealType(meal.meal_type || "cooking"),
+        weekStart: meal.week_start
+      }));
+    }
+
+    function getAdminMealByDay(dayOfWeek) {
+      return adminMealPlanRows.find((meal) => meal.dayOfWeek === dayOfWeek) || null;
+    }
+
+    function syncAdminMealForm(dayOfWeek) {
+      adminSelectedMealDay = dayOfWeek;
+      const monday = getMonday(new Date());
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + dayOfWeek);
+      const meal = getAdminMealByDay(dayOfWeek);
+
+      adminMealDayOfWeek.value = String(dayOfWeek);
+      adminMealEditorTitle.textContent = `Edit ${new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date)} Dinner`;
+      adminMealEditorNote.textContent = `Shared dinner for ${formatAdminDayLabel(date)}.`;
+      adminMealName.value = meal ? meal.mealName : "";
+      adminMealType.value = meal ? meal.mealType : "cooking";
+    }
+
+    function renderAdminMealPlan() {
+      const monday = getMonday(new Date());
+
+      adminMealWeekLabel.textContent = `${formatAdminWeekRange(monday)} · Shared dinners only`;
+      adminMealList.innerHTML = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + index);
+        const meal = getAdminMealByDay(index);
+        const mealType = meal ? getMealTypePresentation(meal.mealType) : null;
+
+        return `
+          <button
+            class="admin-meal-card${index === adminSelectedMealDay ? " is-selected" : ""}"
+            type="button"
+            data-admin-meal-day="${index}"
+            aria-pressed="${index === adminSelectedMealDay ? "true" : "false"}"
+          >
+            <div class="admin-meal-card-top">
+              <div class="admin-meal-day">${escapeHtml(formatAdminDayLabel(date))}</div>
+              <span class="admin-pill admin-pill--due">${escapeHtml(mealType ? mealType.label : "Tap to add")}</span>
+            </div>
+            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : "No dinner set yet.")}</div>
+          </button>
+        `;
+      }).join("");
+
+      syncAdminMealForm(adminSelectedMealDay);
+    }
+
+    async function loadAdminMealPlan() {
+      adminMealWeekLabel.textContent = "Loading this week’s dinners…";
+      adminMealList.innerHTML = '<div class="admin-empty">Loading this week’s dinners…</div>';
+
+      const mealRows = await fetchAdminMealPlan();
+
+      if (!mealRows) {
+        adminMealWeekLabel.textContent = "Couldn’t load this week’s dinners.";
+        adminMealList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        return;
+      }
+
+      adminMealPlanRows = mealRows;
+      renderAdminMealPlan();
+    }
+
+    function upsertAdminMealState(dayOfWeek, mealRecord) {
+      const existingIndex = adminMealPlanRows.findIndex((meal) => meal.dayOfWeek === dayOfWeek);
+
+      if (existingIndex >= 0) {
+        adminMealPlanRows[existingIndex] = mealRecord;
+        return;
+      }
+
+      adminMealPlanRows.push(mealRecord);
+      adminMealPlanRows.sort((left, right) => left.dayOfWeek - right.dayOfWeek);
+    }
+
+    async function saveAdminMeal(formData) {
+      const client = getSupabaseClient();
+
+      if (!client) {
+        showToast("Couldn’t save meal. Supabase is unavailable.");
+        return;
+      }
+
+      const dayOfWeek = Number(formData.get("day_of_week"));
+      const mealName = String(formData.get("meal_name") || "").trim();
+      const mealType = normalizeMealType(formData.get("meal_type"));
+
+      if (!mealName || adminMealWritePending) {
+        return;
+      }
+
+      setAdminMealBusyState(true);
+
+      const monday = getMonday(new Date());
+      const weekStart = formatDateKey(monday);
+      const existingMeal = getAdminMealByDay(dayOfWeek);
+      let responseError = null;
+      let savedMealId = existingMeal ? existingMeal.id : null;
+
+      if (existingMeal) {
+        const { error } = await client
+          .from("meal_plan")
+          .update({
+            meal_name: mealName,
+            meal_type: mealType
+          })
+          .eq("id", existingMeal.id);
+
+        responseError = error;
+      } else {
+        const { data, error } = await client
+          .from("meal_plan")
+          .insert({
+            household_id: DISPLAY_HOUSEHOLD_ID,
+            user_id: null,
+            week_start: weekStart,
+            day_of_week: dayOfWeek,
+            meal_slot: "dinner",
+            meal_name: mealName,
+            meal_type: mealType
+          })
+          .select("id")
+          .single();
+
+        responseError = error;
+        savedMealId = data && data.id ? data.id : null;
+      }
+
+      if (responseError) {
+        setAdminMealBusyState(false);
+        showToast("Couldn’t save meal. Please try again.");
+        return;
+      }
+
+      if (!savedMealId) {
+        setAdminMealBusyState(false);
+        await loadAdminMealPlan();
+        return;
+      }
+
+      upsertAdminMealState(dayOfWeek, {
+        id: savedMealId,
+        dayOfWeek,
+        mealName,
+        mealType,
+        weekStart
+      });
+      setAdminMealBusyState(false);
+      renderAdminMealPlan();
+    }
+
+    function setAdminScreen(nextScreen) {
+      adminScreen = nextScreen;
+
+      adminScreens.forEach((screen) => {
+        const isActive = screen.getAttribute("data-admin-screen") === nextScreen;
+        screen.hidden = !isActive;
+      });
+
+      adminNavButtons.forEach((button) => {
+        const isActive = button.getAttribute("data-admin-nav") === nextScreen;
+        button.classList.toggle("is-active", isActive);
+        if (isActive) {
+          button.setAttribute("aria-current", "page");
+        } else {
+          button.removeAttribute("aria-current");
+        }
+      });
+    }
+
+    function handleAdminNavClick(event) {
+      const button = event.target.closest("[data-admin-nav]");
+
+      if (!button) {
+        return;
+      }
+
+      setAdminScreen(button.getAttribute("data-admin-nav"));
+    }
+
+    function handleAdminMealListClick(event) {
+      const button = event.target.closest("[data-admin-meal-day]");
+
+      if (!button) {
+        return;
+      }
+
+      syncAdminMealForm(Number(button.getAttribute("data-admin-meal-day")));
+      renderAdminMealPlan();
+      adminMealName.focus();
+    }
+
+    function handleAdminMealSubmit(event) {
+      event.preventDefault();
+      saveAdminMeal(new FormData(event.currentTarget));
+    }
+
+    function handleAdminMealReset() {
+      syncAdminMealForm(adminSelectedMealDay);
     }
 
     function mapSupabaseMeal(meal) {
@@ -2730,9 +3254,15 @@
       document.body.classList.add("admin-mode");
       displayApp.hidden = true;
       adminApp.hidden = false;
+      setAdminScreen("todos");
+      adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminTodoForm.addEventListener("submit", handleAdminTodoSubmit);
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
+      adminMealList.addEventListener("click", handleAdminMealListClick);
+      adminMealForm.addEventListener("submit", handleAdminMealSubmit);
+      adminMealCancelButton.addEventListener("click", handleAdminMealReset);
       loadAdminTodos();
+      loadAdminMealPlan();
       refreshIcons();
     }
 
