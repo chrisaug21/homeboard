@@ -1671,15 +1671,7 @@
             </div>
             <div class="admin-field">
               <label for="admin-meal-type">Meal type</label>
-              <select id="admin-meal-type" name="meal_type" required>
-                <option value="cooking">Cooking</option>
-                <option value="hellofresh">HelloFresh</option>
-                <option value="going_out">Going Out</option>
-                <option value="delivery">Delivery</option>
-                <option value="pick_up">Pick Up</option>
-                <option value="fend_for_yourself">Fend for Yourself</option>
-                <option value="date_night">Date Night</option>
-              </select>
+              <select id="admin-meal-type" name="meal_type" required></select>
             </div>
             <div class="admin-actions">
               <button class="admin-button admin-button--secondary" id="admin-meal-cancel-button" type="button">Reset</button>
@@ -1873,36 +1865,59 @@
     let adminScreen = "todos";
     let adminSelectedMealDay = 0;
     let adminMealPlanRows = [];
-    const mealTypeConfig = {
-      cooking: {
+    const mealTypeOptions = [
+      {
+        value: "cooking",
+        adminLabel: "Cooking",
         label: "Cooking 🍳",
         className: "meal-type--cooking"
       },
-      hellofresh: {
+      {
+        value: "hellofresh",
+        adminLabel: "HelloFresh",
         label: "HelloFresh 📦",
         className: "meal-type--hellofresh"
       },
-      going_out: {
+      {
+        value: "going_out",
+        adminLabel: "Going Out",
         label: "Going Out 🍽️",
         className: "meal-type--going-out"
       },
-      delivery: {
+      {
+        value: "delivery",
+        adminLabel: "Delivery",
         label: "Delivery 🛵",
         className: "meal-type--delivery"
       },
-      pick_up: {
+      {
+        value: "pick_up",
+        adminLabel: "Pick Up",
         label: "Pick Up 🥡",
         className: "meal-type--pick-up"
       },
-      fend_for_yourself: {
+      {
+        value: "fend_for_yourself",
+        adminLabel: "Fend for Yourself",
         label: "Fend for Yourself 😅",
         className: "meal-type--fend-for-yourself"
       },
-      date_night: {
+      {
+        value: "date_night",
+        adminLabel: "Date Night",
         label: "Date Night 💫",
         className: "meal-type--date-night"
       }
-    };
+    ];
+    const mealTypeConfig = Object.fromEntries(
+      mealTypeOptions.map((option) => [
+        option.value,
+        {
+          label: option.label,
+          className: option.className
+        }
+      ])
+    );
 
     function getMonday(date) {
       const next = new Date(date);
@@ -2034,6 +2049,12 @@
         label: type || "Dinner",
         className: "meal-type--fend-for-yourself"
       };
+    }
+
+    function populateAdminMealTypeOptions() {
+      adminMealType.innerHTML = mealTypeOptions.map((option) => `
+        <option value="${option.value}">${option.adminLabel}</option>
+      `).join("");
     }
 
     function getScreenCount() {
@@ -3259,6 +3280,7 @@
       displayApp.hidden = true;
       adminApp.hidden = false;
       setAdminScreen("todos");
+      populateAdminMealTypeOptions();
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminTodoForm.addEventListener("submit", handleAdminTodoSubmit);
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
