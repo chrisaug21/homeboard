@@ -219,7 +219,7 @@
 
       const { data, error } = await client
         .from("households")
-        .select("google_cal_id, google_cal_key")
+        .select("google_cal_id, google_cal_key, total_invited_guests")
         .eq("id", DISPLAY_HOUSEHOLD_ID)
         .single();
 

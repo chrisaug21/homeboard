@@ -789,20 +789,25 @@
       `;
     }
 
-    function renderRsvpBoard(rows) {
+    function renderRsvpBoard(rows, totalInvitedGuests) {
       const list = document.getElementById("rsvp-names");
-      const attendingTotal = rows
+      const attendingGuests = rows
         .filter((row) => row.attending === true)
         .reduce((sum, row) => sum + row.guestCount, 0);
-      const attendingCount = rows.filter((row) => row.attending === true).length;
-      const declinedCount = rows.filter((row) => row.attending === false).length;
-      const pendingCount = rows.filter((row) => row.attending === null).length;
+      const responseCount = rows.filter((row) => row.attending === true).length;
+      const declinedGuests = rows
+        .filter((row) => row.attending === false)
+        .reduce((sum, row) => sum + row.guestCount, 0);
+      const invitedTotal = Number(totalInvitedGuests) || 0;
+      const pendingGuests = invitedTotal > 0
+        ? Math.max(0, invitedTotal - attendingGuests - declinedGuests)
+        : rows.filter((row) => row.attending === null).length;
 
-      document.getElementById("rsvp-total").textContent = String(attendingTotal);
-      document.getElementById("rsvp-total-label").textContent = "attending so far";
-      document.getElementById("rsvp-attending-count").textContent = String(attendingCount);
-      document.getElementById("rsvp-declined-count").textContent = String(declinedCount);
-      document.getElementById("rsvp-pending-count").textContent = String(pendingCount);
+      document.getElementById("rsvp-total").textContent = String(attendingGuests);
+      document.getElementById("rsvp-total-label").textContent = "guests attending so far";
+      document.getElementById("rsvp-attending-count").textContent = String(responseCount);
+      document.getElementById("rsvp-declined-count").textContent = String(declinedGuests);
+      document.getElementById("rsvp-pending-count").textContent = String(pendingGuests);
       document.getElementById("rsvp-names-title").textContent = "Guest List";
 
       if (!rows.length) {
@@ -832,14 +837,18 @@
         return;
       }
 
-      const remoteRsvps = await fetchRsvps();
+      const [remoteRsvps, householdConfig] = await Promise.all([
+        fetchRsvps(),
+        fetchHouseholdConfig()
+      ]);
 
       if (remoteRsvps === null) {
         renderRsvpUnavailable();
         return;
       }
 
-      renderRsvpBoard(remoteRsvps);
+      const totalInvitedGuests = householdConfig ? householdConfig.total_invited_guests : null;
+      renderRsvpBoard(remoteRsvps, totalInvitedGuests);
     }
 
     function renderProgress() {
