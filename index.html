@@ -1107,7 +1107,12 @@
     .admin-button:hover,
     .admin-button:focus-visible {
       transform: translateY(-1px);
-      outline: none;
+    }
+
+    .admin-button:focus-visible {
+      outline: 3px solid var(--ink);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
     }
 
     .admin-button:disabled {
@@ -1970,16 +1975,17 @@
     }
 
     function renderAdminTodoCard(todo, options) {
+      const title = escapeHtml(todo.title || "Untitled task");
       const assignee = todo.assignee ? escapeHtml(todo.assignee) : "Unassigned";
       const dueLabel = formatAdminTodoDate(todo.due_date);
       const actionMarkup = options.showComplete
-        ? `<button class="admin-button admin-button--secondary" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}">Complete</button>`
+        ? `<button class="admin-button admin-button--secondary" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Complete ${title}">Complete</button>`
         : "";
 
       return `
         <article class="admin-todo-card">
           <div class="admin-todo-head">
-            <div class="admin-todo-title">${escapeHtml(todo.title || "Untitled task")}</div>
+            <div class="admin-todo-title">${title}</div>
             ${actionMarkup}
           </div>
           <div class="admin-todo-meta">
