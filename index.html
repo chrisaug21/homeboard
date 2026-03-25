@@ -2519,18 +2519,6 @@
       renderAdminMealPlan();
     }
 
-    function upsertAdminMealState(dayOfWeek, mealRecord) {
-      const existingIndex = adminMealPlanRows.findIndex((meal) => meal.dayOfWeek === dayOfWeek);
-
-      if (existingIndex >= 0) {
-        adminMealPlanRows[existingIndex] = mealRecord;
-        return;
-      }
-
-      adminMealPlanRows.push(mealRecord);
-      adminMealPlanRows.sort((left, right) => left.dayOfWeek - right.dayOfWeek);
-    }
-
     async function saveAdminMeal(formData) {
       const client = getSupabaseClient();
 
@@ -2553,18 +2541,25 @@
       const weekStart = formatDateKey(monday);
       const existingMeal = getAdminMealByDay(dayOfWeek);
       let responseError = null;
-      let savedMealId = existingMeal ? existingMeal.id : null;
+      let savedMeal = null;
 
       if (existingMeal) {
-        const { error } = await client
+        const { data, error } = await client
           .from("meal_plan")
           .update({
             meal_name: mealName,
             meal_type: mealType
           })
-          .eq("id", existingMeal.id);
+          .eq("id", existingMeal.id)
+          .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+          .eq("week_start", weekStart)
+          .eq("meal_slot", "dinner")
+          .is("user_id", null)
+          .select("id, day_of_week, meal_name, meal_type, week_start")
+          .maybeSingle();
 
         responseError = error;
+        savedMeal = data;
       } else {
         const { data, error } = await client
           .from("meal_plan")
@@ -2577,11 +2572,11 @@
             meal_name: mealName,
             meal_type: mealType
           })
-          .select("id")
+          .select("id, day_of_week, meal_name, meal_type, week_start")
           .single();
 
         responseError = error;
-        savedMealId = data && data.id ? data.id : null;
+        savedMeal = data;
       }
 
       if (responseError) {
@@ -2590,21 +2585,15 @@
         return;
       }
 
-      if (!savedMealId) {
+      if (!savedMeal) {
         setAdminMealBusyState(false);
-        await loadAdminMealPlan();
+        showToast("Couldn’t save meal. Please try again.");
         return;
       }
 
-      upsertAdminMealState(dayOfWeek, {
-        id: savedMealId,
-        dayOfWeek,
-        mealName,
-        mealType,
-        weekStart
-      });
+      adminSelectedMealDay = dayOfWeek;
+      await loadAdminMealPlan();
       setAdminMealBusyState(false);
-      renderAdminMealPlan();
     }
 
     function setAdminScreen(nextScreen) {
