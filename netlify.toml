@@ -1,9 +1,9 @@
 [build]
-  command = "sed -i \"s|%%SUPABASE_URL%%|${SUPABASE_URL}|g; s|%%SUPABASE_KEY%%|${SUPABASE_KEY}|g\" index.html"
+  command = "sed -i \"s|%%SUPABASE_URL%%|${SUPABASE_URL}|g; s|%%SUPABASE_KEY%%|${SUPABASE_KEY}|g\" js/shared.js"
   publish = "."
 
 [build.environment]
-  SECRETS_SCAN_OMIT_PATHS = "index.html"
+  SECRETS_SCAN_OMIT_PATHS = "js/shared.js"
 
 [[redirects]]
   from = "/admin"
