@@ -31,9 +31,6 @@
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
 
-    const now = new Date();
-    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const RSVP_RETIRE_AFTER_DATE = "2026-10-10";
