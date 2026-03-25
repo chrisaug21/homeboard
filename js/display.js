@@ -64,6 +64,7 @@
     let pointerStartX = null;
     let pointerDeltaX = 0;
     let rsvpScrollId = null;
+    let calendarEventsMap = new Map();
 
     function getScreenCount() {
       return track.children.length;
@@ -310,6 +311,91 @@
       return data.map(mapSupabaseRsvp);
     }
 
+    function buildCalendarEventsMap(items) {
+      const map = new Map();
+
+      items.forEach((item) => {
+        const startRaw = item.start && (item.start.dateTime || item.start.date);
+        const endRaw = item.end && (item.end.dateTime || item.end.date);
+
+        if (!startRaw) {
+          return;
+        }
+
+        const isAllDay = !item.start.dateTime;
+        const title = item.summary || "Untitled event";
+        const time = isAllDay
+          ? "All day"
+          : new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(startRaw));
+
+        // Walk each calendar day the event spans and add it to the map.
+        const start = new Date(isAllDay ? startRaw + "T00:00:00" : startRaw);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(isAllDay ? endRaw + "T00:00:00" : (endRaw || startRaw));
+        end.setHours(0, 0, 0, 0);
+        // Google all-day end dates are exclusive, so step back one day.
+        if (isAllDay) {
+          end.setDate(end.getDate() - 1);
+        }
+
+        const cursor = new Date(start);
+        while (cursor <= end) {
+          const key = formatDateKey(cursor);
+          if (!map.has(key)) {
+            map.set(key, []);
+          }
+          map.get(key).push({ title, time });
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      });
+
+      return map;
+    }
+
+    function extractCalendarCountdowns(items) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const results = [];
+
+      items.forEach((item) => {
+        const summary = item.summary || "";
+        const description = item.description || "";
+        const combinedText = summary + " " + description;
+
+        // Match #countdown optionally followed by a Lucide icon name token.
+        const match = combinedText.match(/#countdown(?:\s+([a-z][a-z0-9-]*))?/i);
+        if (!match) {
+          return;
+        }
+
+        const icon = match[1] ? match[1].toLowerCase() : "calendar";
+        const startRaw = item.start && (item.start.dateTime || item.start.date);
+
+        if (!startRaw) {
+          return;
+        }
+
+        const eventDate = item.start.date || startRaw.slice(0, 10);
+        const days = getDaysUntil(eventDate);
+
+        if (days === null || days < 0) {
+          return;
+        }
+
+        // Strip the #countdown tag (and optional icon token) from the display name.
+        const name = summary.replace(/#countdown(?:\s+[a-z][a-z0-9-]*)?/i, "").trim() || "Upcoming Event";
+
+        results.push({
+          name,
+          icon,
+          days,
+          caption: formatLongDate(eventDate)
+        });
+      });
+
+      return results;
+    }
+
     function renderCalendar() {
       const grid = document.getElementById("calendar-grid");
       const startDate = new Date();
@@ -317,9 +403,12 @@
       const todayKey = new Date().toDateString();
       const fragment = document.createDocumentFragment();
 
-      weekEvents.slice(0, 5).forEach((events, index) => {
+      for (let index = 0; index < 5; index++) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + index);
+        const events = calendarEventsMap.size > 0
+          ? (calendarEventsMap.get(formatDateKey(date)) || [])
+          : (weekEvents[index] || []);
 
         const column = document.createElement("article");
         column.className = "day-column" + (date.toDateString() === todayKey ? " today" : "");
@@ -327,8 +416,8 @@
         const eventsMarkup = events.length
           ? events.map((event) => `
               <div class="event-card">
-                <div class="event-time">${event.time}</div>
-                <div class="event-title">${event.title}</div>
+                <div class="event-time">${escapeHtml(event.time)}</div>
+                <div class="event-title">${escapeHtml(event.title)}</div>
               </div>
             `).join("")
           : '<div class="event-empty">Nothing scheduled</div>';
@@ -341,7 +430,7 @@
         `;
 
         fragment.appendChild(column);
-      });
+      }
 
       grid.replaceChildren(fragment);
     }
@@ -361,7 +450,7 @@
         date.setDate(start.getDate() + index);
         const isToday = date.toDateString() === today.toDateString();
         const isOutsideMonth = date.getMonth() !== today.getMonth();
-        const events = isOutsideMonth ? [] : getCalendarEventsForDate(date).slice(0, 2);
+        const events = isOutsideMonth ? [] : (calendarEventsMap.get(formatDateKey(date)) || []).slice(0, 2);
 
         return `
           <article class="month-day${isToday ? " month-day--today" : ""}${isOutsideMonth ? " month-day--outside" : ""}">
@@ -581,15 +670,49 @@
       reconcileRotationState();
     }
 
-    async function renderCountdownsWithData() {
-      const remoteCountdowns = await fetchCountdowns();
+    async function renderCalendarAndCountdowns() {
+      // Render immediately with hardcoded fallback data so screens aren't blank.
+      renderCalendar();
+      renderMonthCalendar();
 
-      if (remoteCountdowns === null) {
-        renderCountdowns(countdowns);
-        return;
+      // Fetch household config (for Google Cal credentials) and Supabase countdowns concurrently.
+      const [householdConfig, supabaseCountdowns] = await Promise.all([
+        fetchHouseholdConfig(),
+        fetchCountdowns()
+      ]);
+
+      // Attempt to load Google Calendar events if we have a calendar ID.
+      let calendarCountdowns = [];
+
+      if (householdConfig && householdConfig.google_cal_id) {
+        const apiKey = householdConfig.google_cal_key || GOOGLE_CAL_KEY;
+
+        if (apiKey && !apiKey.startsWith("%%")) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          // Cover the month grid start through end-of-month plus 5 days for the week view.
+          const timeMin = getMonthGridStart(today);
+          const timeMax = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          timeMax.setDate(timeMax.getDate() + 5);
+
+          const items = await fetchGoogleCalendarEvents(householdConfig.google_cal_id, apiKey, timeMin, timeMax);
+
+          if (items) {
+            calendarEventsMap = buildCalendarEventsMap(items);
+            calendarCountdowns = extractCalendarCountdowns(items);
+            // Re-render calendar screens now that we have real data.
+            renderCalendar();
+            renderMonthCalendar();
+          }
+        }
       }
 
-      renderCountdowns(remoteCountdowns);
+      // Merge Supabase countdowns with any calendar-derived countdowns, sorted by days remaining.
+      const baseCountdowns = supabaseCountdowns !== null ? supabaseCountdowns : countdowns;
+      const merged = [...baseCountdowns, ...calendarCountdowns]
+        .sort((a, b) => (a.days ?? Infinity) - (b.days ?? Infinity));
+
+      renderCountdowns(merged.length > 0 ? merged : countdowns);
     }
 
     function getRsvpStatusLabel(attending) {
@@ -790,11 +913,9 @@
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
-      renderCalendar();
-      renderMonthCalendar();
+      renderCalendarAndCountdowns();
       renderTodos();
       renderMealsWithData();
-      renderCountdownsWithData();
       renderRsvpBoardWithData();
       updateHeaderTime();
       renderProgress();

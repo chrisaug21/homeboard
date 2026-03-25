@@ -1,5 +1,5 @@
 [build]
-  command = "sed -i \"s|%%SUPABASE_URL%%|${SUPABASE_URL}|g; s|%%SUPABASE_KEY%%|${SUPABASE_KEY}|g\" js/shared.js"
+  command = "sed -i \"s|%%SUPABASE_URL%%|${SUPABASE_URL}|g; s|%%SUPABASE_KEY%%|${SUPABASE_KEY}|g; s|%%GOOGLE_CAL_KEY%%|${GOOGLE_CAL_KEY}|g\" js/shared.js"
   publish = "."
 
 [build.environment]

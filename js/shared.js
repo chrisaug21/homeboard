@@ -1,5 +1,6 @@
     const SUPABASE_URL = '%%SUPABASE_URL%%';
     const SUPABASE_KEY = '%%SUPABASE_KEY%%';
+    const GOOGLE_CAL_KEY = '%%GOOGLE_CAL_KEY%%';
     const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
     const isAdminMode = pathname === "/admin";
     let sb = null;
@@ -185,18 +186,6 @@
       return Math.round((parsedDate - today) / 86400000);
     }
 
-    function getCalendarEventsForDate(date) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const diffInDays = Math.round((date - today) / 86400000);
-
-      if (diffInDays >= 0 && diffInDays < weekEvents.length) {
-        return weekEvents[diffInDays];
-      }
-
-      return [];
-    }
-
     function getMonthGridStart(date) {
       const firstOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
       const start = new Date(firstOfMonth);
@@ -219,6 +208,52 @@
         label: type || "Dinner",
         className: "meal-type--fend-for-yourself"
       };
+    }
+
+    async function fetchHouseholdConfig() {
+      const client = getSupabaseClient();
+
+      if (!client) {
+        return null;
+      }
+
+      const { data, error } = await client
+        .from("households")
+        .select("google_cal_id, google_cal_key")
+        .eq("id", DISPLAY_HOUSEHOLD_ID)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return data;
+    }
+
+    async function fetchGoogleCalendarEvents(calendarId, apiKey, timeMin, timeMax) {
+      try {
+        const params = new URLSearchParams({
+          key: apiKey,
+          timeMin: timeMin.toISOString(),
+          timeMax: timeMax.toISOString(),
+          singleEvents: "true",
+          orderBy: "startTime",
+          maxResults: "250"
+        });
+
+        const response = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`
+        );
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const json = await response.json();
+        return Array.isArray(json.items) ? json.items : null;
+      } catch {
+        return null;
+      }
     }
 
     function registerServiceWorker() {
