@@ -1008,6 +1008,10 @@
       gap: 16px;
     }
 
+    .admin-screen[hidden] {
+      display: none !important;
+    }
+
     .admin-topbar {
       padding: 18px 20px;
       border-radius: 28px;
@@ -2599,6 +2603,7 @@
       adminScreens.forEach((screen) => {
         const isActive = screen.getAttribute("data-admin-screen") === nextScreen;
         screen.hidden = !isActive;
+        screen.classList.toggle("is-active", isActive);
       });
 
       adminNavButtons.forEach((button) => {
