@@ -635,6 +635,11 @@
       color: #ea580c;
     }
 
+    .meal-type--pick-up {
+      background: rgba(217, 119, 6, 0.15);
+      color: #d97706;
+    }
+
     .meal-type--fend-for-yourself {
       background: rgba(107, 114, 128, 0.15);
       color: #6b7280;
@@ -1671,6 +1676,7 @@
                 <option value="hellofresh">HelloFresh</option>
                 <option value="going_out">Going Out</option>
                 <option value="delivery">Delivery</option>
+                <option value="pick_up">Pick Up</option>
                 <option value="fend_for_yourself">Fend for Yourself</option>
                 <option value="date_night">Date Night</option>
               </select>
@@ -1883,6 +1889,10 @@
       delivery: {
         label: "Delivery 🛵",
         className: "meal-type--delivery"
+      },
+      pick_up: {
+        label: "Pick Up 🥡",
+        className: "meal-type--pick-up"
       },
       fend_for_yourself: {
         label: "Fend for Yourself 😅",
