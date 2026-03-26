@@ -118,10 +118,7 @@
       screen.innerHTML = `
         <div class="panel">
           <div class="screen-title-row">
-            <div>
-              <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
-              <h2 class="screen-title">Countdown Board</h2>
-            </div>
+            <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
           </div>
           <div class="countdown-layout">
             <article class="countdown-card">
@@ -208,10 +205,7 @@
       screen.innerHTML = `
         <div class="panel">
           <div class="screen-title-row">
-            <div>
-              <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
-              <h2 class="screen-title">Countdown Board</h2>
-            </div>
+            <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
           </div>
           <div class="countdown-error">
             <i data-lucide="wifi-off"></i>
@@ -810,10 +804,7 @@
         return `
         <div class="panel">
           <div class="screen-title-row">
-            <div>
-              <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
-              <h2 class="screen-title">Countdown Board</h2>
-            </div>
+            <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
           </div>
           <div class="countdown-layout">
             <article class="countdown-card${variantClass}${hasImage ? " countdown-card--photo" : ""}">
