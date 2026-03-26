@@ -158,8 +158,72 @@
       gap: 12px;
     }
 
+    .admin-week-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .admin-week-nav-label {
+      flex: 1;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .admin-week-nav-btn {
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(124, 96, 69, 0.16);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background-color 140ms ease, opacity 140ms ease;
+      font: inherit;
+    }
+
+    .admin-week-nav-btn:disabled {
+      opacity: 0.28;
+      cursor: default;
+    }
+
+    .admin-week-nav-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
     .admin-meal-list {
-      margin-top: 16px;
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-meal-inline-form {
+      border: 1px solid rgba(180, 83, 9, 0.22);
+      border-radius: 20px;
+      padding: 14px;
+      background: rgba(247, 217, 170, 0.14);
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-meal-inline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .admin-meal-inline-cancel {
+      padding: 6px 12px;
+      font-size: 0.82rem;
     }
 
     .admin-meal-card {

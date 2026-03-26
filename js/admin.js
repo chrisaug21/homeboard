@@ -7,15 +7,9 @@
     const adminScreens = Array.from(document.querySelectorAll("[data-admin-screen]"));
     const adminNavButtons = Array.from(document.querySelectorAll("[data-admin-nav]"));
     const adminMealList = document.getElementById("admin-meal-list");
-    const adminMealForm = document.getElementById("admin-meal-form");
     const adminMealWeekLabel = document.getElementById("admin-meal-week-label");
-    const adminMealEditorTitle = document.getElementById("admin-meal-editor-title");
-    const adminMealEditorNote = document.getElementById("admin-meal-editor-note");
-    const adminMealDayOfWeek = document.getElementById("admin-meal-day-of-week");
-    const adminMealName = document.getElementById("admin-meal-name");
-    const adminMealType = document.getElementById("admin-meal-type");
-    const adminMealSubmitButton = document.getElementById("admin-meal-submit-button");
-    const adminMealCancelButton = document.getElementById("admin-meal-cancel-button");
+    const adminWeekPrevBtn = document.getElementById("admin-week-prev");
+    const adminWeekNextBtn = document.getElementById("admin-week-next");
     const toastEl = document.getElementById("toast");
     const adminCountdownForm = document.getElementById("admin-countdown-form");
     const adminCountdownName = document.getElementById("admin-countdown-name");
@@ -32,16 +26,18 @@
     let adminTodoWritePending = false;
     let adminMealWritePending = false;
     let adminScreen = "todos";
-    let adminSelectedMealDay = 0;
+    let adminWeekOffset = 0;
+    let adminCurrentMonday = null;
+    let adminEditingDay = null;
     let adminMealPlanRows = [];
     let adminCountdownWritePending = false;
     let adminCalEvents = [];
     let adminSavedCountdowns = [];
 
-    function populateAdminMealTypeOptions() {
-      adminMealType.innerHTML = mealTypeOptions.map((option) => `
-        <option value="${option.value}">${option.adminLabel}</option>
-      `).join("");
+    function buildMealTypeOptionsHTML(selectedType) {
+      return mealTypeOptions.map((option) =>
+        `<option value="${escapeHtml(option.value)}"${option.value === selectedType ? " selected" : ""}>${escapeHtml(option.adminLabel)}</option>`
+      ).join("");
     }
 
     function formatAdminTodoDate(dueDate) {
@@ -98,11 +94,6 @@
       adminSubmitButton.textContent = isBusy ? "Saving…" : "Add Todo";
     }
 
-    function setAdminMealBusyState(isBusy) {
-      adminMealWritePending = isBusy;
-      adminMealSubmitButton.disabled = isBusy;
-      adminMealSubmitButton.textContent = isBusy ? "Saving…" : "Save Dinner";
-    }
 
     function renderAdminTodoCard(todo, options) {
       const title = escapeHtml(todo.title || "Untitled task");
@@ -249,14 +240,13 @@
       archiveAdminTodo(button.getAttribute("data-todo-id"));
     }
 
-    async function fetchAdminMealPlan() {
+    async function fetchAdminMealPlan(monday) {
       const client = getSupabaseClient();
 
       if (!client) {
         return null;
       }
 
-      const monday = getMonday(new Date());
       const { data, error } = await client
         .from("meal_plan")
         .select("id, day_of_week, meal_name, meal_type, week_start")
@@ -283,57 +273,99 @@
       return adminMealPlanRows.find((meal) => meal.dayOfWeek === dayOfWeek) || null;
     }
 
-    function syncAdminMealForm(dayOfWeek) {
-      adminSelectedMealDay = dayOfWeek;
+    function getAdminWeekMonday() {
       const monday = getMonday(new Date());
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + dayOfWeek);
-      const meal = getAdminMealByDay(dayOfWeek);
+      monday.setDate(monday.getDate() + adminWeekOffset * 7);
+      return monday;
+    }
 
-      adminMealDayOfWeek.value = String(dayOfWeek);
-      adminMealEditorTitle.textContent = `Edit ${new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date)} Dinner`;
-      adminMealEditorNote.textContent = `Shared dinner for ${formatAdminDayLabel(date)}.`;
-      adminMealName.value = meal ? meal.mealName : "";
-      adminMealType.value = meal ? meal.mealType : "cooking";
+    function renderAdminMealCard(index, date, meal) {
+      const dayLabel = escapeHtml(formatAdminDayLabel(date));
+
+      if (adminEditingDay === index) {
+        const currentName = meal ? escapeHtml(meal.mealName) : "";
+        const currentType = meal ? meal.mealType : "cooking";
+
+        return `
+          <form class="admin-meal-inline-form" data-inline-meal-day="${index}">
+            <div class="admin-meal-inline-header">
+              <span class="admin-meal-day">${dayLabel}</span>
+              <button class="admin-button admin-button--secondary admin-meal-inline-cancel" type="button">Cancel</button>
+            </div>
+            <div class="admin-field">
+              <input
+                class="admin-meal-inline-name"
+                name="meal_name"
+                type="text"
+                maxlength="140"
+                placeholder="What\u2019s for dinner?"
+                value="${currentName}"
+                autocomplete="off"
+              >
+            </div>
+            <div class="admin-field">
+              <select name="meal_type">${buildMealTypeOptionsHTML(currentType)}</select>
+            </div>
+            <div class="admin-actions">
+              <button class="admin-button admin-button--primary" type="submit">Save</button>
+            </div>
+          </form>
+        `;
+      }
+
+      const mealType = meal ? getMealTypePresentation(meal.mealType) : null;
+
+      return `
+        <button class="admin-meal-card" type="button" data-admin-meal-day="${index}">
+          <div class="admin-meal-card-top">
+            <div class="admin-meal-day">${dayLabel}</div>
+            <span class="admin-pill admin-pill--due">${escapeHtml(mealType ? mealType.label : "Tap to add")}</span>
+          </div>
+          <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : "No dinner set yet.")}</div>
+        </button>
+      `;
     }
 
     function renderAdminMealPlan() {
-      const monday = getMonday(new Date());
+      const offsetLabels = { "-1": "Last week", "0": "This week", "1": "Next week" };
+      const offsetLabel = offsetLabels[String(adminWeekOffset)] || (adminWeekOffset > 0 ? `+${adminWeekOffset} weeks` : `${adminWeekOffset} weeks`);
+      const sunday = new Date(adminCurrentMonday);
+      sunday.setDate(adminCurrentMonday.getDate() + 6);
+      const fmt = (d) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+      adminMealWeekLabel.textContent = `${offsetLabel} \u00b7 ${fmt(adminCurrentMonday)}\u2013${fmt(sunday)}`;
+      adminWeekPrevBtn.disabled = adminWeekOffset <= -1;
+      adminWeekNextBtn.disabled = adminWeekOffset >= 1;
 
-      adminMealWeekLabel.textContent = `${formatAdminWeekRange(monday)} · Shared dinners only`;
       adminMealList.innerHTML = Array.from({ length: 7 }, (_, index) => {
-        const date = new Date(monday);
-        date.setDate(monday.getDate() + index);
-        const meal = getAdminMealByDay(index);
-        const mealType = meal ? getMealTypePresentation(meal.mealType) : null;
-
-        return `
-          <button
-            class="admin-meal-card${index === adminSelectedMealDay ? " is-selected" : ""}"
-            type="button"
-            data-admin-meal-day="${index}"
-            aria-pressed="${index === adminSelectedMealDay ? "true" : "false"}"
-          >
-            <div class="admin-meal-card-top">
-              <div class="admin-meal-day">${escapeHtml(formatAdminDayLabel(date))}</div>
-              <span class="admin-pill admin-pill--due">${escapeHtml(mealType ? mealType.label : "Tap to add")}</span>
-            </div>
-            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : "No dinner set yet.")}</div>
-          </button>
-        `;
+        const date = new Date(adminCurrentMonday);
+        date.setDate(adminCurrentMonday.getDate() + index);
+        return renderAdminMealCard(index, date, getAdminMealByDay(index));
       }).join("");
 
-      syncAdminMealForm(adminSelectedMealDay);
+      if (adminEditingDay !== null) {
+        const nameInput = adminMealList.querySelector(".admin-meal-inline-name");
+        if (nameInput) {
+          nameInput.focus();
+          nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
+        }
+      }
+
+      refreshIcons();
     }
 
     async function loadAdminMealPlan() {
-      adminMealWeekLabel.textContent = "Loading this week's dinners…";
-      adminMealList.innerHTML = '<div class="admin-empty">Loading this week\u2019s dinners\u2026</div>';
+      adminCurrentMonday = getAdminWeekMonday();
+      adminMealWeekLabel.textContent = "Loading\u2026";
+      adminWeekPrevBtn.disabled = true;
+      adminWeekNextBtn.disabled = true;
+      adminMealList.innerHTML = '<div class="admin-empty">Loading meals\u2026</div>';
 
-      const mealRows = await fetchAdminMealPlan();
+      const mealRows = await fetchAdminMealPlan(adminCurrentMonday);
 
       if (!mealRows) {
-        adminMealWeekLabel.textContent = "Couldn't load this week's dinners.";
+        adminMealWeekLabel.textContent = "Couldn\u2019t load meals.";
+        adminWeekPrevBtn.disabled = adminWeekOffset <= -1;
+        adminWeekNextBtn.disabled = adminWeekOffset >= 1;
         adminMealList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
         return;
       }
@@ -342,26 +374,22 @@
       renderAdminMealPlan();
     }
 
-    async function saveAdminMeal(formData) {
+    async function saveAdminMeal(dayOfWeek, mealName, mealType) {
       const client = getSupabaseClient();
 
-      if (!client) {
-        showToast("Couldn't save meal. Supabase is unavailable.");
+      if (!client || adminMealWritePending) {
+        if (!client) showToast("Couldn\u2019t save meal. Supabase is unavailable.");
         return;
       }
 
-      const dayOfWeek = Number(formData.get("day_of_week"));
-      const mealName = String(formData.get("meal_name") || "").trim();
-      const mealType = normalizeMealType(formData.get("meal_type"));
-
-      if (!mealName || adminMealWritePending) {
-        return;
+      adminMealWritePending = true;
+      const submitBtn = adminMealList.querySelector(`[data-inline-meal-day="${dayOfWeek}"] [type="submit"]`);
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Saving\u2026";
       }
 
-      setAdminMealBusyState(true);
-
-      const monday = getMonday(new Date());
-      const weekStart = formatDateKey(monday);
+      const weekStart = formatDateKey(adminCurrentMonday);
       const existingMeal = getAdminMealByDay(dayOfWeek);
       let responseError = null;
       let savedMeal = null;
@@ -369,10 +397,7 @@
       if (existingMeal) {
         const { data, error } = await client
           .from("meal_plan")
-          .update({
-            meal_name: mealName,
-            meal_type: mealType
-          })
+          .update({ meal_name: mealName, meal_type: mealType })
           .eq("id", existingMeal.id)
           .eq("household_id", DISPLAY_HOUSEHOLD_ID)
           .eq("week_start", weekStart)
@@ -402,21 +427,19 @@
         savedMeal = data;
       }
 
-      if (responseError) {
-        setAdminMealBusyState(false);
-        showToast("Couldn't save meal. Please try again.");
+      adminMealWritePending = false;
+
+      if (responseError || !savedMeal) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Save";
+        }
+        showToast("Couldn\u2019t save meal. Please try again.");
         return;
       }
 
-      if (!savedMeal) {
-        setAdminMealBusyState(false);
-        showToast("Couldn't save meal. Please try again.");
-        return;
-      }
-
-      adminSelectedMealDay = dayOfWeek;
+      adminEditingDay = null;
       await loadAdminMealPlan();
-      setAdminMealBusyState(false);
     }
 
     function setAdminScreen(nextScreen) {
@@ -455,24 +478,49 @@
     }
 
     function handleAdminMealListClick(event) {
-      const button = event.target.closest("[data-admin-meal-day]");
-
-      if (!button) {
+      if (event.target.closest(".admin-meal-inline-cancel")) {
+        adminEditingDay = null;
+        renderAdminMealPlan();
         return;
       }
 
-      syncAdminMealForm(Number(button.getAttribute("data-admin-meal-day")));
-      renderAdminMealPlan();
-      adminMealName.focus();
+      const dayBtn = event.target.closest("[data-admin-meal-day]");
+      if (dayBtn && !event.target.closest("form")) {
+        adminEditingDay = Number(dayBtn.getAttribute("data-admin-meal-day"));
+        renderAdminMealPlan();
+      }
     }
 
-    function handleAdminMealSubmit(event) {
+    function handleAdminMealInlineSubmit(event) {
+      if (!event.target.classList.contains("admin-meal-inline-form")) {
+        return;
+      }
       event.preventDefault();
-      saveAdminMeal(new FormData(event.currentTarget));
+      const form = event.target;
+      const formData = new FormData(form);
+      const dayOfWeek = Number(form.getAttribute("data-inline-meal-day"));
+      const mealName = String(formData.get("meal_name") || "").trim();
+      const mealType = normalizeMealType(formData.get("meal_type"));
+      if (!mealName) {
+        const nameInput = form.querySelector("[name='meal_name']");
+        if (nameInput) nameInput.focus();
+        return;
+      }
+      saveAdminMeal(dayOfWeek, mealName, mealType);
     }
 
-    function handleAdminMealReset() {
-      syncAdminMealForm(adminSelectedMealDay);
+    function handleAdminWeekPrev() {
+      if (adminWeekOffset <= -1) return;
+      adminWeekOffset--;
+      adminEditingDay = null;
+      loadAdminMealPlan();
+    }
+
+    function handleAdminWeekNext() {
+      if (adminWeekOffset >= 1) return;
+      adminWeekOffset++;
+      adminEditingDay = null;
+      loadAdminMealPlan();
     }
 
     async function fetchAdminCalendarEvents() {
@@ -779,13 +827,13 @@
       displayApp.hidden = true;
       adminApp.hidden = false;
       setAdminScreen("todos");
-      populateAdminMealTypeOptions();
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminTodoForm.addEventListener("submit", handleAdminTodoSubmit);
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
       adminMealList.addEventListener("click", handleAdminMealListClick);
-      adminMealForm.addEventListener("submit", handleAdminMealSubmit);
-      adminMealCancelButton.addEventListener("click", handleAdminMealReset);
+      adminMealList.addEventListener("submit", handleAdminMealInlineSubmit);
+      adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
+      adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);
       adminCountdownForm.addEventListener("submit", handleAdminCountdownSubmit);
       adminCountdownClearButton.addEventListener("click", handleAdminCountdownClear);
       adminCalEventList.addEventListener("click", handleAdminCountdownCalListClick);
