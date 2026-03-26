@@ -86,9 +86,7 @@
 </head>
 <body>
   <div class="app-shell" id="display-app">
-    <header class="topbar">
-      <div id="household-name" class="household-name">Homeboard</div>
-    </header>
+    <div id="household-name" class="household-name" aria-hidden="true">Homeboard</div>
 
     <main class="viewport" id="viewport" aria-label="Homeboard display screens">
       <button class="nav-arrow nav-arrow--left" id="nav-left" type="button" aria-label="Previous screen">
@@ -122,7 +120,7 @@
         <section class="screen">
           <div class="panel">
             <div class="screen-title-row">
-              <div class="eyebrow"><i data-lucide="list-todo"></i> Shared Tasks</div>
+              <div class="eyebrow"><i data-lucide="list-todo"></i> To-do List</div>
             </div>
             <div class="todo-layout">
               <div class="todo-list" id="todo-list"></div>
@@ -196,11 +194,9 @@
   </div>
 
   <div class="admin-shell" id="admin-app" hidden>
-    <header class="admin-topbar">
-      <div class="admin-label">Admin Mode</div>
-      <h1 class="admin-title">Household Admin</h1>
-      <p class="admin-subtitle">Manage shared household plans from your phone with quick tabs for todos, meals, countdowns, and settings.</p>
-    </header>
+    <div class="admin-mode-pill">
+      <i data-lucide="settings-2"></i> Admin Mode
+    </div>
 
     <div class="admin-content">
       <section class="admin-screen" id="admin-screen-todos" data-admin-screen="todos">
