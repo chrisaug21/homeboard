@@ -21,35 +21,26 @@
       display: none !important;
     }
 
-    .admin-topbar {
-      padding: 18px 20px;
-      border-radius: 28px;
-      background: rgba(255, 250, 243, 0.78);
-      border: 1px solid rgba(124, 96, 69, 0.12);
-      box-shadow: 0 10px 24px rgba(98, 73, 46, 0.08);
-      backdrop-filter: blur(14px);
-    }
-
-    .admin-label {
-      font-size: 0.82rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+    .admin-mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(180, 83, 9, 0.10);
       color: var(--amber);
+      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      align-self: start;
     }
 
-    .admin-title {
-      margin-top: 8px;
-      font-family: "Fraunces", serif;
-      font-size: 2rem;
-      line-height: 1;
-    }
-
-    .admin-subtitle {
-      margin-top: 10px;
-      font-size: 0.98rem;
-      line-height: 1.4;
-      color: var(--muted);
+    .admin-mode-pill svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
     }
 
     .admin-panel {
@@ -419,18 +410,30 @@
     .admin-nav-button {
       border: 0;
       border-radius: 18px;
-      padding: 10px 6px;
+      padding: 10px 4px;
       background: transparent;
       color: var(--muted);
       display: grid;
       justify-items: center;
-      gap: 6px;
+      align-items: center;
+      gap: 4px;
       font: inherit;
-      font-size: 0.76rem;
+      font-size: 0.72rem;
       font-weight: 800;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.02em;
       cursor: pointer;
+      text-align: center;
+      line-height: 1.2;
+      min-width: 0;
       transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+    }
+
+    .admin-nav-button span {
+      display: block;
+      width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .admin-nav-button:hover,

@@ -3,8 +3,7 @@
     const progressDots = document.getElementById("progress-dots");
     const navLeft = document.getElementById("nav-left");
     const navRight = document.getElementById("nav-right");
-    const clockEl = document.getElementById("clock");
-    const dateEl = document.getElementById("today-date");
+    const householdNameEl = document.getElementById("household-name");
     const monthTitleEl = document.getElementById("month-title");
 
     let currentIndex = 0;
@@ -119,10 +118,7 @@
       screen.innerHTML = `
         <div class="panel">
           <div class="screen-title-row">
-            <div>
-              <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
-              <h2 class="screen-title">Countdown Board</h2>
-            </div>
+            <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
           </div>
           <div class="countdown-layout">
             <article class="countdown-card">
@@ -209,10 +205,7 @@
       screen.innerHTML = `
         <div class="panel">
           <div class="screen-title-row">
-            <div>
-              <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
-              <h2 class="screen-title">Countdown Board</h2>
-            </div>
+            <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
           </div>
           <div class="countdown-error">
             <i data-lucide="wifi-off"></i>
@@ -811,10 +804,7 @@
         return `
         <div class="panel">
           <div class="screen-title-row">
-            <div>
-              <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
-              <h2 class="screen-title">Countdown Board</h2>
-            </div>
+            <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
           </div>
           <div class="countdown-layout">
             <article class="countdown-card${variantClass}${hasImage ? " countdown-card--photo" : ""}">
@@ -903,6 +893,8 @@
 
       cachedHouseholdConfig = householdConfig;
       cachedSupabaseCountdowns = supabaseCountdowns;
+
+      updateHouseholdName(householdConfig);
 
       const calendarLoaded = await refreshCalendarData();
 
@@ -1045,10 +1037,11 @@
       }).join("");
     }
 
-    function updateHeaderTime() {
-      const current = new Date();
-      clockEl.textContent = formatClock(current);
-      dateEl.textContent = formatHeaderDate(current);
+    function updateHouseholdName(config) {
+      const name = config && config.assistant_name && config.assistant_name.trim()
+        ? config.assistant_name.trim()
+        : "Homeboard";
+      if (householdNameEl) householdNameEl.textContent = name;
     }
 
     function goToScreen(index) {
@@ -1128,7 +1121,6 @@
       renderTodos();
       renderMealsWithData();
       renderRsvpBoardWithData();
-      updateHeaderTime();
       renderProgress();
 
       viewport.addEventListener("pointerdown", handlePointerDown, { passive: true });
@@ -1140,7 +1132,6 @@
       navRight.addEventListener("pointerup", () => manualNavigate("next"));
       window.addEventListener("keydown", handleKeydown);
 
-      window.setInterval(updateHeaderTime, 1000);
       window.setInterval(refreshCalendarData, 5 * 60 * 1000);
 
       refreshIcons();
