@@ -19,6 +19,9 @@
       document.head.appendChild(manifestLink);
       if (mode === "admin") {
         document.querySelector('meta[name="theme-color"]').setAttribute("content", "#B45309");
+        var s = document.createElement("style");
+        s.textContent = "#admin-app{display:grid!important}#display-app{display:none!important}html,body{overflow:auto}";
+        document.head.appendChild(s);
       }
     })();
   </script>

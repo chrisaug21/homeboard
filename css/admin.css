@@ -29,7 +29,7 @@
       border-radius: 999px;
       background: rgba(180, 83, 9, 0.10);
       color: var(--amber);
-      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      font-family: "Bricolage Grotesque", Manrope, sans-serif;
       font-size: 0.8rem;
       font-weight: 700;
       letter-spacing: 0.06em;
