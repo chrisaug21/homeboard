@@ -7,6 +7,7 @@
     const adminScreens = Array.from(document.querySelectorAll("[data-admin-screen]"));
     const adminNavButtons = Array.from(document.querySelectorAll("[data-admin-nav]"));
     const adminMealList = document.getElementById("admin-meal-list");
+    const adminMealNoteWrap = document.getElementById("admin-meal-note-wrap");
     const adminMealWeekLabel = document.getElementById("admin-meal-week-label");
     const adminWeekPrevBtn = document.getElementById("admin-week-prev");
     const adminWeekNextBtn = document.getElementById("admin-week-next");
@@ -25,6 +26,8 @@
     let toastTimeoutId = null;
     let adminTodoWritePending = false;
     let adminMealWritePending = false;
+    let adminCurrentNote = "";
+    let adminNoteWritePending = false;
     let adminScreen = "todos";
     let adminWeekOffset = 0;
     let adminCurrentMonday = null;
@@ -353,14 +356,88 @@
       refreshIcons();
     }
 
+    async function fetchAdminMealNote(monday) {
+      const client = getSupabaseClient();
+      if (!client) return "";
+      const { data, error } = await client
+        .from("meal_plan_notes")
+        .select("note")
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("week_start", formatDateKey(monday))
+        .maybeSingle();
+      if (error || !data) return "";
+      return data.note || "";
+    }
+
+    function renderAdminMealNote() {
+      if (!adminMealNoteWrap) return;
+      adminMealNoteWrap.innerHTML = `
+        <div class="admin-field">
+          <label for="admin-meal-note-input">Weekly Note <span style="font-weight:400;color:var(--muted);">(shown on display board)</span></label>
+          <textarea
+            id="admin-meal-note-input"
+            class="admin-meal-note-textarea"
+            maxlength="280"
+            placeholder="Add a note for this week\u2026"
+            rows="3"
+          >${escapeHtml(adminCurrentNote)}</textarea>
+        </div>
+        <div class="admin-actions">
+          <button class="admin-button admin-button--primary" id="admin-meal-note-save-btn" type="button">Save Note</button>
+        </div>
+      `;
+    }
+
+    async function saveAdminMealNote() {
+      if (adminNoteWritePending) return;
+      const textarea = adminMealNoteWrap && adminMealNoteWrap.querySelector("#admin-meal-note-input");
+      if (!textarea) return;
+      const noteText = textarea.value.trim();
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast("Couldn\u2019t save note. Supabase is unavailable.");
+        return;
+      }
+      adminNoteWritePending = true;
+      const saveBtn = adminMealNoteWrap.querySelector("#admin-meal-note-save-btn");
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving\u2026"; }
+
+      const { error } = await client
+        .from("meal_plan_notes")
+        .upsert(
+          { household_id: DISPLAY_HOUSEHOLD_ID, week_start: formatDateKey(adminCurrentMonday), note: noteText },
+          { onConflict: "household_id,week_start" }
+        );
+
+      adminNoteWritePending = false;
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save Note"; }
+
+      if (error) {
+        showToast("Couldn\u2019t save note. Please try again.");
+        return;
+      }
+      adminCurrentNote = noteText;
+      showToast("Note saved.");
+    }
+
+    function handleAdminMealNoteClick(event) {
+      if (event.target.id === "admin-meal-note-save-btn") {
+        saveAdminMealNote();
+      }
+    }
+
     async function loadAdminMealPlan() {
       adminCurrentMonday = getAdminWeekMonday();
       adminMealWeekLabel.textContent = "Loading\u2026";
       adminWeekPrevBtn.disabled = true;
       adminWeekNextBtn.disabled = true;
       adminMealList.innerHTML = '<div class="admin-empty">Loading meals\u2026</div>';
+      if (adminMealNoteWrap) adminMealNoteWrap.innerHTML = "";
 
-      const mealRows = await fetchAdminMealPlan(adminCurrentMonday);
+      const [mealRows, noteText] = await Promise.all([
+        fetchAdminMealPlan(adminCurrentMonday),
+        fetchAdminMealNote(adminCurrentMonday)
+      ]);
 
       if (!mealRows) {
         adminMealWeekLabel.textContent = "Couldn\u2019t load meals.";
@@ -371,7 +448,9 @@
       }
 
       adminMealPlanRows = mealRows;
+      adminCurrentNote = noteText;
       renderAdminMealPlan();
+      renderAdminMealNote();
     }
 
     async function saveAdminMeal(dayOfWeek, mealName, mealType) {
@@ -438,8 +517,25 @@
         return;
       }
 
+      // Update in-memory state so we can re-render without a full reload
+      if (existingMeal) {
+        const rowIdx = adminMealPlanRows.findIndex((m) => m.dayOfWeek === dayOfWeek);
+        if (rowIdx !== -1) {
+          adminMealPlanRows[rowIdx] = { ...adminMealPlanRows[rowIdx], mealName, mealType };
+        }
+      } else {
+        adminMealPlanRows.push({
+          id: savedMeal.id,
+          dayOfWeek,
+          mealName,
+          mealType,
+          weekStart: savedMeal.week_start
+        });
+      }
+
       adminEditingDay = null;
-      await loadAdminMealPlan();
+      renderAdminMealPlan();
+      showToast("Saved!");
     }
 
     function setAdminScreen(nextScreen) {
@@ -832,6 +928,7 @@
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
       adminMealList.addEventListener("click", handleAdminMealListClick);
       adminMealList.addEventListener("submit", handleAdminMealInlineSubmit);
+      if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
       adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);
       adminCountdownForm.addEventListener("submit", handleAdminCountdownSubmit);

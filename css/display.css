@@ -458,15 +458,16 @@
     }
 
     .meal-card {
-      padding: 8px 10px;
+      padding: 12px 10px;
       border-radius: var(--radius-md);
       background: rgba(255, 255, 255, 0.56);
       border: 1px solid rgba(124, 96, 69, 0.12);
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      min-height: 0;
+      align-items: center;
       justify-content: space-between;
+      text-align: center;
+      min-height: 0;
       overflow: hidden;
     }
 
@@ -475,15 +476,8 @@
       border-color: rgba(180, 83, 9, 0.22);
     }
 
-    .meal-card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
     .meal-day {
-      font-size: 0.82rem;
+      font-size: 0.72rem;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -491,26 +485,27 @@
     }
 
     .meal-name {
-      font-family: Manrope, sans-serif;
-      font-size: 1.05rem;
-      font-weight: 800;
+      font-family: Bricolage Grotesque, sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
       line-height: 1.25;
       overflow: hidden;
       display: -webkit-box;
-      -webkit-line-clamp: 2;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
-      text-align: center;
-      align-self: center;
-      max-width: 20ch;
       color: var(--ink);
+      padding: 4px 0;
     }
 
     .meal-type {
-      padding: 8px 12px;
+      padding: 5px 10px;
       border-radius: 999px;
-      font-size: 0.84rem;
+      font-size: 0.72rem;
       font-weight: 800;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     .meal-type--cooking {
@@ -548,8 +543,52 @@
       color: #be185d;
     }
 
-    .meal-card--wide {
-      grid-column: 1 / -1;
+    .meal-note-card {
+      border-radius: var(--radius-md);
+      background: rgba(247, 217, 170, 0.18);
+      border: 1px solid rgba(180, 83, 9, 0.16);
+      padding: 12px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .meal-note-card--empty {
+      background: transparent;
+      border-style: dashed;
+      border-color: rgba(124, 96, 69, 0.14);
+    }
+
+    .meal-note-label {
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--amber);
+    }
+
+    .meal-note-card--empty .meal-note-label {
+      opacity: 0.4;
+    }
+
+    .meal-note-text {
+      font-size: 0.88rem;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--ink);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+    }
+
+    .meal-note-empty {
+      font-size: 0.8rem;
+      color: var(--muted);
+      opacity: 0.5;
+      font-style: italic;
     }
 
     .countdown-layout {

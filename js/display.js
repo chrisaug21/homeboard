@@ -97,15 +97,15 @@
 
     function renderMealSkeleton() {
       const grid = document.getElementById("meal-grid");
-      grid.innerHTML = Array.from({ length: 7 }, (_, i) => `
-        <article class="meal-card${i === 6 ? " meal-card--wide" : ""}">
-          <div class="meal-card-top">
-            <div class="sk" style="width:40%;height:11px;"></div>
-            <div class="sk" style="width:58px;height:20px;border-radius:20px;"></div>
-          </div>
-          <div class="sk" style="width:76%;height:15px;margin-top:8px;"></div>
+      const skMealCard = `
+        <article class="meal-card">
+          <div class="sk" style="width:55%;height:11px;"></div>
+          <div class="sk" style="width:72%;height:15px;"></div>
+          <div class="sk" style="width:58px;height:20px;border-radius:20px;"></div>
         </article>
-      `).join("");
+      `;
+      grid.innerHTML = Array.from({ length: 7 }, () => skMealCard).join("") +
+        `<article class="meal-note-card meal-note-card--empty"></article>`;
     }
 
     function renderCountdownSkeleton() {
@@ -418,6 +418,20 @@
       }
 
       return data.map(mapSupabaseMeal);
+    }
+
+    async function fetchWeeklyNote() {
+      const client = getSupabaseClient();
+      if (!client) return "";
+      const monday = getMonday(new Date());
+      const { data, error } = await client
+        .from("meal_plan_notes")
+        .select("note")
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("week_start", formatDateKey(monday))
+        .maybeSingle();
+      if (error || !data) return "";
+      return data.note || "";
     }
 
     function mapSupabaseCountdown(countdown) {
@@ -733,7 +747,7 @@
       refreshIcons();
     }
 
-    function renderMeals(mealItems) {
+    function renderMeals(mealItems, weeklyNote) {
       const mealGrid = document.getElementById("meal-grid");
       const monday = getMonday(new Date());
       const todayKey = new Date().toDateString();
@@ -743,31 +757,44 @@
         mealsByDay.set(meal.dayOfWeek, meal);
       });
 
-      mealGrid.innerHTML = Array.from({ length: 7 }, (_, index) => {
+      const mealCards = Array.from({ length: 7 }, (_, index) => {
         const date = new Date(monday);
         date.setDate(monday.getDate() + index);
         const isToday = date.toDateString() === todayKey;
-        const isWide = index === 6;
         const meal = mealsByDay.get(index);
         const mealType = meal ? getMealTypePresentation(meal.type) : null;
-        const mealName = meal ? meal.name : "—";
+        const mealName = meal ? meal.name : "\u2014";
 
         return `
-          <article class="meal-card${isToday ? " today" : ""}${isWide ? " meal-card--wide" : ""}">
-            <div class="meal-card-top">
-              <div class="meal-day">${formatCalendarLabel(date).toUpperCase()}</div>
-              <div class="meal-type ${mealType ? mealType.className : "meal-type--fend-for-yourself"}">${escapeHtml(mealType ? mealType.label : "Open Slot")}</div>
-            </div>
+          <article class="meal-card${isToday ? " today" : ""}">
+            <div class="meal-day">${escapeHtml(formatCalendarLabel(date))}</div>
             <div class="meal-name">${escapeHtml(mealName)}</div>
+            <div class="meal-type ${mealType ? mealType.className : "meal-type--fend-for-yourself"}">${escapeHtml(mealType ? mealType.label : "Open")}</div>
           </article>
         `;
-      }).join("");
+      });
+
+      const noteCard = weeklyNote
+        ? `
+          <article class="meal-note-card">
+            <div class="meal-note-label">This Week</div>
+            <div class="meal-note-text">${escapeHtml(weeklyNote)}</div>
+          </article>
+        `
+        : `
+          <article class="meal-note-card meal-note-card--empty">
+            <div class="meal-note-label">This Week</div>
+            <div class="meal-note-empty">No note this week</div>
+          </article>
+        `;
+
+      mealGrid.innerHTML = mealCards.join("") + noteCard;
     }
 
     async function renderMealsWithData() {
       markPending("meals");
       renderMealSkeleton();
-      const remoteMeals = await fetchMeals();
+      const [remoteMeals, weeklyNote] = await Promise.all([fetchMeals(), fetchWeeklyNote()]);
       if (remoteMeals === null) {
         renderScreenError(
           document.getElementById("meal-grid"),
@@ -775,7 +802,7 @@
           renderMealsWithData
         );
       } else {
-        renderMeals(remoteMeals);
+        renderMeals(remoteMeals, weeklyNote || "");
       }
       resolveScreen("meals");
     }
@@ -1046,6 +1073,25 @@
 
     function goToScreen(index) {
       const screenCount = getScreenCount();
+      const isForwardWrap = index >= screenCount;
+      const isBackwardWrap = index < 0;
+
+      if (isForwardWrap) {
+        // Teleport track to appear one screen to the right of the first screen,
+        // then animate forward (left) into it — so wrap feels like a continuation.
+        track.style.transition = "none";
+        track.style.transform = "translateX(100%)";
+        void track.getBoundingClientRect();
+        track.style.transition = "";
+      } else if (isBackwardWrap) {
+        // Teleport track to appear one screen to the left of the last screen,
+        // then animate backward (right) into it.
+        track.style.transition = "none";
+        track.style.transform = "translateX(-" + (screenCount * 100) + "%)";
+        void track.getBoundingClientRect();
+        track.style.transition = "";
+      }
+
       currentIndex = (index + screenCount) % screenCount;
       track.style.transform = "translateX(-" + (currentIndex * 100) + "%)";
       renderProgress();

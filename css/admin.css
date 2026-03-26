@@ -226,6 +226,35 @@
       font-size: 0.82rem;
     }
 
+    .admin-meal-note-wrap {
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .admin-meal-note-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(124, 96, 69, 0.22);
+      background: rgba(255, 255, 255, 0.9);
+      font-family: Manrope, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--ink);
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .admin-meal-note-textarea:focus {
+      outline: none;
+      border-color: var(--amber);
+    }
+
     .admin-meal-card {
       width: 100%;
       border: 1px solid rgba(124, 96, 69, 0.12);
