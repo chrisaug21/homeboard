@@ -7,63 +7,243 @@
     const dateEl = document.getElementById("today-date");
     const monthTitleEl = document.getElementById("month-title");
 
-    const weekEvents = [
-      [
-        { title: "Gym", time: "7:00 am" },
-        { title: "Team standup", time: "9:30 am" }
-      ],
-      [
-        { title: "Dentist", time: "2:00 pm" }
-      ],
-      [
-        { title: "Dinner with Sarah", time: "7:00 pm" }
-      ],
-      [
-        { title: "Vet appointment", time: "11:00 am" },
-        { title: "Soccer practice", time: "5:30 pm" }
-      ],
-      [
-        { title: "Date night", time: "7:30 pm" }
-      ],
-      [
-        { title: "Farmers market", time: "9:00 am" },
-        { title: "Movie night", time: "8:00 pm" }
-      ],
-      [
-        { title: "Meal prep", time: "4:00 pm" }
-      ]
-    ];
-
-    const todos = [
-      { title: "Pick up dry cleaning", assignee: "Chris", meta: "Due today before 6pm", badge: "Due Today" },
-      { title: "Order more dishwasher pods", assignee: "Shared", meta: "Shared task", badge: "Household" },
-      { title: "Call pediatrician", assignee: "Bailey", meta: "This week", badge: "Assigned" },
-      { title: "Set out recycling bins", assignee: "Shared", meta: "Thursday night", badge: "Routine" },
-      { title: "Book dog groomer", assignee: "", meta: "No due date", badge: "Unassigned" }
-    ];
-
-    const meals = [
-      { name: "Pesto chicken bowls", type: "Cooking" },
-      { name: "HelloFresh meatball subs", type: "HelloFresh" },
-      { name: "Sushi downtown", type: "Going out" },
-      { name: "Pad thai and spring rolls", type: "Delivery" },
-      { name: "Steak frites at Leon's", type: "Date night" },
-      { name: "Leftover grain bowls", type: "Fend for yourself" },
-      { name: "Roast salmon with potatoes", type: "Cooking" }
-    ];
-
-    const countdowns = [
-      { name: "Vacation to Portugal", icon: "plane", days: 47, caption: "Leaves on May 8", image_url: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=400" },
-      { name: "Hozier concert", icon: "music-4", days: 12, caption: "Saturday night at 8pm" },
-      { name: "Wedding", icon: "gem", days: 201, caption: "October 9 countdown" },
-      { name: "Lake weekend", icon: "trees", days: 33, caption: "Cabin key pickup on Friday" }
-    ];
-
     let currentIndex = 0;
     let autoRotateId = null;
     let pointerStartX = null;
     let pointerDeltaX = 0;
     let rsvpScrollId = null;
+    let calendarEventsMap = new Map();
+    let cachedHouseholdConfig = null;
+    let cachedSupabaseCountdowns = null;
+    let cachedCalendarCountdowns = [];
+    let initialLoadComplete = false;
+    const pendingScreens = new Set();
+
+    function markPending(screenId) {
+      pendingScreens.add(screenId);
+    }
+
+    function resolveScreen(screenId) {
+      pendingScreens.delete(screenId);
+      if (!initialLoadComplete && pendingScreens.size === 0) {
+        initialLoadComplete = true;
+        resetAutoRotate();
+      }
+    }
+
+    function renderScreenError(containerEl, label, retryFn) {
+      containerEl.innerHTML = `
+        <div class="screen-error">
+          <i data-lucide="wifi-off"></i>
+          <p class="screen-error-msg">${escapeHtml(label)}</p>
+          <button class="screen-error-retry" type="button">Tap to retry</button>
+        </div>
+      `;
+      refreshIcons();
+      containerEl.querySelector(".screen-error-retry").addEventListener("click", retryFn);
+    }
+
+    function renderCalendarSkeleton() {
+      const grid = document.getElementById("calendar-grid");
+      const skCol = () => `
+        <article class="day-column">
+          <div class="day-header"><div class="sk" style="width:70%;height:13px;"></div></div>
+          <div class="event-list">
+            <div class="event-card">
+              <div class="sk" style="width:38%;height:11px;margin-bottom:5px;"></div>
+              <div class="sk" style="width:82%;height:13px;"></div>
+            </div>
+            <div class="event-card">
+              <div class="sk" style="width:32%;height:11px;margin-bottom:5px;"></div>
+              <div class="sk" style="width:66%;height:13px;"></div>
+            </div>
+          </div>
+        </article>
+      `;
+      grid.innerHTML = Array.from({ length: 5 }, skCol).join("");
+    }
+
+    function renderMonthCalendarSkeleton() {
+      const weekdaysEl = document.getElementById("month-weekdays");
+      const monthGridEl = document.getElementById("month-grid");
+      const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      monthTitleEl.textContent = formatMonthYear(new Date());
+      weekdaysEl.innerHTML = weekdayNames.map((n) => `<div class="month-weekday">${n}</div>`).join("");
+      monthGridEl.innerHTML = Array.from({ length: 35 }, () => `
+        <article class="month-day">
+          <div class="sk" style="width:18px;height:13px;border-radius:4px;"></div>
+        </article>
+      `).join("");
+    }
+
+    function renderTodoSkeleton() {
+      const list = document.getElementById("todo-list");
+      const skRow = () => `
+        <article class="todo-card">
+          <div class="todo-check" aria-hidden="true"></div>
+          <div class="todo-copy">
+            <div class="sk" style="width:70%;height:14px;margin-bottom:6px;"></div>
+            <div class="sk" style="width:44%;height:11px;"></div>
+          </div>
+          <div></div>
+          <div class="sk" style="width:60px;height:22px;border-radius:20px;"></div>
+        </article>
+      `;
+      list.innerHTML = Array.from({ length: 4 }, skRow).join("");
+      document.getElementById("todo-open-count").textContent = "\u2026";
+      document.getElementById("todo-next-up").textContent = "\u2026";
+      document.getElementById("todo-next-text").textContent = "";
+    }
+
+    function renderMealSkeleton() {
+      const grid = document.getElementById("meal-grid");
+      grid.innerHTML = Array.from({ length: 7 }, (_, i) => `
+        <article class="meal-card${i === 6 ? " meal-card--wide" : ""}">
+          <div class="meal-card-top">
+            <div class="sk" style="width:40%;height:11px;"></div>
+            <div class="sk" style="width:58px;height:20px;border-radius:20px;"></div>
+          </div>
+          <div class="sk" style="width:76%;height:15px;margin-top:8px;"></div>
+        </article>
+      `).join("");
+    }
+
+    function renderCountdownSkeleton() {
+      const screen = document.querySelector(".countdown-screen");
+
+      if (!screen) {
+        return;
+      }
+
+      screen.innerHTML = `
+        <div class="panel">
+          <div class="screen-title-row">
+            <div>
+              <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
+              <h2 class="screen-title">Countdown Board</h2>
+            </div>
+          </div>
+          <div class="countdown-layout">
+            <article class="countdown-card">
+              <div class="countdown-copy">
+                <div class="sk" style="width:96px;height:96px;border-radius:28px;margin:0 auto 20px;"></div>
+                <div class="sk" style="width:55%;height:22px;margin:0 auto 16px;"></div>
+                <div class="sk" style="width:30%;height:72px;margin:0 auto 14px;border-radius:12px;"></div>
+                <div class="sk" style="width:42%;height:14px;margin:0 auto;"></div>
+              </div>
+            </article>
+          </div>
+        </div>
+      `;
+      refreshIcons();
+    }
+
+    function renderRsvpSkeleton() {
+      stopRsvpAutoScroll();
+      const sk = (w, h, extra = "") =>
+        `<span class="sk" style="width:${w};height:${h}px;display:inline-block;${extra}"></span>`;
+      const skPill = () =>
+        `<div class="name-pill"><span class="sk" style="width:60%;height:14px;"></span></div>`;
+
+      document.getElementById("rsvp-total").innerHTML = sk("80px", 52, "border-radius:10px;");
+      document.getElementById("rsvp-total-label").innerHTML = sk("130px", 12, "margin-top:6px;");
+      document.getElementById("rsvp-attending-count").innerHTML = sk("38px", 20);
+      document.getElementById("rsvp-declined-count").innerHTML = sk("38px", 20);
+      document.getElementById("rsvp-pending-count").innerHTML = sk("38px", 20);
+      document.getElementById("rsvp-names-title").innerHTML = sk("90px", 14);
+      document.getElementById("rsvp-names").innerHTML = Array.from({ length: 8 }, skPill).join("");
+    }
+
+    async function retryCalendar() {
+      renderCalendarSkeleton();
+      renderMonthCalendarSkeleton();
+      const loaded = await refreshCalendarData();
+      if (!loaded) {
+        renderCalendarError();
+      }
+    }
+
+    function renderCalendarError() {
+      renderScreenError(
+        document.getElementById("calendar-grid"),
+        "Couldn't load calendar \u2014 tap to retry",
+        retryCalendar
+      );
+      renderScreenError(
+        document.getElementById("month-grid"),
+        "Couldn't load calendar \u2014 tap to retry",
+        retryCalendar
+      );
+    }
+
+    async function retryCountdowns() {
+      renderCountdownSkeleton();
+      const newSupabaseCountdowns = await fetchCountdowns();
+      await refreshCalendarData();
+
+      if (newSupabaseCountdowns !== null) {
+        cachedSupabaseCountdowns = newSupabaseCountdowns;
+      }
+
+      const base = cachedSupabaseCountdowns !== null ? cachedSupabaseCountdowns : [];
+      const merged = [...base, ...cachedCalendarCountdowns]
+        .sort((a, b) => (a.days ?? Infinity) - (b.days ?? Infinity));
+
+      if (merged.length > 0) {
+        renderCountdowns(merged);
+      } else if (cachedSupabaseCountdowns !== null) {
+        renderCountdowns([]);
+      } else {
+        renderCountdownError();
+      }
+    }
+
+    function renderCountdownError() {
+      const screen = document.querySelector(".countdown-screen");
+
+      if (!screen) {
+        return;
+      }
+
+      screen.innerHTML = `
+        <div class="panel">
+          <div class="screen-title-row">
+            <div>
+              <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
+              <h2 class="screen-title">Countdown Board</h2>
+            </div>
+          </div>
+          <div class="countdown-error">
+            <i data-lucide="wifi-off"></i>
+            <p class="screen-error-msg">Couldn't load countdowns \u2014 tap to retry</p>
+            <button class="screen-error-retry" type="button">Tap to retry</button>
+          </div>
+        </div>
+      `;
+      refreshIcons();
+      screen.querySelector(".screen-error-retry").addEventListener("click", retryCountdowns);
+    }
+
+    function renderRsvpError() {
+      stopRsvpAutoScroll();
+      document.getElementById("rsvp-total").textContent = "\u2014";
+      document.getElementById("rsvp-total-label").textContent = "";
+      document.getElementById("rsvp-attending-count").textContent = "\u2014";
+      document.getElementById("rsvp-declined-count").textContent = "\u2014";
+      document.getElementById("rsvp-pending-count").textContent = "\u2014";
+      document.getElementById("rsvp-names-title").textContent = "";
+      const list = document.getElementById("rsvp-names");
+      list.innerHTML = `
+        <div class="screen-error">
+          <i data-lucide="wifi-off"></i>
+          <p class="screen-error-msg">Couldn't load RSVP data \u2014 tap to retry</p>
+          <button class="screen-error-retry" type="button">Tap to retry</button>
+        </div>
+      `;
+      refreshIcons();
+      list.querySelector(".screen-error-retry").addEventListener("click", renderRsvpBoardWithData);
+    }
 
     function getScreenCount() {
       return track.children.length;
@@ -310,6 +490,91 @@
       return data.map(mapSupabaseRsvp);
     }
 
+    function buildCalendarEventsMap(items) {
+      const map = new Map();
+
+      items.forEach((item) => {
+        const startRaw = item.start && (item.start.dateTime || item.start.date);
+        const endRaw = item.end && (item.end.dateTime || item.end.date);
+
+        if (!startRaw) {
+          return;
+        }
+
+        const isAllDay = !item.start.dateTime;
+        const title = item.summary || "Untitled event";
+        const time = isAllDay
+          ? "All day"
+          : new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(startRaw));
+
+        // Walk each calendar day the event spans and add it to the map.
+        const start = new Date(isAllDay ? startRaw + "T00:00:00" : startRaw);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(isAllDay ? endRaw + "T00:00:00" : (endRaw || startRaw));
+        end.setHours(0, 0, 0, 0);
+        // Google all-day end dates are exclusive, so step back one day.
+        if (isAllDay) {
+          end.setDate(end.getDate() - 1);
+        }
+
+        const cursor = new Date(start);
+        while (cursor <= end) {
+          const key = formatDateKey(cursor);
+          if (!map.has(key)) {
+            map.set(key, []);
+          }
+          map.get(key).push({ title, time });
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      });
+
+      return map;
+    }
+
+    function extractCalendarCountdowns(items) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const results = [];
+
+      items.forEach((item) => {
+        const summary = item.summary || "";
+        const description = item.description || "";
+        const combinedText = summary + " " + description;
+
+        // Match #countdown optionally followed by a Lucide icon name token.
+        const match = combinedText.match(/#countdown(?:\s+([a-z][a-z0-9-]*))?/i);
+        if (!match) {
+          return;
+        }
+
+        const icon = match[1] ? match[1].toLowerCase() : "calendar";
+        const startRaw = item.start && (item.start.dateTime || item.start.date);
+
+        if (!startRaw) {
+          return;
+        }
+
+        const eventDate = item.start.date || startRaw.slice(0, 10);
+        const days = getDaysUntil(eventDate);
+
+        if (days === null || days < 0) {
+          return;
+        }
+
+        // Strip the #countdown tag (and optional icon token) from the display name.
+        const name = summary.replace(/#countdown(?:\s+[a-z][a-z0-9-]*)?/i, "").trim() || "Upcoming Event";
+
+        results.push({
+          name,
+          icon,
+          days,
+          caption: formatLongDate(eventDate)
+        });
+      });
+
+      return results;
+    }
+
     function renderCalendar() {
       const grid = document.getElementById("calendar-grid");
       const startDate = new Date();
@@ -317,9 +582,10 @@
       const todayKey = new Date().toDateString();
       const fragment = document.createDocumentFragment();
 
-      weekEvents.slice(0, 5).forEach((events, index) => {
+      for (let index = 0; index < 5; index++) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + index);
+        const events = calendarEventsMap.get(formatDateKey(date)) || [];
 
         const column = document.createElement("article");
         column.className = "day-column" + (date.toDateString() === todayKey ? " today" : "");
@@ -327,8 +593,8 @@
         const eventsMarkup = events.length
           ? events.map((event) => `
               <div class="event-card">
-                <div class="event-time">${event.time}</div>
-                <div class="event-title">${event.title}</div>
+                <div class="event-time">${escapeHtml(event.time)}</div>
+                <div class="event-title">${escapeHtml(event.title)}</div>
               </div>
             `).join("")
           : '<div class="event-empty">Nothing scheduled</div>';
@@ -341,7 +607,7 @@
         `;
 
         fragment.appendChild(column);
-      });
+      }
 
       grid.replaceChildren(fragment);
     }
@@ -361,7 +627,7 @@
         date.setDate(start.getDate() + index);
         const isToday = date.toDateString() === today.toDateString();
         const isOutsideMonth = date.getMonth() !== today.getMonth();
-        const events = isOutsideMonth ? [] : getCalendarEventsForDate(date).slice(0, 2);
+        const events = isOutsideMonth ? [] : (calendarEventsMap.get(formatDateKey(date)) || []).slice(0, 2);
 
         return `
           <article class="month-day${isToday ? " month-day--today" : ""}${isOutsideMonth ? " month-day--outside" : ""}">
@@ -377,24 +643,22 @@
     }
 
     async function renderTodos() {
-      const list = document.getElementById("todo-list");
-      list.innerHTML = `
-        <article class="todo-card">
-          <div class="todo-check" aria-hidden="true"></div>
-          <div class="todo-copy">
-            <div class="todo-title">Loading tasks...</div>
-            <div class="todo-meta">Syncing the latest household to-dos.</div>
-          </div>
-          <div></div>
-          <div class="todo-badge">Loading</div>
-        </article>
-      `;
-      document.getElementById("todo-open-count").textContent = "…";
-      document.getElementById("todo-next-up").textContent = "Syncing";
-      document.getElementById("todo-next-text").textContent = "Checking Supabase for the latest open tasks.";
-
+      markPending("todos");
+      renderTodoSkeleton();
       const remoteTodos = await fetchTodos();
-      renderTodoItems(remoteTodos || todos);
+      if (remoteTodos === null) {
+        renderScreenError(
+          document.getElementById("todo-list"),
+          "Couldn't load tasks \u2014 tap to retry",
+          renderTodos
+        );
+        document.getElementById("todo-open-count").textContent = "\u2014";
+        document.getElementById("todo-next-up").textContent = "\u2014";
+        document.getElementById("todo-next-text").textContent = "";
+      } else {
+        renderTodoItems(remoteTodos);
+      }
+      resolveScreen("todos");
     }
 
     function refreshIcons() {
@@ -508,18 +772,19 @@
     }
 
     async function renderMealsWithData() {
+      markPending("meals");
+      renderMealSkeleton();
       const remoteMeals = await fetchMeals();
-
       if (remoteMeals === null) {
-        renderMeals(meals.map((meal, index) => ({
-          dayOfWeek: index,
-          name: meal.name,
-          type: meal.type
-        })));
-        return;
+        renderScreenError(
+          document.getElementById("meal-grid"),
+          "Couldn't load meal plan \u2014 tap to retry",
+          renderMealsWithData
+        );
+      } else {
+        renderMeals(remoteMeals);
       }
-
-      renderMeals(remoteMeals);
+      resolveScreen("meals");
     }
 
     function renderCountdowns(countdownItems) {
@@ -581,15 +846,85 @@
       reconcileRotationState();
     }
 
-    async function renderCountdownsWithData() {
-      const remoteCountdowns = await fetchCountdowns();
-
-      if (remoteCountdowns === null) {
-        renderCountdowns(countdowns);
-        return;
+    async function refreshCalendarData() {
+      if (!cachedHouseholdConfig || !cachedHouseholdConfig.google_cal_id) {
+        return false;
       }
 
-      renderCountdowns(remoteCountdowns);
+      const apiKey = cachedHouseholdConfig.google_cal_key || GOOGLE_CAL_KEY;
+
+      if (!apiKey || apiKey.startsWith("%%")) {
+        return false;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const timeMin = getMonthGridStart(today);
+      const timeMax = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      timeMax.setDate(timeMax.getDate() + 5);
+
+      const items = await fetchGoogleCalendarEvents(cachedHouseholdConfig.google_cal_id, apiKey, timeMin, timeMax);
+
+      if (!items) {
+        return false;
+      }
+
+      calendarEventsMap = buildCalendarEventsMap(items);
+      cachedCalendarCountdowns = extractCalendarCountdowns(items);
+
+      renderCalendar();
+      renderMonthCalendar();
+
+      const base = cachedSupabaseCountdowns !== null ? cachedSupabaseCountdowns : [];
+      const merged = [...base, ...cachedCalendarCountdowns]
+        .sort((a, b) => (a.days ?? Infinity) - (b.days ?? Infinity));
+
+      if (merged.length > 0) {
+        renderCountdowns(merged);
+      } else if (cachedSupabaseCountdowns !== null) {
+        // Both sources loaded but found no countdowns — remove the screen.
+        renderCountdowns([]);
+      }
+
+      return true;
+    }
+
+    async function renderCalendarAndCountdowns() {
+      renderCalendarSkeleton();
+      renderMonthCalendarSkeleton();
+      renderCountdownSkeleton();
+      markPending("calendar");
+      markPending("countdowns");
+
+      const [householdConfig, supabaseCountdowns] = await Promise.all([
+        fetchHouseholdConfig(),
+        fetchCountdowns()
+      ]);
+
+      cachedHouseholdConfig = householdConfig;
+      cachedSupabaseCountdowns = supabaseCountdowns;
+
+      const calendarLoaded = await refreshCalendarData();
+
+      if (!calendarLoaded) {
+        renderCalendarError();
+      }
+      resolveScreen("calendar");
+
+      // refreshCalendarData renders countdowns when it succeeds.
+      // Handle the case where Google Cal didn't load.
+      if (!calendarLoaded) {
+        if (supabaseCountdowns !== null && supabaseCountdowns.length > 0) {
+          renderCountdowns(supabaseCountdowns);
+        } else if (supabaseCountdowns === null) {
+          // Both data sources failed — show error on countdown screen.
+          renderCountdownError();
+        } else {
+          // Both succeeded but found no countdowns — remove the screen.
+          renderCountdowns([]);
+        }
+      }
+      resolveScreen("countdowns");
     }
 
     function getRsvpStatusLabel(attending) {
@@ -633,36 +968,25 @@
       }
     }
 
-    function renderRsvpUnavailable() {
+    function renderRsvpBoard(rows, totalInvitedGuests) {
       const list = document.getElementById("rsvp-names");
-      stopRsvpAutoScroll();
-      document.getElementById("rsvp-total").textContent = "—";
-      document.getElementById("rsvp-total-label").textContent = "RSVP data unavailable";
-      document.getElementById("rsvp-attending-count").textContent = "—";
-      document.getElementById("rsvp-declined-count").textContent = "—";
-      document.getElementById("rsvp-pending-count").textContent = "—";
-      document.getElementById("rsvp-names-title").textContent = "Guest List";
-      list.innerHTML = `
-        <div class="name-pill name-pill--pending">
-          <span>RSVP data unavailable</span>
-        </div>
-      `;
-    }
-
-    function renderRsvpBoard(rows) {
-      const list = document.getElementById("rsvp-names");
-      const attendingTotal = rows
+      const attendingGuests = rows
         .filter((row) => row.attending === true)
         .reduce((sum, row) => sum + row.guestCount, 0);
-      const attendingCount = rows.filter((row) => row.attending === true).length;
-      const declinedCount = rows.filter((row) => row.attending === false).length;
-      const pendingCount = rows.filter((row) => row.attending === null).length;
+      const responseCount = rows.filter((row) => row.attending === true).length;
+      const declinedGuests = rows
+        .filter((row) => row.attending === false)
+        .reduce((sum, row) => sum + row.guestCount, 0);
+      const invitedTotal = Number(totalInvitedGuests) || 0;
+      const pendingGuests = invitedTotal > 0
+        ? Math.max(0, invitedTotal - attendingGuests - declinedGuests)
+        : rows.filter((row) => row.attending === null).length;
 
-      document.getElementById("rsvp-total").textContent = String(attendingTotal);
-      document.getElementById("rsvp-total-label").textContent = "attending so far";
-      document.getElementById("rsvp-attending-count").textContent = String(attendingCount);
-      document.getElementById("rsvp-declined-count").textContent = String(declinedCount);
-      document.getElementById("rsvp-pending-count").textContent = String(pendingCount);
+      document.getElementById("rsvp-total").textContent = String(attendingGuests);
+      document.getElementById("rsvp-total-label").textContent = "guests attending so far";
+      document.getElementById("rsvp-attending-count").textContent = String(responseCount);
+      document.getElementById("rsvp-declined-count").textContent = String(declinedGuests);
+      document.getElementById("rsvp-pending-count").textContent = String(pendingGuests);
       document.getElementById("rsvp-names-title").textContent = "Guest List";
 
       if (!rows.length) {
@@ -687,19 +1011,29 @@
     }
 
     async function renderRsvpBoardWithData() {
+      markPending("rsvp");
+
       if (shouldHideRsvpScreen()) {
         removeRsvpScreen();
+        resolveScreen("rsvp");
         return;
       }
 
-      const remoteRsvps = await fetchRsvps();
+      renderRsvpSkeleton();
+
+      const [remoteRsvps, householdConfig] = await Promise.all([
+        fetchRsvps(),
+        fetchHouseholdConfig()
+      ]);
 
       if (remoteRsvps === null) {
-        renderRsvpUnavailable();
-        return;
+        renderRsvpError();
+      } else {
+        const totalInvitedGuests = householdConfig ? householdConfig.total_invited_guests : null;
+        renderRsvpBoard(remoteRsvps, totalInvitedGuests);
       }
 
-      renderRsvpBoard(remoteRsvps);
+      resolveScreen("rsvp");
     }
 
     function renderProgress() {
@@ -790,15 +1124,12 @@
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
-      renderCalendar();
-      renderMonthCalendar();
+      renderCalendarAndCountdowns();
       renderTodos();
       renderMealsWithData();
-      renderCountdownsWithData();
       renderRsvpBoardWithData();
       updateHeaderTime();
       renderProgress();
-      resetAutoRotate();
 
       viewport.addEventListener("pointerdown", handlePointerDown, { passive: true });
       viewport.addEventListener("pointermove", handlePointerMove, { passive: true });
@@ -810,6 +1141,7 @@
       window.addEventListener("keydown", handleKeydown);
 
       window.setInterval(updateHeaderTime, 1000);
+      window.setInterval(refreshCalendarData, 5 * 60 * 1000);
 
       refreshIcons();
     }

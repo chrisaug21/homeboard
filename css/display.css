@@ -917,6 +917,86 @@
       background: var(--rose);
     }
 
+    /* ── Skeleton loader ── */
+    @keyframes skeleton-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .sk {
+      display: block;
+      background: rgba(124, 96, 69, 0.14);
+      border-radius: 6px;
+      animation: skeleton-pulse 1.6s ease-in-out infinite;
+    }
+
+    /* ── Screen error state ── */
+    .screen-error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 160px;
+      gap: 12px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .screen-error svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .screen-error-msg {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .screen-error-retry {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 7px 18px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      color: var(--amber);
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background-color 150ms ease;
+    }
+
+    .screen-error-retry:hover {
+      background: var(--amber-soft);
+    }
+
+    /* Error inside grid containers must span all columns */
+    .calendar-layout > .screen-error,
+    .meals-layout > .screen-error,
+    .month-grid > .screen-error,
+    .names-scroll > .screen-error {
+      grid-column: 1 / -1;
+    }
+
+    /* ── Countdown error ── */
+    .countdown-error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: calc(100% - 88px);
+      gap: 12px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .countdown-error svg {
+      width: 28px;
+      height: 28px;
+    }
+
     @media (max-width: 1120px) {
       .screen-title {
         font-size: 2.35rem;

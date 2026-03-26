@@ -453,6 +453,101 @@
       height: 20px;
     }
 
+    .admin-cal-event-card {
+      width: 100%;
+      border: 1px solid rgba(124, 96, 69, 0.12);
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+      font: inherit;
+    }
+
+    .admin-cal-event-card:hover,
+    .admin-cal-event-card:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(180, 83, 9, 0.28);
+    }
+
+    .admin-cal-event-card:focus-visible {
+      outline: 3px solid var(--ink);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+    }
+
+    .admin-cal-event-card.is-saved {
+      background: rgba(247, 217, 170, 0.34);
+      border-color: rgba(180, 83, 9, 0.24);
+      box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
+    }
+
+    .admin-cal-event-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.3;
+      min-width: 0;
+    }
+
+    .admin-cal-event-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .admin-icon-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .admin-icon-row input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .admin-icon-link {
+      flex-shrink: 0;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--amber);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .admin-icon-link:hover {
+      text-decoration: underline;
+    }
+
+    .admin-saved-countdown-card {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(124, 96, 69, 0.12);
+    }
+
+    .admin-saved-countdown-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .admin-saved-countdown-name {
+      font-size: 1.08rem;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
     @media (max-width: 640px) {
       .admin-form-row {
         grid-template-columns: 1fr;
