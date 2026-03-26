@@ -76,7 +76,7 @@ js/
   admin.js          — admin mode logic
 manifest.json       — PWA manifest for display mode (landscape, start_url: /)
 manifest-admin.json — PWA manifest for admin mode (portrait, start_url: /admin)
-sw.js               — service worker (cache key: homeboard-v##)
+sw.js               — service worker (cache key: homeboard-v{version})
 netlify.toml        — build config, env var injection, redirect rules
 ```
 
