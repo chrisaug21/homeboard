@@ -7,15 +7,17 @@
   <title>Homeboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="manifest" href="/manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
       var mode = pathname === "/admin" ? "admin" : "display";
       document.documentElement.setAttribute("data-mode", mode);
+      var manifestLink = document.createElement("link");
+      manifestLink.rel = "manifest";
+      manifestLink.href = mode === "admin" ? "/manifest-admin.json" : "/manifest.json";
+      document.head.appendChild(manifestLink);
       if (mode === "admin") {
-        document.querySelector('link[rel="manifest"]').setAttribute("href", "/manifest-admin.json");
         document.querySelector('meta[name="theme-color"]').setAttribute("content", "#B45309");
       }
     })();
@@ -85,9 +87,7 @@
 <body>
   <div class="app-shell" id="display-app">
     <header class="topbar">
-      <div class="household-name">HACC</div>
-      <div id="clock" class="clock" aria-live="polite">--:--</div>
-      <div id="today-date" class="today-date">Loading date</div>
+      <div id="household-name" class="household-name">Homeboard</div>
     </header>
 
     <main class="viewport" id="viewport" aria-label="Homeboard display screens">
@@ -102,7 +102,6 @@
           <div class="panel">
             <div class="screen-title-row">
               <div class="eyebrow"><i data-lucide="calendar-days"></i> This Week</div>
-              <h1 class="screen-title">Calendar</h1>
             </div>
             <div class="calendar-layout" id="calendar-grid"></div>
           </div>
@@ -111,8 +110,7 @@
         <section class="screen">
           <div class="panel">
             <div class="screen-title-row">
-              <div class="eyebrow"><i data-lucide="calendar-range"></i> This Month</div>
-              <h2 class="screen-title" id="month-title">Month 2026</h2>
+              <div class="eyebrow" id="month-eyebrow"><i data-lucide="calendar-range"></i> <span id="month-title">This Month</span></div>
             </div>
             <div class="month-layout">
               <div class="month-weekdays" id="month-weekdays"></div>
@@ -125,7 +123,6 @@
           <div class="panel">
             <div class="screen-title-row">
               <div class="eyebrow"><i data-lucide="list-todo"></i> Shared Tasks</div>
-              <h2 class="screen-title">To-Do List</h2>
             </div>
             <div class="todo-layout">
               <div class="todo-list" id="todo-list"></div>
@@ -149,7 +146,6 @@
           <div class="panel">
             <div class="screen-title-row">
               <div class="eyebrow"><i data-lucide="utensils-crossed"></i> Dinner Plan</div>
-              <h2 class="screen-title">Meal Plan</h2>
             </div>
             <div class="meals-layout" id="meal-grid"></div>
           </div>
@@ -158,10 +154,7 @@
         <section class="screen countdown-screen">
           <div class="panel">
             <div class="screen-title-row">
-              <div>
-                <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
-                <h2 class="screen-title">Countdown Board</h2>
-              </div>
+              <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
             </div>
             <div class="countdown-layout" id="countdown-grid"></div>
           </div>
@@ -171,7 +164,6 @@
           <div class="panel">
             <div class="screen-title-row">
               <div class="eyebrow"><i data-lucide="heart"></i> Wedding Pulse</div>
-              <h2 class="screen-title">RSVP Live Board</h2>
             </div>
             <div class="rsvp-layout">
               <div class="hero-card">
