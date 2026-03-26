@@ -4,7 +4,7 @@
       height: 100vh;
       padding: 16px 22px 12px;
       display: grid;
-      grid-template-rows: 1fr var(--footer-height);
+      grid-template-rows: auto 1fr var(--footer-height);
       gap: 10px;
     }
 
@@ -32,10 +32,7 @@
     }
 
     .household-name {
-      position: absolute;
-      top: 20px;
-      left: 30px;
-      z-index: 4;
+      align-self: center;
       font-size: 0.68rem;
       font-weight: 800;
       letter-spacing: 0.14em;
@@ -44,6 +41,7 @@
       opacity: 0.55;
       pointer-events: none;
       user-select: none;
+      padding-left: 8px;
     }
 
     .viewport {
