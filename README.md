@@ -28,7 +28,7 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 3. **To-do List** — shared household tasks with open count and next-up summary
 4. **Dinner Plan** — this week's dinner entries (Mon–Sun)
 5. **Looking Forward** — countdown cards to upcoming events with Lucide icons and days-remaining
-6. **Wedding Pulse** — live RSVP tracker (Chris & Bailey only, retires Oct 9 2026)
+6. **Wedding Pulse** — live RSVP tracker (Chris & Bailey only, hidden starting Oct 11, 2026)
 
 ## Admin Tabs
 
@@ -60,6 +60,7 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 | `users` | Linked to `auth.users`; household membership and role |
 | `todos` | Soft-delete only — never hard delete; archived via `archived_at` |
 | `meal_plan` | `user_id = null` = shared/household row shown on display |
+| `meal_plan_notes` | One note per household per week; keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` is a Lucide icon name string (e.g. `"plane"`) |
 | `rsvps` | Wedding RSVP table — do not modify schema |
 
@@ -88,6 +89,7 @@ Set in Netlify dashboard. Never hardcode.
 |----------|---------|
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_KEY` | Supabase anon/public key |
+| `GOOGLE_CAL_KEY` | Google Calendar read-only API key |
 
 ## Local Development
 

@@ -11,6 +11,7 @@
     const adminMealWeekLabel = document.getElementById("admin-meal-week-label");
     const adminWeekPrevBtn = document.getElementById("admin-week-prev");
     const adminWeekNextBtn = document.getElementById("admin-week-next");
+    const adminWeekTodayBtn = document.getElementById("admin-week-today");
     const toastEl = document.getElementById("toast");
     const adminCountdownForm = document.getElementById("admin-countdown-form");
     const adminCountdownName = document.getElementById("admin-countdown-name");
@@ -305,10 +306,11 @@
                 placeholder="What\u2019s for dinner?"
                 value="${currentName}"
                 autocomplete="off"
+                aria-label="Dinner name"
               >
             </div>
             <div class="admin-field">
-              <select name="meal_type">${buildMealTypeOptionsHTML(currentType)}</select>
+              <select name="meal_type" aria-label="Meal type">${buildMealTypeOptionsHTML(currentType)}</select>
             </div>
             <div class="admin-actions">
               <button class="admin-button admin-button--primary" type="submit">Save</button>
@@ -339,6 +341,7 @@
       adminMealWeekLabel.textContent = `${offsetLabel} \u00b7 ${fmt(adminCurrentMonday)}\u2013${fmt(sunday)}`;
       adminWeekPrevBtn.disabled = adminWeekOffset <= -1;
       adminWeekNextBtn.disabled = adminWeekOffset >= 1;
+      if (adminWeekTodayBtn) adminWeekTodayBtn.disabled = adminWeekOffset === 0;
 
       adminMealList.innerHTML = Array.from({ length: 7 }, (_, index) => {
         const date = new Date(adminCurrentMonday);
@@ -359,14 +362,15 @@
 
     async function fetchAdminMealNote(monday) {
       const client = getSupabaseClient();
-      if (!client) return "";
+      if (!client) return null;
       const { data, error } = await client
         .from("meal_plan_notes")
         .select("note")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .eq("week_start", formatDateKey(monday))
         .maybeSingle();
-      if (error || !data) return "";
+      if (error) return null;
+      if (!data) return "";
       return data.note || "";
     }
 
@@ -387,6 +391,7 @@
                 maxlength="280"
                 placeholder="Add a note for this week\u2026"
                 rows="3"
+                aria-label="Weekly note"
               >${escapeHtml(adminCurrentNote)}</textarea>
             </div>
             <div class="admin-actions">
@@ -415,7 +420,7 @@
     }
 
     async function saveAdminMealNote() {
-      if (adminNoteWritePending) return;
+      if (adminNoteWritePending || adminMealWritePending) return;
       const textarea = adminMealNoteWrap && adminMealNoteWrap.querySelector("#admin-meal-note-input");
       if (!textarea) return;
       const noteText = textarea.value.trim();
@@ -425,13 +430,14 @@
         return;
       }
       adminNoteWritePending = true;
+      const savedWeekStart = formatDateKey(adminCurrentMonday);
       const submitBtn = adminMealNoteWrap.querySelector("[type='submit']");
       if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Saving\u2026"; }
 
       const { error } = await client
         .from("meal_plan_notes")
         .upsert(
-          { household_id: DISPLAY_HOUSEHOLD_ID, week_start: formatDateKey(adminCurrentMonday), note: noteText },
+          { household_id: DISPLAY_HOUSEHOLD_ID, week_start: savedWeekStart, note: noteText },
           { onConflict: "household_id,week_start" }
         );
 
@@ -443,6 +449,9 @@
         return;
       }
 
+      // If the week changed while awaiting, discard the stale result
+      if (formatDateKey(adminCurrentMonday) !== savedWeekStart) return;
+
       adminCurrentNote = noteText;
       adminEditingNote = false;
       renderAdminMealNote();
@@ -450,6 +459,8 @@
     }
 
     function handleAdminMealNoteClick(event) {
+      if (adminNoteWritePending) return;
+
       if (event.target.closest("#admin-meal-note-cancel")) {
         adminEditingNote = false;
         renderAdminMealNote();
@@ -490,7 +501,12 @@
       }
 
       adminMealPlanRows = mealRows;
-      adminCurrentNote = noteText;
+      if (noteText === null) {
+        showToast("Couldn\u2019t load this week\u2019s note.");
+        adminCurrentNote = "";
+      } else {
+        adminCurrentNote = noteText;
+      }
       renderAdminMealPlan();
       renderAdminMealNote();
     }
@@ -498,7 +514,7 @@
     async function saveAdminMeal(dayOfWeek, mealName, mealType) {
       const client = getSupabaseClient();
 
-      if (!client || adminMealWritePending) {
+      if (!client || adminMealWritePending || adminNoteWritePending) {
         if (!client) showToast("Couldn\u2019t save meal. Supabase is unavailable.");
         return;
       }
@@ -510,7 +526,8 @@
         submitBtn.textContent = "Saving\u2026";
       }
 
-      const weekStart = formatDateKey(adminCurrentMonday);
+      const savedWeekStart = formatDateKey(adminCurrentMonday);
+      const weekStart = savedWeekStart;
       const existingMeal = getAdminMealByDay(dayOfWeek);
       let responseError = null;
       let savedMeal = null;
@@ -575,6 +592,9 @@
         });
       }
 
+      // If the week changed while awaiting, discard the stale result
+      if (formatDateKey(adminCurrentMonday) !== savedWeekStart) return;
+
       adminEditingDay = null;
       renderAdminMealPlan();
       showToast("Saved!");
@@ -616,6 +636,8 @@
     }
 
     function handleAdminMealListClick(event) {
+      if (adminMealWritePending) return;
+
       if (event.target.closest(".admin-meal-inline-cancel")) {
         adminEditingDay = null;
         renderAdminMealPlan();
@@ -648,15 +670,22 @@
     }
 
     function handleAdminWeekPrev() {
-      if (adminWeekOffset <= -1) return;
+      if (adminWeekOffset <= -1 || adminMealWritePending || adminNoteWritePending) return;
       adminWeekOffset--;
       adminEditingDay = null;
       loadAdminMealPlan();
     }
 
     function handleAdminWeekNext() {
-      if (adminWeekOffset >= 1) return;
+      if (adminWeekOffset >= 1 || adminMealWritePending || adminNoteWritePending) return;
       adminWeekOffset++;
+      adminEditingDay = null;
+      loadAdminMealPlan();
+    }
+
+    function handleAdminWeekToday() {
+      if (adminWeekOffset === 0 || adminMealWritePending || adminNoteWritePending) return;
+      adminWeekOffset = 0;
       adminEditingDay = null;
       loadAdminMealPlan();
     }
@@ -974,6 +1003,7 @@
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("submit", handleAdminMealNoteSubmit);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
       adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);
+      if (adminWeekTodayBtn) adminWeekTodayBtn.addEventListener("click", handleAdminWeekToday);
       adminCountdownForm.addEventListener("submit", handleAdminCountdownSubmit);
       adminCountdownClearButton.addEventListener("click", handleAdminCountdownClear);
       adminCalEventList.addEventListener("click", handleAdminCountdownCalListClick);

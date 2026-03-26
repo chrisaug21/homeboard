@@ -645,6 +645,11 @@
     }
 
     .admin-version-label {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 96px;
+      z-index: 9;
       text-align: center;
       font-size: 0.6rem;
       font-weight: 700;
@@ -652,7 +657,6 @@
       text-transform: uppercase;
       color: var(--muted);
       opacity: 0.38;
-      padding: 8px 0 4px;
       pointer-events: none;
       user-select: none;
     }

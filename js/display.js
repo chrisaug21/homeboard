@@ -422,7 +422,7 @@
 
     async function fetchWeeklyNote() {
       const client = getSupabaseClient();
-      if (!client) return "";
+      if (!client) return null;
       const monday = getMonday(new Date());
       const { data, error } = await client
         .from("meal_plan_notes")
@@ -430,7 +430,8 @@
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .eq("week_start", formatDateKey(monday))
         .maybeSingle();
-      if (error || !data) return "";
+      if (error) return null;
+      if (!data) return "";
       return data.note || "";
     }
 
@@ -774,11 +775,12 @@
         `;
       });
 
-      const noteCard = weeklyNote
+      const noteText = weeklyNote || "";
+      const noteCard = noteText
         ? `
           <article class="meal-note-card">
             <div class="meal-note-label">This Week</div>
-            <div class="meal-note-text">${escapeHtml(weeklyNote)}</div>
+            <div class="meal-note-text">${escapeHtml(noteText).replace(/\n/g, "<br>")}</div>
           </article>
         `
         : `
