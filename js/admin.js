@@ -28,6 +28,7 @@
     let adminMealWritePending = false;
     let adminCurrentNote = "";
     let adminNoteWritePending = false;
+    let adminEditingNote = false;
     let adminScreen = "todos";
     let adminWeekOffset = 0;
     let adminCurrentMonday = null;
@@ -371,21 +372,46 @@
 
     function renderAdminMealNote() {
       if (!adminMealNoteWrap) return;
-      adminMealNoteWrap.innerHTML = `
-        <div class="admin-field">
-          <label for="admin-meal-note-input">Weekly Note <span style="font-weight:400;color:var(--muted);">(shown on display board)</span></label>
-          <textarea
-            id="admin-meal-note-input"
-            class="admin-meal-note-textarea"
-            maxlength="280"
-            placeholder="Add a note for this week\u2026"
-            rows="3"
-          >${escapeHtml(adminCurrentNote)}</textarea>
-        </div>
-        <div class="admin-actions">
-          <button class="admin-button admin-button--primary" id="admin-meal-note-save-btn" type="button">Save Note</button>
-        </div>
-      `;
+
+      if (adminEditingNote) {
+        adminMealNoteWrap.innerHTML = `
+          <form class="admin-meal-inline-form" id="admin-meal-note-form">
+            <div class="admin-meal-inline-header">
+              <span class="admin-meal-day">Weekly Note</span>
+              <button class="admin-button admin-button--secondary admin-meal-inline-cancel" type="button" id="admin-meal-note-cancel">Cancel</button>
+            </div>
+            <div class="admin-field">
+              <textarea
+                id="admin-meal-note-input"
+                class="admin-meal-note-textarea"
+                maxlength="280"
+                placeholder="Add a note for this week\u2026"
+                rows="3"
+              >${escapeHtml(adminCurrentNote)}</textarea>
+            </div>
+            <div class="admin-actions">
+              <button class="admin-button admin-button--primary" type="submit">Save Note</button>
+            </div>
+          </form>
+        `;
+        const noteInput = adminMealNoteWrap.querySelector("#admin-meal-note-input");
+        if (noteInput) {
+          noteInput.focus();
+          noteInput.setSelectionRange(noteInput.value.length, noteInput.value.length);
+        }
+      } else {
+        adminMealNoteWrap.innerHTML = `
+          <button class="admin-meal-card" type="button" id="admin-meal-note-card">
+            <div class="admin-meal-card-top">
+              <div class="admin-meal-day">Weekly Note</div>
+              <span class="admin-pill">${adminCurrentNote ? "Tap to edit" : "Tap to add"}</span>
+            </div>
+            <div class="admin-meal-name${adminCurrentNote ? "" : " admin-meal-name--empty"}">${escapeHtml(adminCurrentNote || "No note this week.")}</div>
+          </button>
+        `;
+      }
+
+      refreshIcons();
     }
 
     async function saveAdminMealNote() {
@@ -399,8 +425,8 @@
         return;
       }
       adminNoteWritePending = true;
-      const saveBtn = adminMealNoteWrap.querySelector("#admin-meal-note-save-btn");
-      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving\u2026"; }
+      const submitBtn = adminMealNoteWrap.querySelector("[type='submit']");
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Saving\u2026"; }
 
       const { error } = await client
         .from("meal_plan_notes")
@@ -410,20 +436,35 @@
         );
 
       adminNoteWritePending = false;
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save Note"; }
 
       if (error) {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Save Note"; }
         showToast("Couldn\u2019t save note. Please try again.");
         return;
       }
+
       adminCurrentNote = noteText;
+      adminEditingNote = false;
+      renderAdminMealNote();
       showToast("Note saved.");
     }
 
     function handleAdminMealNoteClick(event) {
-      if (event.target.id === "admin-meal-note-save-btn") {
-        saveAdminMealNote();
+      if (event.target.closest("#admin-meal-note-cancel")) {
+        adminEditingNote = false;
+        renderAdminMealNote();
+        return;
       }
+      if (event.target.closest("#admin-meal-note-card")) {
+        adminEditingNote = true;
+        renderAdminMealNote();
+      }
+    }
+
+    function handleAdminMealNoteSubmit(event) {
+      if (!event.target.closest("#admin-meal-note-form")) return;
+      event.preventDefault();
+      saveAdminMealNote();
     }
 
     async function loadAdminMealPlan() {
@@ -432,6 +473,7 @@
       adminWeekPrevBtn.disabled = true;
       adminWeekNextBtn.disabled = true;
       adminMealList.innerHTML = '<div class="admin-empty">Loading meals\u2026</div>';
+      adminEditingNote = false;
       if (adminMealNoteWrap) adminMealNoteWrap.innerHTML = "";
 
       const [mealRows, noteText] = await Promise.all([
@@ -929,6 +971,7 @@
       adminMealList.addEventListener("click", handleAdminMealListClick);
       adminMealList.addEventListener("submit", handleAdminMealInlineSubmit);
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);
+      if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("submit", handleAdminMealNoteSubmit);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
       adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);
       adminCountdownForm.addEventListener("submit", handleAdminCountdownSubmit);
