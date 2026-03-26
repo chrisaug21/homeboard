@@ -838,6 +838,8 @@
       adminCountdownClearButton.addEventListener("click", handleAdminCountdownClear);
       adminCalEventList.addEventListener("click", handleAdminCountdownCalListClick);
       adminSavedCountdownList.addEventListener("click", handleAdminSavedCountdownListClick);
+      const adminVersionEl = document.getElementById("admin-version-label");
+      if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
       loadAdminTodos();
       loadAdminMealPlan();
       refreshIcons();

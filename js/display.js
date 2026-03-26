@@ -1117,6 +1117,8 @@
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
+      const versionEl = document.getElementById("version-label");
+      if (versionEl) versionEl.textContent = `v${VERSION}`;
       renderCalendarAndCountdowns();
       renderTodos();
       renderMealsWithData();
