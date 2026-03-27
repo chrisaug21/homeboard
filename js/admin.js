@@ -762,7 +762,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("id, name, icon, event_date, unsplash_image_url")
+        .select("id, name, icon, event_date, unsplash_image_url, days_before_visible")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .order("event_date", { ascending: true });
 
@@ -844,7 +844,13 @@
           }
         }
 
+        const thumbnailUrl = imageUrl ? unsplashThumbnailUrl(imageUrl) : null;
+        const daysBeforeLabel = c.days_before_visible != null
+          ? `Shows ${c.days_before_visible}d before`
+          : null;
+
         if (c.id === adminEditingCountdownId) {
+          const daysBeforeValue = c.days_before_visible != null ? String(c.days_before_visible) : "";
           return `
             <article class="admin-saved-countdown-card admin-saved-countdown-card--editing" data-countdown-id="${escapeHtml(c.id)}">
               <form class="admin-countdown-edit-form" data-countdown-id="${escapeHtml(c.id)}" data-original-name="${escapeHtml(c.name)}">
@@ -864,6 +870,15 @@
                   <label for="admin-edit-cd-icon-${escapeHtml(c.id)}">Icon <span style="font-weight:400;color:var(--muted)">(Lucide icon name)</span></label>
                   <input id="admin-edit-cd-icon-${escapeHtml(c.id)}" name="icon" type="text" maxlength="60" value="${escapeHtml(c.icon || "calendar")}" placeholder="e.g. plane, heart, gem" autocomplete="off">
                 </div>
+                <div class="admin-field">
+                  <label for="admin-edit-cd-days-${escapeHtml(c.id)}">Show starting <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+                  <input id="admin-edit-cd-days-${escapeHtml(c.id)}" name="days_before_visible" type="number" min="1" max="365" value="${escapeHtml(daysBeforeValue)}" placeholder="e.g. 30">
+                  <p class="admin-field-hint">Leave blank to always show. Set a number to only show on the display within that many days of the event.</p>
+                </div>
+                ${imageUrl ? `
+                <div class="admin-countdown-remove-photo">
+                  <button class="admin-button admin-button--ghost-danger" type="button" data-action="remove-photo" data-countdown-id="${escapeHtml(c.id)}" aria-label="Remove photo for ${escapeHtml(c.name)}">Remove photo</button>
+                </div>` : ""}
                 <button class="admin-button admin-button--primary" type="submit">Save changes</button>
               </form>
             </article>
@@ -873,18 +888,19 @@
         return `
           <article class="admin-saved-countdown-card" data-countdown-id="${escapeHtml(c.id)}">
             <div class="admin-countdown-card-main">
-              ${imageUrl ? `<img class="admin-countdown-preview" src="${escapeHtml(imageUrl)}" alt="" aria-hidden="true" onerror="this.remove();">` : ""}
+              ${thumbnailUrl ? `<img class="admin-countdown-preview" src="${escapeHtml(thumbnailUrl)}" alt="" aria-hidden="true" onerror="this.remove();">` : ""}
               <div class="admin-countdown-card-body">
                 <div class="admin-saved-countdown-name">${escapeHtml(c.name)}</div>
                 <div class="admin-countdown-card-meta">
                   <span class="admin-countdown-meta-item">${escapeHtml(dateLabel)}</span>
                   <span class="admin-countdown-meta-item"><i data-lucide="${escapeHtml(c.icon || "calendar")}" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;"></i>${escapeHtml(c.icon || "calendar")}</span>
+                  ${daysBeforeLabel ? `<span class="admin-countdown-meta-item">${escapeHtml(daysBeforeLabel)}</span>` : ""}
                 </div>
               </div>
             </div>
             <div class="admin-countdown-actions">
-              <button class="admin-button admin-button--secondary" type="button" data-action="edit-countdown" data-countdown-id="${escapeHtml(c.id)}" aria-label="Edit ${escapeHtml(c.name)}">Edit</button>
-              <button class="admin-button admin-button--secondary admin-countdown-refresh-btn" type="button" data-action="refresh-photo" data-countdown-id="${escapeHtml(c.id)}" data-countdown-name="${escapeHtml(c.name)}" aria-label="Refresh photo for ${escapeHtml(c.name)}">Refresh photo</button>
+              <button class="admin-button admin-button--secondary admin-countdown-action-btn" type="button" data-action="edit-countdown" data-countdown-id="${escapeHtml(c.id)}" aria-label="Edit ${escapeHtml(c.name)}">Edit</button>
+              <button class="admin-button admin-button--secondary admin-countdown-action-btn" type="button" data-action="refresh-photo" data-countdown-id="${escapeHtml(c.id)}" data-countdown-name="${escapeHtml(c.name)}" aria-label="Refresh photo for ${escapeHtml(c.name)}">Refresh photo</button>
               <button class="admin-button admin-button--ghost-danger" type="button" data-action="delete-countdown" data-countdown-id="${escapeHtml(c.id)}" aria-label="Delete ${escapeHtml(c.name)}">Delete</button>
             </div>
           </article>
@@ -923,6 +939,16 @@
       }
 
       refreshIcons();
+    }
+
+    function unsplashThumbnailUrl(url) {
+      try {
+        const u = new URL(url);
+        u.searchParams.set("w", "200");
+        return u.toString();
+      } catch {
+        return url;
+      }
     }
 
     async function fetchUnsplashPhoto(query) {
@@ -979,12 +1005,29 @@
           showToast("Couldn\u2019t save photo. Please try again.");
           return;
         }
+        const scrollY = window.scrollY;
         await loadAdminCountdowns();
+        window.scrollTo({ top: scrollY, behavior: "instant" });
         showToast("Photo updated.");
       } finally {
         refreshingCountdowns.delete(id);
         if (card) card.classList.remove("admin-countdown-card--refreshing");
       }
+    }
+
+    async function removeCountdownPhoto(id) {
+      const client = getSupabaseClient();
+      if (!client) return;
+      const { error } = await client
+        .from("countdowns")
+        .update({ unsplash_image_url: null })
+        .eq("id", id)
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID);
+      if (error) {
+        showToast("Couldn\u2019t remove photo. Please try again.");
+        return;
+      }
+      await loadAdminCountdowns();
     }
 
     async function saveAdminCountdown(formData) {
@@ -998,6 +1041,8 @@
       const name = String(formData.get("name") || "").trim();
       const eventDate = String(formData.get("event_date") || "").trim();
       const icon = String(formData.get("icon") || "").trim() || "calendar";
+      const daysBeforeRaw = String(formData.get("days_before_visible") || "").trim();
+      const daysBeforeVisible = daysBeforeRaw !== "" ? parseInt(daysBeforeRaw, 10) || null : null;
 
       if (!name || !eventDate || adminCountdownWritePending) {
         return;
@@ -1018,7 +1063,8 @@
           household_id: DISPLAY_HOUSEHOLD_ID,
           name,
           icon,
-          event_date: eventDate
+          event_date: eventDate,
+          days_before_visible: daysBeforeVisible
         })
         .select("id")
         .single();
@@ -1044,7 +1090,7 @@
       }).catch((e) => console.warn("Background photo fetch failed:", e));
     }
 
-    async function updateAdminCountdown(id, name, eventDate, icon, originalName) {
+    async function updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, originalName) {
       const client = getSupabaseClient();
       if (!client) {
         showToast("Couldn\u2019t update countdown. Supabase is unavailable.");
@@ -1060,7 +1106,7 @@
 
       const { error } = await client
         .from("countdowns")
-        .update({ name, event_date: eventDate, icon })
+        .update({ name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible })
         .eq("id", id)
         .eq("household_id", DISPLAY_HOUSEHOLD_ID);
 
@@ -1097,8 +1143,10 @@
       const name = String(formData.get("name") || "").trim();
       const eventDate = String(formData.get("event_date") || "").trim();
       const icon = String(formData.get("icon") || "").trim() || "calendar";
+      const daysBeforeRaw = String(formData.get("days_before_visible") || "").trim();
+      const daysBeforeVisible = daysBeforeRaw !== "" ? parseInt(daysBeforeRaw, 10) || null : null;
       if (!name || !eventDate || adminCountdownEditPending) return;
-      updateAdminCountdown(id, name, eventDate, icon, originalName);
+      updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, originalName);
     }
 
     async function deleteAdminCountdown(id) {
@@ -1162,6 +1210,12 @@
         adminEditingCountdownId = null;
         renderAdminSavedCountdowns();
         refreshIcons();
+        return;
+      }
+
+      const removePhotoBtn = event.target.closest("[data-action='remove-photo']");
+      if (removePhotoBtn) {
+        removeCountdownPhoto(removePhotoBtn.getAttribute("data-countdown-id"));
         return;
       }
 

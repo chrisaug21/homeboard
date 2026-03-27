@@ -194,6 +194,22 @@
       cursor: default;
     }
 
+    .admin-cal-nav {
+      margin-top: 8px;
+    }
+
+    .admin-cal-nav .admin-week-nav-label {
+      flex: unset;
+      text-align: left;
+    }
+
+    .admin-field-hint {
+      margin: 4px 0 0;
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
     .admin-week-nav-btn svg {
       width: 16px;
       height: 16px;
@@ -622,6 +638,22 @@
       text-decoration: underline;
     }
 
+    #admin-saved-countdown-list {
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 500px) {
+      #admin-saved-countdown-list {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 760px) {
+      #admin-saved-countdown-list {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
     .admin-saved-countdown-card {
       display: grid;
       gap: 12px;
@@ -687,7 +719,7 @@
       padding-top: 10px;
     }
 
-    .admin-countdown-refresh-btn {
+    .admin-countdown-action-btn {
       padding: 6px 10px;
       font-size: 0.82rem;
     }
@@ -698,6 +730,14 @@
       padding: 6px 10px;
       font-size: 0.82rem;
       margin-left: auto;
+    }
+
+    .admin-countdown-remove-photo {
+      display: flex;
+    }
+
+    .admin-countdown-remove-photo .admin-button--ghost-danger {
+      margin-left: 0;
     }
 
     .admin-button--ghost-danger:hover,

@@ -275,7 +275,7 @@
 
         <section class="admin-panel" aria-labelledby="admin-cal-events-title">
           <h2 class="admin-panel-title" id="admin-cal-events-title">Calendar Events</h2>
-          <div class="admin-week-nav" id="admin-cal-nav">
+          <div class="admin-week-nav admin-cal-nav" id="admin-cal-nav">
             <button class="admin-week-nav-btn" id="admin-cal-prev" type="button" aria-label="Previous month">
               <i data-lucide="chevron-left"></i>
             </button>
@@ -306,6 +306,11 @@
                 <input id="admin-countdown-icon" name="icon" type="text" maxlength="60" placeholder="e.g. plane, heart, gem">
                 <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse icons ↗</a>
               </div>
+            </div>
+            <div class="admin-field">
+              <label for="admin-countdown-days-before">Show starting <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+              <input id="admin-countdown-days-before" name="days_before_visible" type="number" min="1" max="365" placeholder="e.g. 30">
+              <p class="admin-field-hint">Leave blank to always show. Set a number to only show on the display within that many days of the event.</p>
             </div>
             <div class="admin-actions">
               <button class="admin-button admin-button--secondary" id="admin-countdown-clear-button" type="button">Clear</button>

@@ -455,7 +455,8 @@
         days: getDaysUntil(countdown.event_date),
         caption: formatLongDate(countdown.event_date),
         image_url: imageUrl,
-        image_credit: imageCredit
+        image_credit: imageCredit,
+        daysBeforeVisible: countdown.days_before_visible ?? null
       };
     }
 
@@ -471,7 +472,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("name, icon, event_date, unsplash_image_url")
+        .select("name, icon, event_date, unsplash_image_url, days_before_visible")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
@@ -480,7 +481,10 @@
         return null;
       }
 
-      return data.map(mapSupabaseCountdown);
+      return data.map(mapSupabaseCountdown).filter((item) => {
+        if (item.daysBeforeVisible === null) return true;
+        return item.days !== null && item.days <= item.daysBeforeVisible;
+      });
     }
 
     function mapSupabaseRsvp(row) {
