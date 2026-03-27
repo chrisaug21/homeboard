@@ -38,6 +38,7 @@
     let adminCountdownWritePending = false;
     let adminCalEvents = [];
     let adminSavedCountdowns = [];
+    const refreshingCountdowns = new Set();
 
     function buildMealTypeOptionsHTML(selectedType) {
       return mealTypeOptions.map((option) =>
@@ -804,30 +805,28 @@
 
         return `
           <article class="admin-saved-countdown-card">
+            <div class="admin-saved-countdown-name">${escapeHtml(c.name)}</div>
             ${imageUrl ? `<img class="admin-countdown-preview" src="${escapeHtml(imageUrl)}" alt="" aria-hidden="true" onerror="this.remove();">` : ""}
-            <div class="admin-saved-countdown-head">
-              <div class="admin-saved-countdown-name">${escapeHtml(c.name)}</div>
-              <div class="admin-countdown-head-actions">
-                <button
-                  class="admin-button admin-button--secondary admin-countdown-refresh-btn"
-                  type="button"
-                  data-action="refresh-photo"
-                  data-countdown-id="${escapeHtml(c.id)}"
-                  data-countdown-name="${escapeHtml(c.name)}"
-                  aria-label="Refresh photo for ${escapeHtml(c.name)}"
-                >Refresh photo</button>
-                <button
-                  class="admin-button admin-button--danger"
-                  type="button"
-                  data-action="delete-countdown"
-                  data-countdown-id="${escapeHtml(c.id)}"
-                  aria-label="Delete ${escapeHtml(c.name)}"
-                >Delete</button>
-              </div>
-            </div>
             <div class="admin-todo-meta">
               <span class="admin-pill admin-pill--due">${escapeHtml(dateLabel)}</span>
               <span class="admin-pill"><i data-lucide="${escapeHtml(c.icon || "calendar")}" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>${escapeHtml(c.icon || "calendar")}</span>
+            </div>
+            <div class="admin-countdown-actions">
+              <button
+                class="admin-button admin-button--secondary admin-countdown-refresh-btn"
+                type="button"
+                data-action="refresh-photo"
+                data-countdown-id="${escapeHtml(c.id)}"
+                data-countdown-name="${escapeHtml(c.name)}"
+                aria-label="Refresh photo for ${escapeHtml(c.name)}"
+              >Refresh photo</button>
+              <button
+                class="admin-button admin-button--danger"
+                type="button"
+                data-action="delete-countdown"
+                data-countdown-id="${escapeHtml(c.id)}"
+                aria-label="Delete ${escapeHtml(c.name)}"
+              >Delete</button>
             </div>
           </article>
         `;
@@ -878,10 +877,12 @@
         const data = await response.json();
         const url = data.urls && data.urls.regular;
         const photographerName = data.user && data.user.name;
+        const photographerProfile = data.user && data.user.links && data.user.links.html;
         if (!url) return null;
         return {
           url,
-          credit: photographerName ? `Photo: ${photographerName} \u00b7 Unsplash` : "Photo: Unsplash"
+          credit: photographerName ? `Photo: ${photographerName} \u00b7 Unsplash` : "Photo: Unsplash",
+          photographerProfile: photographerProfile || null
         };
       } catch {
         return null;
@@ -893,26 +894,37 @@
       if (!client) return false;
       const { error } = await client
         .from("countdowns")
-        .update({ unsplash_image_url: JSON.stringify({ url: photo.url, credit: photo.credit }) })
+        .update({ unsplash_image_url: JSON.stringify({ url: photo.url, credit: photo.credit, photographerProfile: photo.photographerProfile || null }) })
         .eq("id", id)
         .eq("household_id", DISPLAY_HOUSEHOLD_ID);
       return !error;
     }
 
     async function refreshCountdownPhoto(id, name) {
+      if (refreshingCountdowns.has(id)) return;
+      refreshingCountdowns.add(id);
+
+      const card = adminSavedCountdownList.querySelector(`[data-countdown-id="${id}"]`)?.closest(".admin-saved-countdown-card");
+      if (card) card.classList.add("admin-countdown-card--refreshing");
+
       showToast("Fetching new photo\u2026");
-      const photo = await fetchUnsplashPhoto(name);
-      if (!photo) {
-        showToast("Couldn\u2019t find a photo. Try again.");
-        return;
+      try {
+        const photo = await fetchUnsplashPhoto(name);
+        if (!photo) {
+          showToast("Couldn\u2019t find a photo. Try again.");
+          return;
+        }
+        const ok = await updateCountdownPhoto(id, photo);
+        if (!ok) {
+          showToast("Couldn\u2019t save photo. Please try again.");
+          return;
+        }
+        await loadAdminCountdowns();
+        showToast("Photo updated.");
+      } finally {
+        refreshingCountdowns.delete(id);
+        if (card) card.classList.remove("admin-countdown-card--refreshing");
       }
-      const ok = await updateCountdownPhoto(id, photo);
-      if (!ok) {
-        showToast("Couldn\u2019t save photo. Please try again.");
-        return;
-      }
-      await loadAdminCountdowns();
-      showToast("Photo updated.");
     }
 
     async function saveAdminCountdown(formData) {
@@ -959,17 +971,17 @@
         return;
       }
 
-      adminCountdownSubmitButton.textContent = "Fetching photo\u2026";
-      const photo = await fetchUnsplashPhoto(name);
-      if (photo) {
-        await updateCountdownPhoto(insertedRow.id, photo);
-      }
-
       adminCountdownWritePending = false;
       adminCountdownSubmitButton.disabled = false;
       adminCountdownSubmitButton.textContent = "Save Countdown";
       adminCountdownForm.reset();
       await loadAdminCountdowns();
+
+      fetchUnsplashPhoto(name).then(async (photo) => {
+        if (!photo) return;
+        const ok = await updateCountdownPhoto(insertedRow.id, photo);
+        if (ok) await loadAdminCountdowns();
+      }).catch((e) => console.warn("Background photo fetch failed:", e));
     }
 
     async function deleteAdminCountdown(id) {
