@@ -760,10 +760,14 @@
         return null;
       }
 
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       const { data, error } = await client
         .from("countdowns")
         .select("id, name, icon, event_date, unsplash_image_url, days_before_visible")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
 
       if (error || !Array.isArray(data)) {
