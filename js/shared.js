@@ -1,6 +1,7 @@
     const SUPABASE_URL = '%%SUPABASE_URL%%';
     const SUPABASE_KEY = '%%SUPABASE_KEY%%';
     const GOOGLE_CAL_KEY = '%%GOOGLE_CAL_KEY%%';
+    const UNSPLASH_ACCESS_KEY = '%%UNSPLASH_ACCESS_KEY%%';
     const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
     const isAdminMode = pathname === "/admin";
     let sb = null;
@@ -27,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.1.1";
+    const VERSION = "0.2.0";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");

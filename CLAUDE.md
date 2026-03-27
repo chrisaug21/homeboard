@@ -40,6 +40,8 @@ Household command center PWA. Runs on a wall-mounted Android tablet in landscape
 ## Env Vars (never hardcode)
 - `SUPABASE_URL`
 - `SUPABASE_KEY`
+- `GOOGLE_CAL_KEY`
+- `UNSPLASH_ACCESS_KEY`
 
 ## Local Dev
 Use `netlify dev` — injects env vars correctly.

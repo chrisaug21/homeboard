@@ -720,7 +720,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("id, name, icon, event_date")
+        .select("id, name, icon, event_date, unsplash_image_url")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .order("event_date", { ascending: true });
 
@@ -793,17 +793,37 @@
             )
           : "No date";
 
+        let imageUrl = null;
+        if (c.unsplash_image_url) {
+          try {
+            imageUrl = JSON.parse(c.unsplash_image_url).url || null;
+          } catch {
+            imageUrl = c.unsplash_image_url;
+          }
+        }
+
         return `
           <article class="admin-saved-countdown-card">
+            ${imageUrl ? `<img class="admin-countdown-preview" src="${escapeHtml(imageUrl)}" alt="" aria-hidden="true" onerror="this.remove();">` : ""}
             <div class="admin-saved-countdown-head">
               <div class="admin-saved-countdown-name">${escapeHtml(c.name)}</div>
-              <button
-                class="admin-button admin-button--danger"
-                type="button"
-                data-action="delete-countdown"
-                data-countdown-id="${escapeHtml(c.id)}"
-                aria-label="Delete ${escapeHtml(c.name)}"
-              >Delete</button>
+              <div class="admin-countdown-head-actions">
+                <button
+                  class="admin-button admin-button--secondary admin-countdown-refresh-btn"
+                  type="button"
+                  data-action="refresh-photo"
+                  data-countdown-id="${escapeHtml(c.id)}"
+                  data-countdown-name="${escapeHtml(c.name)}"
+                  aria-label="Refresh photo for ${escapeHtml(c.name)}"
+                ><i data-lucide="image-down"></i></button>
+                <button
+                  class="admin-button admin-button--danger"
+                  type="button"
+                  data-action="delete-countdown"
+                  data-countdown-id="${escapeHtml(c.id)}"
+                  aria-label="Delete ${escapeHtml(c.name)}"
+                >Delete</button>
+              </div>
             </div>
             <div class="admin-todo-meta">
               <span class="admin-pill admin-pill--due">${escapeHtml(dateLabel)}</span>
@@ -846,6 +866,54 @@
       refreshIcons();
     }
 
+    async function fetchUnsplashPhoto(query) {
+      if (!UNSPLASH_ACCESS_KEY || UNSPLASH_ACCESS_KEY.startsWith("%%")) return null;
+      try {
+        const response = await fetch(
+          `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=landscape&content_filter=high`,
+          { headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` } }
+        );
+        if (!response.ok) return null;
+        const data = await response.json();
+        const url = data.urls && data.urls.regular;
+        const photographerName = data.user && data.user.name;
+        if (!url) return null;
+        return {
+          url,
+          credit: photographerName ? `Photo: ${photographerName} \u00b7 Unsplash` : "Photo: Unsplash"
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    async function updateCountdownPhoto(id, photo) {
+      const client = getSupabaseClient();
+      if (!client) return false;
+      const { error } = await client
+        .from("countdowns")
+        .update({ unsplash_image_url: JSON.stringify({ url: photo.url, credit: photo.credit }) })
+        .eq("id", id)
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID);
+      return !error;
+    }
+
+    async function refreshCountdownPhoto(id, name) {
+      showToast("Fetching new photo\u2026");
+      const photo = await fetchUnsplashPhoto(name);
+      if (!photo) {
+        showToast("Couldn\u2019t find a photo. Try again.");
+        return;
+      }
+      const ok = await updateCountdownPhoto(id, photo);
+      if (!ok) {
+        showToast("Couldn\u2019t save photo. Please try again.");
+        return;
+      }
+      await loadAdminCountdowns();
+      showToast("Photo updated.");
+    }
+
     async function saveAdminCountdown(formData) {
       const client = getSupabaseClient();
 
@@ -869,26 +937,36 @@
 
       adminCountdownWritePending = true;
       adminCountdownSubmitButton.disabled = true;
-      adminCountdownSubmitButton.textContent = "Saving…";
+      adminCountdownSubmitButton.textContent = "Saving\u2026";
 
-      const { error } = await client
+      const { data: insertedRow, error } = await client
         .from("countdowns")
         .insert({
           household_id: DISPLAY_HOUSEHOLD_ID,
           name,
           icon,
           event_date: eventDate
-        });
+        })
+        .select("id")
+        .single();
+
+      if (error || !insertedRow) {
+        adminCountdownWritePending = false;
+        adminCountdownSubmitButton.disabled = false;
+        adminCountdownSubmitButton.textContent = "Save Countdown";
+        showToast("Couldn\u2019t save countdown. Please try again.");
+        return;
+      }
+
+      adminCountdownSubmitButton.textContent = "Fetching photo\u2026";
+      const photo = await fetchUnsplashPhoto(name);
+      if (photo) {
+        await updateCountdownPhoto(insertedRow.id, photo);
+      }
 
       adminCountdownWritePending = false;
       adminCountdownSubmitButton.disabled = false;
       adminCountdownSubmitButton.textContent = "Save Countdown";
-
-      if (error) {
-        showToast("Couldn't save countdown. Please try again.");
-        return;
-      }
-
       adminCountdownForm.reset();
       await loadAdminCountdowns();
     }
@@ -941,13 +1019,19 @@
     }
 
     function handleAdminSavedCountdownListClick(event) {
-      const button = event.target.closest("[data-action='delete-countdown']");
-
-      if (!button) {
+      const refreshBtn = event.target.closest("[data-action='refresh-photo']");
+      if (refreshBtn) {
+        refreshCountdownPhoto(
+          refreshBtn.getAttribute("data-countdown-id"),
+          refreshBtn.getAttribute("data-countdown-name")
+        );
         return;
       }
 
-      deleteAdminCountdown(button.getAttribute("data-countdown-id"));
+      const deleteBtn = event.target.closest("[data-action='delete-countdown']");
+      if (deleteBtn) {
+        deleteAdminCountdown(deleteBtn.getAttribute("data-countdown-id"));
+      }
     }
 
     function handleAdminCountdownClear() {
