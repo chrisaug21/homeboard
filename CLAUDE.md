@@ -25,6 +25,7 @@ Household command center PWA. Runs on a wall-mounted Android tablet in landscape
 - `users` — linked to `auth.users`, household membership, role (admin/member)
 - `todos` — soft delete via `archived_at`, never hard delete
 - `meal_plan` — `user_id` nullable: null = shared/household, uuid = personal
+- `meal_plan_notes` — one note per household per week, keyed by `household_id` + `week_start`
 - `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`
 - `rsvps` — pre-existing wedding table, do not modify schema
 
@@ -50,3 +51,4 @@ Use `netlify dev --no-watch` if Mac permissions error occurs.
 - Never hard-delete todos — always set `archived_at`
 - `meal_plan` rows with `user_id = null` are shared/household; never show personal rows (`user_id` set) on the display
 - sw.js cache prefix: `homeboard-v##`
+- When pushing any change: update `VERSION` in `js/shared.js` (patch bump for fixes, minor bump for features), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — add new tables, env vars, or screens as they are introduced

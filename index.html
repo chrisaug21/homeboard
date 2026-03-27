@@ -194,6 +194,7 @@
     <footer class="progress-bar" aria-label="Screen progress">
       <div class="progress-dots" id="progress-dots"></div>
     </footer>
+    <div id="version-label" class="version-label" aria-hidden="true"></div>
   </div>
 
   <div class="admin-shell" id="admin-app" hidden>
@@ -252,28 +253,20 @@
       <section class="admin-screen" id="admin-screen-meal-plan" data-admin-screen="meal-plan" hidden>
         <section class="admin-panel" aria-labelledby="admin-meal-plan-title">
           <h2 class="admin-panel-title" id="admin-meal-plan-title">Meal Plan</h2>
-          <p class="admin-panel-note" id="admin-meal-week-label">Loading this week's dinners…</p>
-          <div class="admin-list admin-meal-list" id="admin-meal-list"></div>
-        </section>
-
-        <section class="admin-panel" aria-labelledby="admin-meal-editor-title">
-          <h2 class="admin-panel-title" id="admin-meal-editor-title">Edit Dinner</h2>
-          <p class="admin-panel-note" id="admin-meal-editor-note">Tap a day above to add or edit that night's dinner.</p>
-          <form class="admin-todo-form" id="admin-meal-form">
-            <input id="admin-meal-day-of-week" name="day_of_week" type="hidden" value="0">
-            <div class="admin-field">
-              <label for="admin-meal-name">Meal name</label>
-              <input id="admin-meal-name" name="meal_name" type="text" maxlength="140" required>
-            </div>
-            <div class="admin-field">
-              <label for="admin-meal-type">Meal type</label>
-              <select id="admin-meal-type" name="meal_type" required></select>
-            </div>
-            <div class="admin-actions">
-              <button class="admin-button admin-button--secondary" id="admin-meal-cancel-button" type="button">Reset</button>
-              <button class="admin-button admin-button--primary" id="admin-meal-submit-button" type="submit">Save Dinner</button>
-            </div>
-          </form>
+          <div class="admin-week-nav">
+            <button class="admin-week-nav-btn" id="admin-week-prev" type="button" aria-label="Previous week">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <span class="admin-week-nav-label" id="admin-meal-week-label">Loading…</span>
+            <button class="admin-week-nav-btn" id="admin-week-today" type="button" aria-label="Current week">
+              <i data-lucide="calendar-check"></i>
+            </button>
+            <button class="admin-week-nav-btn" id="admin-week-next" type="button" aria-label="Next week">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+          <div class="admin-meal-list" id="admin-meal-list"></div>
+          <div class="admin-meal-note-wrap" id="admin-meal-note-wrap"></div>
         </section>
       </section>
 
@@ -350,6 +343,7 @@
         <span>Settings</span>
       </button>
     </nav>
+    <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

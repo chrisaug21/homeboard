@@ -18,6 +18,7 @@ Household command center PWA. Wall-mounted Android tablet (landscape display) + 
 | `users` | Linked to `auth.users`. Role: `admin` or `member` |
 | `todos` | Soft delete only — set `archived_at`, never hard delete |
 | `meal_plan` | `user_id` null = shared (show on display). `user_id` set = personal (admin only) |
+| `meal_plan_notes` | One note per household per week. Keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` = Lucide icon name string |
 | `rsvps` | Wedding table — **do not modify schema** |
 
@@ -27,6 +28,7 @@ Household command center PWA. Wall-mounted Android tablet (landscape display) + 
 - Never show `meal_plan` rows where `user_id` is set in Display Mode
 - Never hardcode `SUPABASE_URL` or `SUPABASE_KEY` — injected by Netlify at build
 - sw.js cache prefix must be `homeboard-v##`
+- When pushing any change: bump `VERSION` in `js/shared.js` (patch for fixes, minor for features), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — document new tables, env vars, or screens as they are added
 
 ## Local Dev
 `netlify dev` is the only correct local workflow. `file://` and `npx serve .` do not work.

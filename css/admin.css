@@ -158,8 +158,101 @@
       gap: 12px;
     }
 
+    .admin-week-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .admin-week-nav-label {
+      flex: 1;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .admin-week-nav-btn {
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(124, 96, 69, 0.16);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background-color 140ms ease, opacity 140ms ease;
+      font: inherit;
+    }
+
+    .admin-week-nav-btn:disabled {
+      opacity: 0.28;
+      cursor: default;
+    }
+
+    .admin-week-nav-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
     .admin-meal-list {
-      margin-top: 16px;
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-meal-inline-form {
+      border: 1px solid rgba(180, 83, 9, 0.22);
+      border-radius: 20px;
+      padding: 14px;
+      background: rgba(247, 217, 170, 0.14);
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-meal-inline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .admin-meal-inline-cancel {
+      padding: 6px 12px;
+      font-size: 0.82rem;
+    }
+
+    .admin-meal-note-wrap {
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .admin-meal-note-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(124, 96, 69, 0.22);
+      background: rgba(255, 255, 255, 0.9);
+      font-family: Manrope, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--ink);
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .admin-meal-note-textarea:focus {
+      outline: none;
+      border-color: var(--amber);
     }
 
     .admin-meal-card {
@@ -549,6 +642,23 @@
       font-size: 1.08rem;
       font-weight: 800;
       line-height: 1.3;
+    }
+
+    .admin-version-label {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 96px;
+      z-index: 9;
+      text-align: center;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0.38;
+      pointer-events: none;
+      user-select: none;
     }
 
     @media (max-width: 640px) {
