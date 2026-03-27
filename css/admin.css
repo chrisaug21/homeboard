@@ -627,9 +627,8 @@
     }
 
     .admin-icon-link {
-      flex-shrink: 0;
       font-size: 0.82rem;
-      font-weight: 800;
+      font-weight: 700;
       color: var(--amber);
       text-decoration: none;
       white-space: nowrap;
@@ -789,6 +788,10 @@
       font-size: 0.75rem;
       color: var(--muted);
       line-height: 1.4;
+    }
+
+    .admin-form-photo-preview[hidden] {
+      display: none;
     }
 
     .admin-form-photo-preview {

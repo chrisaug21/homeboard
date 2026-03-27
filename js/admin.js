@@ -884,25 +884,22 @@
                 <div class="admin-form-row">
                   <div class="admin-field">
                     <label for="admin-edit-cd-keyword-${id}">Photo keyword</label>
-                    <div class="admin-icon-row">
-                      <input id="admin-edit-cd-keyword-${id}" name="photo_keyword" type="text" maxlength="100" value="${escapeHtml(c.photo_keyword || "")}" placeholder="e.g. beach, mountains" autocomplete="off">
-                      <button class="admin-button admin-button--secondary" type="button" data-action="get-photo-edit" data-countdown-id="${id}">Get photo</button>
-                    </div>
+                    <input id="admin-edit-cd-keyword-${id}" name="photo_keyword" type="text" maxlength="100" value="${escapeHtml(c.photo_keyword || "")}" placeholder="e.g. beach, mountains" autocomplete="off">
+                    <button class="admin-button admin-button--secondary" type="button" data-action="get-photo-edit" data-countdown-id="${id}" style="width:100%;margin-top:6px">Get photo</button>
                     <p class="admin-field-hint">Optional. Used for Unsplash photo fetch.</p>
                   </div>
                   <div class="admin-field">
-                    <label for="admin-edit-cd-icon-${id}">Icon</label>
-                    <div class="admin-icon-row">
-                      <input id="admin-edit-cd-icon-${id}" name="icon" type="text" maxlength="60" value="${escapeHtml(c.icon || "calendar")}" placeholder="e.g. plane, heart, gem" autocomplete="off">
-                      <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse ↗</a>
-                    </div>
+                    <label for="admin-edit-cd-icon-${id}">Icon — <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse ↗</a></label>
+                    <input id="admin-edit-cd-icon-${id}" name="icon" type="text" maxlength="60" value="${escapeHtml(c.icon || "calendar")}" placeholder="e.g. plane, heart, gem" autocomplete="off">
                     <p class="admin-field-hint">Lucide icon name. Optional.</p>
                   </div>
                 </div>
                 <div class="admin-form-photo-preview" id="admin-edit-photo-pending-${id}" hidden></div>
                 ${thumbnailUrl ? `
                 <div class="admin-edit-photo-preview">
-                  <img class="admin-edit-photo-thumb" src="${escapeHtml(thumbnailUrl)}" alt="" aria-hidden="true" onerror="this.closest('.admin-edit-photo-preview').remove();">
+                  <button class="admin-countdown-preview-btn" type="button" data-action="view-photo" data-full-url="${escapeHtml(imageUrl)}" data-credit="${escapeHtml(imageCredit || "")}" aria-label="View full photo">
+                    <img class="admin-edit-photo-thumb" src="${escapeHtml(thumbnailUrl)}" alt="" aria-hidden="true" onerror="this.closest('.admin-edit-photo-preview').remove();">
+                  </button>
                   <div class="admin-edit-photo-meta">
                     ${imageCredit ? `<span class="admin-edit-photo-credit">${escapeHtml(imageCredit)}</span>` : ""}
                     <button class="admin-button admin-button--ghost-danger" type="button" data-action="remove-photo" data-countdown-id="${id}" aria-label="Remove photo" style="margin-left:0">Remove photo</button>
@@ -1286,6 +1283,12 @@
         </div>
       `;
       container.hidden = false;
+      // If there's an existing saved photo preview in the same form, hide it so only one shows
+      const form = container.closest("form");
+      if (form) {
+        const existing = form.querySelector(".admin-edit-photo-preview");
+        if (existing) existing.hidden = true;
+      }
     }
 
     async function handleGetPhotoCreate() {
