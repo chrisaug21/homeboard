@@ -732,14 +732,6 @@
       margin-left: auto;
     }
 
-    .admin-countdown-remove-photo {
-      display: flex;
-    }
-
-    .admin-countdown-remove-photo .admin-button--ghost-danger {
-      margin-left: 0;
-    }
-
     .admin-button--ghost-danger:hover,
     .admin-button--ghost-danger:focus-visible {
       background: rgba(166, 76, 99, 0.08);
@@ -748,6 +740,93 @@
     .admin-countdown-card--refreshing .admin-countdown-actions button {
       opacity: 0.4;
       pointer-events: none;
+    }
+
+    .admin-countdown-preview-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: zoom-in;
+      flex-shrink: 0;
+      border-radius: 10px;
+      overflow: hidden;
+      display: block;
+    }
+
+    .admin-countdown-preview-btn:focus-visible {
+      outline: 3px solid var(--amber);
+      outline-offset: 2px;
+    }
+
+    .admin-edit-photo-preview {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px;
+      background: rgba(124, 96, 69, 0.06);
+      border-radius: 12px;
+    }
+
+    .admin-edit-photo-thumb {
+      width: 64px;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      border-radius: 8px;
+      flex-shrink: 0;
+      background: rgba(124, 96, 69, 0.08);
+    }
+
+    .admin-edit-photo-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .admin-edit-photo-credit {
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .admin-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      cursor: pointer;
+    }
+
+    .admin-lightbox[hidden] {
+      display: none;
+    }
+
+    .admin-lightbox-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      max-width: min(400px, 100%);
+      pointer-events: none;
+    }
+
+    .admin-lightbox-img {
+      width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+      border-radius: 16px;
+    }
+
+    .admin-lightbox-credit {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.55);
+      text-align: center;
+      margin: 0;
     }
 
     .admin-countdown-edit-header {
