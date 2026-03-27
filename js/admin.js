@@ -815,7 +815,7 @@
                   data-countdown-id="${escapeHtml(c.id)}"
                   data-countdown-name="${escapeHtml(c.name)}"
                   aria-label="Refresh photo for ${escapeHtml(c.name)}"
-                ><i data-lucide="image-down"></i></button>
+                >Refresh photo</button>
                 <button
                   class="admin-button admin-button--danger"
                   type="button"
@@ -869,8 +869,9 @@
     async function fetchUnsplashPhoto(query) {
       if (!UNSPLASH_ACCESS_KEY || UNSPLASH_ACCESS_KEY.startsWith("%%")) return null;
       try {
+        const cleanQuery = query.replace(/[^a-zA-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
         const response = await fetch(
-          `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=landscape&content_filter=high`,
+          `https://api.unsplash.com/photos/random?query=${encodeURIComponent(cleanQuery)}&orientation=portrait&order_by=editorial&content_filter=high`,
           { headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` } }
         );
         if (!response.ok) return null;
