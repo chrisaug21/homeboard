@@ -102,11 +102,12 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
+      align-items: start;
     }
 
     .admin-actions {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       gap: 10px;
     }
 
@@ -788,6 +789,34 @@
       font-size: 0.75rem;
       color: var(--muted);
       line-height: 1.4;
+    }
+
+    .admin-form-photo-preview {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px;
+      background: rgba(124, 96, 69, 0.06);
+      border-radius: 12px;
+    }
+
+    .admin-form-photo-preview img {
+      width: 64px;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      border-radius: 8px;
+      flex-shrink: 0;
+      background: rgba(124, 96, 69, 0.08);
+    }
+
+    .admin-form-photo-preview-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+      font-size: 0.75rem;
+      color: var(--muted);
     }
 
     .admin-lightbox {

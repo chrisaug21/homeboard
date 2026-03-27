@@ -38,6 +38,7 @@
     let adminCountdownWritePending = false;
     let adminCountdownEditPending = false;
     let adminEditingCountdownId = null;
+    const adminPendingPhotos = new Map();
     let adminCalEvents = [];
     let adminSavedCountdowns = [];
     const refreshingCountdowns = new Set();
@@ -765,7 +766,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("id, name, icon, event_date, unsplash_image_url, days_before_visible")
+        .select("id, name, icon, event_date, unsplash_image_url, days_before_visible, photo_keyword")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
@@ -864,7 +865,6 @@
               <form class="admin-countdown-edit-form" data-countdown-id="${id}" data-original-name="${escapeHtml(c.name)}">
                 <div class="admin-countdown-edit-header">
                   <span class="admin-countdown-edit-title">${escapeHtml(c.name)}</span>
-                  <button class="admin-button admin-button--secondary" type="button" data-action="cancel-edit" data-countdown-id="${id}" aria-label="Cancel edit">Cancel</button>
                 </div>
                 <div class="admin-field">
                   <label for="admin-edit-cd-name-${id}">Name</label>
@@ -876,21 +876,30 @@
                     <input id="admin-edit-cd-date-${id}" name="event_date" type="date" value="${escapeHtml(c.event_date || "")}" required>
                   </div>
                   <div class="admin-field">
-                    <label for="admin-edit-cd-days-${id}">Show starting <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+                    <label for="admin-edit-cd-days-${id}">Show starting</label>
                     <input id="admin-edit-cd-days-${id}" name="days_before_visible" type="number" min="1" max="365" value="${escapeHtml(daysBeforeValue)}" placeholder="e.g. 30">
-                    <p class="admin-field-hint">Days before event to appear on display.</p>
+                    <p class="admin-field-hint">Days before event to appear. Optional.</p>
                   </div>
                 </div>
                 <div class="admin-form-row">
                   <div class="admin-field">
-                    <label for="admin-edit-cd-keyword-${id}">Photo keyword <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
-                    <input id="admin-edit-cd-keyword-${id}" name="photo_keyword" type="text" maxlength="100" placeholder="e.g. beach, mountains" autocomplete="off">
+                    <label for="admin-edit-cd-keyword-${id}">Photo keyword</label>
+                    <div class="admin-icon-row">
+                      <input id="admin-edit-cd-keyword-${id}" name="photo_keyword" type="text" maxlength="100" value="${escapeHtml(c.photo_keyword || "")}" placeholder="e.g. beach, mountains" autocomplete="off">
+                      <button class="admin-button admin-button--secondary" type="button" data-action="get-photo-edit" data-countdown-id="${id}">Get photo</button>
+                    </div>
+                    <p class="admin-field-hint">Optional. Used for Unsplash photo fetch.</p>
                   </div>
                   <div class="admin-field">
-                    <label for="admin-edit-cd-icon-${id}">Icon <span style="font-weight:400;color:var(--muted)">(Lucide icon name)</span></label>
-                    <input id="admin-edit-cd-icon-${id}" name="icon" type="text" maxlength="60" value="${escapeHtml(c.icon || "calendar")}" placeholder="e.g. plane, heart, gem" autocomplete="off">
+                    <label for="admin-edit-cd-icon-${id}">Icon</label>
+                    <div class="admin-icon-row">
+                      <input id="admin-edit-cd-icon-${id}" name="icon" type="text" maxlength="60" value="${escapeHtml(c.icon || "calendar")}" placeholder="e.g. plane, heart, gem" autocomplete="off">
+                      <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse ↗</a>
+                    </div>
+                    <p class="admin-field-hint">Lucide icon name. Optional.</p>
                   </div>
                 </div>
+                <div class="admin-form-photo-preview" id="admin-edit-photo-pending-${id}" hidden></div>
                 ${thumbnailUrl ? `
                 <div class="admin-edit-photo-preview">
                   <img class="admin-edit-photo-thumb" src="${escapeHtml(thumbnailUrl)}" alt="" aria-hidden="true" onerror="this.closest('.admin-edit-photo-preview').remove();">
@@ -899,7 +908,10 @@
                     <button class="admin-button admin-button--ghost-danger" type="button" data-action="remove-photo" data-countdown-id="${id}" aria-label="Remove photo" style="margin-left:0">Remove photo</button>
                   </div>
                 </div>` : ""}
-                <button class="admin-button admin-button--primary" type="submit">Save changes</button>
+                <div class="admin-actions">
+                  <button class="admin-button admin-button--secondary" type="button" data-action="cancel-edit" data-countdown-id="${id}" aria-label="Cancel edit">Cancel</button>
+                  <button class="admin-button admin-button--primary" type="submit">Save changes</button>
+                </div>
               </form>
             </article>
           `;
@@ -923,7 +935,7 @@
             </div>
             <div class="admin-countdown-actions">
               <button class="admin-button admin-button--secondary admin-countdown-action-btn" type="button" data-action="edit-countdown" data-countdown-id="${escapeHtml(c.id)}" aria-label="Edit ${escapeHtml(c.name)}">Edit</button>
-              <button class="admin-button admin-button--secondary admin-countdown-action-btn" type="button" data-action="refresh-photo" data-countdown-id="${escapeHtml(c.id)}" data-countdown-name="${escapeHtml(c.name)}" aria-label="Refresh photo for ${escapeHtml(c.name)}">Refresh photo</button>
+              <button class="admin-button admin-button--secondary admin-countdown-action-btn" type="button" data-action="refresh-photo" data-countdown-id="${escapeHtml(c.id)}" data-countdown-name="${escapeHtml(c.name)}" data-photo-keyword="${escapeHtml(c.photo_keyword || "")}" aria-label="Refresh photo for ${escapeHtml(c.name)}">Refresh photo</button>
               <button class="admin-button admin-button--ghost-danger" type="button" data-action="delete-countdown" data-countdown-id="${escapeHtml(c.id)}" aria-label="Delete ${escapeHtml(c.name)}">Delete</button>
             </div>
           </article>
@@ -931,7 +943,8 @@
       }).join("");
     }
 
-    async function loadAdminCountdowns() {
+    async function loadAdminCountdowns({ preserveScroll = false } = {}) {
+      const savedScrollY = preserveScroll ? window.scrollY : 0;
       updateAdminCalMonthLabel();
       adminCalEventsNote.textContent = "Loading calendar events\u2026";
       adminCalEventList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
@@ -962,6 +975,10 @@
       }
 
       refreshIcons();
+
+      if (preserveScroll) {
+        requestAnimationFrame(() => window.scrollTo({ top: savedScrollY, behavior: "instant" }));
+      }
     }
 
     function openAdminLightbox(fullUrl, credit) {
@@ -1029,7 +1046,7 @@
       return !error;
     }
 
-    async function refreshCountdownPhoto(id, name) {
+    async function refreshCountdownPhoto(id, name, photoKeyword) {
       if (refreshingCountdowns.has(id)) return;
       refreshingCountdowns.add(id);
 
@@ -1038,7 +1055,7 @@
 
       showToast("Fetching new photo\u2026");
       try {
-        const photo = await fetchUnsplashPhoto(name);
+        const photo = await fetchUnsplashPhoto(photoKeyword || name);
         if (!photo) {
           showToast("Couldn\u2019t find a photo. Try again.");
           return;
@@ -1048,9 +1065,7 @@
           showToast("Couldn\u2019t save photo. Please try again.");
           return;
         }
-        const scrollY = window.scrollY;
-        await loadAdminCountdowns();
-        window.scrollTo({ top: scrollY, behavior: "instant" });
+        await loadAdminCountdowns({ preserveScroll: true });
         showToast("Photo updated.");
       } finally {
         refreshingCountdowns.delete(id);
@@ -1070,7 +1085,7 @@
         showToast("Couldn\u2019t remove photo. Please try again.");
         return;
       }
-      await loadAdminCountdowns();
+      await loadAdminCountdowns({ preserveScroll: true });
     }
 
     async function saveAdminCountdown(formData) {
@@ -1108,7 +1123,8 @@
           name,
           icon,
           event_date: eventDate,
-          days_before_visible: daysBeforeVisible
+          days_before_visible: daysBeforeVisible,
+          photo_keyword: photoKeyword || null
         })
         .select("id")
         .single();
@@ -1125,13 +1141,25 @@
       adminCountdownSubmitButton.disabled = false;
       adminCountdownSubmitButton.textContent = "Save Countdown";
       adminCountdownForm.reset();
+      const pendingCreatePreview = document.getElementById("admin-create-photo-pending");
+      if (pendingCreatePreview) pendingCreatePreview.hidden = true;
+
+      const pendingPhoto = adminPendingPhotos.get("create");
+      adminPendingPhotos.delete("create");
+
       await loadAdminCountdowns();
 
-      fetchUnsplashPhoto(photoKeyword || name).then(async (photo) => {
-        if (!photo) return;
-        const ok = await updateCountdownPhoto(insertedRow.id, photo);
-        if (ok) await loadAdminCountdowns();
-      }).catch((e) => console.warn("Background photo fetch failed:", e));
+      if (pendingPhoto) {
+        updateCountdownPhoto(insertedRow.id, pendingPhoto).then(async (ok) => {
+          if (ok) await loadAdminCountdowns();
+        }).catch((e) => console.warn("Background photo save failed:", e));
+      } else {
+        fetchUnsplashPhoto(photoKeyword || name).then(async (photo) => {
+          if (!photo) return;
+          const ok = await updateCountdownPhoto(insertedRow.id, photo);
+          if (ok) await loadAdminCountdowns();
+        }).catch((e) => console.warn("Background photo fetch failed:", e));
+      }
     }
 
     async function updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName) {
@@ -1150,7 +1178,7 @@
 
       const { error } = await client
         .from("countdowns")
-        .update({ name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible })
+        .update({ name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null })
         .eq("id", id)
         .eq("household_id", DISPLAY_HOUSEHOLD_ID);
 
@@ -1166,13 +1194,20 @@
       }
 
       adminEditingCountdownId = null;
-      await loadAdminCountdowns();
+      const pendingPhoto = adminPendingPhotos.get(id);
+      adminPendingPhotos.delete(id);
 
-      if (photoKeyword || name !== originalName) {
+      await loadAdminCountdowns({ preserveScroll: true });
+
+      if (pendingPhoto) {
+        updateCountdownPhoto(id, pendingPhoto).then(async (ok) => {
+          if (ok) await loadAdminCountdowns({ preserveScroll: true });
+        }).catch((e) => console.warn("Background photo save failed:", e));
+      } else if (photoKeyword || name !== originalName) {
         fetchUnsplashPhoto(photoKeyword || name).then(async (photo) => {
           if (!photo) return;
           const ok = await updateCountdownPhoto(id, photo);
-          if (ok) await loadAdminCountdowns();
+          if (ok) await loadAdminCountdowns({ preserveScroll: true });
         }).catch((e) => console.warn("Background photo fetch failed:", e));
       }
     }
@@ -1241,6 +1276,59 @@
       saveAdminCountdown(new FormData(event.currentTarget));
     }
 
+    function setFormPhotoPreview(container, photo) {
+      if (!container) return;
+      const thumbUrl = unsplashThumbnailUrl(photo.url);
+      container.innerHTML = `
+        <img src="${escapeHtml(thumbUrl)}" alt="" aria-hidden="true">
+        <div class="admin-form-photo-preview-meta">
+          <span>${escapeHtml(photo.credit || "")}</span>
+        </div>
+      `;
+      container.hidden = false;
+    }
+
+    async function handleGetPhotoCreate() {
+      const keywordInput = document.getElementById("admin-countdown-photo-keyword");
+      const nameInput = document.getElementById("admin-countdown-name");
+      const previewContainer = document.getElementById("admin-create-photo-pending");
+      const btn = adminCountdownForm.querySelector("[data-action='get-photo-create']");
+      if (!keywordInput || !previewContainer) return;
+      const query = keywordInput.value.trim() || (nameInput && nameInput.value.trim()) || "";
+      if (!query) return;
+      if (btn) { btn.disabled = true; btn.textContent = "Loading\u2026"; }
+      const photo = await fetchUnsplashPhoto(query);
+      if (btn) { btn.disabled = false; btn.textContent = "Get photo"; }
+      if (!photo) {
+        showToast("Couldn\u2019t find a photo. Try a different keyword.");
+        return;
+      }
+      adminPendingPhotos.set("create", photo);
+      setFormPhotoPreview(previewContainer, photo);
+    }
+
+    async function handleGetPhotoEdit(btn) {
+      const id = btn.getAttribute("data-countdown-id");
+      const form = adminSavedCountdownList.querySelector(`.admin-countdown-edit-form[data-countdown-id="${id}"]`);
+      if (!form) return;
+      const keywordInput = form.querySelector(`[name="photo_keyword"]`);
+      const nameInput = form.querySelector(`[name="name"]`);
+      const previewContainer = document.getElementById(`admin-edit-photo-pending-${id}`);
+      const query = (keywordInput && keywordInput.value.trim()) || (nameInput && nameInput.value.trim()) || "";
+      if (!query) return;
+      btn.disabled = true;
+      btn.textContent = "Loading\u2026";
+      const photo = await fetchUnsplashPhoto(query);
+      btn.disabled = false;
+      btn.textContent = "Get photo";
+      if (!photo) {
+        showToast("Couldn\u2019t find a photo. Try a different keyword.");
+        return;
+      }
+      adminPendingPhotos.set(id, photo);
+      setFormPhotoPreview(previewContainer, photo);
+    }
+
     function handleAdminSavedCountdownListClick(event) {
       const viewPhotoBtn = event.target.closest("[data-action='view-photo']");
       if (viewPhotoBtn) {
@@ -1253,17 +1341,28 @@
 
       const editBtn = event.target.closest("[data-action='edit-countdown']");
       if (editBtn) {
+        const scrollY = window.scrollY;
         adminEditingCountdownId = editBtn.getAttribute("data-countdown-id");
         renderAdminSavedCountdowns();
         refreshIcons();
+        requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "instant" }));
         return;
       }
 
       const cancelBtn = event.target.closest("[data-action='cancel-edit']");
       if (cancelBtn) {
+        const scrollY = window.scrollY;
+        adminPendingPhotos.delete(cancelBtn.getAttribute("data-countdown-id"));
         adminEditingCountdownId = null;
         renderAdminSavedCountdowns();
         refreshIcons();
+        requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "instant" }));
+        return;
+      }
+
+      const getPhotoEditBtn = event.target.closest("[data-action='get-photo-edit']");
+      if (getPhotoEditBtn) {
+        handleGetPhotoEdit(getPhotoEditBtn);
         return;
       }
 
@@ -1277,7 +1376,8 @@
       if (refreshBtn) {
         refreshCountdownPhoto(
           refreshBtn.getAttribute("data-countdown-id"),
-          refreshBtn.getAttribute("data-countdown-name")
+          refreshBtn.getAttribute("data-countdown-name"),
+          refreshBtn.getAttribute("data-photo-keyword")
         );
         return;
       }
@@ -1290,6 +1390,9 @@
 
     function handleAdminCountdownClear() {
       adminCountdownForm.reset();
+      adminPendingPhotos.delete("create");
+      const previewContainer = document.getElementById("admin-create-photo-pending");
+      if (previewContainer) previewContainer.hidden = true;
     }
 
     async function fetchAdminTodos() {
@@ -1343,6 +1446,9 @@
       adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);
       if (adminWeekTodayBtn) adminWeekTodayBtn.addEventListener("click", handleAdminWeekToday);
       adminCountdownForm.addEventListener("submit", handleAdminCountdownSubmit);
+      adminCountdownForm.addEventListener("click", (e) => {
+        if (e.target.closest("[data-action='get-photo-create']")) handleGetPhotoCreate();
+      });
       adminCountdownClearButton.addEventListener("click", handleAdminCountdownClear);
       adminCalEventList.addEventListener("click", handleAdminCountdownCalListClick);
       adminSavedCountdownList.addEventListener("click", handleAdminSavedCountdownListClick);
