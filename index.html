@@ -275,6 +275,15 @@
 
         <section class="admin-panel" aria-labelledby="admin-cal-events-title">
           <h2 class="admin-panel-title" id="admin-cal-events-title">Calendar Events</h2>
+          <div class="admin-week-nav" id="admin-cal-nav">
+            <button class="admin-week-nav-btn" id="admin-cal-prev" type="button" aria-label="Previous month">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <span class="admin-week-nav-label" id="admin-cal-month-label"></span>
+            <button class="admin-week-nav-btn" id="admin-cal-next" type="button" aria-label="Next month">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
           <p class="admin-panel-note" id="admin-cal-events-note">Tap an event to flag it as a countdown.</p>
           <div class="admin-list" id="admin-cal-event-list"></div>
         </section>

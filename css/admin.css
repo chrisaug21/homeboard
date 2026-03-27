@@ -631,20 +631,51 @@
       border: 1px solid rgba(124, 96, 69, 0.12);
     }
 
+    .admin-saved-countdown-card--editing {
+      background: rgba(247, 217, 170, 0.18);
+      border-color: rgba(180, 83, 9, 0.22);
+    }
+
+    .admin-countdown-card-main {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .admin-countdown-card-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
     .admin-saved-countdown-name {
-      font-size: 1.08rem;
+      font-size: 1.05rem;
       font-weight: 800;
       line-height: 1.3;
     }
 
+    .admin-countdown-card-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .admin-countdown-meta-item {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+    }
+
     .admin-countdown-preview {
-      height: 140px;
-      width: auto;
-      max-width: 100%;
+      width: 72px;
       aspect-ratio: 3 / 4;
       object-fit: cover;
-      border-radius: 12px;
-      display: block;
+      border-radius: 10px;
+      flex-shrink: 0;
       background: rgba(124, 96, 69, 0.08);
     }
 
@@ -652,6 +683,8 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      border-top: 1px solid rgba(124, 96, 69, 0.1);
+      padding-top: 10px;
     }
 
     .admin-countdown-refresh-btn {
@@ -659,10 +692,45 @@
       font-size: 0.82rem;
     }
 
+    .admin-button--ghost-danger {
+      background: none;
+      color: var(--rose);
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      margin-left: auto;
+    }
+
+    .admin-button--ghost-danger:hover,
+    .admin-button--ghost-danger:focus-visible {
+      background: rgba(166, 76, 99, 0.08);
+    }
+
     .admin-countdown-card--refreshing .admin-countdown-actions button {
       opacity: 0.4;
       pointer-events: none;
     }
+
+    .admin-countdown-edit-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .admin-countdown-edit-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .admin-countdown-edit-form {
+      display: grid;
+      gap: 14px;
+    }
+
 
     .admin-version-label {
       font-size: 0.65rem;

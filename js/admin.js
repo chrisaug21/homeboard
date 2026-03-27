@@ -36,9 +36,17 @@
     let adminEditingDay = null;
     let adminMealPlanRows = [];
     let adminCountdownWritePending = false;
+    let adminCountdownEditPending = false;
+    let adminEditingCountdownId = null;
     let adminCalEvents = [];
     let adminSavedCountdowns = [];
     const refreshingCountdowns = new Set();
+    let adminCalMonthDate = (() => {
+      const d = new Date();
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    })();
 
     function buildMealTypeOptionsHTML(selectedType) {
       return mealTypeOptions.map((option) =>
@@ -704,12 +712,45 @@
         return null;
       }
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const timeMax = new Date(today);
-      timeMax.setDate(today.getDate() + 60);
+      const start = new Date(adminCalMonthDate.getFullYear(), adminCalMonthDate.getMonth(), 1);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(adminCalMonthDate.getFullYear(), adminCalMonthDate.getMonth() + 1, 0);
+      end.setHours(23, 59, 59, 999);
 
-      return fetchGoogleCalendarEvents(config.google_cal_id, apiKey, today, timeMax);
+      return fetchGoogleCalendarEvents(config.google_cal_id, apiKey, start, end);
+    }
+
+    function updateAdminCalMonthLabel() {
+      const label = document.getElementById("admin-cal-month-label");
+      if (label) {
+        label.textContent = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(adminCalMonthDate);
+      }
+    }
+
+    async function loadAdminCalendarMonth() {
+      adminCalEventsNote.textContent = "Loading\u2026";
+      adminCalEventList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
+      updateAdminCalMonthLabel();
+      const calItems = await fetchAdminCalendarEvents();
+      adminCalEvents = calItems || [];
+      if (!calItems) {
+        adminCalEventsNote.textContent = "Google Calendar not configured for this household.";
+        adminCalEventList.innerHTML = '<div class="admin-empty">Add a google_cal_id to the households table to enable this.</div>';
+      } else {
+        adminCalEventsNote.textContent = calItems.length ? "Tap an event to flag it as a countdown." : "No events this month.";
+        renderAdminCalEventList();
+      }
+      refreshIcons();
+    }
+
+    function handleAdminCalPrev() {
+      adminCalMonthDate = new Date(adminCalMonthDate.getFullYear(), adminCalMonthDate.getMonth() - 1, 1);
+      loadAdminCalendarMonth();
+    }
+
+    function handleAdminCalNext() {
+      adminCalMonthDate = new Date(adminCalMonthDate.getFullYear(), adminCalMonthDate.getMonth() + 1, 1);
+      loadAdminCalendarMonth();
     }
 
     async function fetchAdminSavedCountdowns() {
@@ -803,30 +844,48 @@
           }
         }
 
+        if (c.id === adminEditingCountdownId) {
+          return `
+            <article class="admin-saved-countdown-card admin-saved-countdown-card--editing" data-countdown-id="${escapeHtml(c.id)}">
+              <form class="admin-countdown-edit-form" data-countdown-id="${escapeHtml(c.id)}" data-original-name="${escapeHtml(c.name)}">
+                <div class="admin-countdown-edit-header">
+                  <span class="admin-countdown-edit-title">${escapeHtml(c.name)}</span>
+                  <button class="admin-button admin-button--secondary" type="button" data-action="cancel-edit" data-countdown-id="${escapeHtml(c.id)}" aria-label="Cancel edit">Cancel</button>
+                </div>
+                <div class="admin-field">
+                  <label for="admin-edit-cd-name-${escapeHtml(c.id)}">Name</label>
+                  <input id="admin-edit-cd-name-${escapeHtml(c.id)}" name="name" type="text" maxlength="140" value="${escapeHtml(c.name)}" required autocomplete="off">
+                </div>
+                <div class="admin-field">
+                  <label for="admin-edit-cd-date-${escapeHtml(c.id)}">Date</label>
+                  <input id="admin-edit-cd-date-${escapeHtml(c.id)}" name="event_date" type="date" value="${escapeHtml(c.event_date || "")}" required>
+                </div>
+                <div class="admin-field">
+                  <label for="admin-edit-cd-icon-${escapeHtml(c.id)}">Icon <span style="font-weight:400;color:var(--muted)">(Lucide icon name)</span></label>
+                  <input id="admin-edit-cd-icon-${escapeHtml(c.id)}" name="icon" type="text" maxlength="60" value="${escapeHtml(c.icon || "calendar")}" placeholder="e.g. plane, heart, gem" autocomplete="off">
+                </div>
+                <button class="admin-button admin-button--primary" type="submit">Save changes</button>
+              </form>
+            </article>
+          `;
+        }
+
         return `
-          <article class="admin-saved-countdown-card">
-            <div class="admin-saved-countdown-name">${escapeHtml(c.name)}</div>
-            ${imageUrl ? `<img class="admin-countdown-preview" src="${escapeHtml(imageUrl)}" alt="" aria-hidden="true" onerror="this.remove();">` : ""}
-            <div class="admin-todo-meta">
-              <span class="admin-pill admin-pill--due">${escapeHtml(dateLabel)}</span>
-              <span class="admin-pill"><i data-lucide="${escapeHtml(c.icon || "calendar")}" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>${escapeHtml(c.icon || "calendar")}</span>
+          <article class="admin-saved-countdown-card" data-countdown-id="${escapeHtml(c.id)}">
+            <div class="admin-countdown-card-main">
+              ${imageUrl ? `<img class="admin-countdown-preview" src="${escapeHtml(imageUrl)}" alt="" aria-hidden="true" onerror="this.remove();">` : ""}
+              <div class="admin-countdown-card-body">
+                <div class="admin-saved-countdown-name">${escapeHtml(c.name)}</div>
+                <div class="admin-countdown-card-meta">
+                  <span class="admin-countdown-meta-item">${escapeHtml(dateLabel)}</span>
+                  <span class="admin-countdown-meta-item"><i data-lucide="${escapeHtml(c.icon || "calendar")}" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;"></i>${escapeHtml(c.icon || "calendar")}</span>
+                </div>
+              </div>
             </div>
             <div class="admin-countdown-actions">
-              <button
-                class="admin-button admin-button--secondary admin-countdown-refresh-btn"
-                type="button"
-                data-action="refresh-photo"
-                data-countdown-id="${escapeHtml(c.id)}"
-                data-countdown-name="${escapeHtml(c.name)}"
-                aria-label="Refresh photo for ${escapeHtml(c.name)}"
-              >Refresh photo</button>
-              <button
-                class="admin-button admin-button--danger"
-                type="button"
-                data-action="delete-countdown"
-                data-countdown-id="${escapeHtml(c.id)}"
-                aria-label="Delete ${escapeHtml(c.name)}"
-              >Delete</button>
+              <button class="admin-button admin-button--secondary" type="button" data-action="edit-countdown" data-countdown-id="${escapeHtml(c.id)}" aria-label="Edit ${escapeHtml(c.name)}">Edit</button>
+              <button class="admin-button admin-button--secondary admin-countdown-refresh-btn" type="button" data-action="refresh-photo" data-countdown-id="${escapeHtml(c.id)}" data-countdown-name="${escapeHtml(c.name)}" aria-label="Refresh photo for ${escapeHtml(c.name)}">Refresh photo</button>
+              <button class="admin-button admin-button--ghost-danger" type="button" data-action="delete-countdown" data-countdown-id="${escapeHtml(c.id)}" aria-label="Delete ${escapeHtml(c.name)}">Delete</button>
             </div>
           </article>
         `;
@@ -834,10 +893,11 @@
     }
 
     async function loadAdminCountdowns() {
-      adminCalEventsNote.textContent = "Loading calendar events…";
-      adminCalEventList.innerHTML = '<div class="admin-empty">Loading…</div>';
-      adminSavedCountdownsNote.textContent = "Loading…";
-      adminSavedCountdownList.innerHTML = '<div class="admin-empty">Loading…</div>';
+      updateAdminCalMonthLabel();
+      adminCalEventsNote.textContent = "Loading calendar events\u2026";
+      adminCalEventList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
+      adminSavedCountdownsNote.textContent = "Loading\u2026";
+      adminSavedCountdownList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
 
       const [calItems, savedRows] = await Promise.all([
         fetchAdminCalendarEvents(),
@@ -851,12 +911,12 @@
         adminCalEventsNote.textContent = "Google Calendar not configured for this household.";
         adminCalEventList.innerHTML = '<div class="admin-empty">Add a google_cal_id to the households table to enable this.</div>';
       } else {
-        adminCalEventsNote.textContent = "Tap an event to flag it as a countdown.";
+        adminCalEventsNote.textContent = calItems.length ? "Tap an event to flag it as a countdown." : "No events this month.";
         renderAdminCalEventList();
       }
 
       if (!savedRows) {
-        adminSavedCountdownsNote.textContent = "Couldn't load saved countdowns.";
+        adminSavedCountdownsNote.textContent = "Couldn\u2019t load saved countdowns.";
         adminSavedCountdownList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
       } else {
         renderAdminSavedCountdowns();
@@ -984,6 +1044,63 @@
       }).catch((e) => console.warn("Background photo fetch failed:", e));
     }
 
+    async function updateAdminCountdown(id, name, eventDate, icon, originalName) {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast("Couldn\u2019t update countdown. Supabase is unavailable.");
+        return;
+      }
+
+      adminCountdownEditPending = true;
+      const submitBtn = adminSavedCountdownList.querySelector(`[data-countdown-id="${id}"] form [type="submit"]`);
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Saving\u2026";
+      }
+
+      const { error } = await client
+        .from("countdowns")
+        .update({ name, event_date: eventDate, icon })
+        .eq("id", id)
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID);
+
+      adminCountdownEditPending = false;
+
+      if (error) {
+        showToast("Couldn\u2019t update countdown. Please try again.");
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Save changes";
+        }
+        return;
+      }
+
+      adminEditingCountdownId = null;
+      await loadAdminCountdowns();
+
+      if (name !== originalName) {
+        fetchUnsplashPhoto(name).then(async (photo) => {
+          if (!photo) return;
+          const ok = await updateCountdownPhoto(id, photo);
+          if (ok) await loadAdminCountdowns();
+        }).catch((e) => console.warn("Background photo fetch failed:", e));
+      }
+    }
+
+    function handleAdminSavedCountdownListSubmit(event) {
+      const form = event.target.closest(".admin-countdown-edit-form");
+      if (!form) return;
+      event.preventDefault();
+      const id = form.getAttribute("data-countdown-id");
+      const originalName = form.getAttribute("data-original-name");
+      const formData = new FormData(form);
+      const name = String(formData.get("name") || "").trim();
+      const eventDate = String(formData.get("event_date") || "").trim();
+      const icon = String(formData.get("icon") || "").trim() || "calendar";
+      if (!name || !eventDate || adminCountdownEditPending) return;
+      updateAdminCountdown(id, name, eventDate, icon, originalName);
+    }
+
     async function deleteAdminCountdown(id) {
       const client = getSupabaseClient();
 
@@ -1032,6 +1149,22 @@
     }
 
     function handleAdminSavedCountdownListClick(event) {
+      const editBtn = event.target.closest("[data-action='edit-countdown']");
+      if (editBtn) {
+        adminEditingCountdownId = editBtn.getAttribute("data-countdown-id");
+        renderAdminSavedCountdowns();
+        refreshIcons();
+        return;
+      }
+
+      const cancelBtn = event.target.closest("[data-action='cancel-edit']");
+      if (cancelBtn) {
+        adminEditingCountdownId = null;
+        renderAdminSavedCountdowns();
+        refreshIcons();
+        return;
+      }
+
       const refreshBtn = event.target.closest("[data-action='refresh-photo']");
       if (refreshBtn) {
         refreshCountdownPhoto(
@@ -1105,6 +1238,11 @@
       adminCountdownClearButton.addEventListener("click", handleAdminCountdownClear);
       adminCalEventList.addEventListener("click", handleAdminCountdownCalListClick);
       adminSavedCountdownList.addEventListener("click", handleAdminSavedCountdownListClick);
+      adminSavedCountdownList.addEventListener("submit", handleAdminSavedCountdownListSubmit);
+      const adminCalPrevBtn = document.getElementById("admin-cal-prev");
+      const adminCalNextBtn = document.getElementById("admin-cal-next");
+      if (adminCalPrevBtn) adminCalPrevBtn.addEventListener("click", handleAdminCalPrev);
+      if (adminCalNextBtn) adminCalNextBtn.addEventListener("click", handleAdminCalNext);
       const adminVersionEl = document.getElementById("admin-version-label");
       if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
       loadAdminTodos();
