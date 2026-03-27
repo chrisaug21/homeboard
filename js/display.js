@@ -435,13 +435,28 @@
       return data.note || "";
     }
 
+    function parseUnsplashData(raw) {
+      if (!raw) return { imageUrl: null, imageCredit: null };
+      try {
+        const parsed = JSON.parse(raw);
+        return { imageUrl: parsed.url || null, imageCredit: parsed.credit || null };
+      } catch {
+        // Legacy: raw URL stored before JSON format
+        return { imageUrl: raw, imageCredit: null };
+      }
+    }
+
     function mapSupabaseCountdown(countdown) {
+      const { imageUrl, imageCredit } = parseUnsplashData(countdown.unsplash_image_url);
       return {
         name: countdown.name || "Upcoming Event",
         icon: countdown.icon || "calendar",
         eventDate: countdown.event_date,
         days: getDaysUntil(countdown.event_date),
-        caption: formatLongDate(countdown.event_date)
+        caption: formatLongDate(countdown.event_date),
+        image_url: imageUrl,
+        image_credit: imageCredit,
+        daysBeforeVisible: countdown.days_before_visible ?? null
       };
     }
 
@@ -457,7 +472,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("name, icon, event_date")
+        .select("name, icon, event_date, unsplash_image_url, days_before_visible")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
@@ -466,7 +481,10 @@
         return null;
       }
 
-      return data.map(mapSupabaseCountdown);
+      return data.map(mapSupabaseCountdown).filter((item) => {
+        if (item.daysBeforeVisible === null) return true;
+        return item.days !== null && item.days <= item.daysBeforeVisible;
+      });
     }
 
     function mapSupabaseRsvp(row) {
@@ -837,7 +855,11 @@
           </div>
           <div class="countdown-layout">
             <article class="countdown-card${variantClass}${hasImage ? " countdown-card--photo" : ""}">
-              ${hasImage ? `<img class="countdown-photo" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" onerror="this.closest('.countdown-card').classList.remove('countdown-card--photo'); this.remove();">` : ""}
+              ${hasImage ? `
+              <div class="countdown-photo-wrap">
+                <img class="countdown-photo" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" onerror="this.closest('.countdown-card').classList.remove('countdown-card--photo'); this.closest('.countdown-photo-wrap').remove();">
+                ${item.image_credit ? `<div class="countdown-photo-credit">${escapeHtml(item.image_credit)}</div>` : ""}
+              </div>` : ""}
               <div class="countdown-copy">
                 <div class="countdown-icon"><i data-lucide="${escapeHtml(item.icon || "calendar")}"></i></div>
                 <div class="countdown-name">${escapeHtml(item.name)}</div>

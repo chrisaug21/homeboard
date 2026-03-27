@@ -200,6 +200,7 @@
   <div class="admin-shell" id="admin-app" hidden>
     <div class="admin-mode-pill">
       <i data-lucide="settings-2"></i> Admin Mode
+      <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
     </div>
 
     <div class="admin-content">
@@ -274,6 +275,15 @@
 
         <section class="admin-panel" aria-labelledby="admin-cal-events-title">
           <h2 class="admin-panel-title" id="admin-cal-events-title">Calendar Events</h2>
+          <div class="admin-week-nav admin-cal-nav" id="admin-cal-nav">
+            <button class="admin-week-nav-btn" id="admin-cal-prev" type="button" aria-label="Previous month">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <span class="admin-week-nav-label" id="admin-cal-month-label"></span>
+            <button class="admin-week-nav-btn" id="admin-cal-next" type="button" aria-label="Next month">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
           <p class="admin-panel-note" id="admin-cal-events-note">Tap an event to flag it as a countdown.</p>
           <div class="admin-list" id="admin-cal-event-list"></div>
         </section>
@@ -286,17 +296,33 @@
               <label for="admin-countdown-name">Name</label>
               <input id="admin-countdown-name" name="name" type="text" maxlength="140" required placeholder="e.g. Portugal trip">
             </div>
-            <div class="admin-field">
-              <label for="admin-countdown-date">Date</label>
-              <input id="admin-countdown-date" name="event_date" type="date" required>
-            </div>
-            <div class="admin-field">
-              <label for="admin-countdown-icon">Icon <span style="font-weight:400;color:var(--muted)">(Lucide icon name)</span></label>
-              <div class="admin-icon-row">
-                <input id="admin-countdown-icon" name="icon" type="text" maxlength="60" placeholder="e.g. plane, heart, gem">
-                <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse icons ↗</a>
+            <div class="admin-form-row">
+              <div class="admin-field">
+                <label for="admin-countdown-date">Date</label>
+                <input id="admin-countdown-date" name="event_date" type="date" required>
+              </div>
+              <div class="admin-field">
+                <label for="admin-countdown-days-before">Show starting</label>
+                <input id="admin-countdown-days-before" name="days_before_visible" type="number" min="1" max="365" placeholder="e.g. 30">
+                <p class="admin-field-hint">Days before event to appear. Optional.</p>
               </div>
             </div>
+            <div class="admin-form-row">
+              <div class="admin-field">
+                <label for="admin-countdown-photo-keyword">Photo keyword</label>
+                <div class="admin-icon-row">
+                  <input id="admin-countdown-photo-keyword" name="photo_keyword" type="text" maxlength="100" placeholder="e.g. beach, mountains">
+                  <button class="admin-button admin-button--secondary" type="button" data-action="get-photo-create">Get photo</button>
+                </div>
+                <p class="admin-field-hint">Optional. Previews before you save.</p>
+              </div>
+              <div class="admin-field">
+                <label for="admin-countdown-icon">Icon — <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse ↗</a></label>
+                <input id="admin-countdown-icon" name="icon" type="text" maxlength="60" placeholder="e.g. plane, heart, gem">
+                <p class="admin-field-hint">Lucide icon name. Optional.</p>
+              </div>
+            </div>
+            <div class="admin-form-photo-preview" id="admin-create-photo-pending" hidden></div>
             <div class="admin-actions">
               <button class="admin-button admin-button--secondary" id="admin-countdown-clear-button" type="button">Clear</button>
               <button class="admin-button admin-button--primary" id="admin-countdown-submit-button" type="submit">Save Countdown</button>
@@ -343,10 +369,16 @@
         <span>Settings</span>
       </button>
     </nav>
-    <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="admin-lightbox" id="admin-lightbox" hidden role="dialog" aria-modal="true" aria-label="Photo preview">
+    <div class="admin-lightbox-inner">
+      <img class="admin-lightbox-img" id="admin-lightbox-img" src="" alt="">
+      <p class="admin-lightbox-credit" id="admin-lightbox-credit"></p>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer crossorigin="anonymous"></script>

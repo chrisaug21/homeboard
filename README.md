@@ -61,6 +61,7 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 | `todos` | Soft-delete only — never hard delete; archived via `archived_at` |
 | `meal_plan` | `user_id = null` = shared/household row shown on display |
 | `meal_plan_notes` | One note per household per week; keyed by `household_id` + `week_start` (Monday's date) |
+| `countdowns` (updated) | Added `unsplash_image_url` — stores JSON `{url, credit}` for Unsplash background photos |
 | `countdowns` | `icon` is a Lucide icon name string (e.g. `"plane"`) |
 | `rsvps` | Wedding RSVP table — do not modify schema |
 
@@ -90,6 +91,7 @@ Set in Netlify dashboard. Never hardcode.
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_KEY` | Supabase anon/public key |
 | `GOOGLE_CAL_KEY` | Google Calendar read-only API key |
+| `UNSPLASH_ACCESS_KEY` | Unsplash API access key for countdown background photos |
 
 ## Local Development
 
