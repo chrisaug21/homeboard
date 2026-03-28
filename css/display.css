@@ -327,17 +327,19 @@
       word-break: keep-all;
     }
 
-    /* Error/retry block spans both columns so it isn't stranded in one cell */
+    /* Error/retry block and empty state span both columns */
     .todo-list > .screen-error {
-      grid-column: 1 / -1;
+      column-span: all;
     }
 
-    /* Two-column scrollable grid for the todo list */
+    .todo-card--empty {
+      column-span: all;
+    }
+
+    /* Two-column scrollable layout — fills left column first, then right */
     .todo-list {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      align-content: start;
+      column-count: 2;
+      column-gap: 14px;
       overflow-y: auto;
       height: calc(100% - 46px);
     }
@@ -353,6 +355,8 @@
       border: 1px solid rgba(124, 96, 69, 0.12);
       min-width: 0;
       transition: opacity 0.25s, transform 0.2s;
+      break-inside: avoid;
+      margin-bottom: 14px;
     }
 
     .todo-card.is-completing {
@@ -522,9 +526,10 @@
     .meals-layout {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(4, minmax(0, 1fr));
+      grid-auto-flow: column;
       gap: 14px;
       height: calc(100% - 46px);
-      grid-auto-rows: minmax(0, 1fr);
     }
 
     .meal-card {
@@ -1084,6 +1089,11 @@
     .month-grid > .screen-error,
     .names-scroll > .screen-error {
       grid-column: 1 / -1;
+    }
+
+    /* Meal layout error also spans all rows */
+    .meals-layout > .screen-error {
+      grid-row: 1 / -1;
     }
 
     /* ── Countdown error ── */

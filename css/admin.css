@@ -218,8 +218,13 @@
 
     .admin-meal-list {
       margin-top: 12px;
-      display: grid;
-      gap: 10px;
+      column-gap: 10px;
+    }
+
+    @media (min-width: 500px) {
+      .admin-meal-list {
+        column-count: 2;
+      }
     }
 
     .admin-meal-inline-form {
@@ -229,6 +234,8 @@
       background: rgba(247, 217, 170, 0.14);
       display: grid;
       gap: 10px;
+      break-inside: avoid;
+      margin-bottom: 10px;
     }
 
     .admin-meal-inline-header {
@@ -284,6 +291,8 @@
       display: grid;
       gap: 10px;
       transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+      break-inside: avoid;
+      margin-bottom: 10px;
     }
 
     .admin-meal-card:hover,
@@ -701,6 +710,22 @@
 
     @media (min-width: 760px) {
       #admin-saved-countdown-list {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    #admin-cal-event-list {
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 500px) {
+      #admin-cal-event-list {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 760px) {
+      #admin-cal-event-list {
         grid-template-columns: repeat(3, 1fr);
       }
     }
