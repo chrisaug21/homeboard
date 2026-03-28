@@ -9,6 +9,23 @@ Household command center PWA. Runs on a wall-mounted Android tablet in landscape
 - Google Calendar API — read-only, API key based (no OAuth)
 - Lucide icons via CDN
 
+## File Structure
+```
+index.html          — single HTML file, both display + admin shells
+css/
+  display.css       — display mode styles only
+  admin.css         — admin mode styles only
+js/
+  shared.js         — Supabase init, VERSION constant, utility functions, shared config
+  display.js        — display mode logic (auto-rotate, data fetching, rendering)
+  admin.js          — all admin mode logic (screens, modals, event handling)
+manifests/
+  manifest.json     — PWA manifest for display mode (landscape)
+  manifest-admin.json — PWA manifest for admin mode (portrait)
+sw.js               — service worker, cache key homeboard-v##
+netlify.toml        — build config, env var injection via sed
+```
+
 ## Two Modes
 - **Display Mode** — landscape tablet, auto-rotates screens every 30s, manual swipe
 - **Admin Mode** — portrait phone, at `/admin`

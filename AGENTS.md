@@ -5,11 +5,24 @@ Project-specific instructions. Global coding standards and git discipline are in
 ## What This Project Is
 Household command center PWA. Wall-mounted Android tablet (landscape display) + phone admin (portrait). Single `index.html`, Supabase backend, Netlify hosting.
 
+## File Structure
+```
+index.html          — single HTML file, both display + admin shells
+css/display.css     — display mode styles only
+css/admin.css       — admin mode styles only
+js/shared.js        — Supabase init, VERSION constant, utilities, shared config
+js/display.js       — display mode logic
+js/admin.js         — all admin mode logic (screens, modals, event handling)
+sw.js               — service worker (cache key: homeboard-v##)
+netlify.toml        — build + env var injection via sed
+```
+
 ## Architecture
 - Supabase-first. No offline writes — show error toast if Supabase unreachable on write.
 - localStorage is read-only cache only.
 - No frameworks, no bundlers. Plain vanilla JS.
 - Two modes: Display Mode (landscape) and Admin Mode (`/admin`, portrait).
+- Admin add/edit forms use a shared bottom-sheet modal (`#admin-modal`) — inject form HTML via `openAdminModal()`, dismiss via `closeAdminModal()`. Do not add new always-visible form panels.
 
 ## Supabase Tables
 | Table | Key notes |
