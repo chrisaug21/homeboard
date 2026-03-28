@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.5.2";
+    const VERSION = "0.7.2";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -259,27 +259,40 @@
       return data;
     }
 
-    async function fetchGoogleCalendarEvents(calendarId, apiKey, timeMin, timeMax) {
+    async function fetchGoogleCalendarEvents(calendarId, apiKey, timeMin, timeMax, maxResults = "250") {
       try {
-        const params = new URLSearchParams({
+        const baseParams = {
           key: apiKey,
           timeMin: timeMin.toISOString(),
           timeMax: timeMax.toISOString(),
           singleEvents: "true",
           orderBy: "startTime",
-          maxResults: "250"
-        });
+          maxResults
+        };
 
-        const response = await fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`
-        );
+        const allItems = [];
+        let pageToken = null;
 
-        if (!response.ok) {
-          return null;
-        }
+        do {
+          const params = new URLSearchParams(baseParams);
+          if (pageToken) params.set("pageToken", pageToken);
 
-        const json = await response.json();
-        return Array.isArray(json.items) ? json.items : null;
+          const response = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`
+          );
+
+          if (!response.ok) {
+            throw new Error(`Calendar API error: ${response.status} ${response.statusText}`);
+          }
+
+          const json = await response.json();
+          if (Array.isArray(json.items)) {
+            allItems.push(...json.items);
+          }
+          pageToken = json.nextPageToken || null;
+        } while (pageToken);
+
+        return allItems;
       } catch {
         return null;
       }

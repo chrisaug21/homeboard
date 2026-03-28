@@ -11,10 +11,16 @@
     let pointerStartX = null;
     let pointerDeltaX = 0;
     let rsvpScrollId = null;
+    // Number of days shown in the Upcoming view — increase here when settings PR lands
+    const UPCOMING_DAYS = 5;
+
     let calendarEventsMap = new Map();
     let cachedHouseholdConfig = null;
     let cachedSupabaseCountdowns = null;
     let cachedCalendarCountdowns = [];
+    let monthOffset = 0;
+    let weekOffset = 0;
+    let lastWideFetch = 0; // ms timestamp of last 24-month fetch
     let initialLoadComplete = false;
     const pendingScreens = new Set();
 
@@ -494,6 +500,7 @@
 
     function buildCalendarEventsMap(items) {
       const map = new Map();
+      const fmt = (dt) => new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(dt));
 
       items.forEach((item) => {
         const startRaw = item.start && (item.start.dateTime || item.start.date);
@@ -505,9 +512,6 @@
 
         const isAllDay = !item.start.dateTime;
         const title = item.summary || "Untitled event";
-        const time = isAllDay
-          ? "All day"
-          : new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(startRaw));
 
         // Walk each calendar day the event spans and add it to the map.
         const start = new Date(isAllDay ? startRaw + "T00:00:00" : startRaw);
@@ -519,13 +523,37 @@
           end.setDate(end.getDate() - 1);
         }
 
+        const isMultiDay = start.toDateString() !== end.toDateString();
+        const startTime = (!isAllDay && startRaw) ? fmt(startRaw) : null;
+        const endTime = (!isAllDay && endRaw) ? fmt(endRaw) : null;
+
         const cursor = new Date(start);
         while (cursor <= end) {
           const key = formatDateKey(cursor);
           if (!map.has(key)) {
             map.set(key, []);
           }
-          map.get(key).push({ title, time });
+
+          // For multi-day timed events, label each day correctly:
+          // first day → start time, middle days → "All day", last day → "ends HH:MM"
+          let timeForDay;
+          if (isAllDay || !isMultiDay) {
+            timeForDay = isAllDay ? "All day" : startTime;
+          } else if (cursor.toDateString() === start.toDateString()) {
+            timeForDay = startTime || "All day";
+          } else if (cursor.toDateString() === end.toDateString()) {
+            timeForDay = endTime ? `ends ${endTime}` : "All day";
+          } else {
+            timeForDay = "All day";
+          }
+
+          map.get(key).push({
+            title,
+            time: timeForDay,
+            isAllDay,
+            location: item.location || null,
+            description: item.description || null
+          });
           cursor.setDate(cursor.getDate() + 1);
         }
       });
@@ -579,22 +607,34 @@
 
     function renderCalendar() {
       const grid = document.getElementById("calendar-grid");
-      const startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
-      const todayKey = new Date().toDateString();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayKey = today.toDateString();
+
+      // Offset start date by weekOffset × UPCOMING_DAYS days
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() + weekOffset * UPCOMING_DAYS);
+
       const fragment = document.createDocumentFragment();
 
-      for (let index = 0; index < 5; index++) {
+      for (let index = 0; index < UPCOMING_DAYS; index++) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + index);
         const events = calendarEventsMap.get(formatDateKey(date)) || [];
+        const dateKey = formatDateKey(date);
 
         const column = document.createElement("article");
         column.className = "day-column" + (date.toDateString() === todayKey ? " today" : "");
 
         const eventsMarkup = events.length
           ? events.map((event) => `
-              <div class="event-card">
+              <div class="event-card" role="button" tabindex="0"
+                   data-event-title="${escapeHtml(event.title)}"
+                   data-event-time="${escapeHtml(event.time)}"
+                   data-event-location="${escapeHtml(event.location || "")}"
+                   data-event-description="${escapeHtml(event.description || "")}"
+                   data-event-isallday="${event.isAllDay ? "true" : "false"}"
+                   data-event-date="${escapeHtml(dateKey)}">
                 <div class="event-time">${escapeHtml(event.time)}</div>
                 <div class="event-title">${escapeHtml(event.title)}</div>
               </div>
@@ -614,34 +654,125 @@
       grid.replaceChildren(fragment);
     }
 
-    function renderMonthCalendar() {
-      const weekdaysEl = document.getElementById("month-weekdays");
-      const monthGridEl = document.getElementById("month-grid");
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const start = getMonthGridStart(today);
-      const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    // Measures how many event chips fit in a rendered month cell.
+    // Two numbers: maxFull (no overflow pill) and maxWithPill (space reserved for pill).
+    // Called synchronously after Pass 1 of renderMonthCalendar so layout is already computed.
+    function measureMonthCellCapacity(monthGridEl) {
+      const cell = monthGridEl.querySelector(".month-day:not(.month-day--outside)") ||
+                   monthGridEl.querySelector(".month-day");
+      if (!cell) return { maxFull: 2, maxWithPill: 1 };
 
-      monthTitleEl.textContent = formatMonthYear(today);
-      weekdaysEl.innerHTML = weekdayNames.map((name) => `<div class="month-weekday">${name}</div>`).join("");
-      const cells = Array.from({ length: 35 }, (_, index) => {
+      const cellStyle = getComputedStyle(cell);
+      const paddingV = parseFloat(cellStyle.paddingTop) + parseFloat(cellStyle.paddingBottom);
+      const cellInnerH = cell.clientHeight - paddingV;
+
+      const dateEl = cell.querySelector(".month-date");
+      const eventsEl = cell.querySelector(".month-events");
+      if (!dateEl || !eventsEl) return { maxFull: 2, maxWithPill: 1 };
+
+      const cellGap = parseFloat(cellStyle.gap) || 6;
+      const dateH = dateEl.offsetHeight + cellGap;
+      const availableH = cellInnerH - dateH;
+      if (availableH <= 0) return { maxFull: 1, maxWithPill: 0 };
+
+      // Append a hidden probe chip to measure real chip height at this screen size
+      const probe = document.createElement("div");
+      probe.className = "month-event";
+      probe.textContent = "X";
+      probe.style.cssText = "visibility:hidden;pointer-events:none;";
+      eventsEl.appendChild(probe);
+      const chipH = probe.offsetHeight;
+      const chipsGap = parseFloat(getComputedStyle(eventsEl).gap) || 4;
+      eventsEl.removeChild(probe);
+
+      if (chipH <= 0) return { maxFull: 2, maxWithPill: 1 };
+
+      const maxFull = Math.max(1, Math.floor((availableH + chipsGap) / (chipH + chipsGap)));
+      // Overflow pill is roughly the same height as a chip; reserve space for it
+      const maxWithPill = Math.max(0, Math.floor((availableH - chipH - chipsGap + chipsGap) / (chipH + chipsGap)));
+
+      return { maxFull, maxWithPill };
+    }
+
+    function renderMonthCalendarCells(monthGridEl, displayedMonth, start, cellsNeeded, capacity, today) {
+      const cells = Array.from({ length: cellsNeeded }, (_, index) => {
         const date = new Date(start);
         date.setDate(start.getDate() + index);
         const isToday = date.toDateString() === today.toDateString();
-        const isOutsideMonth = date.getMonth() !== today.getMonth();
-        const events = isOutsideMonth ? [] : (calendarEventsMap.get(formatDateKey(date)) || []).slice(0, 2);
+        const isOutsideMonth = date.getMonth() !== displayedMonth.getMonth();
+        const allEvents = isOutsideMonth ? [] : (calendarEventsMap.get(formatDateKey(date)) || []);
+        const dateKey = formatDateKey(date);
+
+        // Determine how many events to show
+        const hasOverflow = allEvents.length > capacity.maxFull;
+        const showCount = hasOverflow
+          ? Math.max(1, capacity.maxWithPill)
+          : allEvents.length;
+        const visibleEvents = allEvents.slice(0, showCount);
+        const overflowCount = allEvents.length - visibleEvents.length;
+        // Allow wrapping only when a single event occupies the cell (extra vertical room)
+        const wrapClass = allEvents.length === 1 ? " month-event--wrap" : "";
+
+        const eventChips = visibleEvents.map((event) => `
+          <div class="month-event${wrapClass}"
+               data-event-title="${escapeHtml(event.title)}"
+               data-event-time="${escapeHtml(event.time)}"
+               data-event-location="${escapeHtml(event.location || "")}"
+               data-event-description="${escapeHtml(event.description || "")}"
+               data-event-isallday="${event.isAllDay ? "true" : "false"}"
+               data-event-date="${escapeHtml(dateKey)}"
+               role="button" tabindex="0">${escapeHtml(event.title)}</div>
+        `).join("");
+
+        const overflowPill = overflowCount > 0
+          ? `<div class="month-more-pill" data-date-key="${escapeHtml(dateKey)}" role="button" tabindex="0">+${overflowCount} more</div>`
+          : "";
 
         return `
           <article class="month-day${isToday ? " month-day--today" : ""}${isOutsideMonth ? " month-day--outside" : ""}">
             <div class="month-date">${date.getDate()}</div>
-            <div class="month-events">
-              ${events.map((event) => `<div class="month-event">${event.title}</div>`).join("")}
-            </div>
+            <div class="month-events">${eventChips}${overflowPill}</div>
           </article>
         `;
       });
 
       monthGridEl.innerHTML = cells.join("");
+    }
+
+    function renderMonthCalendar() {
+      const weekdaysEl = document.getElementById("month-weekdays");
+      const monthGridEl = document.getElementById("month-grid");
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const displayedMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+      const start = getMonthGridStart(displayedMonth);
+      const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      monthTitleEl.textContent = formatMonthYear(displayedMonth);
+      weekdaysEl.innerHTML = weekdayNames.map((name) => `<div class="month-weekday">${name}</div>`).join("");
+
+      const daysInMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 0).getDate();
+      const cellsNeeded = (displayedMonth.getDay() + daysInMonth) > 35 ? 42 : 35;
+
+      // Pass 1: render empty cell skeletons so the browser can compute cell height
+      monthGridEl.innerHTML = Array.from({ length: cellsNeeded }, (_, i) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+        const isToday = date.toDateString() === today.toDateString();
+        const isOutside = date.getMonth() !== displayedMonth.getMonth();
+        return `<article class="month-day${isToday ? " month-day--today" : ""}${isOutside ? " month-day--outside" : ""}">
+          <div class="month-date">${date.getDate()}</div>
+          <div class="month-events"></div>
+        </article>`;
+      }).join("");
+
+      // Accessing clientHeight here forces synchronous layout — no visual flicker
+      // because both innerHTML writes happen in the same JS task before any paint.
+      const capacity = measureMonthCellCapacity(monthGridEl);
+
+      // Pass 2: render cells with correctly measured event counts
+      renderMonthCalendarCells(monthGridEl, displayedMonth, start, cellsNeeded, capacity, today);
     }
 
     async function renderTodos() {
@@ -869,7 +1000,10 @@
       reconcileRotationState();
     }
 
-    async function refreshCalendarData() {
+    // wide=true: fetch 24-month window and rebuild the full event store.
+    // wide=false: fetch 3-month rolling window and merge into the existing store.
+    // Countdowns are only re-extracted on wide fetches (they cover the full 24-month range).
+    async function refreshCalendarData(wide = false) {
       if (!cachedHouseholdConfig || !cachedHouseholdConfig.google_cal_id) {
         return false;
       }
@@ -882,18 +1016,52 @@
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const timeMin = getMonthGridStart(today);
-      const timeMax = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      timeMax.setDate(timeMax.getDate() + 5);
 
-      const items = await fetchGoogleCalendarEvents(cachedHouseholdConfig.google_cal_id, apiKey, timeMin, timeMax);
+      let timeMin, timeMax, maxResults;
+      if (wide) {
+        // 24-month window: 12 months back, 12 months forward
+        // timeMax is the first day after the window (exclusive upper bound for Google Calendar)
+        timeMin = new Date(today.getFullYear(), today.getMonth() - 12, 1);
+        timeMax = new Date(today.getFullYear(), today.getMonth() + 13, 1);
+        maxResults = "2500";
+        console.log(`[calendar] wide fetch — timeMin: ${timeMin.toISOString()}, timeMax: ${timeMax.toISOString()}`);
+      } else {
+        // 3-month rolling window: 1 month back, 2 months forward
+        // timeMax is the first day after the window (exclusive upper bound for Google Calendar)
+        timeMin = getMonthGridStart(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+        timeMax = new Date(today.getFullYear(), today.getMonth() + 3, 1);
+        maxResults = "500";
+      }
+
+      const items = await fetchGoogleCalendarEvents(cachedHouseholdConfig.google_cal_id, apiKey, timeMin, timeMax, maxResults);
 
       if (!items) {
         return false;
       }
 
-      calendarEventsMap = buildCalendarEventsMap(items);
-      cachedCalendarCountdowns = extractCalendarCountdowns(items);
+      const freshMap = buildCalendarEventsMap(items);
+
+      if (wide) {
+        // Complete replacement — wide fetch is the source of truth
+        calendarEventsMap = freshMap;
+        cachedCalendarCountdowns = extractCalendarCountdowns(items);
+        lastWideFetch = Date.now(); // stamp only after successful completion
+      } else {
+        // Merge: overwrite keys from freshMap, then delete stale keys within the
+        // refreshed window that are no longer present (days that became empty).
+        // Countdowns intentionally not updated — wide fetch (every 24h) keeps them fresh.
+        freshMap.forEach((events, key) => {
+          calendarEventsMap.set(key, events);
+        });
+        const cursor = new Date(timeMin);
+        while (cursor < timeMax) {
+          const key = formatDateKey(cursor);
+          if (!freshMap.has(key)) {
+            calendarEventsMap.delete(key);
+          }
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      }
 
       renderCalendar();
       renderMonthCalendar();
@@ -929,7 +1097,7 @@
 
       updateHouseholdName(householdConfig);
 
-      const calendarLoaded = await refreshCalendarData();
+      const calendarLoaded = await refreshCalendarData(true); // wide fetch on initial load
 
       if (!calendarLoaded) {
         renderCalendarError();
@@ -1166,6 +1334,84 @@
       }
     }
 
+    function openEventDetailModal(event, dateStr) {
+      const titleEl = document.getElementById("event-detail-title");
+      const bodyEl = document.getElementById("event-detail-body");
+
+      titleEl.textContent = event.title;
+
+      const timeLabel = event.isAllDay ? "All day" : event.time;
+      const dateLabel = formatLongDate(dateStr);
+
+      let html = `
+        <div class="event-detail-row">
+          <i data-lucide="clock"></i>
+          <span class="event-detail-text">${escapeHtml(dateLabel)} &middot; ${escapeHtml(timeLabel)}</span>
+        </div>
+      `;
+
+      if (event.location) {
+        html += `
+          <div class="event-detail-row">
+            <i data-lucide="map-pin"></i>
+            <span class="event-detail-text">${escapeHtml(event.location)}</span>
+          </div>
+        `;
+      }
+
+      if (event.description) {
+        html += `
+          <div class="event-detail-row">
+            <i data-lucide="align-left"></i>
+            <span class="event-detail-text">${escapeHtml(event.description).replace(/\n/g, "<br>")}</span>
+          </div>
+        `;
+      }
+
+      bodyEl.innerHTML = html;
+      document.getElementById("event-detail-modal").hidden = false;
+      resetAutoRotate();
+      refreshIcons();
+    }
+
+    function closeEventDetailModal() {
+      document.getElementById("event-detail-modal").hidden = true;
+      resetAutoRotate();
+    }
+
+    function openDayDetailModal(dateKey) {
+      const date = new Date(dateKey + "T00:00:00");
+      document.getElementById("day-detail-title").textContent = formatHeaderDate(date);
+
+      const allEvents = calendarEventsMap.get(dateKey) || [];
+      const bodyEl = document.getElementById("day-detail-body");
+
+      if (!allEvents.length) {
+        bodyEl.innerHTML = `<p class="event-detail-text" style="color:var(--muted);">No events this day.</p>`;
+      } else {
+        bodyEl.innerHTML = allEvents.map((event) => `
+          <div class="day-event-item" role="button" tabindex="0"
+               data-event-title="${escapeHtml(event.title)}"
+               data-event-time="${escapeHtml(event.time)}"
+               data-event-location="${escapeHtml(event.location || "")}"
+               data-event-description="${escapeHtml(event.description || "")}"
+               data-event-isallday="${event.isAllDay ? "true" : "false"}"
+               data-event-date="${escapeHtml(dateKey)}">
+            <div class="day-event-item-time">${escapeHtml(event.time)}</div>
+            <div class="day-event-item-title">${escapeHtml(event.title)}</div>
+          </div>
+        `).join("");
+      }
+
+      document.getElementById("day-detail-modal").hidden = false;
+      resetAutoRotate();
+    }
+
+    function closeDayDetailModal() {
+      document.getElementById("day-detail-modal").hidden = true;
+      resetAutoRotate();
+    }
+
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
@@ -1186,7 +1432,92 @@
       navRight.addEventListener("pointerup", () => manualNavigate("next"));
       window.addEventListener("keydown", handleKeydown);
 
-      window.setInterval(refreshCalendarData, 5 * 60 * 1000);
+      // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed
+      window.setInterval(() => {
+        const needsWide = (Date.now() - lastWideFetch) >= 24 * 60 * 60 * 1000;
+        refreshCalendarData(needsWide);
+      }, 5 * 60 * 1000);
+
+      // Week navigation — each click resets the rotation timer
+      document.getElementById("week-prev").addEventListener("click", () => { weekOffset--; renderCalendar(); resetAutoRotate(); });
+      document.getElementById("week-next").addEventListener("click", () => { weekOffset++; renderCalendar(); resetAutoRotate(); });
+      document.getElementById("week-today").addEventListener("click", () => { weekOffset = 0; renderCalendar(); resetAutoRotate(); });
+
+      // Month navigation — each click resets the rotation timer
+      document.getElementById("month-prev").addEventListener("click", () => { monthOffset--; renderMonthCalendar(); resetAutoRotate(); });
+      document.getElementById("month-next").addEventListener("click", () => { monthOffset++; renderMonthCalendar(); resetAutoRotate(); });
+      document.getElementById("month-today").addEventListener("click", () => { monthOffset = 0; renderMonthCalendar(); resetAutoRotate(); });
+
+      // Week view: tap/keyboard event card → event detail modal
+      function activateCalendarGridItem(e) {
+        const card = e.target.closest(".event-card[data-event-title]");
+        if (card) {
+          openEventDetailModal({
+            title: card.dataset.eventTitle,
+            time: card.dataset.eventTime,
+            location: card.dataset.eventLocation || null,
+            description: card.dataset.eventDescription || null,
+            isAllDay: card.dataset.eventIsallday === "true"
+          }, card.dataset.eventDate);
+        }
+      }
+      document.getElementById("calendar-grid").addEventListener("click", activateCalendarGridItem);
+      document.getElementById("calendar-grid").addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        if (e.key === " ") e.preventDefault();
+        activateCalendarGridItem(e);
+      });
+
+      // Month view: tap/keyboard event chip → event detail; tap "+N more" → day detail
+      function activateMonthGridItem(e) {
+        const eventEl = e.target.closest(".month-event[data-event-title]");
+        const morePill = e.target.closest(".month-more-pill");
+        if (eventEl) {
+          openEventDetailModal({
+            title: eventEl.dataset.eventTitle,
+            time: eventEl.dataset.eventTime,
+            location: eventEl.dataset.eventLocation || null,
+            description: eventEl.dataset.eventDescription || null,
+            isAllDay: eventEl.dataset.eventIsallday === "true"
+          }, eventEl.dataset.eventDate);
+          return;
+        }
+        if (morePill) {
+          openDayDetailModal(morePill.dataset.dateKey);
+        }
+      }
+      document.getElementById("month-grid").addEventListener("click", activateMonthGridItem);
+      document.getElementById("month-grid").addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        if (e.key === " ") e.preventDefault();
+        activateMonthGridItem(e);
+      });
+
+      // Day detail: tap/keyboard event row → event detail modal (on top)
+      function activateDayDetailItem(e) {
+        const item = e.target.closest(".day-event-item");
+        if (item) {
+          openEventDetailModal({
+            title: item.dataset.eventTitle,
+            time: item.dataset.eventTime,
+            location: item.dataset.eventLocation || null,
+            description: item.dataset.eventDescription || null,
+            isAllDay: item.dataset.eventIsallday === "true"
+          }, item.dataset.eventDate);
+        }
+      }
+      document.getElementById("day-detail-body").addEventListener("click", activateDayDetailItem);
+      document.getElementById("day-detail-body").addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        if (e.key === " ") e.preventDefault();
+        activateDayDetailItem(e);
+      });
+
+      // Modal close handlers
+      document.getElementById("event-detail-close").addEventListener("click", closeEventDetailModal);
+      document.getElementById("event-detail-backdrop").addEventListener("click", closeEventDetailModal);
+      document.getElementById("day-detail-close").addEventListener("click", closeDayDetailModal);
+      document.getElementById("day-detail-backdrop").addEventListener("click", closeDayDetailModal);
 
       refreshIcons();
     }
