@@ -282,7 +282,7 @@
           );
 
           if (!response.ok) {
-            return allItems.length > 0 ? allItems : null;
+            throw new Error(`Calendar API error: ${response.status} ${response.statusText}`);
           }
 
           const json = await response.json();
@@ -292,7 +292,7 @@
           pageToken = json.nextPageToken || null;
         } while (pageToken);
 
-        return allItems.length > 0 ? allItems : null;
+        return allItems;
       } catch {
         return null;
       }

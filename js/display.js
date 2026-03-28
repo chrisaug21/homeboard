@@ -1019,16 +1019,17 @@
 
       let timeMin, timeMax, maxResults;
       if (wide) {
-        // 24-month window: 12 months back and 12 months forward
+        // 24-month window: 12 months back, 12 months forward
+        // timeMax is the first day after the window (exclusive upper bound for Google Calendar)
         timeMin = new Date(today.getFullYear(), today.getMonth() - 12, 1);
-        timeMax = new Date(today.getFullYear(), today.getMonth() + 13, 0);
+        timeMax = new Date(today.getFullYear(), today.getMonth() + 13, 1);
         maxResults = "2500";
-        lastWideFetch = Date.now();
         console.log(`[calendar] wide fetch — timeMin: ${timeMin.toISOString()}, timeMax: ${timeMax.toISOString()}`);
       } else {
         // 3-month rolling window: 1 month back, 2 months forward
+        // timeMax is the first day after the window (exclusive upper bound for Google Calendar)
         timeMin = getMonthGridStart(new Date(today.getFullYear(), today.getMonth() - 1, 1));
-        timeMax = new Date(today.getFullYear(), today.getMonth() + 3, 0);
+        timeMax = new Date(today.getFullYear(), today.getMonth() + 3, 1);
         maxResults = "500";
       }
 
@@ -1044,12 +1045,22 @@
         // Complete replacement — wide fetch is the source of truth
         calendarEventsMap = freshMap;
         cachedCalendarCountdowns = extractCalendarCountdowns(items);
+        lastWideFetch = Date.now(); // stamp only after successful completion
       } else {
-        // Merge: narrow-fetch results overwrite their date keys; distant months stay intact
+        // Merge: overwrite keys from freshMap, then delete stale keys within the
+        // refreshed window that are no longer present (days that became empty).
+        // Countdowns intentionally not updated — wide fetch (every 24h) keeps them fresh.
         freshMap.forEach((events, key) => {
           calendarEventsMap.set(key, events);
         });
-        // Countdowns intentionally not updated — wide fetch (every 24h) keeps them fresh
+        const cursor = new Date(timeMin);
+        while (cursor < timeMax) {
+          const key = formatDateKey(cursor);
+          if (!freshMap.has(key)) {
+            calendarEventsMap.delete(key);
+          }
+          cursor.setDate(cursor.getDate() + 1);
+        }
       }
 
       renderCalendar();
@@ -1365,6 +1376,7 @@
 
     function closeEventDetailModal() {
       document.getElementById("event-detail-modal").hidden = true;
+      resetAutoRotate();
     }
 
     function openDayDetailModal(dateKey) {
@@ -1378,7 +1390,7 @@
         bodyEl.innerHTML = `<p class="event-detail-text" style="color:var(--muted);">No events this day.</p>`;
       } else {
         bodyEl.innerHTML = allEvents.map((event) => `
-          <div class="day-event-item"
+          <div class="day-event-item" role="button" tabindex="0"
                data-event-title="${escapeHtml(event.title)}"
                data-event-time="${escapeHtml(event.time)}"
                data-event-location="${escapeHtml(event.location || "")}"
@@ -1397,6 +1409,7 @@
 
     function closeDayDetailModal() {
       document.getElementById("day-detail-modal").hidden = true;
+      resetAutoRotate();
     }
 
     function initDisplayMode() {
@@ -1435,8 +1448,8 @@
       document.getElementById("month-next").addEventListener("click", () => { monthOffset++; renderMonthCalendar(); resetAutoRotate(); });
       document.getElementById("month-today").addEventListener("click", () => { monthOffset = 0; renderMonthCalendar(); resetAutoRotate(); });
 
-      // Week view: tap event card → event detail modal
-      document.getElementById("calendar-grid").addEventListener("click", (e) => {
+      // Week view: tap/keyboard event card → event detail modal
+      function activateCalendarGridItem(e) {
         const card = e.target.closest(".event-card[data-event-title]");
         if (card) {
           openEventDetailModal({
@@ -1447,10 +1460,16 @@
             isAllDay: card.dataset.eventIsallday === "true"
           }, card.dataset.eventDate);
         }
+      }
+      document.getElementById("calendar-grid").addEventListener("click", activateCalendarGridItem);
+      document.getElementById("calendar-grid").addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        if (e.key === " ") e.preventDefault();
+        activateCalendarGridItem(e);
       });
 
-      // Month view: tap event chip → event detail; tap "+N more" → day detail
-      document.getElementById("month-grid").addEventListener("click", (e) => {
+      // Month view: tap/keyboard event chip → event detail; tap "+N more" → day detail
+      function activateMonthGridItem(e) {
         const eventEl = e.target.closest(".month-event[data-event-title]");
         const morePill = e.target.closest(".month-more-pill");
         if (eventEl) {
@@ -1466,10 +1485,16 @@
         if (morePill) {
           openDayDetailModal(morePill.dataset.dateKey);
         }
+      }
+      document.getElementById("month-grid").addEventListener("click", activateMonthGridItem);
+      document.getElementById("month-grid").addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        if (e.key === " ") e.preventDefault();
+        activateMonthGridItem(e);
       });
 
-      // Day detail: tap event row → event detail modal (on top)
-      document.getElementById("day-detail-body").addEventListener("click", (e) => {
+      // Day detail: tap/keyboard event row → event detail modal (on top)
+      function activateDayDetailItem(e) {
         const item = e.target.closest(".day-event-item");
         if (item) {
           openEventDetailModal({
@@ -1480,6 +1505,12 @@
             isAllDay: item.dataset.eventIsallday === "true"
           }, item.dataset.eventDate);
         }
+      }
+      document.getElementById("day-detail-body").addEventListener("click", activateDayDetailItem);
+      document.getElementById("day-detail-body").addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        if (e.key === " ") e.preventDefault();
+        activateDayDetailItem(e);
       });
 
       // Modal close handlers
