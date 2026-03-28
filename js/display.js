@@ -245,33 +245,6 @@
       return "todo-assignee todo-assignee--other";
     }
 
-    // Returns { cssClass, label } for the due date urgency pill, or null if no due date.
-    function getTodoDuePill(dueDate) {
-      if (!dueDate) return null;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const parsed = new Date(dueDate + "T00:00:00");
-      parsed.setHours(0, 0, 0, 0);
-      const diff = Math.round((parsed - today) / 86400000);
-
-      if (diff < 0) {
-        return { cssClass: "todo-due-pill--overdue", label: "Overdue" };
-      }
-      if (diff === 0) {
-        return { cssClass: "todo-due-pill--today", label: "Today" };
-      }
-      if (diff <= 3) {
-        const label = diff === 1
-          ? "Tomorrow"
-          : new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed);
-        return { cssClass: "todo-due-pill--soon", label };
-      }
-      return {
-        cssClass: "todo-due-pill--future",
-        label: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed)
-      };
-    }
-
     function mapSupabaseTodo(todo) {
       return {
         id: todo.id,
@@ -360,7 +333,13 @@
         return;
       }
       cardEl.classList.add("is-done");
-      cardEl.addEventListener("transitionend", () => cardEl.remove(), { once: true });
+      cardEl.addEventListener("transitionend", () => {
+        cardEl.remove();
+        const list = document.getElementById("todo-list");
+        if (list && !list.querySelector("[data-todo-id]")) {
+          renderTodoItems([]);
+        }
+      }, { once: true });
     }
 
     async function fetchTodos() {
@@ -375,6 +354,7 @@
         .select("id, title, due_date, assignee, archived_at, created_at")
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null)
+        .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
 
       if (error || !Array.isArray(data)) {

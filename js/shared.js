@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.5.0";
+    const VERSION = "0.5.1";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -193,6 +193,34 @@
       start.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
       start.setHours(0, 0, 0, 0);
       return start;
+    }
+
+    // Returns { cssClass, label } for a due date urgency pill, or null if no due date.
+    // Used on both the display and admin views.
+    function getTodoDuePill(dueDate) {
+      if (!dueDate) return null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const parsed = new Date(dueDate + "T00:00:00");
+      parsed.setHours(0, 0, 0, 0);
+      const diff = Math.round((parsed - today) / 86400000);
+
+      if (diff < 0) {
+        return { cssClass: "todo-due-pill--overdue", label: "Overdue" };
+      }
+      if (diff === 0) {
+        return { cssClass: "todo-due-pill--today", label: "Today" };
+      }
+      if (diff <= 3) {
+        const label = diff === 1
+          ? "Tomorrow"
+          : new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed);
+        return { cssClass: "todo-due-pill--soon", label };
+      }
+      return {
+        cssClass: "todo-due-pill--future",
+        label: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed)
+      };
     }
 
     function normalizeMealType(type) {

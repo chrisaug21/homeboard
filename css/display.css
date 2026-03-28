@@ -327,6 +327,11 @@
       word-break: keep-all;
     }
 
+    /* Error/retry block spans both columns so it isn't stranded in one cell */
+    .todo-list > .screen-error {
+      grid-column: 1 / -1;
+    }
+
     /* Two-column scrollable grid for the todo list */
     .todo-list {
       display: grid;
@@ -480,8 +485,9 @@
     }
 
     .todo-due-pill--soon {
-      background: rgba(217, 119, 6, 0.14);
-      color: #c2410c;
+      /* distinctly orange — warmer and brighter than the amber used for "today" */
+      background: rgba(234, 88, 12, 0.13);
+      color: #ea580c;
     }
 
     .todo-due-pill--future {

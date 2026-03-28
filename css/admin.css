@@ -353,18 +353,21 @@
       gap: 10px;
     }
 
-    /* Active cards are tappable — the entire card opens the edit modal */
+    /* Base card style (both active and archived) */
     .admin-todo-card {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
       padding: 11px 13px;
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.78);
       border: 1px solid rgba(124, 96, 69, 0.12);
+      transition: opacity 0.25s, transform 0.2s;
     }
 
+    /* Active cards: checkbox on the left, body on the right */
     .admin-todo-card--active {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: start;
       cursor: pointer;
     }
 
@@ -372,11 +375,23 @@
       opacity: 0.75;
     }
 
-    .admin-todo-head {
+    /* Archived cards: single-column, no checkbox */
+    .admin-todo-card:not(.admin-todo-card--active) {
       display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: flex-start;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .admin-todo-body {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Checkbox alignment in admin cards */
+    .admin-todo-card--active .todo-check-btn {
+      margin-top: 2px;
     }
 
     .admin-todo-title {
@@ -391,20 +406,22 @@
       gap: 6px;
     }
 
-    /* Month navigation row inside the archive drawer */
-    .admin-month-nav {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 0 14px;
+    /* Completion animation on admin todo cards (mirrors display.css .todo-card rules) */
+    .admin-todo-card.is-completing .todo-check {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: white;
     }
 
-    .admin-month-nav-label {
-      flex: 1;
-      text-align: center;
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: var(--primary);
+    .admin-todo-card.is-completing .todo-check-icon {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .admin-todo-card.is-done {
+      opacity: 0;
+      transform: scale(0.92);
+      pointer-events: none;
     }
 
     .admin-pill {

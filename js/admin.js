@@ -278,23 +278,48 @@
     function renderAdminTodoCard(todo, options) {
       const title = escapeHtml(todo.title || "Untitled task");
       const assignee = todo.assignee ? escapeHtml(todo.assignee) : "Unassigned";
-      const dueLabel = formatAdminTodoDate(todo.due_date);
-      const completeBtn = options.showComplete
-        ? `<button class="admin-button admin-button--secondary" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Complete ${title}" style="flex-shrink:0">Complete</button>`
-        : "";
-      const activeAttrs = options.showComplete
-        ? `data-todo-id="${escapeHtml(todo.id)}" role="button" tabindex="0"`
-        : "";
+
+      // Active cards use the urgency-coded pill from display view; archived use plain date.
+      let dueMarkup = "";
+      if (options.showComplete) {
+        const duePill = getTodoDuePill(todo.due_date);
+        if (duePill) {
+          dueMarkup = `<span class="todo-due-pill ${escapeHtml(duePill.cssClass)}">${escapeHtml(duePill.label)}</span>`;
+        }
+      } else if (todo.due_date) {
+        dueMarkup = `<span class="admin-pill admin-pill--due">${escapeHtml(formatAdminTodoDate(todo.due_date))}</span>`;
+      }
+
+      const meta = `
+        <div class="admin-todo-meta">
+          <span class="admin-pill">${assignee}</span>
+          ${dueMarkup}
+        </div>
+      `;
+
+      if (options.showComplete) {
+        return `
+          <article class="admin-todo-card admin-todo-card--active" data-todo-id="${escapeHtml(todo.id)}" role="button" tabindex="0" aria-label="Edit: ${title}">
+            <button class="todo-check-btn" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Complete ${title}">
+              <div class="todo-check">
+                <svg class="todo-check-icon" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M1 5L4.5 8.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </button>
+            <div class="admin-todo-body">
+              <div class="admin-todo-title">${title}</div>
+              ${meta}
+            </div>
+          </article>
+        `;
+      }
 
       return `
-        <article class="admin-todo-card${options.showComplete ? " admin-todo-card--active" : ""}" ${activeAttrs} aria-label="${options.showComplete ? `Edit: ${title}` : title}">
-          <div class="admin-todo-head">
+        <article class="admin-todo-card" aria-label="${title}">
+          <div class="admin-todo-body">
             <div class="admin-todo-title">${title}</div>
-            ${completeBtn}
-          </div>
-          <div class="admin-todo-meta">
-            <span class="admin-pill">${assignee}</span>
-            <span class="admin-pill admin-pill--due">${escapeHtml(dueLabel)}</span>
+            ${meta}
           </div>
         </article>
       `;
@@ -313,12 +338,14 @@
       });
       const archivedCount = filteredArchived.length;
 
+      const monthLabel = getArchivedMonthDisplay();
+
       adminActiveSummary.textContent = activeCount
         ? `${activeCount} active household ${activeCount === 1 ? "task" : "tasks"}`
         : "No active household tasks right now.";
       adminArchivedSummary.textContent = archivedCount
         ? `${archivedCount} completed ${archivedCount === 1 ? "task" : "tasks"}`
-        : "No completed tasks this month.";
+        : `No completed tasks in ${monthLabel}.`;
 
       adminActiveList.innerHTML = activeCount
         ? todoGroups.active.map((todo) => renderAdminTodoCard(todo, { showComplete: true })).join("")
@@ -326,18 +353,21 @@
 
       adminArchivedList.innerHTML = archivedCount
         ? filteredArchived.map((todo) => renderAdminTodoCard(todo, { showComplete: false })).join("")
-        : '<div class="admin-empty">Nothing completed this month.</div>';
+        : `<div class="admin-empty">Nothing completed in ${escapeHtml(monthLabel)}.</div>`;
 
       updateArchiveMonthLabel();
     }
 
-    function updateArchiveMonthLabel() {
-      const labelEl = document.getElementById("admin-archive-month-label");
-      if (!labelEl) return;
+    function getArchivedMonthDisplay() {
       const [year, month] = adminArchivedMonth.split("-").map(Number);
-      labelEl.textContent = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(
+      return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(
         new Date(year, month - 1, 1)
       );
+    }
+
+    function updateArchiveMonthLabel() {
+      const labelEl = document.getElementById("admin-archive-month-label");
+      if (labelEl) labelEl.textContent = getArchivedMonthDisplay();
     }
 
     function handleArchiveMonthPrev() {
@@ -455,7 +485,11 @@
     function buildTodoFormHTML(todo) {
       const isEdit = !!todo;
       const currentAssignee = isEdit ? (todo.assignee || "") : "";
-      const assigneeOptions = ["", ...HOUSEHOLD_MEMBERS].map((name) =>
+      // Preserve any existing assignee that isn't in the standard list (e.g. old data)
+      const extraMember = currentAssignee && !HOUSEHOLD_MEMBERS.includes(currentAssignee)
+        ? [currentAssignee]
+        : [];
+      const assigneeOptions = ["", ...HOUSEHOLD_MEMBERS, ...extraMember].map((name) =>
         `<option value="${escapeHtml(name)}"${name === currentAssignee ? " selected" : ""}>${escapeHtml(name || "Unassigned")}</option>`
       ).join("");
       return `
@@ -531,17 +565,71 @@
     }
 
 
+    async function archiveAdminTodoWithAnimation(todoId, cardEl) {
+      const client = getSupabaseClient();
+      if (!client || adminTodoWritePending) {
+        if (!client) showToast("Couldn\u2019t complete todo. Supabase is unavailable.");
+        return;
+      }
+      adminTodoWritePending = true;
+      cardEl.classList.add("is-completing");
+
+      const { error } = await client
+        .from("todos")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", todoId)
+        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("archived_at", null);
+
+      if (error) {
+        adminTodoWritePending = false;
+        cardEl.classList.remove("is-completing");
+        showToast("Couldn\u2019t complete todo. Please try again.");
+        return;
+      }
+
+      cardEl.classList.add("is-done");
+      cardEl.addEventListener("transitionend", async () => {
+        adminTodoWritePending = false;
+        await loadAdminTodos();
+      }, { once: true });
+    }
+
     function handleAdminActiveListClick(event) {
-      // Complete button takes priority — archive the todo and stop.
+      // Checkbox click — animate and archive.
       const archiveBtn = event.target.closest("[data-action='archive-todo']");
       if (archiveBtn) {
-        archiveAdminTodo(archiveBtn.getAttribute("data-todo-id"));
+        const card = archiveBtn.closest(".admin-todo-card");
+        if (card && !card.classList.contains("is-completing")) {
+          archiveAdminTodoWithAnimation(archiveBtn.getAttribute("data-todo-id"), card);
+        }
         return;
       }
 
       // Tapping anywhere else on an active card opens the edit modal.
       const card = event.target.closest(".admin-todo-card--active");
-      if (card) {
+      if (card && !card.classList.contains("is-completing")) {
+        const id = card.getAttribute("data-todo-id");
+        const todo = adminTodos.find((t) => t.id === id);
+        if (todo) openEditTodoModal(todo);
+      }
+    }
+
+    function handleAdminActiveListKeydown(event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      if (event.key === " ") event.preventDefault();
+
+      const archiveBtn = event.target.closest("[data-action='archive-todo']");
+      if (archiveBtn) {
+        const card = archiveBtn.closest(".admin-todo-card");
+        if (card && !card.classList.contains("is-completing")) {
+          archiveAdminTodoWithAnimation(archiveBtn.getAttribute("data-todo-id"), card);
+        }
+        return;
+      }
+
+      const card = event.target.closest(".admin-todo-card--active");
+      if (card && !card.classList.contains("is-completing")) {
         const id = card.getAttribute("data-todo-id");
         const todo = adminTodos.find((t) => t.id === id);
         if (todo) openEditTodoModal(todo);
@@ -1592,6 +1680,7 @@
         .from("todos")
         .select("id, title, assignee, due_date, archived_at, created_at")
         .eq("household_id", TODO_HOUSEHOLD_ID)
+        .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
 
       if (error || !Array.isArray(data)) {
@@ -1623,6 +1712,7 @@
       setAdminScreen("todos");
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
+      adminActiveList.addEventListener("keydown", handleAdminActiveListKeydown);
       adminMealList.addEventListener("click", handleAdminMealListClick);
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
