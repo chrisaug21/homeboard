@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.6.0";
+    const VERSION = "0.7.0";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -259,7 +259,7 @@
       return data;
     }
 
-    async function fetchGoogleCalendarEvents(calendarId, apiKey, timeMin, timeMax) {
+    async function fetchGoogleCalendarEvents(calendarId, apiKey, timeMin, timeMax, maxResults = "250") {
       try {
         const params = new URLSearchParams({
           key: apiKey,
@@ -267,7 +267,7 @@
           timeMax: timeMax.toISOString(),
           singleEvents: "true",
           orderBy: "startTime",
-          maxResults: "250"
+          maxResults
         });
 
         const response = await fetch(
