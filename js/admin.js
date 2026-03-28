@@ -1,5 +1,3 @@
-    const adminTodoForm = document.getElementById("admin-todo-form");
-    const adminSubmitButton = document.getElementById("admin-submit-button");
     const adminActiveList = document.getElementById("admin-active-list");
     const adminArchivedList = document.getElementById("admin-archived-list");
     const adminActiveSummary = document.getElementById("admin-active-summary");
@@ -13,31 +11,27 @@
     const adminWeekNextBtn = document.getElementById("admin-week-next");
     const adminWeekTodayBtn = document.getElementById("admin-week-today");
     const toastEl = document.getElementById("toast");
-    const adminCountdownForm = document.getElementById("admin-countdown-form");
-    const adminCountdownName = document.getElementById("admin-countdown-name");
-    const adminCountdownDate = document.getElementById("admin-countdown-date");
-    const adminCountdownIcon = document.getElementById("admin-countdown-icon");
-    const adminCountdownSubmitButton = document.getElementById("admin-countdown-submit-button");
-    const adminCountdownClearButton = document.getElementById("admin-countdown-clear-button");
     const adminCalEventList = document.getElementById("admin-cal-event-list");
     const adminCalEventsNote = document.getElementById("admin-cal-events-note");
     const adminSavedCountdownList = document.getElementById("admin-saved-countdown-list");
     const adminSavedCountdownsNote = document.getElementById("admin-saved-countdowns-note");
+    const adminTodoAddButton = document.getElementById("admin-todo-add-button");
+    const adminCountdownAddButton = document.getElementById("admin-countdown-add-button");
 
     let toastTimeoutId = null;
     let adminTodoWritePending = false;
     let adminMealWritePending = false;
     let adminCurrentNote = "";
     let adminNoteWritePending = false;
-    let adminEditingNote = false;
     let adminScreen = "todos";
     let adminWeekOffset = 0;
     let adminCurrentMonday = null;
-    let adminEditingDay = null;
     let adminMealPlanRows = [];
     let adminCountdownWritePending = false;
     let adminCountdownEditPending = false;
-    let adminEditingCountdownId = null;
+    let adminModalType = null;
+    let adminModalContext = null;
+    let adminTodos = [];
     const adminPendingPhotos = new Map();
     let adminCalEvents = [];
     let adminSavedCountdowns = [];
@@ -103,10 +97,173 @@
       }, 2800);
     }
 
-    function setAdminBusyState(isBusy) {
-      adminTodoWritePending = isBusy;
-      adminSubmitButton.disabled = isBusy;
-      adminSubmitButton.textContent = isBusy ? "Saving…" : "Add Todo";
+    function setModalSaving(isBusy, defaultLabel) {
+      const btn = document.querySelector("#admin-modal-body [type='submit']");
+      if (btn) {
+        btn.disabled = isBusy;
+        if (isBusy) {
+          if (!btn.dataset.savedLabel) btn.dataset.savedLabel = btn.textContent;
+          btn.textContent = "Saving\u2026";
+        } else {
+          btn.textContent = defaultLabel || btn.dataset.savedLabel || "Save";
+          delete btn.dataset.savedLabel;
+        }
+      }
+    }
+
+    function openAdminModal(title, bodyHTML) {
+      const modal = document.getElementById("admin-modal");
+      const modalTitle = document.getElementById("admin-modal-title");
+      const modalBody = document.getElementById("admin-modal-body");
+      if (!modal || !modalTitle || !modalBody) return;
+      modalTitle.textContent = title;
+      modalBody.innerHTML = bodyHTML;
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+      const firstInput = modalBody.querySelector("input:not([type='hidden']), select, textarea");
+      if (firstInput) {
+        firstInput.focus();
+        if (firstInput.value && (firstInput.type === "text" || firstInput.type === "number")) {
+          firstInput.setSelectionRange(firstInput.value.length, firstInput.value.length);
+        }
+      }
+      refreshIcons();
+    }
+
+    function closeAdminModal() {
+      const modal = document.getElementById("admin-modal");
+      if (!modal || modal.hidden) return;
+      modal.hidden = true;
+      const modalBody = document.getElementById("admin-modal-body");
+      if (modalBody) modalBody.innerHTML = "";
+      document.body.style.overflow = "";
+      // Clean up any pending photos
+      if (adminModalType === "edit-countdown" && adminModalContext && adminModalContext.id) {
+        adminPendingPhotos.delete(adminModalContext.id);
+      } else if (adminModalType === "add-countdown") {
+        adminPendingPhotos.delete("modal-create");
+      }
+      adminModalType = null;
+      adminModalContext = null;
+    }
+
+    function handleEscapeKey(event) {
+      if (event.key === "Escape") closeAdminModal();
+    }
+
+    function handleAdminModalClick(event) {
+      if (event.target.classList.contains("admin-modal-backdrop")) {
+        closeAdminModal();
+        return;
+      }
+      if (event.target.closest("[data-action='close-modal']")) {
+        closeAdminModal();
+        return;
+      }
+      if (event.target.closest("[data-action='get-photo-modal']")) {
+        handleGetPhotoModal();
+        return;
+      }
+      const viewPhotoBtn = event.target.closest("[data-action='view-photo']");
+      if (viewPhotoBtn) {
+        openAdminLightbox(
+          viewPhotoBtn.getAttribute("data-full-url"),
+          viewPhotoBtn.getAttribute("data-credit")
+        );
+        return;
+      }
+      const removePhotoBtn = event.target.closest("[data-action='remove-photo-modal']");
+      if (removePhotoBtn) {
+        // Stage the removal — only persist to Supabase when the user clicks Save
+        const preview = removePhotoBtn.closest(".admin-edit-photo-preview");
+        if (preview) preview.hidden = true;
+        const form = removePhotoBtn.closest("form");
+        if (form && !form.querySelector("[name='remove_photo']")) {
+          const hidden = document.createElement("input");
+          hidden.type = "hidden";
+          hidden.name = "remove_photo";
+          hidden.value = "1";
+          form.appendChild(hidden);
+        }
+      }
+    }
+
+    function handleAdminModalSubmit(event) {
+      const form = event.target.closest("form[data-modal-form]");
+      if (!form) return;
+      event.preventDefault();
+      const formType = form.getAttribute("data-modal-form");
+      const formData = new FormData(form);
+
+      if (formType === "todo") {
+        const todoTitle = String(formData.get("title") || "").trim();
+        if (!todoTitle) {
+          const titleInput = form.querySelector("[name='title']");
+          if (titleInput) {
+            titleInput.style.borderColor = "var(--rose)";
+            titleInput.focus();
+            titleInput.addEventListener("input", () => { titleInput.style.borderColor = ""; }, { once: true });
+          }
+          return;
+        }
+        if (adminModalType === "edit-todo") {
+          updateAdminTodo(adminModalContext.id, formData);
+        } else {
+          createAdminTodo(formData);
+        }
+      } else if (formType === "meal") {
+        const dayOfWeek = Number(form.getAttribute("data-meal-day"));
+        const mealName = String(formData.get("meal_name") || "").trim();
+        const mealType = normalizeMealType(formData.get("meal_type"));
+        if (!mealName) {
+          const nameInput = form.querySelector("[name='meal_name']");
+          if (nameInput) nameInput.focus();
+          return;
+        }
+        saveAdminMeal(dayOfWeek, mealName, mealType);
+      } else if (formType === "note") {
+        saveAdminMealNote(formData);
+      } else if (formType === "countdown") {
+        if (adminModalType === "edit-countdown") {
+          const id = form.getAttribute("data-countdown-id");
+          const originalName = form.getAttribute("data-original-name");
+          const name = String(formData.get("name") || "").trim();
+          const eventDate = String(formData.get("event_date") || "").trim();
+          const icon = String(formData.get("icon") || "").trim() || "calendar";
+          const daysBeforeRaw = String(formData.get("days_before_visible") || "").trim();
+          const daysBeforeVisible = daysBeforeRaw !== "" ? parseInt(daysBeforeRaw, 10) || null : null;
+          const photoKeyword = String(formData.get("photo_keyword") || "").trim();
+          const removePhoto = formData.get("remove_photo") === "1";
+          if (!name || !eventDate || adminCountdownEditPending) return;
+          updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, removePhoto);
+        } else {
+          saveAdminCountdown(formData);
+        }
+      }
+    }
+
+    async function handleGetPhotoModal() {
+      const modalBody = document.getElementById("admin-modal-body");
+      if (!modalBody) return;
+      const keywordInput = modalBody.querySelector("[name='photo_keyword']");
+      const nameInput = modalBody.querySelector("[name='name']");
+      const previewContainer = modalBody.querySelector(".admin-modal-photo-pending");
+      const btn = modalBody.querySelector("[data-action='get-photo-modal']");
+      const query = (keywordInput && keywordInput.value.trim()) || (nameInput && nameInput.value.trim()) || "";
+      if (!query) return;
+      // Capture modal context before the async gap to avoid race conditions
+      const capturedModalType = adminModalType;
+      const capturedContextId = adminModalContext && adminModalContext.id;
+      if (btn) { btn.disabled = true; btn.textContent = "Loading\u2026"; }
+      const photo = await fetchUnsplashPhoto(query);
+      if (btn) { btn.disabled = false; btn.textContent = "Get photo"; }
+      if (!photo) {
+        showToast("Couldn\u2019t find a photo. Try a different keyword.");
+        return;
+      }
+      const photoKey = capturedModalType === "edit-countdown" ? capturedContextId : "modal-create";
+      adminPendingPhotos.set(photoKey, photo);
+      setFormPhotoPreview(previewContainer, photo);
     }
 
 
@@ -115,7 +272,10 @@
       const assignee = todo.assignee ? escapeHtml(todo.assignee) : "Unassigned";
       const dueLabel = formatAdminTodoDate(todo.due_date);
       const actionMarkup = options.showComplete
-        ? `<button class="admin-button admin-button--secondary" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Complete ${title}">Complete</button>`
+        ? `<div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="admin-button admin-button--secondary" type="button" data-action="edit-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Edit ${title}">Edit</button>
+            <button class="admin-button admin-button--secondary" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Complete ${title}">Complete</button>
+          </div>`
         : "";
 
       return `
@@ -133,6 +293,7 @@
     }
 
     function renderAdminTodoLists(todoGroups) {
+      adminTodos = todoGroups.active;
       const activeCount = todoGroups.active.length;
       const archivedCount = todoGroups.archived.length;
 
@@ -187,7 +348,8 @@
         return;
       }
 
-      setAdminBusyState(true);
+      adminTodoWritePending = true;
+      setModalSaving(true);
 
       const { error } = await client
         .from("todos")
@@ -198,15 +360,97 @@
           due_date: dueDate || null
         });
 
+      adminTodoWritePending = false;
+
       if (error) {
-        setAdminBusyState(false);
+        setModalSaving(false, "Add Todo");
         showToast("Couldn't save todo. Please try again.");
         return;
       }
 
-      adminTodoForm.reset();
+      closeAdminModal();
       await loadAdminTodos();
-      setAdminBusyState(false);
+    }
+
+    async function updateAdminTodo(id, formData) {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast("Couldn\u2019t save todo. Supabase is unavailable.");
+        return;
+      }
+
+      const title = String(formData.get("title") || "").trim();
+      const assignee = String(formData.get("assignee") || "").trim();
+      const dueDate = String(formData.get("due_date") || "").trim();
+
+      if (!title || adminTodoWritePending) return;
+
+      adminTodoWritePending = true;
+      setModalSaving(true);
+
+      const { error } = await client
+        .from("todos")
+        .update({
+          title,
+          assignee: assignee || null,
+          due_date: dueDate || null
+        })
+        .eq("id", id)
+        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("archived_at", null);
+
+      adminTodoWritePending = false;
+
+      if (error) {
+        setModalSaving(false, "Save Changes");
+        showToast("Couldn\u2019t update todo. Please try again.");
+        return;
+      }
+
+      closeAdminModal();
+      await loadAdminTodos();
+    }
+
+    function buildTodoFormHTML(todo) {
+      const isEdit = !!todo;
+      return `
+        <form data-modal-form="todo" novalidate>
+          <div class="admin-field">
+            <label for="modal-todo-title">Title</label>
+            <input id="modal-todo-title" name="title" type="text" maxlength="140" required
+              value="${isEdit ? escapeHtml(todo.title || "") : ""}"
+              placeholder="${isEdit ? "" : "What needs doing?"}">
+          </div>
+          <div class="admin-form-row">
+            <div class="admin-field">
+              <label for="modal-todo-assignee">Assignee</label>
+              <input id="modal-todo-assignee" name="assignee" type="text" maxlength="60"
+                value="${isEdit ? escapeHtml(todo.assignee || "") : ""}">
+            </div>
+            <div class="admin-field">
+              <label for="modal-todo-due">Due date</label>
+              <input id="modal-todo-due" name="due_date" type="date"
+                value="${isEdit ? escapeHtml(todo.due_date || "") : ""}">
+            </div>
+          </div>
+          <div class="admin-actions">
+            <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            <button class="admin-button admin-button--primary" type="submit">${isEdit ? "Save Changes" : "Add Todo"}</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function openAddTodoModal() {
+      adminModalType = "add-todo";
+      adminModalContext = null;
+      openAdminModal("Add Todo", buildTodoFormHTML(null));
+    }
+
+    function openEditTodoModal(todo) {
+      adminModalType = "edit-todo";
+      adminModalContext = { id: todo.id };
+      openAdminModal("Edit Todo", buildTodoFormHTML(todo));
     }
 
     async function archiveAdminTodo(todoId) {
@@ -240,19 +484,20 @@
       adminTodoWritePending = false;
     }
 
-    function handleAdminTodoSubmit(event) {
-      event.preventDefault();
-      createAdminTodo(new FormData(event.currentTarget));
-    }
 
     function handleAdminActiveListClick(event) {
-      const button = event.target.closest("[data-action='archive-todo']");
-
-      if (!button) {
+      const editBtn = event.target.closest("[data-action='edit-todo']");
+      if (editBtn) {
+        const id = editBtn.getAttribute("data-todo-id");
+        const todo = adminTodos.find((t) => t.id === id);
+        if (todo) openEditTodoModal(todo);
         return;
       }
 
-      archiveAdminTodo(button.getAttribute("data-todo-id"));
+      const archiveBtn = event.target.closest("[data-action='archive-todo']");
+      if (archiveBtn) {
+        archiveAdminTodo(archiveBtn.getAttribute("data-todo-id"));
+      }
     }
 
     async function fetchAdminMealPlan(monday) {
@@ -296,39 +541,6 @@
 
     function renderAdminMealCard(index, date, meal) {
       const dayLabel = escapeHtml(formatAdminDayLabel(date));
-
-      if (adminEditingDay === index) {
-        const currentName = meal ? escapeHtml(meal.mealName) : "";
-        const currentType = meal ? meal.mealType : "cooking";
-
-        return `
-          <form class="admin-meal-inline-form" data-inline-meal-day="${index}">
-            <div class="admin-meal-inline-header">
-              <span class="admin-meal-day">${dayLabel}</span>
-              <button class="admin-button admin-button--secondary admin-meal-inline-cancel" type="button">Cancel</button>
-            </div>
-            <div class="admin-field">
-              <input
-                class="admin-meal-inline-name"
-                name="meal_name"
-                type="text"
-                maxlength="140"
-                placeholder="What\u2019s for dinner?"
-                value="${currentName}"
-                autocomplete="off"
-                aria-label="Dinner name"
-              >
-            </div>
-            <div class="admin-field">
-              <select name="meal_type" aria-label="Meal type">${buildMealTypeOptionsHTML(currentType)}</select>
-            </div>
-            <div class="admin-actions">
-              <button class="admin-button admin-button--primary" type="submit">Save</button>
-            </div>
-          </form>
-        `;
-      }
-
       const mealType = meal ? getMealTypePresentation(meal.mealType) : null;
 
       return `
@@ -340,6 +552,37 @@
           <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : "No dinner set yet.")}</div>
         </button>
       `;
+    }
+
+    function buildMealFormHTML(dayIndex, date, meal) {
+      const dayLabel = escapeHtml(formatAdminDayLabel(date));
+      const currentName = meal ? escapeHtml(meal.mealName) : "";
+      const currentType = meal ? meal.mealType : "cooking";
+
+      return `
+        <form data-modal-form="meal" data-meal-day="${dayIndex}" novalidate>
+          <p class="admin-panel-note" style="margin-top:0">${dayLabel}</p>
+          <div class="admin-field">
+            <label for="modal-meal-name">Dinner</label>
+            <input id="modal-meal-name" name="meal_name" type="text" maxlength="140"
+              placeholder="What\u2019s for dinner?" value="${currentName}" autocomplete="off">
+          </div>
+          <div class="admin-field">
+            <label for="modal-meal-type">Type</label>
+            <select id="modal-meal-type" name="meal_type">${buildMealTypeOptionsHTML(currentType)}</select>
+          </div>
+          <div class="admin-actions">
+            <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            <button class="admin-button admin-button--primary" type="submit">Save</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function openMealModal(dayIndex, date, meal) {
+      adminModalType = "edit-meal";
+      adminModalContext = { dayIndex };
+      openAdminModal(formatAdminDayLabel(date), buildMealFormHTML(dayIndex, date, meal));
     }
 
     function renderAdminMealPlan() {
@@ -358,14 +601,6 @@
         date.setDate(adminCurrentMonday.getDate() + index);
         return renderAdminMealCard(index, date, getAdminMealByDay(index));
       }).join("");
-
-      if (adminEditingDay !== null) {
-        const nameInput = adminMealList.querySelector(".admin-meal-inline-name");
-        if (nameInput) {
-          nameInput.focus();
-          nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
-        }
-      }
 
       refreshIcons();
     }
@@ -386,63 +621,54 @@
 
     function renderAdminMealNote() {
       if (!adminMealNoteWrap) return;
-
-      if (adminEditingNote) {
-        adminMealNoteWrap.innerHTML = `
-          <form class="admin-meal-inline-form" id="admin-meal-note-form">
-            <div class="admin-meal-inline-header">
-              <span class="admin-meal-day">Weekly Note</span>
-              <button class="admin-button admin-button--secondary admin-meal-inline-cancel" type="button" id="admin-meal-note-cancel">Cancel</button>
-            </div>
-            <div class="admin-field">
-              <textarea
-                id="admin-meal-note-input"
-                class="admin-meal-note-textarea"
-                maxlength="280"
-                placeholder="Add a note for this week\u2026"
-                rows="3"
-                aria-label="Weekly note"
-              >${escapeHtml(adminCurrentNote)}</textarea>
-            </div>
-            <div class="admin-actions">
-              <button class="admin-button admin-button--primary" type="submit">Save Note</button>
-            </div>
-          </form>
-        `;
-        const noteInput = adminMealNoteWrap.querySelector("#admin-meal-note-input");
-        if (noteInput) {
-          noteInput.focus();
-          noteInput.setSelectionRange(noteInput.value.length, noteInput.value.length);
-        }
-      } else {
-        adminMealNoteWrap.innerHTML = `
-          <button class="admin-meal-card" type="button" id="admin-meal-note-card">
-            <div class="admin-meal-card-top">
-              <div class="admin-meal-day">Weekly Note</div>
-              <span class="admin-pill">${adminCurrentNote ? "Tap to edit" : "Tap to add"}</span>
-            </div>
-            <div class="admin-meal-name${adminCurrentNote ? "" : " admin-meal-name--empty"}">${escapeHtml(adminCurrentNote || "No note this week.")}</div>
-          </button>
-        `;
-      }
-
+      adminMealNoteWrap.innerHTML = `
+        <button class="admin-meal-card" type="button" data-action="edit-meal-note">
+          <div class="admin-meal-day">Weekly Note</div>
+          <div class="admin-meal-name${adminCurrentNote ? "" : " admin-meal-name--empty"}">${escapeHtml(adminCurrentNote || "No note this week.")}</div>
+        </button>
+      `;
       refreshIcons();
     }
 
-    async function saveAdminMealNote() {
+    function buildMealNoteFormHTML() {
+      return `
+        <form data-modal-form="note" novalidate>
+          <div class="admin-field">
+            <textarea
+              id="admin-meal-note-input"
+              name="note"
+              class="admin-meal-note-textarea"
+              maxlength="280"
+              placeholder="Add a note for this week\u2026"
+              rows="3"
+              aria-label="Weekly note"
+            >${escapeHtml(adminCurrentNote)}</textarea>
+          </div>
+          <div class="admin-actions">
+            <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            <button class="admin-button admin-button--primary" type="submit">Save Note</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function openMealNoteModal() {
+      adminModalType = "note";
+      adminModalContext = null;
+      openAdminModal("Weekly Note", buildMealNoteFormHTML());
+    }
+
+    async function saveAdminMealNote(formData) {
       if (adminNoteWritePending || adminMealWritePending) return;
-      const textarea = adminMealNoteWrap && adminMealNoteWrap.querySelector("#admin-meal-note-input");
-      if (!textarea) return;
-      const noteText = textarea.value.trim();
+      const noteText = String(formData.get("note") || "").trim();
       const client = getSupabaseClient();
       if (!client) {
         showToast("Couldn\u2019t save note. Supabase is unavailable.");
         return;
       }
       adminNoteWritePending = true;
+      setModalSaving(true);
       const savedWeekStart = formatDateKey(adminCurrentMonday);
-      const submitBtn = adminMealNoteWrap.querySelector("[type='submit']");
-      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Saving\u2026"; }
 
       const { error } = await client
         .from("meal_plan_notes")
@@ -454,38 +680,27 @@
       adminNoteWritePending = false;
 
       if (error) {
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Save Note"; }
+        setModalSaving(false, "Save Note");
         showToast("Couldn\u2019t save note. Please try again.");
         return;
       }
 
       // If the week changed while awaiting, discard the stale result
-      if (formatDateKey(adminCurrentMonday) !== savedWeekStart) return;
+      if (formatDateKey(adminCurrentMonday) !== savedWeekStart) {
+        closeAdminModal();
+        return;
+      }
 
       adminCurrentNote = noteText;
-      adminEditingNote = false;
+      closeAdminModal();
       renderAdminMealNote();
       showToast("Note saved.");
     }
 
     function handleAdminMealNoteClick(event) {
-      if (adminNoteWritePending) return;
-
-      if (event.target.closest("#admin-meal-note-cancel")) {
-        adminEditingNote = false;
-        renderAdminMealNote();
-        return;
+      if (event.target.closest("[data-action='edit-meal-note']")) {
+        openMealNoteModal();
       }
-      if (event.target.closest("#admin-meal-note-card")) {
-        adminEditingNote = true;
-        renderAdminMealNote();
-      }
-    }
-
-    function handleAdminMealNoteSubmit(event) {
-      if (!event.target.closest("#admin-meal-note-form")) return;
-      event.preventDefault();
-      saveAdminMealNote();
     }
 
     async function loadAdminMealPlan() {
@@ -494,7 +709,6 @@
       adminWeekPrevBtn.disabled = true;
       adminWeekNextBtn.disabled = true;
       adminMealList.innerHTML = '<div class="admin-empty">Loading meals\u2026</div>';
-      adminEditingNote = false;
       if (adminMealNoteWrap) adminMealNoteWrap.innerHTML = "";
 
       const [mealRows, noteText] = await Promise.all([
@@ -530,7 +744,7 @@
       }
 
       adminMealWritePending = true;
-      const submitBtn = adminMealList.querySelector(`[data-inline-meal-day="${dayOfWeek}"] [type="submit"]`);
+      const submitBtn = document.querySelector("#admin-modal-body [type='submit']");
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = "Saving\u2026";
@@ -605,7 +819,7 @@
       // If the week changed while awaiting, discard the stale result
       if (formatDateKey(adminCurrentMonday) !== savedWeekStart) return;
 
-      adminEditingDay = null;
+      closeAdminModal();
       renderAdminMealPlan();
       showToast("Saved!");
     }
@@ -648,55 +862,30 @@
     function handleAdminMealListClick(event) {
       if (adminMealWritePending) return;
 
-      if (event.target.closest(".admin-meal-inline-cancel")) {
-        adminEditingDay = null;
-        renderAdminMealPlan();
-        return;
-      }
-
       const dayBtn = event.target.closest("[data-admin-meal-day]");
-      if (dayBtn && !event.target.closest("form")) {
-        adminEditingDay = Number(dayBtn.getAttribute("data-admin-meal-day"));
-        renderAdminMealPlan();
+      if (dayBtn) {
+        const dayIndex = Number(dayBtn.getAttribute("data-admin-meal-day"));
+        const date = new Date(adminCurrentMonday);
+        date.setDate(adminCurrentMonday.getDate() + dayIndex);
+        openMealModal(dayIndex, date, getAdminMealByDay(dayIndex));
       }
-    }
-
-    function handleAdminMealInlineSubmit(event) {
-      if (!event.target.classList.contains("admin-meal-inline-form")) {
-        return;
-      }
-      event.preventDefault();
-      const form = event.target;
-      const formData = new FormData(form);
-      const dayOfWeek = Number(form.getAttribute("data-inline-meal-day"));
-      const mealName = String(formData.get("meal_name") || "").trim();
-      const mealType = normalizeMealType(formData.get("meal_type"));
-      if (!mealName) {
-        const nameInput = form.querySelector("[name='meal_name']");
-        if (nameInput) nameInput.focus();
-        return;
-      }
-      saveAdminMeal(dayOfWeek, mealName, mealType);
     }
 
     function handleAdminWeekPrev() {
       if (adminWeekOffset <= -1 || adminMealWritePending || adminNoteWritePending) return;
       adminWeekOffset--;
-      adminEditingDay = null;
       loadAdminMealPlan();
     }
 
     function handleAdminWeekNext() {
       if (adminWeekOffset >= 1 || adminMealWritePending || adminNoteWritePending) return;
       adminWeekOffset++;
-      adminEditingDay = null;
       loadAdminMealPlan();
     }
 
     function handleAdminWeekToday() {
       if (adminWeekOffset === 0 || adminMealWritePending || adminNoteWritePending) return;
       adminWeekOffset = 0;
-      adminEditingDay = null;
       loadAdminMealPlan();
     }
 
@@ -856,63 +1045,6 @@
         const daysBeforeLabel = c.days_before_visible != null
           ? `Shows ${c.days_before_visible}d before`
           : null;
-
-        if (c.id === adminEditingCountdownId) {
-          const daysBeforeValue = c.days_before_visible != null ? String(c.days_before_visible) : "";
-          const id = escapeHtml(c.id);
-          return `
-            <article class="admin-saved-countdown-card admin-saved-countdown-card--editing" data-countdown-id="${id}">
-              <form class="admin-countdown-edit-form" data-countdown-id="${id}" data-original-name="${escapeHtml(c.name)}">
-                <div class="admin-countdown-edit-header">
-                  <span class="admin-countdown-edit-title">${escapeHtml(c.name)}</span>
-                </div>
-                <div class="admin-field">
-                  <label for="admin-edit-cd-name-${id}">Name</label>
-                  <input id="admin-edit-cd-name-${id}" name="name" type="text" maxlength="140" value="${escapeHtml(c.name)}" required autocomplete="off">
-                </div>
-                <div class="admin-form-row">
-                  <div class="admin-field">
-                    <label for="admin-edit-cd-date-${id}">Date</label>
-                    <input id="admin-edit-cd-date-${id}" name="event_date" type="date" value="${escapeHtml(c.event_date || "")}" required>
-                  </div>
-                  <div class="admin-field">
-                    <label for="admin-edit-cd-days-${id}">Show starting</label>
-                    <input id="admin-edit-cd-days-${id}" name="days_before_visible" type="number" min="1" max="365" value="${escapeHtml(daysBeforeValue)}" placeholder="e.g. 30">
-                    <p class="admin-field-hint">Days before event to appear. Optional.</p>
-                  </div>
-                </div>
-                <div class="admin-form-row">
-                  <div class="admin-field">
-                    <label for="admin-edit-cd-keyword-${id}">Photo keyword</label>
-                    <input id="admin-edit-cd-keyword-${id}" name="photo_keyword" type="text" maxlength="100" value="${escapeHtml(c.photo_keyword || "")}" placeholder="e.g. beach, mountains" autocomplete="off">
-                    <button class="admin-button admin-button--secondary" type="button" data-action="get-photo-edit" data-countdown-id="${id}" style="width:100%;margin-top:6px">Get photo</button>
-                    <p class="admin-field-hint">Optional. Used for Unsplash photo fetch.</p>
-                  </div>
-                  <div class="admin-field">
-                    <label for="admin-edit-cd-icon-${id}">Icon — <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse ↗</a></label>
-                    <input id="admin-edit-cd-icon-${id}" name="icon" type="text" maxlength="60" value="${escapeHtml(c.icon || "calendar")}" placeholder="e.g. plane, heart, gem" autocomplete="off">
-                    <p class="admin-field-hint">Lucide icon name. Optional.</p>
-                  </div>
-                </div>
-                <div class="admin-form-photo-preview" id="admin-edit-photo-pending-${id}" hidden></div>
-                ${thumbnailUrl ? `
-                <div class="admin-edit-photo-preview">
-                  <button class="admin-countdown-preview-btn" type="button" data-action="view-photo" data-full-url="${escapeHtml(imageUrl)}" data-credit="${escapeHtml(imageCredit || "")}" aria-label="View full photo">
-                    <img class="admin-edit-photo-thumb" src="${escapeHtml(thumbnailUrl)}" alt="" aria-hidden="true" onerror="this.closest('.admin-edit-photo-preview').remove();">
-                  </button>
-                  <div class="admin-edit-photo-meta">
-                    ${imageCredit ? `<span class="admin-edit-photo-credit">${escapeHtml(imageCredit)}</span>` : ""}
-                    <button class="admin-button admin-button--ghost-danger" type="button" data-action="remove-photo" data-countdown-id="${id}" aria-label="Remove photo" style="margin-left:0">Remove photo</button>
-                  </div>
-                </div>` : ""}
-                <div class="admin-actions">
-                  <button class="admin-button admin-button--secondary" type="button" data-action="cancel-edit" data-countdown-id="${id}" aria-label="Cancel edit">Cancel</button>
-                  <button class="admin-button admin-button--primary" type="submit">Save changes</button>
-                </div>
-              </form>
-            </article>
-          `;
-        }
 
         return `
           <article class="admin-saved-countdown-card" data-countdown-id="${escapeHtml(c.id)}">
@@ -1110,8 +1242,8 @@
       }
 
       adminCountdownWritePending = true;
-      adminCountdownSubmitButton.disabled = true;
-      adminCountdownSubmitButton.textContent = "Saving\u2026";
+      const submitBtn = document.querySelector("#admin-modal-body [type='submit']");
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Saving\u2026"; }
 
       const { data: insertedRow, error } = await client
         .from("countdowns")
@@ -1128,22 +1260,17 @@
 
       if (error || !insertedRow) {
         adminCountdownWritePending = false;
-        adminCountdownSubmitButton.disabled = false;
-        adminCountdownSubmitButton.textContent = "Save Countdown";
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Save Countdown"; }
         showToast("Couldn\u2019t save countdown. Please try again.");
         return;
       }
 
       adminCountdownWritePending = false;
-      adminCountdownSubmitButton.disabled = false;
-      adminCountdownSubmitButton.textContent = "Save Countdown";
-      adminCountdownForm.reset();
-      const pendingCreatePreview = document.getElementById("admin-create-photo-pending");
-      if (pendingCreatePreview) pendingCreatePreview.hidden = true;
 
-      const pendingPhoto = adminPendingPhotos.get("create");
-      adminPendingPhotos.delete("create");
+      const pendingPhoto = adminPendingPhotos.get("modal-create");
+      adminPendingPhotos.delete("modal-create");
 
+      closeAdminModal();
       await loadAdminCountdowns();
 
       if (pendingPhoto) {
@@ -1159,7 +1286,7 @@
       }
     }
 
-    async function updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName) {
+    async function updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, removePhoto) {
       const client = getSupabaseClient();
       if (!client) {
         showToast("Couldn\u2019t update countdown. Supabase is unavailable.");
@@ -1167,15 +1294,18 @@
       }
 
       adminCountdownEditPending = true;
-      const submitBtn = adminSavedCountdownList.querySelector(`[data-countdown-id="${id}"] form [type="submit"]`);
+      const submitBtn = document.querySelector("#admin-modal-body [type='submit']");
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = "Saving\u2026";
       }
 
+      const updatePayload = { name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null };
+      if (removePhoto) updatePayload.unsplash_image_url = null;
+
       const { error } = await client
         .from("countdowns")
-        .update({ name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null })
+        .update(updatePayload)
         .eq("id", id)
         .eq("household_id", DISPLAY_HOUSEHOLD_ID);
 
@@ -1185,46 +1315,32 @@
         showToast("Couldn\u2019t update countdown. Please try again.");
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.textContent = "Save changes";
+          submitBtn.textContent = "Save Changes";
         }
         return;
       }
 
-      adminEditingCountdownId = null;
       const pendingPhoto = adminPendingPhotos.get(id);
       adminPendingPhotos.delete(id);
 
+      closeAdminModal();
       await loadAdminCountdowns({ preserveScroll: true });
 
-      if (pendingPhoto) {
-        updateCountdownPhoto(id, pendingPhoto).then(async (ok) => {
-          if (ok) await loadAdminCountdowns({ preserveScroll: true });
-        }).catch((e) => console.warn("Background photo save failed:", e));
-      } else if (photoKeyword || name !== originalName) {
-        fetchUnsplashPhoto(photoKeyword || name).then(async (photo) => {
-          if (!photo) return;
-          const ok = await updateCountdownPhoto(id, photo);
-          if (ok) await loadAdminCountdowns({ preserveScroll: true });
-        }).catch((e) => console.warn("Background photo fetch failed:", e));
+      if (!removePhoto) {
+        if (pendingPhoto) {
+          updateCountdownPhoto(id, pendingPhoto).then(async (ok) => {
+            if (ok) await loadAdminCountdowns({ preserveScroll: true });
+          }).catch((e) => console.warn("Background photo save failed:", e));
+        } else if (photoKeyword || name !== originalName) {
+          fetchUnsplashPhoto(photoKeyword || name).then(async (photo) => {
+            if (!photo) return;
+            const ok = await updateCountdownPhoto(id, photo);
+            if (ok) await loadAdminCountdowns({ preserveScroll: true });
+          }).catch((e) => console.warn("Background photo fetch failed:", e));
+        }
       }
     }
 
-    function handleAdminSavedCountdownListSubmit(event) {
-      const form = event.target.closest(".admin-countdown-edit-form");
-      if (!form) return;
-      event.preventDefault();
-      const id = form.getAttribute("data-countdown-id");
-      const originalName = form.getAttribute("data-original-name");
-      const formData = new FormData(form);
-      const name = String(formData.get("name") || "").trim();
-      const eventDate = String(formData.get("event_date") || "").trim();
-      const icon = String(formData.get("icon") || "").trim() || "calendar";
-      const daysBeforeRaw = String(formData.get("days_before_visible") || "").trim();
-      const daysBeforeVisible = daysBeforeRaw !== "" ? parseInt(daysBeforeRaw, 10) || null : null;
-      const photoKeyword = String(formData.get("photo_keyword") || "").trim();
-      if (!name || !eventDate || adminCountdownEditPending) return;
-      updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName);
-    }
 
     async function deleteAdminCountdown(id) {
       const client = getSupabaseClient();
@@ -1248,29 +1364,13 @@
       await loadAdminCountdowns();
     }
 
-    function syncAdminCountdownForm(name, date) {
-      adminCountdownName.value = name;
-      adminCountdownDate.value = date;
-      adminCountdownIcon.value = "";
-      adminCountdownIcon.focus();
-    }
-
     function handleAdminCountdownCalListClick(event) {
       const card = event.target.closest("[data-cal-name]");
-
-      if (!card) {
-        return;
-      }
-
-      syncAdminCountdownForm(
-        card.getAttribute("data-cal-name"),
-        card.getAttribute("data-cal-date")
-      );
-    }
-
-    function handleAdminCountdownSubmit(event) {
-      event.preventDefault();
-      saveAdminCountdown(new FormData(event.currentTarget));
+      if (!card) return;
+      openAddCountdownModal({
+        name: card.getAttribute("data-cal-name"),
+        date: card.getAttribute("data-cal-date")
+      });
     }
 
     function setFormPhotoPreview(container, photo) {
@@ -1291,45 +1391,112 @@
       }
     }
 
-    async function handleGetPhotoCreate() {
-      const keywordInput = document.getElementById("admin-countdown-photo-keyword");
-      const nameInput = document.getElementById("admin-countdown-name");
-      const previewContainer = document.getElementById("admin-create-photo-pending");
-      const btn = adminCountdownForm.querySelector("[data-action='get-photo-create']");
-      if (!keywordInput || !previewContainer) return;
-      const query = keywordInput.value.trim() || (nameInput && nameInput.value.trim()) || "";
-      if (!query) return;
-      if (btn) { btn.disabled = true; btn.textContent = "Loading\u2026"; }
-      const photo = await fetchUnsplashPhoto(query);
-      if (btn) { btn.disabled = false; btn.textContent = "Get photo"; }
-      if (!photo) {
-        showToast("Couldn\u2019t find a photo. Try a different keyword.");
-        return;
+    function buildCountdownFormHTML(countdown, prefill) {
+      // countdown: object for edit, null for add
+      // prefill: { name, date } for pre-filling from calendar event (add only)
+      const p = prefill || {};
+      const isEdit = !!countdown;
+      const id = isEdit ? escapeHtml(countdown.id) : "";
+      const name = isEdit ? escapeHtml(countdown.name) : escapeHtml(p.name || "");
+      const eventDate = isEdit ? escapeHtml(countdown.event_date || "") : escapeHtml(p.date || "");
+      const daysBeforeValue = isEdit && countdown.days_before_visible != null ? String(countdown.days_before_visible) : "";
+      const photoKeyword = isEdit ? escapeHtml(countdown.photo_keyword || "") : "";
+      const icon = isEdit ? escapeHtml(countdown.icon || "") : "";
+
+      let existingPhotoHTML = "";
+      if (isEdit && countdown.unsplash_image_url) {
+        let imageUrl = null;
+        let imageCredit = null;
+        try {
+          const parsed = JSON.parse(countdown.unsplash_image_url);
+          imageUrl = parsed.url || null;
+          imageCredit = parsed.credit || null;
+        } catch {
+          imageUrl = countdown.unsplash_image_url;
+        }
+        if (imageUrl) {
+          const thumbnailUrl = unsplashThumbnailUrl(imageUrl);
+          existingPhotoHTML = `
+            <div class="admin-edit-photo-preview">
+              <button class="admin-countdown-preview-btn" type="button" data-action="view-photo"
+                data-full-url="${escapeHtml(imageUrl)}" data-credit="${escapeHtml(imageCredit || "")}"
+                aria-label="View full photo">
+                <img class="admin-edit-photo-thumb" src="${escapeHtml(thumbnailUrl)}" alt="" aria-hidden="true"
+                  onerror="this.closest('.admin-edit-photo-preview').remove();">
+              </button>
+              <div class="admin-edit-photo-meta">
+                ${imageCredit ? `<span class="admin-edit-photo-credit">${escapeHtml(imageCredit)}</span>` : ""}
+                <button class="admin-button admin-button--ghost-danger" type="button"
+                  data-action="remove-photo-modal" data-countdown-id="${id}"
+                  aria-label="Remove photo" style="margin-left:0">Remove photo</button>
+              </div>
+            </div>
+          `;
+        }
       }
-      adminPendingPhotos.set("create", photo);
-      setFormPhotoPreview(previewContainer, photo);
+
+      const formAttrs = isEdit
+        ? `data-countdown-id="${id}" data-original-name="${name}"`
+        : "";
+      const submitLabel = isEdit ? "Save Changes" : "Save Countdown";
+
+      return `
+        <form data-modal-form="countdown" ${formAttrs} novalidate>
+          <div class="admin-field">
+            <label for="modal-cd-name">Name</label>
+            <input id="modal-cd-name" name="name" type="text" maxlength="140" required
+              value="${name}" placeholder="e.g. Portugal trip" autocomplete="off">
+          </div>
+          <div class="admin-form-row">
+            <div class="admin-field">
+              <label for="modal-cd-date">Date</label>
+              <input id="modal-cd-date" name="event_date" type="date" required value="${eventDate}">
+            </div>
+            <div class="admin-field">
+              <label for="modal-cd-days">Show starting</label>
+              <input id="modal-cd-days" name="days_before_visible" type="number" min="1" max="365"
+                value="${daysBeforeValue}" placeholder="e.g. 30">
+              <p class="admin-field-hint">Days before event. Optional.</p>
+            </div>
+          </div>
+          <div class="admin-form-row">
+            <div class="admin-field">
+              <label for="modal-cd-keyword">Photo keyword</label>
+              <div class="admin-icon-row">
+                <input id="modal-cd-keyword" name="photo_keyword" type="text" maxlength="100"
+                  value="${photoKeyword}" placeholder="e.g. beach, mountains" autocomplete="off">
+                <button class="admin-button admin-button--secondary" type="button"
+                  data-action="get-photo-modal">Get photo</button>
+              </div>
+              <p class="admin-field-hint">Optional. Previews before you save.</p>
+            </div>
+            <div class="admin-field">
+              <label for="modal-cd-icon">Icon &mdash; <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse ↗</a></label>
+              <input id="modal-cd-icon" name="icon" type="text" maxlength="60"
+                value="${icon}" placeholder="e.g. plane, heart, gem" autocomplete="off">
+              <p class="admin-field-hint">Lucide icon name. Optional.</p>
+            </div>
+          </div>
+          ${existingPhotoHTML}
+          <div class="admin-modal-photo-pending" hidden></div>
+          <div class="admin-actions">
+            <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            <button class="admin-button admin-button--primary" type="submit">${submitLabel}</button>
+          </div>
+        </form>
+      `;
     }
 
-    async function handleGetPhotoEdit(btn) {
-      const id = btn.getAttribute("data-countdown-id");
-      const form = adminSavedCountdownList.querySelector(`.admin-countdown-edit-form[data-countdown-id="${id}"]`);
-      if (!form) return;
-      const keywordInput = form.querySelector(`[name="photo_keyword"]`);
-      const nameInput = form.querySelector(`[name="name"]`);
-      const previewContainer = document.getElementById(`admin-edit-photo-pending-${id}`);
-      const query = (keywordInput && keywordInput.value.trim()) || (nameInput && nameInput.value.trim()) || "";
-      if (!query) return;
-      btn.disabled = true;
-      btn.textContent = "Loading\u2026";
-      const photo = await fetchUnsplashPhoto(query);
-      btn.disabled = false;
-      btn.textContent = "Get photo";
-      if (!photo) {
-        showToast("Couldn\u2019t find a photo. Try a different keyword.");
-        return;
-      }
-      adminPendingPhotos.set(id, photo);
-      setFormPhotoPreview(previewContainer, photo);
+    function openAddCountdownModal(prefill) {
+      adminModalType = "add-countdown";
+      adminModalContext = null;
+      openAdminModal("Add Countdown", buildCountdownFormHTML(null, prefill));
+    }
+
+    function openEditCountdownModal(countdown) {
+      adminModalType = "edit-countdown";
+      adminModalContext = { id: countdown.id };
+      openAdminModal("Edit Countdown", buildCountdownFormHTML(countdown));
     }
 
     function handleAdminSavedCountdownListClick(event) {
@@ -1344,34 +1511,9 @@
 
       const editBtn = event.target.closest("[data-action='edit-countdown']");
       if (editBtn) {
-        const scrollY = window.scrollY;
-        adminEditingCountdownId = editBtn.getAttribute("data-countdown-id");
-        renderAdminSavedCountdowns();
-        refreshIcons();
-        requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "instant" }));
-        return;
-      }
-
-      const cancelBtn = event.target.closest("[data-action='cancel-edit']");
-      if (cancelBtn) {
-        const scrollY = window.scrollY;
-        adminPendingPhotos.delete(cancelBtn.getAttribute("data-countdown-id"));
-        adminEditingCountdownId = null;
-        renderAdminSavedCountdowns();
-        refreshIcons();
-        requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "instant" }));
-        return;
-      }
-
-      const getPhotoEditBtn = event.target.closest("[data-action='get-photo-edit']");
-      if (getPhotoEditBtn) {
-        handleGetPhotoEdit(getPhotoEditBtn);
-        return;
-      }
-
-      const removePhotoBtn = event.target.closest("[data-action='remove-photo']");
-      if (removePhotoBtn) {
-        removeCountdownPhoto(removePhotoBtn.getAttribute("data-countdown-id"));
+        const id = editBtn.getAttribute("data-countdown-id");
+        const countdown = adminSavedCountdowns.find((c) => c.id === id);
+        if (countdown) openEditCountdownModal(countdown);
         return;
       }
 
@@ -1389,13 +1531,6 @@
       if (deleteBtn) {
         deleteAdminCountdown(deleteBtn.getAttribute("data-countdown-id"));
       }
-    }
-
-    function handleAdminCountdownClear() {
-      adminCountdownForm.reset();
-      adminPendingPhotos.delete("create");
-      const previewContainer = document.getElementById("admin-create-photo-pending");
-      if (previewContainer) previewContainer.hidden = true;
     }
 
     async function fetchAdminTodos() {
@@ -1439,23 +1574,22 @@
       adminApp.hidden = false;
       setAdminScreen("todos");
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
-      adminTodoForm.addEventListener("submit", handleAdminTodoSubmit);
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
       adminMealList.addEventListener("click", handleAdminMealListClick);
-      adminMealList.addEventListener("submit", handleAdminMealInlineSubmit);
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);
-      if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("submit", handleAdminMealNoteSubmit);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
       adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);
       if (adminWeekTodayBtn) adminWeekTodayBtn.addEventListener("click", handleAdminWeekToday);
-      adminCountdownForm.addEventListener("submit", handleAdminCountdownSubmit);
-      adminCountdownForm.addEventListener("click", (e) => {
-        if (e.target.closest("[data-action='get-photo-create']")) handleGetPhotoCreate();
-      });
-      adminCountdownClearButton.addEventListener("click", handleAdminCountdownClear);
       adminCalEventList.addEventListener("click", handleAdminCountdownCalListClick);
       adminSavedCountdownList.addEventListener("click", handleAdminSavedCountdownListClick);
-      adminSavedCountdownList.addEventListener("submit", handleAdminSavedCountdownListSubmit);
+      if (adminTodoAddButton) adminTodoAddButton.addEventListener("click", openAddTodoModal);
+      if (adminCountdownAddButton) adminCountdownAddButton.addEventListener("click", () => openAddCountdownModal());
+      const adminModal = document.getElementById("admin-modal");
+      if (adminModal) {
+        adminModal.addEventListener("click", handleAdminModalClick);
+        adminModal.addEventListener("submit", handleAdminModalSubmit);
+      }
+      document.addEventListener("keydown", handleEscapeKey);
       const lightbox = document.getElementById("admin-lightbox");
       if (lightbox) lightbox.addEventListener("click", closeAdminLightbox);
       const adminCalPrevBtn = document.getElementById("admin-cal-prev");

@@ -690,6 +690,15 @@
     function refreshIcons() {
       if (window.lucide && typeof window.lucide.createIcons === "function") {
         window.lucide.createIcons();
+        // Fallback: any icon inside .countdown-icon that wasn't recognized → use "calendar"
+        let needsRetry = false;
+        document.querySelectorAll(".countdown-icon i[data-lucide]").forEach((el) => {
+          if (!el.querySelector("svg")) {
+            el.setAttribute("data-lucide", "calendar");
+            needsRetry = true;
+          }
+        });
+        if (needsRetry) window.lucide.createIcons();
       }
     }
 
