@@ -327,37 +327,84 @@
       word-break: keep-all;
     }
 
-    .todo-layout {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 20px;
-      height: calc(100% - 46px);
-    }
-
+    /* Two-column scrollable grid for the todo list */
     .todo-list {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 14px;
+      align-content: start;
+      overflow-y: auto;
+      height: calc(100% - 46px);
     }
 
     .todo-card {
       display: grid;
-      grid-template-columns: auto 1fr auto auto;
-      align-items: center;
+      grid-template-columns: auto 1fr;
+      align-items: start;
       gap: 12px;
-      padding: 18px 20px;
+      padding: 16px 18px;
       border-radius: var(--radius-md);
       background: rgba(255, 255, 255, 0.56);
       border: 1px solid rgba(124, 96, 69, 0.12);
       min-width: 0;
+      transition: opacity 0.25s, transform 0.2s;
+    }
+
+    .todo-card.is-completing {
+      opacity: 0.75;
+    }
+
+    .todo-card.is-completing .todo-check {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: white;
+    }
+
+    .todo-card.is-completing .todo-check-icon {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .todo-card.is-done {
+      opacity: 0;
+      transform: scale(0.92);
+      pointer-events: none;
+    }
+
+    /* Rounded-square checkbox button */
+    .todo-check-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 3px;
+      touch-action: manipulation;
     }
 
     .todo-check {
       width: 22px;
       height: 22px;
-      border-radius: 50%;
-      border: 3px solid var(--amber);
-      flex-shrink: 0;
+      border-radius: 6px;
+      border: 2.5px solid var(--amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: transparent;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .todo-check-btn:active .todo-check {
+      background: var(--amber);
+      color: white;
+    }
+
+    .todo-check-icon {
+      width: 12px;
+      height: 10px;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: opacity 0.15s, transform 0.15s;
     }
 
     .todo-copy {
@@ -365,7 +412,7 @@
     }
 
     .todo-title {
-      font-size: 1.45rem;
+      font-size: 1.35rem;
       font-weight: 700;
       line-height: 1.25;
       overflow: hidden;
@@ -380,52 +427,69 @@
       color: var(--muted);
     }
 
+    .todo-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 7px;
+    }
+
+    /* Person-color assignee pills — distinct from status colors (no amber/green/red) */
     .todo-assignee {
-      padding: 8px 12px;
+      padding: 5px 10px;
       border-radius: 999px;
-      font-size: 0.9rem;
-      font-weight: 800;
+      font-size: 0.88rem;
+      font-weight: 700;
       white-space: nowrap;
     }
 
     .todo-assignee--chris {
-      background: rgba(180, 83, 9, 0.14);
-      color: var(--amber);
+      /* slate blue */
+      background: rgba(71, 100, 145, 0.14);
+      color: #3b5a8a;
     }
 
     .todo-assignee--bailey {
-      background: rgba(21, 128, 61, 0.14);
-      color: var(--sage);
+      /* dusty rose */
+      background: rgba(180, 90, 110, 0.14);
+      color: #8a3b50;
     }
 
-    .todo-assignee--shared {
+    .todo-assignee--other {
       background: rgba(121, 106, 94, 0.12);
       color: var(--muted);
     }
 
-    .todo-badge {
-      padding: 10px 14px;
+    /* Urgency-coded due date pills */
+    .todo-due-pill {
+      padding: 5px 10px;
       border-radius: 999px;
-      background: rgba(21, 128, 61, 0.12);
-      color: var(--sage);
-      font-size: 1rem;
-      font-weight: 800;
+      font-size: 0.88rem;
+      font-weight: 700;
       white-space: nowrap;
     }
 
-    .todo-summary {
-      display: grid;
-      gap: 16px;
-      align-content: start;
+    .todo-due-pill--overdue {
+      background: rgba(190, 18, 60, 0.12);
+      color: #be123c;
     }
 
-    .summary-card {
-      padding: 22px;
-      border-radius: var(--radius-md);
-      background: linear-gradient(180deg, rgba(247, 217, 170, 0.28), rgba(255, 255, 255, 0.52));
-      border: 1px solid rgba(180, 83, 9, 0.14);
+    .todo-due-pill--today {
+      background: rgba(180, 83, 9, 0.15);
+      color: var(--amber);
     }
 
+    .todo-due-pill--soon {
+      background: rgba(217, 119, 6, 0.14);
+      color: #c2410c;
+    }
+
+    .todo-due-pill--future {
+      background: rgba(121, 106, 94, 0.1);
+      color: var(--muted);
+    }
+
+    /* Kept for RSVP screen — do not remove */
     .summary-label {
       font-size: 1rem;
       font-weight: 800;

@@ -125,21 +125,7 @@
             <div class="screen-title-row">
               <div class="eyebrow"><i data-lucide="list-todo"></i> To-do List</div>
             </div>
-            <div class="todo-layout">
-              <div class="todo-list" id="todo-list"></div>
-              <div class="todo-summary">
-                <div class="summary-card">
-                  <div class="summary-label">Open Items</div>
-                  <div class="summary-value" id="todo-open-count">0</div>
-                  <div class="summary-text">Shared household tasks that still need attention.</div>
-                </div>
-                <div class="summary-card">
-                  <div class="summary-label">Next Up</div>
-                  <div class="summary-value" style="font-size:2.2rem;" id="todo-next-up">Today</div>
-                  <div class="summary-text" id="todo-next-text">Dry cleaning pickup before 6pm.</div>
-                </div>
-              </div>
-            </div>
+            <div class="todo-list" id="todo-list"></div>
           </div>
         </section>
 
@@ -225,6 +211,15 @@
             </span>
           </summary>
           <div class="admin-drawer-body">
+            <div class="admin-month-nav" id="admin-archive-month-nav">
+              <button class="admin-week-nav-btn" type="button" id="admin-archive-month-prev" aria-label="Previous month">
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <span class="admin-month-nav-label" id="admin-archive-month-label">March 2026</span>
+              <button class="admin-week-nav-btn" type="button" id="admin-archive-month-next" aria-label="Next month">
+                <i data-lucide="chevron-right"></i>
+              </button>
+            </div>
             <div class="admin-list" id="admin-archived-list"></div>
           </div>
         </details>
