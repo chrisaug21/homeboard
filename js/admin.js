@@ -623,10 +623,7 @@
       if (!adminMealNoteWrap) return;
       adminMealNoteWrap.innerHTML = `
         <button class="admin-meal-card" type="button" data-action="edit-meal-note">
-          <div class="admin-meal-card-top">
-            <div class="admin-meal-day">Weekly Note</div>
-            <span class="admin-pill">${adminCurrentNote ? "Tap to edit" : "Tap to add"}</span>
-          </div>
+          <div class="admin-meal-day">Weekly Note</div>
           <div class="admin-meal-name${adminCurrentNote ? "" : " admin-meal-name--empty"}">${escapeHtml(adminCurrentNote || "No note this week.")}</div>
         </button>
       `;
