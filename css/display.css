@@ -480,8 +480,8 @@
     }
 
     .todo-due-pill--today {
-      background: rgba(180, 83, 9, 0.15);
-      color: var(--amber);
+      background: rgba(21, 128, 61, 0.13);
+      color: var(--sage);
     }
 
     .todo-due-pill--soon {
