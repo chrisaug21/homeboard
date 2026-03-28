@@ -6,7 +6,7 @@ Project-specific instructions. Global coding standards and git discipline are in
 Household command center PWA. Wall-mounted Android tablet (landscape display) + phone admin (portrait). Single `index.html`, Supabase backend, Netlify hosting.
 
 ## File Structure
-```
+```text
 index.html          — single HTML file, both display + admin shells
 css/display.css     — display mode styles only
 css/admin.css       — admin mode styles only

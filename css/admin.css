@@ -492,7 +492,7 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity 180ms ease, transform 180ms ease;
-      z-index: 20;
+      z-index: 600;
     }
 
     .toast.is-visible {

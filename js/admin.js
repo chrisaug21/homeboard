@@ -23,7 +23,6 @@
     let adminMealWritePending = false;
     let adminCurrentNote = "";
     let adminNoteWritePending = false;
-    let adminEditingNote = false;
     let adminScreen = "todos";
     let adminWeekOffset = 0;
     let adminCurrentMonday = null;
@@ -175,7 +174,17 @@
       }
       const removePhotoBtn = event.target.closest("[data-action='remove-photo-modal']");
       if (removePhotoBtn) {
-        removeCountdownPhoto(removePhotoBtn.getAttribute("data-countdown-id"));
+        // Stage the removal — only persist to Supabase when the user clicks Save
+        const preview = removePhotoBtn.closest(".admin-edit-photo-preview");
+        if (preview) preview.hidden = true;
+        const form = removePhotoBtn.closest("form");
+        if (form && !form.querySelector("[name='remove_photo']")) {
+          const hidden = document.createElement("input");
+          hidden.type = "hidden";
+          hidden.name = "remove_photo";
+          hidden.value = "1";
+          form.appendChild(hidden);
+        }
       }
     }
 
@@ -187,6 +196,16 @@
       const formData = new FormData(form);
 
       if (formType === "todo") {
+        const todoTitle = String(formData.get("title") || "").trim();
+        if (!todoTitle) {
+          const titleInput = form.querySelector("[name='title']");
+          if (titleInput) {
+            titleInput.style.borderColor = "var(--rose)";
+            titleInput.focus();
+            titleInput.addEventListener("input", () => { titleInput.style.borderColor = ""; }, { once: true });
+          }
+          return;
+        }
         if (adminModalType === "edit-todo") {
           updateAdminTodo(adminModalContext.id, formData);
         } else {
@@ -202,6 +221,8 @@
           return;
         }
         saveAdminMeal(dayOfWeek, mealName, mealType);
+      } else if (formType === "note") {
+        saveAdminMealNote(formData);
       } else if (formType === "countdown") {
         if (adminModalType === "edit-countdown") {
           const id = form.getAttribute("data-countdown-id");
@@ -212,8 +233,9 @@
           const daysBeforeRaw = String(formData.get("days_before_visible") || "").trim();
           const daysBeforeVisible = daysBeforeRaw !== "" ? parseInt(daysBeforeRaw, 10) || null : null;
           const photoKeyword = String(formData.get("photo_keyword") || "").trim();
+          const removePhoto = formData.get("remove_photo") === "1";
           if (!name || !eventDate || adminCountdownEditPending) return;
-          updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName);
+          updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, removePhoto);
         } else {
           saveAdminCountdown(formData);
         }
@@ -229,6 +251,9 @@
       const btn = modalBody.querySelector("[data-action='get-photo-modal']");
       const query = (keywordInput && keywordInput.value.trim()) || (nameInput && nameInput.value.trim()) || "";
       if (!query) return;
+      // Capture modal context before the async gap to avoid race conditions
+      const capturedModalType = adminModalType;
+      const capturedContextId = adminModalContext && adminModalContext.id;
       if (btn) { btn.disabled = true; btn.textContent = "Loading\u2026"; }
       const photo = await fetchUnsplashPhoto(query);
       if (btn) { btn.disabled = false; btn.textContent = "Get photo"; }
@@ -236,7 +261,7 @@
         showToast("Couldn\u2019t find a photo. Try a different keyword.");
         return;
       }
-      const photoKey = adminModalType === "edit-countdown" ? adminModalContext.id : "modal-create";
+      const photoKey = capturedModalType === "edit-countdown" ? capturedContextId : "modal-create";
       adminPendingPhotos.set(photoKey, photo);
       setFormPhotoPreview(previewContainer, photo);
     }
@@ -389,7 +414,7 @@
     function buildTodoFormHTML(todo) {
       const isEdit = !!todo;
       return `
-        <form data-modal-form="todo">
+        <form data-modal-form="todo" novalidate>
           <div class="admin-field">
             <label for="modal-todo-title">Title</label>
             <input id="modal-todo-title" name="title" type="text" maxlength="140" required
@@ -535,7 +560,7 @@
       const currentType = meal ? meal.mealType : "cooking";
 
       return `
-        <form data-modal-form="meal" data-meal-day="${dayIndex}">
+        <form data-modal-form="meal" data-meal-day="${dayIndex}" novalidate>
           <p class="admin-panel-note" style="margin-top:0">${dayLabel}</p>
           <div class="admin-field">
             <label for="modal-meal-name">Dinner</label>
@@ -596,63 +621,57 @@
 
     function renderAdminMealNote() {
       if (!adminMealNoteWrap) return;
-
-      if (adminEditingNote) {
-        adminMealNoteWrap.innerHTML = `
-          <form class="admin-meal-inline-form" id="admin-meal-note-form">
-            <div class="admin-meal-inline-header">
-              <span class="admin-meal-day">Weekly Note</span>
-              <button class="admin-button admin-button--secondary admin-meal-inline-cancel" type="button" id="admin-meal-note-cancel">Cancel</button>
-            </div>
-            <div class="admin-field">
-              <textarea
-                id="admin-meal-note-input"
-                class="admin-meal-note-textarea"
-                maxlength="280"
-                placeholder="Add a note for this week\u2026"
-                rows="3"
-                aria-label="Weekly note"
-              >${escapeHtml(adminCurrentNote)}</textarea>
-            </div>
-            <div class="admin-actions">
-              <button class="admin-button admin-button--primary" type="submit">Save Note</button>
-            </div>
-          </form>
-        `;
-        const noteInput = adminMealNoteWrap.querySelector("#admin-meal-note-input");
-        if (noteInput) {
-          noteInput.focus();
-          noteInput.setSelectionRange(noteInput.value.length, noteInput.value.length);
-        }
-      } else {
-        adminMealNoteWrap.innerHTML = `
-          <button class="admin-meal-card" type="button" id="admin-meal-note-card">
-            <div class="admin-meal-card-top">
-              <div class="admin-meal-day">Weekly Note</div>
-              <span class="admin-pill">${adminCurrentNote ? "Tap to edit" : "Tap to add"}</span>
-            </div>
-            <div class="admin-meal-name${adminCurrentNote ? "" : " admin-meal-name--empty"}">${escapeHtml(adminCurrentNote || "No note this week.")}</div>
-          </button>
-        `;
-      }
-
+      adminMealNoteWrap.innerHTML = `
+        <button class="admin-meal-card" type="button" data-action="edit-meal-note">
+          <div class="admin-meal-card-top">
+            <div class="admin-meal-day">Weekly Note</div>
+            <span class="admin-pill">${adminCurrentNote ? "Tap to edit" : "Tap to add"}</span>
+          </div>
+          <div class="admin-meal-name${adminCurrentNote ? "" : " admin-meal-name--empty"}">${escapeHtml(adminCurrentNote || "No note this week.")}</div>
+        </button>
+      `;
       refreshIcons();
     }
 
-    async function saveAdminMealNote() {
+    function buildMealNoteFormHTML() {
+      return `
+        <form data-modal-form="note" novalidate>
+          <div class="admin-field">
+            <textarea
+              id="admin-meal-note-input"
+              name="note"
+              class="admin-meal-note-textarea"
+              maxlength="280"
+              placeholder="Add a note for this week\u2026"
+              rows="3"
+              aria-label="Weekly note"
+            >${escapeHtml(adminCurrentNote)}</textarea>
+          </div>
+          <div class="admin-actions">
+            <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            <button class="admin-button admin-button--primary" type="submit">Save Note</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function openMealNoteModal() {
+      adminModalType = "note";
+      adminModalContext = null;
+      openAdminModal("Weekly Note", buildMealNoteFormHTML());
+    }
+
+    async function saveAdminMealNote(formData) {
       if (adminNoteWritePending || adminMealWritePending) return;
-      const textarea = adminMealNoteWrap && adminMealNoteWrap.querySelector("#admin-meal-note-input");
-      if (!textarea) return;
-      const noteText = textarea.value.trim();
+      const noteText = String(formData.get("note") || "").trim();
       const client = getSupabaseClient();
       if (!client) {
         showToast("Couldn\u2019t save note. Supabase is unavailable.");
         return;
       }
       adminNoteWritePending = true;
+      setModalSaving(true);
       const savedWeekStart = formatDateKey(adminCurrentMonday);
-      const submitBtn = adminMealNoteWrap.querySelector("[type='submit']");
-      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Saving\u2026"; }
 
       const { error } = await client
         .from("meal_plan_notes")
@@ -664,38 +683,27 @@
       adminNoteWritePending = false;
 
       if (error) {
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Save Note"; }
+        setModalSaving(false, "Save Note");
         showToast("Couldn\u2019t save note. Please try again.");
         return;
       }
 
       // If the week changed while awaiting, discard the stale result
-      if (formatDateKey(adminCurrentMonday) !== savedWeekStart) return;
+      if (formatDateKey(adminCurrentMonday) !== savedWeekStart) {
+        closeAdminModal();
+        return;
+      }
 
       adminCurrentNote = noteText;
-      adminEditingNote = false;
+      closeAdminModal();
       renderAdminMealNote();
       showToast("Note saved.");
     }
 
     function handleAdminMealNoteClick(event) {
-      if (adminNoteWritePending) return;
-
-      if (event.target.closest("#admin-meal-note-cancel")) {
-        adminEditingNote = false;
-        renderAdminMealNote();
-        return;
+      if (event.target.closest("[data-action='edit-meal-note']")) {
+        openMealNoteModal();
       }
-      if (event.target.closest("#admin-meal-note-card")) {
-        adminEditingNote = true;
-        renderAdminMealNote();
-      }
-    }
-
-    function handleAdminMealNoteSubmit(event) {
-      if (!event.target.closest("#admin-meal-note-form")) return;
-      event.preventDefault();
-      saveAdminMealNote();
     }
 
     async function loadAdminMealPlan() {
@@ -704,7 +712,6 @@
       adminWeekPrevBtn.disabled = true;
       adminWeekNextBtn.disabled = true;
       adminMealList.innerHTML = '<div class="admin-empty">Loading meals\u2026</div>';
-      adminEditingNote = false;
       if (adminMealNoteWrap) adminMealNoteWrap.innerHTML = "";
 
       const [mealRows, noteText] = await Promise.all([
@@ -1282,7 +1289,7 @@
       }
     }
 
-    async function updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName) {
+    async function updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, removePhoto) {
       const client = getSupabaseClient();
       if (!client) {
         showToast("Couldn\u2019t update countdown. Supabase is unavailable.");
@@ -1296,9 +1303,12 @@
         submitBtn.textContent = "Saving\u2026";
       }
 
+      const updatePayload = { name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null };
+      if (removePhoto) updatePayload.unsplash_image_url = null;
+
       const { error } = await client
         .from("countdowns")
-        .update({ name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null })
+        .update(updatePayload)
         .eq("id", id)
         .eq("household_id", DISPLAY_HOUSEHOLD_ID);
 
@@ -1319,16 +1329,18 @@
       closeAdminModal();
       await loadAdminCountdowns({ preserveScroll: true });
 
-      if (pendingPhoto) {
-        updateCountdownPhoto(id, pendingPhoto).then(async (ok) => {
-          if (ok) await loadAdminCountdowns({ preserveScroll: true });
-        }).catch((e) => console.warn("Background photo save failed:", e));
-      } else if (photoKeyword || name !== originalName) {
-        fetchUnsplashPhoto(photoKeyword || name).then(async (photo) => {
-          if (!photo) return;
-          const ok = await updateCountdownPhoto(id, photo);
-          if (ok) await loadAdminCountdowns({ preserveScroll: true });
-        }).catch((e) => console.warn("Background photo fetch failed:", e));
+      if (!removePhoto) {
+        if (pendingPhoto) {
+          updateCountdownPhoto(id, pendingPhoto).then(async (ok) => {
+            if (ok) await loadAdminCountdowns({ preserveScroll: true });
+          }).catch((e) => console.warn("Background photo save failed:", e));
+        } else if (photoKeyword || name !== originalName) {
+          fetchUnsplashPhoto(photoKeyword || name).then(async (photo) => {
+            if (!photo) return;
+            const ok = await updateCountdownPhoto(id, photo);
+            if (ok) await loadAdminCountdowns({ preserveScroll: true });
+          }).catch((e) => console.warn("Background photo fetch failed:", e));
+        }
       }
     }
 
@@ -1432,7 +1444,7 @@
       const submitLabel = isEdit ? "Save Changes" : "Save Countdown";
 
       return `
-        <form data-modal-form="countdown" ${formAttrs}>
+        <form data-modal-form="countdown" ${formAttrs} novalidate>
           <div class="admin-field">
             <label for="modal-cd-name">Name</label>
             <input id="modal-cd-name" name="name" type="text" maxlength="140" required
@@ -1568,7 +1580,6 @@
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
       adminMealList.addEventListener("click", handleAdminMealListClick);
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);
-      if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("submit", handleAdminMealNoteSubmit);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
       adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);
       if (adminWeekTodayBtn) adminWeekTodayBtn.addEventListener("click", handleAdminWeekToday);

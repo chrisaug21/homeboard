@@ -10,7 +10,7 @@ Household command center PWA. Runs on a wall-mounted Android tablet in landscape
 - Lucide icons via CDN
 
 ## File Structure
-```
+```text
 index.html          — single HTML file, both display + admin shells
 css/
   display.css       — display mode styles only
@@ -19,9 +19,8 @@ js/
   shared.js         — Supabase init, VERSION constant, utility functions, shared config
   display.js        — display mode logic (auto-rotate, data fetching, rendering)
   admin.js          — all admin mode logic (screens, modals, event handling)
-manifests/
-  manifest.json     — PWA manifest for display mode (landscape)
-  manifest-admin.json — PWA manifest for admin mode (portrait)
+manifest.json       — PWA manifest for display mode (landscape)
+manifest-admin.json — PWA manifest for admin mode (portrait)
 sw.js               — service worker, cache key homeboard-v##
 netlify.toml        — build config, env var injection via sed
 ```
