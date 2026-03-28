@@ -103,6 +103,11 @@
           <div class="panel">
             <div class="screen-title-row">
               <div class="eyebrow"><i data-lucide="calendar-days"></i> This Week</div>
+              <div class="cal-nav-controls">
+                <button class="cal-nav-btn" id="week-prev" type="button" aria-label="Previous week"><i data-lucide="chevron-left"></i></button>
+                <button class="cal-nav-btn cal-nav-btn--today" id="week-today" type="button">This Week</button>
+                <button class="cal-nav-btn" id="week-next" type="button" aria-label="Next week"><i data-lucide="chevron-right"></i></button>
+              </div>
             </div>
             <div class="calendar-layout" id="calendar-grid"></div>
           </div>
@@ -112,6 +117,11 @@
           <div class="panel">
             <div class="screen-title-row">
               <div class="eyebrow" id="month-eyebrow"><i data-lucide="calendar-range"></i> <span id="month-title">This Month</span></div>
+              <div class="cal-nav-controls">
+                <button class="cal-nav-btn" id="month-prev" type="button" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+                <button class="cal-nav-btn cal-nav-btn--today" id="month-today" type="button">Today</button>
+                <button class="cal-nav-btn" id="month-next" type="button" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
+              </div>
             </div>
             <div class="month-layout">
               <div class="month-weekdays" id="month-weekdays"></div>
@@ -181,6 +191,28 @@
       <div class="progress-dots" id="progress-dots"></div>
     </footer>
     <div id="version-label" class="version-label" aria-hidden="true"></div>
+
+    <div class="display-modal" id="day-detail-modal" hidden role="dialog" aria-modal="true" aria-labelledby="day-detail-title">
+      <div class="display-modal-backdrop" id="day-detail-backdrop"></div>
+      <div class="display-modal-sheet">
+        <div class="display-modal-header">
+          <h2 class="display-modal-title" id="day-detail-title"></h2>
+          <button class="display-modal-close" type="button" id="day-detail-close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="display-modal-body" id="day-detail-body"></div>
+      </div>
+    </div>
+
+    <div class="display-modal" id="event-detail-modal" hidden role="dialog" aria-modal="true" aria-labelledby="event-detail-title">
+      <div class="display-modal-backdrop" id="event-detail-backdrop"></div>
+      <div class="display-modal-sheet">
+        <div class="display-modal-header">
+          <h2 class="display-modal-title" id="event-detail-title"></h2>
+          <button class="display-modal-close" type="button" id="event-detail-close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="display-modal-body" id="event-detail-body"></div>
+      </div>
+    </div>
   </div>
 
   <div class="admin-shell" id="admin-app" hidden>

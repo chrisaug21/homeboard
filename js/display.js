@@ -15,6 +15,8 @@
     let cachedHouseholdConfig = null;
     let cachedSupabaseCountdowns = null;
     let cachedCalendarCountdowns = [];
+    let monthOffset = 0;
+    let weekOffset = 0;
     let initialLoadComplete = false;
     const pendingScreens = new Set();
 
@@ -525,7 +527,7 @@
           if (!map.has(key)) {
             map.set(key, []);
           }
-          map.get(key).push({ title, time });
+          map.get(key).push({ title, time, isAllDay, location: item.location || null, description: item.description || null });
           cursor.setDate(cursor.getDate() + 1);
         }
       });
@@ -579,22 +581,34 @@
 
     function renderCalendar() {
       const grid = document.getElementById("calendar-grid");
-      const startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
-      const todayKey = new Date().toDateString();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayKey = today.toDateString();
+
+      // Offset start date by weekOffset weeks
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() + weekOffset * 7);
+
       const fragment = document.createDocumentFragment();
 
       for (let index = 0; index < 5; index++) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + index);
         const events = calendarEventsMap.get(formatDateKey(date)) || [];
+        const dateKey = formatDateKey(date);
 
         const column = document.createElement("article");
         column.className = "day-column" + (date.toDateString() === todayKey ? " today" : "");
 
         const eventsMarkup = events.length
           ? events.map((event) => `
-              <div class="event-card">
+              <div class="event-card" role="button" tabindex="0"
+                   data-event-title="${escapeHtml(event.title)}"
+                   data-event-time="${escapeHtml(event.time)}"
+                   data-event-location="${escapeHtml(event.location || "")}"
+                   data-event-description="${escapeHtml(event.description || "")}"
+                   data-event-isallday="${event.isAllDay ? "true" : "false"}"
+                   data-event-date="${escapeHtml(dateKey)}">
                 <div class="event-time">${escapeHtml(event.time)}</div>
                 <div class="event-title">${escapeHtml(event.title)}</div>
               </div>
@@ -619,24 +633,54 @@
       const monthGridEl = document.getElementById("month-grid");
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const start = getMonthGridStart(today);
+
+      // Apply monthOffset to get the displayed month
+      const displayedMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+      const start = getMonthGridStart(displayedMonth);
       const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-      monthTitleEl.textContent = formatMonthYear(today);
+      monthTitleEl.textContent = formatMonthYear(displayedMonth);
       weekdaysEl.innerHTML = weekdayNames.map((name) => `<div class="month-weekday">${name}</div>`).join("");
-      const cells = Array.from({ length: 35 }, (_, index) => {
+
+      // Determine whether this month needs 5 or 6 grid rows
+      const daysInMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 0).getDate();
+      const cellsNeeded = (displayedMonth.getDay() + daysInMonth) > 35 ? 42 : 35;
+      // Fewer rows = more vertical space per cell = can show more events
+      const maxEventsPerCell = cellsNeeded === 42 ? 2 : 3;
+
+      const cells = Array.from({ length: cellsNeeded }, (_, index) => {
         const date = new Date(start);
         date.setDate(start.getDate() + index);
         const isToday = date.toDateString() === today.toDateString();
-        const isOutsideMonth = date.getMonth() !== today.getMonth();
-        const events = isOutsideMonth ? [] : (calendarEventsMap.get(formatDateKey(date)) || []).slice(0, 2);
+        const isOutsideMonth = date.getMonth() !== displayedMonth.getMonth();
+        const allEvents = isOutsideMonth ? [] : (calendarEventsMap.get(formatDateKey(date)) || []);
+        const dateKey = formatDateKey(date);
+
+        const showCount = Math.min(allEvents.length, maxEventsPerCell);
+        const visibleEvents = allEvents.slice(0, showCount);
+        const overflowCount = allEvents.length - showCount;
+        // Allow title wrapping when there's only one event (room to spare)
+        const wrapClass = allEvents.length === 1 ? " month-event--wrap" : "";
+
+        const eventChips = visibleEvents.map((event) => `
+          <div class="month-event${wrapClass}"
+               data-event-title="${escapeHtml(event.title)}"
+               data-event-time="${escapeHtml(event.time)}"
+               data-event-location="${escapeHtml(event.location || "")}"
+               data-event-description="${escapeHtml(event.description || "")}"
+               data-event-isallday="${event.isAllDay ? "true" : "false"}"
+               data-event-date="${escapeHtml(dateKey)}"
+               role="button" tabindex="0">${escapeHtml(event.title)}</div>
+        `).join("");
+
+        const overflowPill = overflowCount > 0
+          ? `<div class="month-more-pill" data-date-key="${escapeHtml(dateKey)}" role="button" tabindex="0">+${overflowCount} more</div>`
+          : "";
 
         return `
           <article class="month-day${isToday ? " month-day--today" : ""}${isOutsideMonth ? " month-day--outside" : ""}">
             <div class="month-date">${date.getDate()}</div>
-            <div class="month-events">
-              ${events.map((event) => `<div class="month-event">${event.title}</div>`).join("")}
-            </div>
+            <div class="month-events">${eventChips}${overflowPill}</div>
           </article>
         `;
       });
@@ -882,9 +926,9 @@
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const timeMin = getMonthGridStart(today);
-      const timeMax = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      timeMax.setDate(timeMax.getDate() + 5);
+      // Fetch ±2 months so prev/next navigation works without additional API calls
+      const timeMin = getMonthGridStart(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+      const timeMax = new Date(today.getFullYear(), today.getMonth() + 3, 0);
 
       const items = await fetchGoogleCalendarEvents(cachedHouseholdConfig.google_cal_id, apiKey, timeMin, timeMax);
 
@@ -1166,6 +1210,80 @@
       }
     }
 
+    function openEventDetailModal(event, dateStr) {
+      const titleEl = document.getElementById("event-detail-title");
+      const bodyEl = document.getElementById("event-detail-body");
+
+      titleEl.textContent = event.title;
+
+      const timeLabel = event.isAllDay ? "All day" : event.time;
+      const dateLabel = formatLongDate(dateStr);
+
+      let html = `
+        <div class="event-detail-row">
+          <i data-lucide="clock"></i>
+          <span class="event-detail-text">${escapeHtml(dateLabel)} &middot; ${escapeHtml(timeLabel)}</span>
+        </div>
+      `;
+
+      if (event.location) {
+        html += `
+          <div class="event-detail-row">
+            <i data-lucide="map-pin"></i>
+            <span class="event-detail-text">${escapeHtml(event.location)}</span>
+          </div>
+        `;
+      }
+
+      if (event.description) {
+        html += `
+          <div class="event-detail-row">
+            <i data-lucide="align-left"></i>
+            <span class="event-detail-text">${escapeHtml(event.description).replace(/\n/g, "<br>")}</span>
+          </div>
+        `;
+      }
+
+      bodyEl.innerHTML = html;
+      document.getElementById("event-detail-modal").hidden = false;
+      refreshIcons();
+    }
+
+    function closeEventDetailModal() {
+      document.getElementById("event-detail-modal").hidden = true;
+    }
+
+    function openDayDetailModal(dateKey) {
+      const date = new Date(dateKey + "T00:00:00");
+      document.getElementById("day-detail-title").textContent = formatHeaderDate(date);
+
+      const allEvents = calendarEventsMap.get(dateKey) || [];
+      const bodyEl = document.getElementById("day-detail-body");
+
+      if (!allEvents.length) {
+        bodyEl.innerHTML = `<p class="event-detail-text" style="color:var(--muted);">No events this day.</p>`;
+      } else {
+        bodyEl.innerHTML = allEvents.map((event) => `
+          <div class="day-event-item"
+               data-event-title="${escapeHtml(event.title)}"
+               data-event-time="${escapeHtml(event.time)}"
+               data-event-location="${escapeHtml(event.location || "")}"
+               data-event-description="${escapeHtml(event.description || "")}"
+               data-event-isallday="${event.isAllDay ? "true" : "false"}"
+               data-event-date="${escapeHtml(dateKey)}">
+            <div class="day-event-item-time">${escapeHtml(event.time)}</div>
+            <div class="day-event-item-title">${escapeHtml(event.title)}</div>
+          </div>
+        `).join("");
+      }
+
+      document.getElementById("day-detail-modal").hidden = false;
+    }
+
+    function closeDayDetailModal() {
+      document.getElementById("day-detail-modal").hidden = true;
+    }
+
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
@@ -1187,6 +1305,69 @@
       window.addEventListener("keydown", handleKeydown);
 
       window.setInterval(refreshCalendarData, 5 * 60 * 1000);
+
+      // Week navigation
+      document.getElementById("week-prev").addEventListener("click", () => { weekOffset--; renderCalendar(); });
+      document.getElementById("week-next").addEventListener("click", () => { weekOffset++; renderCalendar(); });
+      document.getElementById("week-today").addEventListener("click", () => { weekOffset = 0; renderCalendar(); });
+
+      // Month navigation
+      document.getElementById("month-prev").addEventListener("click", () => { monthOffset--; renderMonthCalendar(); });
+      document.getElementById("month-next").addEventListener("click", () => { monthOffset++; renderMonthCalendar(); });
+      document.getElementById("month-today").addEventListener("click", () => { monthOffset = 0; renderMonthCalendar(); });
+
+      // Week view: tap event card → event detail modal
+      document.getElementById("calendar-grid").addEventListener("click", (e) => {
+        const card = e.target.closest(".event-card[data-event-title]");
+        if (card) {
+          openEventDetailModal({
+            title: card.dataset.eventTitle,
+            time: card.dataset.eventTime,
+            location: card.dataset.eventLocation || null,
+            description: card.dataset.eventDescription || null,
+            isAllDay: card.dataset.eventIsallday === "true"
+          }, card.dataset.eventDate);
+        }
+      });
+
+      // Month view: tap event chip → event detail; tap "+N more" → day detail
+      document.getElementById("month-grid").addEventListener("click", (e) => {
+        const eventEl = e.target.closest(".month-event[data-event-title]");
+        const morePill = e.target.closest(".month-more-pill");
+        if (eventEl) {
+          openEventDetailModal({
+            title: eventEl.dataset.eventTitle,
+            time: eventEl.dataset.eventTime,
+            location: eventEl.dataset.eventLocation || null,
+            description: eventEl.dataset.eventDescription || null,
+            isAllDay: eventEl.dataset.eventIsallday === "true"
+          }, eventEl.dataset.eventDate);
+          return;
+        }
+        if (morePill) {
+          openDayDetailModal(morePill.dataset.dateKey);
+        }
+      });
+
+      // Day detail: tap event row → event detail modal (on top)
+      document.getElementById("day-detail-body").addEventListener("click", (e) => {
+        const item = e.target.closest(".day-event-item");
+        if (item) {
+          openEventDetailModal({
+            title: item.dataset.eventTitle,
+            time: item.dataset.eventTime,
+            location: item.dataset.eventLocation || null,
+            description: item.dataset.eventDescription || null,
+            isAllDay: item.dataset.eventIsallday === "true"
+          }, item.dataset.eventDate);
+        }
+      });
+
+      // Modal close handlers
+      document.getElementById("event-detail-close").addEventListener("click", closeEventDetailModal);
+      document.getElementById("event-detail-backdrop").addEventListener("click", closeEventDetailModal);
+      document.getElementById("day-detail-close").addEventListener("click", closeDayDetailModal);
+      document.getElementById("day-detail-backdrop").addEventListener("click", closeDayDetailModal);
 
       refreshIcons();
     }
