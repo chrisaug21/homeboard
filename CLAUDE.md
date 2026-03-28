@@ -70,3 +70,6 @@ Use `netlify dev --no-watch` if Mac permissions error occurs.
 - `meal_plan` rows with `user_id = null` are shared/household; never show personal rows (`user_id` set) on the display
 - sw.js cache prefix: `homeboard-v##`
 - When pushing any change: update `VERSION` in `js/shared.js` (patch bump for fixes, minor bump for features), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — add new tables, env vars, or screens as they are introduced
+
+## Hardcoded Data (needs future work)
+- `HOUSEHOLD_MEMBERS` constant in `js/admin.js` (top of file) drives the todo assignee picker. Currently hardcoded as `["Chris", "Bailey"]`. Replace with a query from the `users` table once multi-user auth is implemented.

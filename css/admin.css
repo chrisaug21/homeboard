@@ -218,8 +218,13 @@
 
     .admin-meal-list {
       margin-top: 12px;
-      display: grid;
-      gap: 10px;
+      column-gap: 10px;
+    }
+
+    @media (min-width: 500px) {
+      .admin-meal-list {
+        column-count: 2;
+      }
     }
 
     .admin-meal-inline-form {
@@ -229,6 +234,8 @@
       background: rgba(247, 217, 170, 0.14);
       display: grid;
       gap: 10px;
+      break-inside: avoid;
+      margin-bottom: 10px;
     }
 
     .admin-meal-inline-header {
@@ -284,6 +291,8 @@
       display: grid;
       gap: 10px;
       transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+      break-inside: avoid;
+      margin-bottom: 10px;
     }
 
     .admin-meal-card:hover,
@@ -345,24 +354,57 @@
       border-color: rgba(180, 83, 9, 0.3);
     }
 
-    .admin-todo-card {
+    /* Responsive 2-column grid for active and archived todo lists */
+    #admin-active-list,
+    #admin-archived-list {
       display: grid;
-      gap: 12px;
-      padding: 16px;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
     }
 
-    .admin-todo-head {
+    /* Base card style (both active and archived) */
+    .admin-todo-card {
+      padding: 11px 13px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(124, 96, 69, 0.12);
+      transition: opacity 0.25s, transform 0.2s;
+    }
+
+    /* Active cards: checkbox on the left, body on the right */
+    .admin-todo-card--active {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: start;
+      cursor: pointer;
+    }
+
+    .admin-todo-card--active:active {
+      opacity: 0.75;
+    }
+
+    /* Archived cards: single-column, no checkbox */
+    .admin-todo-card:not(.admin-todo-card--active) {
       display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: flex-start;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .admin-todo-body {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Checkbox alignment in admin cards */
+    .admin-todo-card--active .todo-check-btn {
+      margin-top: 2px;
     }
 
     .admin-todo-title {
-      font-size: 1.08rem;
+      font-size: 1rem;
       font-weight: 800;
       line-height: 1.3;
     }
@@ -370,7 +412,25 @@
     .admin-todo-meta {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
+    }
+
+    /* Completion animation on admin todo cards (mirrors display.css .todo-card rules) */
+    .admin-todo-card.is-completing .todo-check {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: white;
+    }
+
+    .admin-todo-card.is-completing .todo-check-icon {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .admin-todo-card.is-done {
+      opacity: 0;
+      transform: scale(0.92);
+      pointer-events: none;
     }
 
     .admin-pill {
@@ -650,6 +710,22 @@
 
     @media (min-width: 760px) {
       #admin-saved-countdown-list {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    #admin-cal-event-list {
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 500px) {
+      #admin-cal-event-list {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 760px) {
+      #admin-cal-event-list {
         grid-template-columns: repeat(3, 1fr);
       }
     }

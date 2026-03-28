@@ -18,6 +18,10 @@
     const adminTodoAddButton = document.getElementById("admin-todo-add-button");
     const adminCountdownAddButton = document.getElementById("admin-countdown-add-button");
 
+    // Household members for the assignee picker.
+    // TODO: replace with a query from the `users` table once multi-user auth is implemented.
+    const HOUSEHOLD_MEMBERS = ["Chris", "Bailey"];
+
     let toastTimeoutId = null;
     let adminTodoWritePending = false;
     let adminMealWritePending = false;
@@ -32,6 +36,10 @@
     let adminModalType = null;
     let adminModalContext = null;
     let adminTodos = [];
+    let adminArchivedMonth = (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    })();
     const adminPendingPhotos = new Map();
     let adminCalEvents = [];
     let adminSavedCountdowns = [];
@@ -270,23 +278,48 @@
     function renderAdminTodoCard(todo, options) {
       const title = escapeHtml(todo.title || "Untitled task");
       const assignee = todo.assignee ? escapeHtml(todo.assignee) : "Unassigned";
-      const dueLabel = formatAdminTodoDate(todo.due_date);
-      const actionMarkup = options.showComplete
-        ? `<div style="display:flex;gap:8px;flex-shrink:0">
-            <button class="admin-button admin-button--secondary" type="button" data-action="edit-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Edit ${title}">Edit</button>
-            <button class="admin-button admin-button--secondary" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Complete ${title}">Complete</button>
-          </div>`
-        : "";
+
+      // Active cards use the urgency-coded pill from display view; archived use plain date.
+      let dueMarkup = "";
+      if (options.showComplete) {
+        const duePill = getTodoDuePill(todo.due_date);
+        if (duePill) {
+          dueMarkup = `<span class="todo-due-pill ${escapeHtml(duePill.cssClass)}">${escapeHtml(duePill.label)}</span>`;
+        }
+      } else if (todo.due_date) {
+        dueMarkup = `<span class="admin-pill admin-pill--due">${escapeHtml(formatAdminTodoDate(todo.due_date))}</span>`;
+      }
+
+      const meta = `
+        <div class="admin-todo-meta">
+          <span class="admin-pill">${assignee}</span>
+          ${dueMarkup}
+        </div>
+      `;
+
+      if (options.showComplete) {
+        return `
+          <article class="admin-todo-card admin-todo-card--active" data-todo-id="${escapeHtml(todo.id)}" role="button" tabindex="0" aria-label="Edit: ${title}">
+            <button class="todo-check-btn" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Complete ${title}">
+              <div class="todo-check">
+                <svg class="todo-check-icon" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M1 5L4.5 8.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </button>
+            <div class="admin-todo-body">
+              <div class="admin-todo-title">${title}</div>
+              ${meta}
+            </div>
+          </article>
+        `;
+      }
 
       return `
-        <article class="admin-todo-card">
-          <div class="admin-todo-head">
+        <article class="admin-todo-card" aria-label="${title}">
+          <div class="admin-todo-body">
             <div class="admin-todo-title">${title}</div>
-            ${actionMarkup}
-          </div>
-          <div class="admin-todo-meta">
-            <span class="admin-pill">${assignee}</span>
-            <span class="admin-pill admin-pill--due">${escapeHtml(dueLabel)}</span>
+            ${meta}
           </div>
         </article>
       `;
@@ -295,22 +328,60 @@
     function renderAdminTodoLists(todoGroups) {
       adminTodos = todoGroups.active;
       const activeCount = todoGroups.active.length;
-      const archivedCount = todoGroups.archived.length;
+
+      // Filter archived todos to the selected month
+      const filteredArchived = todoGroups.archived.filter((todo) => {
+        if (!todo.archived_at) return false;
+        const d = new Date(todo.archived_at);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        return key === adminArchivedMonth;
+      });
+      const archivedCount = filteredArchived.length;
+
+      const monthLabel = getArchivedMonthDisplay();
 
       adminActiveSummary.textContent = activeCount
         ? `${activeCount} active household ${activeCount === 1 ? "task" : "tasks"}`
         : "No active household tasks right now.";
       adminArchivedSummary.textContent = archivedCount
         ? `${archivedCount} completed ${archivedCount === 1 ? "task" : "tasks"}`
-        : "No completed household tasks yet.";
+        : `No completed tasks in ${monthLabel}.`;
 
       adminActiveList.innerHTML = activeCount
         ? todoGroups.active.map((todo) => renderAdminTodoCard(todo, { showComplete: true })).join("")
         : '<div class="admin-empty">No active tasks right now.</div>';
 
       adminArchivedList.innerHTML = archivedCount
-        ? todoGroups.archived.map((todo) => renderAdminTodoCard(todo, { showComplete: false })).join("")
-        : '<div class="admin-empty">Nothing archived yet.</div>';
+        ? filteredArchived.map((todo) => renderAdminTodoCard(todo, { showComplete: false })).join("")
+        : `<div class="admin-empty">Nothing completed in ${escapeHtml(monthLabel)}.</div>`;
+
+      updateArchiveMonthLabel();
+    }
+
+    function getArchivedMonthDisplay() {
+      const [year, month] = adminArchivedMonth.split("-").map(Number);
+      return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(
+        new Date(year, month - 1, 1)
+      );
+    }
+
+    function updateArchiveMonthLabel() {
+      const labelEl = document.getElementById("admin-archive-month-label");
+      if (labelEl) labelEl.textContent = getArchivedMonthDisplay();
+    }
+
+    function handleArchiveMonthPrev() {
+      const [year, month] = adminArchivedMonth.split("-").map(Number);
+      const d = new Date(year, month - 2, 1);
+      adminArchivedMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      loadAdminTodos();
+    }
+
+    function handleArchiveMonthNext() {
+      const [year, month] = adminArchivedMonth.split("-").map(Number);
+      const d = new Date(year, month, 1);
+      adminArchivedMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      loadAdminTodos();
     }
 
     async function loadAdminTodos() {
@@ -413,6 +484,14 @@
 
     function buildTodoFormHTML(todo) {
       const isEdit = !!todo;
+      const currentAssignee = isEdit ? (todo.assignee || "") : "";
+      // Preserve any existing assignee that isn't in the standard list (e.g. old data)
+      const extraMember = currentAssignee && !HOUSEHOLD_MEMBERS.includes(currentAssignee)
+        ? [currentAssignee]
+        : [];
+      const assigneeOptions = ["", ...HOUSEHOLD_MEMBERS, ...extraMember].map((name) =>
+        `<option value="${escapeHtml(name)}"${name === currentAssignee ? " selected" : ""}>${escapeHtml(name || "Unassigned")}</option>`
+      ).join("");
       return `
         <form data-modal-form="todo" novalidate>
           <div class="admin-field">
@@ -424,8 +503,9 @@
           <div class="admin-form-row">
             <div class="admin-field">
               <label for="modal-todo-assignee">Assignee</label>
-              <input id="modal-todo-assignee" name="assignee" type="text" maxlength="60"
-                value="${isEdit ? escapeHtml(todo.assignee || "") : ""}">
+              <select id="modal-todo-assignee" name="assignee">
+                ${assigneeOptions}
+              </select>
             </div>
             <div class="admin-field">
               <label for="modal-todo-due">Due date</label>
@@ -485,18 +565,74 @@
     }
 
 
-    function handleAdminActiveListClick(event) {
-      const editBtn = event.target.closest("[data-action='edit-todo']");
-      if (editBtn) {
-        const id = editBtn.getAttribute("data-todo-id");
-        const todo = adminTodos.find((t) => t.id === id);
-        if (todo) openEditTodoModal(todo);
+    async function archiveAdminTodoWithAnimation(todoId, cardEl) {
+      const client = getSupabaseClient();
+      if (!client || adminTodoWritePending) {
+        if (!client) showToast("Couldn\u2019t complete todo. Supabase is unavailable.");
+        return;
+      }
+      adminTodoWritePending = true;
+      cardEl.classList.add("is-completing");
+
+      const { error } = await client
+        .from("todos")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", todoId)
+        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("archived_at", null);
+
+      if (error) {
+        adminTodoWritePending = false;
+        cardEl.classList.remove("is-completing");
+        showToast("Couldn\u2019t complete todo. Please try again.");
         return;
       }
 
+      cardEl.classList.add("is-done");
+      cardEl.addEventListener("transitionend", async () => {
+        adminTodoWritePending = false;
+        await loadAdminTodos();
+      }, { once: true });
+    }
+
+    function handleAdminActiveListClick(event) {
+      // Checkbox click — animate and archive.
       const archiveBtn = event.target.closest("[data-action='archive-todo']");
       if (archiveBtn) {
-        archiveAdminTodo(archiveBtn.getAttribute("data-todo-id"));
+        const card = archiveBtn.closest(".admin-todo-card");
+        if (card && !card.classList.contains("is-completing")) {
+          archiveAdminTodoWithAnimation(archiveBtn.getAttribute("data-todo-id"), card);
+        }
+        return;
+      }
+
+      // Tapping anywhere else on an active card opens the edit modal.
+      const card = event.target.closest(".admin-todo-card--active");
+      if (card && !card.classList.contains("is-completing")) {
+        const id = card.getAttribute("data-todo-id");
+        const todo = adminTodos.find((t) => t.id === id);
+        if (todo) openEditTodoModal(todo);
+      }
+    }
+
+    function handleAdminActiveListKeydown(event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      if (event.key === " ") event.preventDefault();
+
+      const archiveBtn = event.target.closest("[data-action='archive-todo']");
+      if (archiveBtn) {
+        const card = archiveBtn.closest(".admin-todo-card");
+        if (card && !card.classList.contains("is-completing")) {
+          archiveAdminTodoWithAnimation(archiveBtn.getAttribute("data-todo-id"), card);
+        }
+        return;
+      }
+
+      const card = event.target.closest(".admin-todo-card--active");
+      if (card && !card.classList.contains("is-completing")) {
+        const id = card.getAttribute("data-todo-id");
+        const todo = adminTodos.find((t) => t.id === id);
+        if (todo) openEditTodoModal(todo);
       }
     }
 
@@ -1544,6 +1680,7 @@
         .from("todos")
         .select("id, title, assignee, due_date, archived_at, created_at")
         .eq("household_id", TODO_HOUSEHOLD_ID)
+        .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
 
       if (error || !Array.isArray(data)) {
@@ -1575,6 +1712,7 @@
       setAdminScreen("todos");
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
+      adminActiveList.addEventListener("keydown", handleAdminActiveListKeydown);
       adminMealList.addEventListener("click", handleAdminMealListClick);
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
@@ -1583,6 +1721,10 @@
       adminCalEventList.addEventListener("click", handleAdminCountdownCalListClick);
       adminSavedCountdownList.addEventListener("click", handleAdminSavedCountdownListClick);
       if (adminTodoAddButton) adminTodoAddButton.addEventListener("click", openAddTodoModal);
+      const archiveMonthPrev = document.getElementById("admin-archive-month-prev");
+      const archiveMonthNext = document.getElementById("admin-archive-month-next");
+      if (archiveMonthPrev) archiveMonthPrev.addEventListener("click", handleArchiveMonthPrev);
+      if (archiveMonthNext) archiveMonthNext.addEventListener("click", handleArchiveMonthNext);
       if (adminCountdownAddButton) adminCountdownAddButton.addEventListener("click", () => openAddCountdownModal());
       const adminModal = document.getElementById("admin-modal");
       if (adminModal) {

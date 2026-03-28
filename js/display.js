@@ -80,19 +80,16 @@
       const list = document.getElementById("todo-list");
       const skRow = () => `
         <article class="todo-card">
-          <div class="todo-check" aria-hidden="true"></div>
-          <div class="todo-copy">
-            <div class="sk" style="width:70%;height:14px;margin-bottom:6px;"></div>
-            <div class="sk" style="width:44%;height:11px;"></div>
+          <div class="todo-check-btn" aria-hidden="true">
+            <div class="todo-check"></div>
           </div>
-          <div></div>
-          <div class="sk" style="width:60px;height:22px;border-radius:20px;"></div>
+          <div class="todo-copy">
+            <div class="sk" style="width:72%;height:14px;margin-bottom:8px;"></div>
+            <div class="sk" style="width:48%;height:20px;border-radius:999px;"></div>
+          </div>
         </article>
       `;
-      list.innerHTML = Array.from({ length: 4 }, skRow).join("");
-      document.getElementById("todo-open-count").textContent = "\u2026";
-      document.getElementById("todo-next-up").textContent = "\u2026";
-      document.getElementById("todo-next-text").textContent = "";
+      list.innerHTML = Array.from({ length: 6 }, skRow).join("");
     }
 
     function renderMealSkeleton() {
@@ -243,86 +240,17 @@
     }
 
     function getAssigneeClass(assignee) {
-      if (assignee === "Chris") {
-        return "todo-assignee todo-assignee--chris";
-      }
-
-      if (assignee === "Bailey") {
-        return "todo-assignee todo-assignee--bailey";
-      }
-
-      if (assignee === "Shared") {
-        return "todo-assignee todo-assignee--shared";
-      }
-
-      return "";
-    }
-
-    function formatTodoDueDate(dueDate) {
-      if (!dueDate) {
-        return "No due date";
-      }
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const parsedDate = new Date(dueDate + "T00:00:00");
-      parsedDate.setHours(0, 0, 0, 0);
-      const diffInDays = Math.round((parsedDate - today) / 86400000);
-
-      if (diffInDays === 0) {
-        return "Due today";
-      }
-
-      if (diffInDays === 1) {
-        return "Due tomorrow";
-      }
-
-      if (diffInDays > 1 && diffInDays < 7) {
-        return "Due " + new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(parsedDate);
-      }
-
-      if (diffInDays < 0) {
-        return "Past due";
-      }
-
-      return "Due " + new Intl.DateTimeFormat("en-US", {
-        month: "short",
-        day: "numeric"
-      }).format(parsedDate);
-    }
-
-    function getTodoBadge(todo) {
-      if (todo.due_date) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const parsedDate = new Date(todo.due_date + "T00:00:00");
-        parsedDate.setHours(0, 0, 0, 0);
-        const diffInDays = Math.round((parsedDate - today) / 86400000);
-
-        if (diffInDays <= 0) {
-          return "Due Today";
-        }
-
-        if (diffInDays < 7) {
-          return "Upcoming";
-        }
-      }
-
-      if (todo.assignee) {
-        return "Assigned";
-      }
-
-      return "Unassigned";
+      if (assignee === "Chris") return "todo-assignee todo-assignee--chris";
+      if (assignee === "Bailey") return "todo-assignee todo-assignee--bailey";
+      return "todo-assignee todo-assignee--other";
     }
 
     function mapSupabaseTodo(todo) {
-      const normalizedAssignee = todo.assignee || "";
-
       return {
+        id: todo.id,
         title: todo.title || "Untitled task",
-        assignee: normalizedAssignee,
-        meta: normalizedAssignee ? formatTodoDueDate(todo.due_date) : (todo.due_date ? formatTodoDueDate(todo.due_date) : "Shared task"),
-        badge: getTodoBadge(todo)
+        assignee: todo.assignee || "",
+        duePill: getTodoDuePill(todo.due_date)
       };
     }
 
@@ -331,40 +259,87 @@
 
       if (!todoItems.length) {
         list.innerHTML = `
-          <article class="todo-card">
-            <div class="todo-check" aria-hidden="true"></div>
+          <article class="todo-card todo-card--empty">
             <div class="todo-copy">
-              <div class="todo-title">No open tasks</div>
-              <div class="todo-meta">Everything is cleared for now.</div>
+              <div class="todo-title">All clear!</div>
+              <div class="todo-meta">No open household tasks.</div>
             </div>
-            <div></div>
-            <div class="todo-badge">Clear</div>
           </article>
         `;
-
-        document.getElementById("todo-open-count").textContent = "0";
-        document.getElementById("todo-next-up").textContent = "All Set";
-        document.getElementById("todo-next-text").textContent = "No active household tasks right now.";
         return;
       }
 
-      list.innerHTML = todoItems.map((todo) => `
-        <article class="todo-card">
-          <div class="todo-check" aria-hidden="true"></div>
-          <div class="todo-copy">
-            <div class="todo-title">${escapeHtml(todo.title)}</div>
-            <div class="todo-meta">${escapeHtml(todo.meta)}</div>
-          </div>
-          ${todo.assignee ? `<div class="${getAssigneeClass(todo.assignee)}">${escapeHtml(todo.assignee)}</div>` : '<div></div>'}
-          <div class="todo-badge">${escapeHtml(todo.badge)}</div>
-        </article>
-      `).join("");
+      list.innerHTML = todoItems.map((todo) => {
+        const pill = todo.duePill
+          ? `<span class="todo-due-pill ${escapeHtml(todo.duePill.cssClass)}">${escapeHtml(todo.duePill.label)}</span>`
+          : "";
+        const assignee = todo.assignee
+          ? `<span class="${getAssigneeClass(todo.assignee)}">${escapeHtml(todo.assignee)}</span>`
+          : "";
+        return `
+          <article class="todo-card" data-todo-id="${escapeHtml(todo.id)}">
+            <button class="todo-check-btn" type="button" aria-label="Complete ${escapeHtml(todo.title)}">
+              <div class="todo-check">
+                <svg class="todo-check-icon" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M1 5L4.5 8.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </button>
+            <div class="todo-copy">
+              <div class="todo-title">${escapeHtml(todo.title)}</div>
+              <div class="todo-pills">${assignee}${pill}</div>
+            </div>
+          </article>
+        `;
+      }).join("");
 
-      document.getElementById("todo-open-count").textContent = String(todoItems.length);
-      document.getElementById("todo-next-up").textContent = "Today";
-      document.getElementById("todo-next-text").textContent = todoItems.length
-        ? todoItems[0].title + "."
-        : "No open tasks right now.";
+      list.querySelectorAll(".todo-check-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const card = btn.closest("[data-todo-id]");
+          if (card && !card.classList.contains("is-completing")) {
+            completeTodoFromDisplay(card.dataset.todoId, card);
+          }
+        });
+      });
+    }
+
+    let displayToastTimeoutId = null;
+    function showDisplayToast(message) {
+      const el = document.getElementById("toast");
+      if (!el) return;
+      window.clearTimeout(displayToastTimeoutId);
+      el.textContent = message;
+      el.classList.add("is-visible");
+      displayToastTimeoutId = window.setTimeout(() => el.classList.remove("is-visible"), 2800);
+    }
+
+    async function completeTodoFromDisplay(todoId, cardEl) {
+      const client = getSupabaseClient();
+      if (!client) {
+        showDisplayToast("Couldn\u2019t complete \u2014 Supabase unavailable.");
+        return;
+      }
+      cardEl.classList.add("is-completing");
+      const { error } = await client
+        .from("todos")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", todoId)
+        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("archived_at", null);
+      if (error) {
+        cardEl.classList.remove("is-completing");
+        showDisplayToast("Couldn\u2019t save \u2014 please try again.");
+        return;
+      }
+      cardEl.classList.add("is-done");
+      cardEl.addEventListener("transitionend", () => {
+        cardEl.remove();
+        const list = document.getElementById("todo-list");
+        if (list && !list.querySelector("[data-todo-id]")) {
+          renderTodoItems([]);
+        }
+      }, { once: true });
     }
 
     async function fetchTodos() {
@@ -376,9 +351,10 @@
 
       const { data, error } = await client
         .from("todos")
-        .select("title, due_date, assignee, archived_at, created_at")
+        .select("id, title, due_date, assignee, archived_at, created_at")
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null)
+        .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
 
       if (error || !Array.isArray(data)) {
@@ -675,12 +651,9 @@
       if (remoteTodos === null) {
         renderScreenError(
           document.getElementById("todo-list"),
-          "Couldn't load tasks \u2014 tap to retry",
+          "Couldn\u2019t load tasks \u2014 tap to retry",
           renderTodos
         );
-        document.getElementById("todo-open-count").textContent = "\u2014";
-        document.getElementById("todo-next-up").textContent = "\u2014";
-        document.getElementById("todo-next-text").textContent = "";
       } else {
         renderTodoItems(remoteTodos);
       }
