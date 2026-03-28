@@ -1024,6 +1024,7 @@
         timeMax = new Date(today.getFullYear(), today.getMonth() + 13, 0);
         maxResults = "2500";
         lastWideFetch = Date.now();
+        console.log(`[calendar] wide fetch — timeMin: ${timeMin.toISOString()}, timeMax: ${timeMax.toISOString()}`);
       } else {
         // 3-month rolling window: 1 month back, 2 months forward
         timeMin = getMonthGridStart(new Date(today.getFullYear(), today.getMonth() - 1, 1));

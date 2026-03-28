@@ -89,8 +89,6 @@
 </head>
 <body>
   <div class="app-shell" id="display-app">
-    <div id="household-name" class="household-name" aria-hidden="true">Homeboard</div>
-
     <main class="viewport" id="viewport" aria-label="Homeboard display screens">
       <button class="nav-arrow nav-arrow--left" id="nav-left" type="button" aria-label="Previous screen">
         <i data-lucide="chevron-left"></i>
@@ -113,7 +111,7 @@
           </div>
         </section>
 
-        <section class="screen">
+        <section class="screen screen--month">
           <div class="panel">
             <div class="screen-title-row">
               <div class="eyebrow" id="month-eyebrow"><i data-lucide="calendar-range"></i> <span id="month-title">This Month</span></div>
@@ -188,9 +186,10 @@
     </main>
 
     <footer class="progress-bar" aria-label="Screen progress">
+      <span id="household-name" class="household-name" aria-hidden="true">Homeboard</span>
       <div class="progress-dots" id="progress-dots"></div>
+      <span id="version-label" class="version-label" aria-hidden="true"></span>
     </footer>
-    <div id="version-label" class="version-label" aria-hidden="true"></div>
 
     <div class="display-modal" id="day-detail-modal" hidden role="dialog" aria-modal="true" aria-labelledby="day-detail-title">
       <div class="display-modal-backdrop" id="day-detail-backdrop"></div>
