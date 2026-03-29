@@ -49,7 +49,9 @@
         ]
       }
     };
-    let adminSettingsWritePending = false;
+    let householdSavePending = false;
+    let displaySavePending = false;
+    let integrationsSavePending = false;
 
     let toastTimeoutId = null;
     let adminTodoWritePending = false;
@@ -1920,9 +1922,9 @@
 
     async function saveHouseholdSection() {
       const client = getSupabaseClient();
-      if (!client || adminSettingsWritePending) return;
+      if (!client || householdSavePending) return;
 
-      adminSettingsWritePending = true;
+      householdSavePending = true;
       const saveBtn = document.getElementById("settings-household-save");
       if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
 
@@ -1938,27 +1940,32 @@
 
         const newDs = { ...adminHouseholdSettings.display_settings, members: newMembers };
 
-        const { error } = await client
+        const { data, error } = await client
           .from("households")
           .update({ assistant_name: newName || null, display_settings: newDs })
-          .eq("id", DISPLAY_HOUSEHOLD_ID);
+          .eq("id", DISPLAY_HOUSEHOLD_ID)
+          .select();
+        console.log("[saveHouseholdSection] id:", DISPLAY_HOUSEHOLD_ID, "data:", data, "error:", error);
 
         if (error) {
           showToast("Error saving household settings.");
+        } else if (!data || data.length === 0) {
+          showToast("Warning: no rows updated — check household ID.");
+          console.warn("[saveHouseholdSection] 0 rows affected. Household ID may be wrong.");
         } else {
           showToast("Household settings saved.");
         }
       } finally {
-        adminSettingsWritePending = false;
+        householdSavePending = false;
         if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
       }
     }
 
     async function saveDisplaySection() {
       const client = getSupabaseClient();
-      if (!client || adminSettingsWritePending) return;
+      if (!client || displaySavePending) return;
 
-      adminSettingsWritePending = true;
+      displaySavePending = true;
       const saveBtn = document.getElementById("settings-display-save");
       if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
 
@@ -2012,27 +2019,32 @@
         adminHouseholdSettings.display_settings = newDs;
         adminHouseholdSettings.color_scheme = colorScheme;
 
-        const { error } = await client
+        const { data, error } = await client
           .from("households")
           .update({ color_scheme: colorScheme, display_settings: newDs })
-          .eq("id", DISPLAY_HOUSEHOLD_ID);
+          .eq("id", DISPLAY_HOUSEHOLD_ID)
+          .select();
+        console.log("[saveDisplaySection] id:", DISPLAY_HOUSEHOLD_ID, "data:", data, "error:", error);
 
         if (error) {
           showToast("Error saving display settings.");
+        } else if (!data || data.length === 0) {
+          showToast("Warning: no rows updated — check household ID.");
+          console.warn("[saveDisplaySection] 0 rows affected. Household ID may be wrong.");
         } else {
           showToast("Display settings saved.");
         }
       } finally {
-        adminSettingsWritePending = false;
+        displaySavePending = false;
         if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
       }
     }
 
     async function saveIntegrationsSection() {
       const client = getSupabaseClient();
-      if (!client || adminSettingsWritePending) return;
+      if (!client || integrationsSavePending) return;
 
-      adminSettingsWritePending = true;
+      integrationsSavePending = true;
       const saveBtn = document.getElementById("settings-integrations-save");
       if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
 
@@ -2042,18 +2054,23 @@
 
         adminHouseholdSettings.google_cal_id = newCalId;
 
-        const { error } = await client
+        const { data, error } = await client
           .from("households")
           .update({ google_cal_id: newCalId || null })
-          .eq("id", DISPLAY_HOUSEHOLD_ID);
+          .eq("id", DISPLAY_HOUSEHOLD_ID)
+          .select();
+        console.log("[saveIntegrationsSection] id:", DISPLAY_HOUSEHOLD_ID, "data:", data, "error:", error);
 
         if (error) {
           showToast("Error saving integration settings.");
+        } else if (!data || data.length === 0) {
+          showToast("Warning: no rows updated — check household ID.");
+          console.warn("[saveIntegrationsSection] 0 rows affected. Household ID may be wrong.");
         } else {
           showToast("Integration settings saved.");
         }
       } finally {
-        adminSettingsWritePending = false;
+        integrationsSavePending = false;
         if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
       }
     }

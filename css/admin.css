@@ -972,7 +972,7 @@
     }
 
     @media (max-width: 640px) {
-      .admin-form-row {
+      .admin-form-row:not(.admin-form-row--add-member) {
         grid-template-columns: 1fr;
       }
     }

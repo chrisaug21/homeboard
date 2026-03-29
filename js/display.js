@@ -1353,10 +1353,15 @@
         : defaultScreens;
       applyScreenOrder(screenOrder);
 
-      // Apply calendar default view (set starting screen index)
+      // Apply calendar default view — controls which calendar screen leads in rotation
       // Normalize: DB may store "month" or "monthly"; both mean monthly view
       if (ds.calendar_view === "monthly" || ds.calendar_view === "month") {
         const monthScreen = track.querySelector(".screen--month");
+        const calScreen = track.querySelector(".screen--calendar");
+        if (monthScreen && calScreen) {
+          // Move monthly before upcoming in DOM so it leads the rotation
+          track.insertBefore(monthScreen, calScreen);
+        }
         if (monthScreen) {
           const idx = Array.from(track.children).indexOf(monthScreen);
           if (idx >= 0) currentIndex = idx;

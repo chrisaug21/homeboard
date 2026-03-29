@@ -166,6 +166,280 @@
         linear-gradient(135deg, #edf2f7 0%, #e2e8f0 44%, #cbd5e1 100%);
     }
 
+    /* ── Dark scheme component overrides ──────────────────────────────────────
+       Purpose: fix white-on-white text — card surfaces that use hardcoded
+       rgba(255,255,255,...) become invisible in dark mode because --ink is
+       light (#f2ede6). Replace with dark semi-transparent surfaces.
+    ── */
+
+    /* Glow orbs */
+    html[data-scheme="dark"] .app-shell::before {
+      background: rgba(245, 158, 11, 0.07);
+    }
+
+    /* Nav arrows */
+    html[data-scheme="dark"] .nav-arrow {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--ink);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+    }
+    html[data-scheme="dark"] .nav-arrow:hover,
+    html[data-scheme="dark"] .nav-arrow:focus-visible {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Cal nav button */
+    html[data-scheme="dark"] .cal-nav-btn {
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    /* Eyebrow badge */
+    html[data-scheme="dark"] .eyebrow {
+      background: rgba(245, 158, 11, 0.14);
+    }
+
+    /* Calendar day columns */
+    html[data-scheme="dark"] .day-column {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border);
+    }
+    html[data-scheme="dark"] .day-column.today {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.28);
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.08);
+    }
+    html[data-scheme="dark"] .day-header {
+      border-bottom-color: var(--border);
+    }
+
+    /* Event cards */
+    html[data-scheme="dark"] .event-card {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: var(--border);
+    }
+    html[data-scheme="dark"] .event-card[role="button"]:hover {
+      background: rgba(245, 158, 11, 0.12);
+    }
+
+    /* Month grid */
+    html[data-scheme="dark"] .month-day {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border);
+    }
+    html[data-scheme="dark"] .month-day--today {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.28);
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.08);
+    }
+    html[data-scheme="dark"] .month-event {
+      background: rgba(255, 255, 255, 0.09);
+    }
+    html[data-scheme="dark"] .month-event:hover {
+      background: rgba(245, 158, 11, 0.16);
+    }
+    html[data-scheme="dark"] .month-more-pill {
+      background: rgba(245, 158, 11, 0.14);
+    }
+    html[data-scheme="dark"] .month-more-pill:hover {
+      background: rgba(245, 158, 11, 0.24);
+    }
+
+    /* Modal */
+    html[data-scheme="dark"] .display-modal-backdrop {
+      background: rgba(0, 0, 0, 0.62);
+    }
+    html[data-scheme="dark"] .day-event-item {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: var(--border);
+    }
+    html[data-scheme="dark"] .day-event-item:hover {
+      background: rgba(245, 158, 11, 0.12);
+    }
+
+    /* To-do cards */
+    html[data-scheme="dark"] .todo-card {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border);
+    }
+
+    /* Meal cards */
+    html[data-scheme="dark"] .meal-card {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border);
+    }
+    html[data-scheme="dark"] .meal-card.today {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+    html[data-scheme="dark"] .meal-note-card {
+      background: rgba(245, 158, 11, 0.10);
+      border-color: rgba(245, 158, 11, 0.18);
+    }
+
+    /* Countdown cards */
+    html[data-scheme="dark"] .countdown-card {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+      border-color: var(--border);
+      box-shadow: 0 20px 36px rgba(0, 0, 0, 0.32);
+    }
+    html[data-scheme="dark"] .countdown-card--variant-2 {
+      background: linear-gradient(180deg, rgba(34, 197, 94, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+      border-color: rgba(34, 197, 94, 0.18);
+    }
+    html[data-scheme="dark"] .countdown-card--variant-3 {
+      background: linear-gradient(180deg, rgba(251, 113, 133, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+      border-color: rgba(251, 113, 133, 0.18);
+    }
+    html[data-scheme="dark"] .countdown-card--variant-4 {
+      background: linear-gradient(180deg, rgba(139, 92, 246, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+      border-color: rgba(139, 92, 246, 0.18);
+    }
+    html[data-scheme="dark"] .countdown-icon {
+      background: rgba(255, 255, 255, 0.10);
+    }
+    html[data-scheme="dark"] .countdown-photo-wrap {
+      background: rgba(245, 158, 11, 0.16);
+    }
+
+    /* Progress dots */
+    html[data-scheme="dark"] .progress-dots {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: var(--border);
+    }
+
+    /* RSVP screen */
+    html[data-scheme="dark"] .rsvp-screen .panel {
+      background: var(--panel-strong);
+      border-color: var(--border);
+    }
+    html[data-scheme="dark"] .rsvp-screen .eyebrow {
+      background: rgba(251, 113, 133, 0.14);
+    }
+    html[data-scheme="dark"] .hero-card,
+    html[data-scheme="dark"] .names-card {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border);
+    }
+    html[data-scheme="dark"] .breakdown-row {
+      background: rgba(251, 113, 133, 0.10);
+      border-color: rgba(251, 113, 133, 0.14);
+    }
+    html[data-scheme="dark"] .breakdown-row:nth-child(2),
+    html[data-scheme="dark"] .breakdown-row:nth-child(3) {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    html[data-scheme="dark"] .name-pill {
+      background: rgba(255, 255, 255, 0.07);
+    }
+    html[data-scheme="dark"] .name-pill--attending {
+      background: rgba(34, 197, 94, 0.12);
+    }
+    html[data-scheme="dark"] .name-pill--declined {
+      background: rgba(234, 88, 12, 0.12);
+    }
+    html[data-scheme="dark"] .name-pill--pending {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    html[data-scheme="dark"] .name-pill--more {
+      background: rgba(251, 113, 133, 0.12);
+    }
+    html[data-scheme="dark"] .name-status {
+      background: rgba(255, 255, 255, 0.10);
+    }
+
+    /* ── Slate scheme component overrides ─────────────────────────────────────
+       Purpose: replace hardcoded amber/warm rgba() values with slate-blue
+       equivalents so warm palette doesn't bleed through. CSS variable
+       overrides already handle --amber / --amber-soft, but many surfaces
+       use literal rgba(180,83,9,...) or rgba(247,217,170,...) directly.
+    ── */
+
+    /* Glow orbs */
+    html[data-scheme="slate"] .app-shell::before {
+      background: rgba(3, 105, 161, 0.08);
+    }
+
+    /* Eyebrow badge */
+    html[data-scheme="slate"] .eyebrow {
+      background: rgba(3, 105, 161, 0.10);
+    }
+
+    /* Calendar today */
+    html[data-scheme="slate"] .day-column.today {
+      background: rgba(3, 105, 161, 0.10);
+      border-color: rgba(3, 105, 161, 0.22);
+      box-shadow: inset 0 0 0 1px rgba(3, 105, 161, 0.06);
+    }
+    html[data-scheme="slate"] .month-day--today {
+      background: rgba(3, 105, 161, 0.10);
+      border-color: rgba(3, 105, 161, 0.22);
+      box-shadow: inset 0 0 0 1px rgba(3, 105, 161, 0.06);
+    }
+
+    /* Month event hover / pill */
+    html[data-scheme="slate"] .month-event:hover {
+      background: rgba(3, 105, 161, 0.10);
+    }
+    html[data-scheme="slate"] .month-more-pill {
+      background: rgba(3, 105, 161, 0.10);
+    }
+    html[data-scheme="slate"] .month-more-pill:hover {
+      background: rgba(3, 105, 161, 0.18);
+    }
+
+    /* Event card hover */
+    html[data-scheme="slate"] .event-card[role="button"]:hover {
+      background: rgba(3, 105, 161, 0.07);
+    }
+    html[data-scheme="slate"] .day-event-item:hover {
+      background: rgba(3, 105, 161, 0.07);
+    }
+
+    /* Nav arrow hover */
+    html[data-scheme="slate"] .nav-arrow:hover,
+    html[data-scheme="slate"] .nav-arrow:focus-visible {
+      color: var(--amber);
+    }
+
+    /* Meal today + note */
+    html[data-scheme="slate"] .meal-card.today {
+      background: rgba(3, 105, 161, 0.08);
+      border-color: rgba(3, 105, 161, 0.22);
+    }
+    html[data-scheme="slate"] .meal-note-card {
+      background: rgba(3, 105, 161, 0.07);
+      border-color: rgba(3, 105, 161, 0.14);
+    }
+
+    /* Countdown card — replace warm amber gradient with neutral */
+    html[data-scheme="slate"] .countdown-card {
+      background: linear-gradient(180deg, rgba(3, 105, 161, 0.10) 0%, rgba(248, 250, 252, 0.92) 100%);
+      border-color: rgba(3, 105, 161, 0.14);
+      box-shadow: 0 20px 36px rgba(15, 23, 42, 0.08);
+    }
+    html[data-scheme="slate"] .countdown-photo-wrap {
+      background: rgba(3, 105, 161, 0.12);
+    }
+
+    /* RSVP screen */
+    html[data-scheme="slate"] .rsvp-screen .panel {
+      background: var(--panel-strong);
+      border-color: var(--border);
+    }
+    html[data-scheme="slate"] .breakdown-row {
+      background: rgba(190, 18, 60, 0.07);
+      border-color: rgba(190, 18, 60, 0.12);
+    }
+    html[data-scheme="slate"] .breakdown-row:nth-child(2) {
+      background: rgba(234, 88, 12, 0.07);
+    }
+    html[data-scheme="slate"] .breakdown-row:nth-child(3) {
+      background: rgba(107, 114, 128, 0.07);
+    }
+    html[data-scheme="slate"] .name-pill--more {
+      background: rgba(190, 18, 60, 0.08);
+    }
+
     .viewport {
       position: relative;
       z-index: 1;
@@ -323,8 +597,8 @@
     }
 
     .calendar-layout {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      display: flex;
+      flex-wrap: nowrap;
       gap: 14px;
       flex: 1;
       min-height: 0;
@@ -363,6 +637,7 @@
     }
 
     .day-column {
+      flex: 1 1 0;
       min-width: 0;
       padding: 16px 14px 14px;
       border-radius: var(--radius-md);
@@ -1444,11 +1719,15 @@
     }
 
     /* Error inside grid containers must span all columns */
-    .calendar-layout > .screen-error,
     .meals-layout > .screen-error,
     .month-grid > .screen-error,
     .names-scroll > .screen-error {
       grid-column: 1 / -1;
+    }
+
+    /* calendar-layout is flex, so use flex to span full width */
+    .calendar-layout > .screen-error {
+      flex: 1 1 100%;
     }
 
     /* Meal layout error also spans all rows */
