@@ -1160,6 +1160,10 @@
       gap: 6px;
     }
 
+    .admin-rsvp-review-modal {
+      padding-top: 10px;
+    }
+
     .admin-rsvp-issue-badge {
       display: inline-flex;
       align-items: center;

@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.9.4";
+    const VERSION = "0.9.5";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -519,18 +519,36 @@
       );
       const unmatchedRsvps = rsvpList.filter((rsvp) => !matchedRsvpIds.has(rsvp.id));
       const reviewItems = [];
+      const unmatchedBestMatches = new Map();
+      const duplicateMatchesByParty = new Map();
 
       unmatchedRsvps.forEach((rsvp) => {
         const bestOverallMatch = getBestInvitedPartyMatch(rsvp.name, hydratedParties);
+        unmatchedBestMatches.set(rsvp.id, bestOverallMatch);
         if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
+          const duplicateMatches = duplicateMatchesByParty.get(bestOverallMatch.id) || [];
+          duplicateMatches.push({ rsvp, bestScore: bestOverallMatch.matchScore });
+          duplicateMatchesByParty.set(bestOverallMatch.id, duplicateMatches);
+        }
+      });
+
+      unmatchedRsvps.forEach((rsvp) => {
+        const bestOverallMatch = unmatchedBestMatches.get(rsvp.id) || null;
+        if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
+          const duplicateParty = hydratedParties.find((party) => party.id === bestOverallMatch.id) || null;
+          const duplicateMatches = duplicateMatchesByParty.get(bestOverallMatch.id) || [];
           reviewItems.push({
             id: rsvp.id,
             issueType: "duplicate",
             issueLabel: "Duplicate",
             rsvp,
             matchedParty: null,
-            competingParty: hydratedParties.find((party) => party.id === bestOverallMatch.id) || null,
+            competingParty: duplicateParty,
             competingRsvp: rsvpById.get(bestOverallMatch.rsvpId) || null,
+            competingRsvps: duplicateMatches
+              .map((match) => match.rsvp)
+              .filter((matchRsvp) => matchRsvp.id !== rsvp.id)
+              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)),
             suggestions: [],
             bestScore: bestOverallMatch.matchScore
           });
@@ -545,6 +563,7 @@
           matchedParty: null,
           competingParty: null,
           competingRsvp: null,
+          competingRsvps: [],
           suggestions: getInvitedPartySuggestions(
             rsvp.name,
             hydratedParties.filter((party) => !party.rsvpId),
@@ -566,6 +585,7 @@
             matchedParty: party,
             competingParty: null,
             competingRsvp: null,
+            competingRsvps: [],
             suggestions: [],
             bestScore: party.matchScore || 0
           });
@@ -584,6 +604,7 @@
             matchedParty: party,
             competingParty: null,
             competingRsvp: null,
+            competingRsvps: [],
             suggestions: getInvitedPartySuggestions(party.linkedRsvp.name, hydratedParties, 3, 0),
             bestScore: party.matchScore || 0
           });

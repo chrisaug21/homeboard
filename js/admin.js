@@ -321,19 +321,6 @@
         form.querySelectorAll(".admin-rsvp-search-result").forEach((row) => row.classList.remove("is-selected"));
         return;
       }
-      const deleteRsvpBtn = event.target.closest("[data-action='review-delete-rsvp']");
-      if (deleteRsvpBtn) {
-        const rsvpId = deleteRsvpBtn.getAttribute("data-rsvp-id");
-        const resolution = deleteRsvpBtn.getAttribute("data-resolution");
-        if (rsvpId) {
-          if (resolution === "replace-with-current") {
-            resolveDuplicateByReplacingCompetingRsvp(rsvpId);
-          } else {
-            deleteReviewRsvp(rsvpId);
-          }
-        }
-        return;
-      }
       const confirmLowConfidenceBtn = event.target.closest("[data-action='review-confirm-low-confidence']");
       if (confirmLowConfidenceBtn) {
         const rsvpId = confirmLowConfidenceBtn.getAttribute("data-rsvp-id");
@@ -1823,44 +1810,49 @@
       }
 
       if (reviewItem.issueType === "duplicate") {
+        const conflictParty = reviewItem.competingParty || null;
+        const linkedRsvp = reviewItem.competingRsvp || null;
+        const competingRsvps = Array.isArray(reviewItem.competingRsvps) ? reviewItem.competingRsvps : [];
+        const conflictRsvps = [
+          ...(linkedRsvp ? [{ rsvp: linkedRsvp, label: "Linked RSVP" }] : []),
+          ...competingRsvps.map((rsvp) => ({ rsvp, label: "Competing RSVP" })),
+          ...(!competingRsvps.find((candidate) => candidate.id === reviewItem.rsvp.id) ? [{ rsvp: reviewItem.rsvp, label: "Competing RSVP" }] : [])
+        ].filter((entry, index, list) =>
+          entry.rsvp && list.findIndex((candidate) => candidate.rsvp.id === entry.rsvp.id) === index
+        );
+        const defaultPrimary = linkedRsvp?.id || conflictRsvps[0]?.rsvp.id || "";
+        const defaultGuestCount = conflictRsvps.find((entry) => entry.rsvp.id === defaultPrimary)?.rsvp.guestCount ?? reviewItem.rsvp.guestCount;
         return `
           <form data-modal-form="review-merge-duplicate" novalidate>
-            <input type="hidden" name="review_rsvp_id" value="${escapeHtml(reviewItem.rsvp.id)}">
-            <input type="hidden" name="competing_rsvp_id" value="${escapeHtml(reviewItem.competingRsvp?.id || "")}">
-            <input type="hidden" name="party_id" value="${escapeHtml(reviewItem.competingParty?.id || "")}">
+            <input type="hidden" name="party_id" value="${escapeHtml(conflictParty?.id || "")}">
+            <input type="hidden" name="conflict_rsvp_ids" value="${escapeHtml(conflictRsvps.map((entry) => entry.rsvp.id).join(","))}">
           <div class="admin-rsvp-review-modal">
             <div class="admin-rsvp-review-header">
               ${buildReviewIssueBadge(reviewItem.issueLabel)}
-              <div class="admin-rsvp-card-title">${escapeHtml(reviewItem.rsvp.name)}</div>
-              <div class="admin-rsvp-card-meta">${escapeHtml(getReviewResponseLabel(reviewItem.rsvp))}</div>
+              <div class="admin-rsvp-card-title">${escapeHtml(conflictParty?.name || reviewItem.rsvp.name)}</div>
+              <div class="admin-rsvp-card-meta">These RSVPs may refer to the same party. Choose which should be the primary.</div>
             </div>
             <div class="admin-rsvp-compare">
-              <label class="admin-rsvp-compare-card">
-                <strong><input type="radio" name="primary_rsvp_id" value="${escapeHtml(reviewItem.rsvp.id)}" checked> Current RSVP</strong>
-                <span>${escapeHtml(reviewItem.rsvp.name)}</span>
-                <span>${escapeHtml(getReviewResponseLabel(reviewItem.rsvp))}</span>
-              </label>
-              <label class="admin-rsvp-compare-card">
-                <strong><input type="radio" name="primary_rsvp_id" value="${escapeHtml(reviewItem.competingRsvp?.id || "")}"> Existing linked RSVP</strong>
-                <span>${escapeHtml(reviewItem.competingRsvp?.name || "Unknown RSVP")}</span>
-                <span>${escapeHtml(getReviewResponseLabel(reviewItem.competingRsvp || { attending: false, guestCount: 0 }))}</span>
-              </label>
+              ${conflictRsvps.map((entry) => `
+                <label class="admin-rsvp-compare-card">
+                  <strong>
+                    <input type="radio" name="primary_rsvp_id" value="${escapeHtml(entry.rsvp.id)}"
+                      data-guest-count="${escapeHtml(entry.rsvp.guestCount)}"
+                      ${entry.rsvp.id === defaultPrimary ? "checked" : ""}>
+                    ${escapeHtml(entry.label)}
+                  </strong>
+                  <span>${escapeHtml(entry.rsvp.name)}</span>
+                  <span>${escapeHtml(getReviewResponseLabel(entry.rsvp))}</span>
+                </label>
+              `).join("")}
             </div>
             <div class="admin-field">
-              <label for="review-merge-guest-count">Merged guest count</label>
-              <input id="review-merge-guest-count" name="guest_count" type="number" min="0" max="20" value="${escapeHtml(reviewItem.rsvp.guestCount)}" required>
+              <label for="review-merge-guest-count">Guest count</label>
+              <input id="review-merge-guest-count" name="guest_count" type="number" min="0" max="20" value="${escapeHtml(defaultGuestCount)}" required>
             </div>
-            <div class="admin-rsvp-action-row">
-              <button class="admin-button admin-button--secondary" type="button"
-                data-action="review-delete-rsvp"
-                data-rsvp-id="${escapeHtml(reviewItem.rsvp.id)}">Delete current RSVP</button>
-              <button class="admin-button admin-button--primary" type="button"
-                data-action="review-delete-rsvp"
-                data-rsvp-id="${escapeHtml(reviewItem.competingRsvp?.id || "")}"
-                data-resolution="replace-with-current">Delete competing RSVP</button>
-              <button class="admin-button admin-button--primary" type="submit">Merge</button>
+            <div class="admin-actions admin-actions--end">
+              <button class="admin-button admin-button--primary" type="submit">Confirm</button>
             </div>
-            ${buildReviewPartySearchSection(reviewItem.rsvp)}
           </div>
           </form>
         `;
@@ -2182,6 +2174,17 @@
     }
 
     function handleAdminModalInput(event) {
+      const primaryRsvpRadio = event.target.closest("input[name='primary_rsvp_id']");
+      if (primaryRsvpRadio) {
+        const form = primaryRsvpRadio.closest("form[data-modal-form='review-merge-duplicate']");
+        const guestCountInput = form && form.querySelector("[name='guest_count']");
+        const selectedGuestCount = primaryRsvpRadio.getAttribute("data-guest-count");
+        if (guestCountInput && selectedGuestCount !== null) {
+          guestCountInput.value = selectedGuestCount || "0";
+        }
+        return;
+      }
+
       const reviewInput = event.target.closest("[data-rsvp-search-input='review']");
       if (reviewInput) {
         const rsvpId = reviewInput.getAttribute("data-rsvp-id");
@@ -2249,49 +2252,6 @@
       showToast("Guest count updated.");
     }
 
-    async function deleteReviewRsvp(rsvpId) {
-      const client = getSupabaseClient();
-      if (!client || !rsvpId) return;
-      if (!window.confirm("Mark this RSVP as superseded?")) return;
-
-      adminRsvpWritePending = true;
-      await client.from("invited_parties").update({ rsvp_id: null }).eq("rsvp_id", rsvpId);
-      const { error } = await client.from("rsvps").update({ status: "superseded" }).eq("id", rsvpId);
-      adminRsvpWritePending = false;
-
-      if (error) {
-        showToast("Couldn’t delete that RSVP.");
-        return;
-      }
-
-      closeAdminModal();
-      await loadAdminRsvpScreen();
-      showToast("RSVP deleted.");
-    }
-
-    async function resolveDuplicateByReplacingCompetingRsvp(competingRsvpId) {
-      const reviewItem = getReviewItemByRsvpId(adminModalContext?.rsvpId);
-      if (!reviewItem || !reviewItem.competingParty || !competingRsvpId) return;
-      if (!window.confirm("Mark the competing RSVP as superseded and replace it with the current one?")) return;
-
-      const client = getSupabaseClient();
-      if (!client) return;
-
-      adminRsvpWritePending = true;
-      await client.from("invited_parties").update({ rsvp_id: reviewItem.rsvp.id }).eq("id", reviewItem.competingParty.id);
-      const { error } = await client.from("rsvps").update({ status: "superseded" }).eq("id", competingRsvpId);
-      adminRsvpWritePending = false;
-
-      if (error) {
-        showToast("Couldn’t replace the competing RSVP.");
-        return;
-      }
-
-      closeAdminModal();
-      await loadAdminRsvpScreen();
-      showToast("Duplicate resolved.");
-    }
-
     async function mergeDuplicateReview(formData) {
       const client = getSupabaseClient();
       if (!client) {
@@ -2299,34 +2259,42 @@
         return;
       }
 
-      const reviewRsvpId = String(formData.get("review_rsvp_id") || "").trim();
-      const competingRsvpId = String(formData.get("competing_rsvp_id") || "").trim();
       const partyId = String(formData.get("party_id") || "").trim();
+      const conflictRsvpIds = String(formData.get("conflict_rsvp_ids") || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
       const primaryRsvpId = String(formData.get("primary_rsvp_id") || "").trim();
       const guestCount = Math.max(0, parseInt(String(formData.get("guest_count") || "0"), 10) || 0);
-      if (!reviewRsvpId || !competingRsvpId || !partyId || !primaryRsvpId) return;
-
-      const secondaryRsvpId = primaryRsvpId === reviewRsvpId ? competingRsvpId : reviewRsvpId;
+      if (!partyId || !primaryRsvpId || !conflictRsvpIds.length) return;
+      const secondaryRsvpIds = conflictRsvpIds.filter((rsvpId) => rsvpId !== primaryRsvpId);
 
       adminRsvpWritePending = true;
-      setModalSaving(true, "Merge");
-      await client.from("invited_parties").update({ rsvp_id: primaryRsvpId }).eq("id", partyId);
-      await client.from("rsvps").update({ guest_count: guestCount, merged_into_party_id: null }).eq("id", primaryRsvpId);
-      const { error } = await client
+      setModalSaving(true, "Confirm");
+      const partyUpdate = await client.from("invited_parties").update({ rsvp_id: primaryRsvpId }).eq("id", partyId);
+      const primaryUpdate = await client
         .from("rsvps")
-        .update({ status: "superseded", merged_into_party_id: partyId })
-        .eq("id", secondaryRsvpId);
+        .update({ guest_count: guestCount, merged_into_party_id: null })
+        .eq("id", primaryRsvpId);
+      let secondaryError = null;
+      if (secondaryRsvpIds.length) {
+        const { error } = await client
+          .from("rsvps")
+          .update({ status: "superseded", merged_into_party_id: partyId })
+          .in("id", secondaryRsvpIds);
+        secondaryError = error;
+      }
       adminRsvpWritePending = false;
-      setModalSaving(false, "Merge");
+      setModalSaving(false, "Confirm");
 
-      if (error) {
-        showToast("Couldn’t merge those RSVPs.");
+      if (partyUpdate.error || primaryUpdate.error || secondaryError) {
+        showToast("Couldn’t confirm that duplicate.");
         return;
       }
 
       closeAdminModal();
       await loadAdminRsvpScreen();
-      showToast("Duplicate merged.");
+      showToast("Duplicate confirmed.");
     }
 
     async function confirmLowConfidenceReview(rsvpId, partyId) {
