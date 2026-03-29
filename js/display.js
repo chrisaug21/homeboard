@@ -11,8 +11,10 @@
     let pointerStartX = null;
     let pointerDeltaX = 0;
     let rsvpScrollId = null;
-    // Number of days shown in the Upcoming view — increase here when settings PR lands
-    const UPCOMING_DAYS = 5;
+    // Number of days shown in the Upcoming view — read from display_settings.upcoming_days
+    let UPCOMING_DAYS = 5;
+    // Per-screen rotation timers in seconds (keyed by screen type, fallback 30s)
+    let screenTimers = {};
 
     let calendarEventsMap = new Map();
     let cachedHouseholdConfig = null;
@@ -23,6 +25,21 @@
     let lastWideFetch = 0; // ms timestamp of last 24-month fetch
     let initialLoadComplete = false;
     const pendingScreens = new Set();
+    const displayScreenRegistry = {
+      upcoming_calendar: track.querySelector(".screen--calendar"),
+      monthly_calendar: track.querySelector(".screen--month"),
+      todos: track.querySelector(".screen--todos"),
+      meals: track.querySelector(".screen--meals")
+    };
+
+    function getRegisteredScreens(screenName) {
+      if (screenName === "countdowns") {
+        return Array.from(track.querySelectorAll(".countdown-screen"));
+      }
+
+      const screen = displayScreenRegistry[screenName];
+      return screen ? [screen] : [];
+    }
 
     function markPending(screenId) {
       pendingScreens.add(screenId);
@@ -32,6 +49,8 @@
       pendingScreens.delete(screenId);
       if (!initialLoadComplete && pendingScreens.size === 0) {
         initialLoadComplete = true;
+        localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
+        updateLastSyncedLabel();
         resetAutoRotate();
       }
     }
@@ -242,7 +261,14 @@
     }
 
     function getScreenCount() {
-      return track.children.length;
+      return getVisibleScreens().length;
+    }
+
+    function getVisibleScreens() {
+      return Array.from(track.children).filter((screen) =>
+        !screen.classList.contains("screen--disabled")
+        && !screen.classList.contains("screen--empty-hidden")
+      );
     }
 
     function getAssigneeClass(assignee) {
@@ -867,7 +893,8 @@
     }
 
     function reconcileRotationState() {
-      const screenCount = getScreenCount();
+      const visibleScreens = getVisibleScreens();
+      const screenCount = visibleScreens.length;
 
       if (!screenCount) {
         return;
@@ -941,20 +968,35 @@
     }
 
     function renderCountdowns(countdownItems) {
-      const existingCountdownScreens = Array.from(track.querySelectorAll(".countdown-screen"));
+      let existingCountdownScreens = Array.from(track.querySelectorAll(".countdown-screen"));
       existingCountdownScreens.forEach((screen, index) => {
         if (index > 0) {
           screen.remove();
         }
       });
 
+      existingCountdownScreens = Array.from(track.querySelectorAll(".countdown-screen"));
+      let firstCountdownScreen = existingCountdownScreens[0];
+
+      if (!firstCountdownScreen) {
+        firstCountdownScreen = document.createElement("section");
+        firstCountdownScreen.className = "screen countdown-screen";
+        const rsvpScreen = track.querySelector(".rsvp-screen");
+        track.insertBefore(firstCountdownScreen, rsvpScreen || null);
+      }
+
       if (!countdownItems.length) {
-        existingCountdownScreens.forEach((screen) => screen.remove());
+        firstCountdownScreen.innerHTML = "";
+        firstCountdownScreen.classList.add("screen--empty-hidden");
+        firstCountdownScreen.setAttribute("aria-hidden", "true");
         reconcileRotationState();
         return;
       }
 
-      const firstCountdownScreen = existingCountdownScreens[0];
+      firstCountdownScreen.classList.remove("screen--empty-hidden");
+      if (!firstCountdownScreen.classList.contains("screen--disabled")) {
+        firstCountdownScreen.removeAttribute("aria-hidden");
+      }
       const countdownTemplate = (item, index) => {
         const hasImage = Boolean(item.image_url);
         const variantIndex = index % 4;
@@ -992,9 +1034,15 @@
 
       countdownItems.slice(1).forEach((item, index) => {
         const section = document.createElement("section");
-        section.className = "screen countdown-screen";
+        section.className = `screen countdown-screen${firstCountdownScreen.classList.contains("screen--disabled") ? " screen--disabled" : ""}`;
+        if (section.classList.contains("screen--disabled")) {
+          section.setAttribute("aria-hidden", "true");
+        }
         section.innerHTML = countdownTemplate(item, index + 1);
-        track.insertBefore(section, document.querySelector(".rsvp-screen"));
+        // Insert after the last existing countdown-screen to keep them grouped
+        const allCountdowns = track.querySelectorAll(".countdown-screen");
+        const lastCountdown = allCountdowns[allCountdowns.length - 1];
+        lastCountdown.insertAdjacentElement("afterend", section);
       });
 
       reconcileRotationState();
@@ -1096,6 +1144,7 @@
       cachedSupabaseCountdowns = supabaseCountdowns;
 
       updateHouseholdName(householdConfig);
+      applyDisplaySettings(householdConfig);
 
       const calendarLoaded = await refreshCalendarData(true); // wide fetch on initial load
 
@@ -1230,9 +1279,9 @@
     }
 
     function renderProgress() {
-      const screenCount = getScreenCount();
-      progressDots.innerHTML = Array.from({ length: screenCount }, (_, index) => {
-        const isRsvpScreen = track.children[index] && track.children[index].classList.contains("rsvp-screen");
+      const visibleScreens = getVisibleScreens();
+      progressDots.innerHTML = Array.from({ length: visibleScreens.length }, (_, index) => {
+        const isRsvpScreen = visibleScreens[index] && visibleScreens[index].classList.contains("rsvp-screen");
         const activeClass = index === currentIndex ? " active" + (isRsvpScreen ? " rsvp-active" : "") : "";
         return `<span class="dot${activeClass}" aria-hidden="true"></span>`;
       }).join("");
@@ -1245,8 +1294,173 @@
       if (householdNameEl) householdNameEl.textContent = name;
     }
 
+    function applyColorScheme(scheme) {
+      const validSchemes = ["warm", "dark", "slate"];
+      const chosen = validSchemes.includes(scheme) ? scheme : "warm";
+      if (chosen === "warm") {
+        document.documentElement.removeAttribute("data-scheme");
+      } else {
+        document.documentElement.setAttribute("data-scheme", chosen);
+      }
+    }
+
+    function applyActiveScreens(activeScreens) {
+      DISPLAY_SCREEN_KEYS.forEach((name) => {
+        getRegisteredScreens(name).forEach((screen) => {
+          if (activeScreens.includes(name)) {
+            screen.classList.remove("screen--disabled");
+            if (!screen.classList.contains("screen--empty-hidden")) {
+              screen.removeAttribute("aria-hidden");
+            }
+          } else {
+            screen.classList.add("screen--disabled");
+            screen.setAttribute("aria-hidden", "true");
+          }
+        });
+      });
+
+      reconcileRotationState();
+    }
+
+    function applyScreenOrder(screenOrder) {
+      const rsvpScreen = track.querySelector(".rsvp-screen");
+      const anchor = rsvpScreen || null;
+      for (const screenName of screenOrder) {
+        getRegisteredScreens(screenName).forEach((screen) => {
+          if (screen.parentElement === track) {
+            track.insertBefore(screen, anchor);
+          }
+        });
+      }
+    }
+
+    function applyDisplaySettings(config) {
+      if (!config) return;
+      const ds = normalizeDisplaySettings(config.display_settings);
+
+      // Apply upcoming days
+      const upcomingDays = Number(ds.upcoming_days);
+      if (upcomingDays === 5 || upcomingDays === 7) {
+        UPCOMING_DAYS = upcomingDays;
+      }
+
+      // Apply per-screen timers (seed with defaults, then overlay saved values)
+      screenTimers = {
+        upcoming_calendar: 30,
+        monthly_calendar: 60,
+        todos: 45,
+        meals: 30,
+        countdowns: 15,
+        default: 30
+      };
+      if (ds.timer_intervals && typeof ds.timer_intervals === "object") {
+        for (const [key, val] of Object.entries(ds.timer_intervals)) {
+          const parsed = parseInt(val, 10);
+          if (parsed > 0) screenTimers[key] = parsed;
+        }
+      }
+
+      // Apply color scheme
+      applyColorScheme(config.color_scheme || "warm");
+
+      // Apply active screens (must come before screen order)
+      const defaultScreens = [...DISPLAY_SCREEN_KEYS];
+      const activeScreens = Array.isArray(ds.active_screens) && ds.active_screens.length > 0
+        ? ds.active_screens
+        : defaultScreens;
+      applyActiveScreens(activeScreens);
+
+      // Apply screen order
+      const screenOrder = Array.isArray(ds.screen_order) && ds.screen_order.length > 0
+        ? ds.screen_order
+        : defaultScreens;
+      applyScreenOrder(screenOrder);
+    }
+
+    function updateLastSyncedLabel() {
+      const el = document.getElementById("display-last-synced");
+      if (!el) return;
+      el.textContent = formatRelativeTimestamp(localStorage.getItem(LAST_SYNCED_KEY), "");
+    }
+
+    let isSyncing = false;
+
+    async function runFullSync() {
+      if (isSyncing) return;
+      isSyncing = true;
+      const syncBtn = document.getElementById("display-sync-btn");
+      if (syncBtn) syncBtn.classList.add("is-syncing");
+
+      try {
+        // Re-fetch all data in parallel
+        const [remoteTodos, remoteMeals, weeklyNote] = await Promise.all([
+          fetchTodos(),
+          fetchMeals(),
+          fetchWeeklyNote()
+        ]);
+
+        if (remoteTodos !== null) renderTodoItems(remoteTodos);
+        if (remoteMeals !== null) renderMeals(remoteMeals, weeklyNote || "");
+
+        // Re-fetch calendar (wide fetch refreshes countdowns too)
+        const [newConfig, newSupabaseCountdowns] = await Promise.all([
+          fetchHouseholdConfig(),
+          fetchCountdowns()
+        ]);
+
+        if (newConfig) {
+          cachedHouseholdConfig = newConfig;
+          updateHouseholdName(newConfig);
+          applyDisplaySettings(newConfig);
+        }
+
+        if (newSupabaseCountdowns !== null) {
+          cachedSupabaseCountdowns = newSupabaseCountdowns;
+        }
+
+        await refreshCalendarData(true);
+
+        // Re-fetch RSVP if visible
+        if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
+          const rsvps = await fetchRsvps();
+          if (rsvps !== null) {
+            renderRsvpBoard(rsvps, cachedHouseholdConfig ? cachedHouseholdConfig.total_invited_guests : null);
+          }
+        }
+
+        // Check for service worker updates
+        if ("serviceWorker" in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+              await registration.update();
+              if (registration.waiting) {
+                navigator.serviceWorker.addEventListener("controllerchange", () => {
+                  window.location.reload();
+                }, { once: true });
+                registration.waiting.postMessage({ type: "SKIP_WAITING" });
+                return; // Page will reload
+              }
+            }
+          } catch {
+            // SW not available — ignore
+          }
+        }
+
+        localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
+        updateLastSyncedLabel();
+      } finally {
+        isSyncing = false;
+        const btn = document.getElementById("display-sync-btn");
+        if (btn) btn.classList.remove("is-syncing");
+      }
+    }
+
     function goToScreen(index) {
       const screenCount = getScreenCount();
+      if (!screenCount) {
+        return;
+      }
       const isForwardWrap = index >= screenCount;
       const isBackwardWrap = index < 0;
 
@@ -1271,9 +1485,25 @@
       renderProgress();
     }
 
+    function getTimerForCurrentScreen() {
+      const screen = getVisibleScreens()[currentIndex];
+      if (!screen) return (screenTimers.default || 30) * 1000;
+      if (screen.classList.contains("screen--calendar")) return (screenTimers.upcoming_calendar || 30) * 1000;
+      if (screen.classList.contains("screen--month")) return (screenTimers.monthly_calendar || 60) * 1000;
+      if (screen.classList.contains("screen--todos")) return (screenTimers.todos || 45) * 1000;
+      if (screen.classList.contains("screen--meals")) return (screenTimers.meals || 30) * 1000;
+      if (screen.classList.contains("countdown-screen")) return (screenTimers.countdowns || 15) * 1000;
+      return (screenTimers.default || 30) * 1000;
+    }
+
     function resetAutoRotate() {
-      window.clearInterval(autoRotateId);
-      autoRotateId = window.setInterval(nextScreen, rotationIntervalMs);
+      window.clearTimeout(autoRotateId);
+      autoRotateId = window.setTimeout(autoAdvanceAndSchedule, getTimerForCurrentScreen());
+    }
+
+    function autoAdvanceAndSchedule() {
+      nextScreen();
+      autoRotateId = window.setTimeout(autoAdvanceAndSchedule, getTimerForCurrentScreen());
     }
 
     function nextScreen() {
@@ -1417,6 +1647,10 @@
       adminApp.hidden = true;
       const versionEl = document.getElementById("version-label");
       if (versionEl) versionEl.textContent = `v${VERSION}`;
+      updateLastSyncedLabel();
+      window.setInterval(updateLastSyncedLabel, 30000);
+      const syncBtn = document.getElementById("display-sync-btn");
+      if (syncBtn) syncBtn.addEventListener("click", runFullSync);
       renderCalendarAndCountdowns();
       renderTodos();
       renderMealsWithData();

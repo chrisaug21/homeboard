@@ -26,24 +26,42 @@ netlify.toml        — build config, env var injection via sed
 ```
 
 ## Two Modes
-- **Display Mode** — landscape tablet, auto-rotates screens every 30s, manual swipe
+- **Display Mode** — landscape tablet, auto-rotates screens (per-screen timers), manual swipe. Mobile screens (≤ 768 px) are redirected to Admin mode automatically.
 - **Admin Mode** — portrait phone, at `/admin`
 
 ## Display Screens (in order)
-1. Calendar (Google Cal read-only)
-2. To-Do List
-3. Meal Plan (dinner only on display)
-4. Countdown Board (Lucide icons)
-5. RSVP Live Board (Chris & Bailey only — reads `rsvps` table, retires Oct 9 2026)
+1. Upcoming Calendar (Google Cal read-only) — controlled independently by `display_settings.active_screens` and `screen_order`
+2. Monthly Calendar (Google Cal read-only) — controlled independently by `display_settings.active_screens` and `screen_order`
+3. To-Do List
+4. Meal Plan (dinner only on display)
+5. Countdown Board (Lucide icons)
+6. RSVP Live Board (Chris & Bailey only — reads `rsvps` table, **hardcoded to this household, retires Oct 9 2026**; intentionally excluded from active-screen toggles; remove via code change after that date)
 
 ## Supabase Tables
-- `households` — assistant name (e.g. "HACC"), Google Cal config, display settings JSON, admin PIN
+- `households` — `assistant_name`, `color_scheme`, `google_cal_id`, `google_cal_key`, `display_settings` (JSONB), `total_invited_guests`, admin PIN
 - `users` — linked to `auth.users`, household membership, role (admin/member)
 - `todos` — soft delete via `archived_at`, never hard delete
 - `meal_plan` — `user_id` nullable: null = shared/household, uuid = personal
 - `meal_plan_notes` — one note per household per week, keyed by `household_id` + `week_start`
 - `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`
 - `rsvps` — pre-existing wedding table, do not modify schema
+
+## display_settings JSONB shape
+```json
+{
+  "members":        [{"name": "Chris", "color": "#2563eb"}, ...],
+  "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
+  "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
+  "timer_intervals": { "upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15 },
+  "upcoming_days":  5
+}
+```
+- `display_settings.members` drives the todo assignee picker and is managed via the Settings screen. **Planned migration**: move to `users` table when multi-user auth is implemented.
+- `upcoming_calendar` and `monthly_calendar` are separate screens across display rotation and admin settings. Never write the legacy `calendar` key back to Supabase.
+- The "Default calendar view" setting has been removed. Whichever calendar screen appears first in `screen_order` renders first.
+- `display_settings.upcoming_days` drives the `UPCOMING_DAYS` variable in `display.js`. Update both together if changing upcoming-view logic.
+- Google Calendar currently reads a single calendar ID (`households.google_cal_id`). **Future enhancement**: support toggling multiple calendars from the Integrations settings.
+- **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.
 
 ## Color Palette
 - Background: `#F5F0E8` (warm parchment)
@@ -71,5 +89,7 @@ Use `netlify dev --no-watch` if Mac permissions error occurs.
 - sw.js cache prefix: `homeboard-v##`
 - When pushing any change: update `VERSION` in `js/shared.js` (patch bump for fixes, minor bump for features), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — add new tables, env vars, or screens as they are introduced
 
-## Hardcoded Data (needs future work)
-- `HOUSEHOLD_MEMBERS` constant in `js/admin.js` (top of file) drives the todo assignee picker. Currently hardcoded as `["Chris", "Bailey"]`. Replace with a query from the `users` table once multi-user auth is implemented.
+## Planned future work
+- **Household members → users table**: `display_settings.members` currently stores the member list. Migrate to the `users` table when multi-user auth is implemented.
+- **Multiple Google Calendars**: the Integrations settings panel has a code comment noting this. When implementing, each calendar will need an ID and an enabled toggle stored in `display_settings`.
+- **Recurring to-dos**: planned for a future PR; requires a schema change to the `todos` table.

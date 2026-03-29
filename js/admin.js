@@ -18,9 +18,47 @@
     const adminTodoAddButton = document.getElementById("admin-todo-add-button");
     const adminCountdownAddButton = document.getElementById("admin-countdown-add-button");
 
-    // Household members for the assignee picker.
-    // TODO: replace with a query from the `users` table once multi-user auth is implemented.
-    const HOUSEHOLD_MEMBERS = ["Chris", "Bailey"];
+    // Person color palette — distinct from status colors (amber, sage, rose)
+    const PERSON_COLOR_PALETTE = [
+      "#2563eb", "#9333ea", "#0891b2", "#be123c",
+      "#c2410c", "#0f766e", "#6d28d9", "#16a34a"
+    ];
+
+    // Screen definitions for settings UI
+    const CONFIGURABLE_SCREENS = [...DISPLAY_SCREEN_KEYS];
+    const SCREEN_LABELS = {
+      upcoming_calendar: "Upcoming Calendar",
+      monthly_calendar: "Monthly Calendar",
+      todos: "To-Do List",
+      meals: "Meal Plan",
+      countdowns: "Countdowns"
+    };
+    const TIMER_SCREEN_KEYS = [...DISPLAY_SCREEN_KEYS];
+    const TIMER_LABELS = {
+      upcoming_calendar: "Upcoming Calendar",
+      monthly_calendar: "Monthly Calendar",
+      todos: "To-Do List",
+      meals: "Meal Plan",
+      countdowns: "Countdowns"
+    };
+    const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15 };
+
+    // Loaded from Supabase at admin init; falls back to defaults so todo form always works
+    let adminHouseholdSettings = {
+      assistant_name: "",
+      color_scheme: "warm",
+      google_cal_id: "",
+      display_settings: {
+        members: []
+      }
+    };
+    let assistantSavePending = false;
+    let displaySavePending = false;
+    let integrationsSavePending = false;
+    let membersSavePending = false;
+    let pendingMemberRemovalIndex = null;
+    let adminHouseholdConfigPromise = null;
+    let adminHouseholdConfigLoaded = false;
 
     let toastTimeoutId = null;
     let adminTodoWritePending = false;
@@ -50,6 +88,52 @@
       d.setHours(0, 0, 0, 0);
       return d;
     })();
+
+    function setAdminConfigDependentUiDisabled(disabled) {
+      const elementIds = [
+        "settings-assistant-name",
+        "settings-assistant-save",
+        "settings-member-input",
+        "settings-member-add-btn",
+        "settings-display-save",
+        "settings-integrations-save"
+      ];
+
+      elementIds.forEach((id) => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.disabled = disabled;
+        }
+      });
+
+      const displayInputs = document.querySelectorAll("#admin-screen-settings input, #admin-screen-settings select, #admin-screen-settings button");
+      displayInputs.forEach((element) => {
+        if (element.id !== "settings-sync-btn") {
+          element.disabled = disabled;
+        }
+      });
+    }
+
+    async function ensureAdminHouseholdConfigLoaded(forceReload = false) {
+      if (forceReload || !adminHouseholdConfigPromise) {
+        setAdminConfigDependentUiDisabled(true);
+        adminHouseholdConfigLoaded = false;
+        adminHouseholdConfigPromise = loadAdminHouseholdConfig()
+          .then(() => {
+            adminHouseholdConfigLoaded = true;
+            setAdminConfigDependentUiDisabled(false);
+          })
+          .catch((error) => {
+            adminHouseholdConfigLoaded = false;
+            setAdminConfigDependentUiDisabled(true);
+            adminHouseholdConfigPromise = null;
+            throw error;
+          });
+      }
+
+      await adminHouseholdConfigPromise;
+      return adminHouseholdConfigLoaded;
+    }
 
     function buildMealTypeOptionsHTML(selectedType) {
       return mealTypeOptions.map((option) =>
@@ -485,11 +569,13 @@
     function buildTodoFormHTML(todo) {
       const isEdit = !!todo;
       const currentAssignee = isEdit ? (todo.assignee || "") : "";
-      // Preserve any existing assignee that isn't in the standard list (e.g. old data)
-      const extraMember = currentAssignee && !HOUSEHOLD_MEMBERS.includes(currentAssignee)
+      // Read members from settings
+      const memberNames = (adminHouseholdSettings.display_settings.members || []).map((m) => m.name);
+      // Preserve any existing assignee that isn't in the current list (e.g. old data)
+      const extraMember = currentAssignee && !memberNames.includes(currentAssignee)
         ? [currentAssignee]
         : [];
-      const assigneeOptions = ["", ...HOUSEHOLD_MEMBERS, ...extraMember].map((name) =>
+      const assigneeOptions = ["", ...memberNames, ...extraMember].map((name) =>
         `<option value="${escapeHtml(name)}"${name === currentAssignee ? " selected" : ""}>${escapeHtml(name || "Unassigned")}</option>`
       ).join("");
       return `
@@ -521,13 +607,25 @@
       `;
     }
 
-    function openAddTodoModal() {
+    async function openAddTodoModal() {
+      try {
+        await ensureAdminHouseholdConfigLoaded();
+      } catch {
+        showToast("Couldn’t load household settings.");
+        return;
+      }
       adminModalType = "add-todo";
       adminModalContext = null;
       openAdminModal("Add Todo", buildTodoFormHTML(null));
     }
 
-    function openEditTodoModal(todo) {
+    async function openEditTodoModal(todo) {
+      try {
+        await ensureAdminHouseholdConfigLoaded();
+      } catch {
+        showToast("Couldn’t load household settings.");
+        return;
+      }
       adminModalType = "edit-todo";
       adminModalContext = { id: todo.id };
       openAdminModal("Edit Todo", buildTodoFormHTML(todo));
@@ -992,6 +1090,12 @@
 
       if (target === "countdowns") {
         loadAdminCountdowns();
+      }
+
+      if (target === "settings") {
+        ensureAdminHouseholdConfigLoaded()
+          .then(() => loadAdminSettings())
+          .catch(() => showToast("Couldn’t load household settings."));
       }
     }
 
@@ -1705,6 +1809,528 @@
       return { active, archived };
     }
 
+    // ── Settings ─────────────────────────────────────────────────────────────
+
+    async function loadAdminHouseholdConfig() {
+      const client = getSupabaseClient();
+      if (!client) {
+        throw new Error("Supabase client unavailable");
+      }
+
+      const { data, error } = await client
+        .from("households")
+        .select("assistant_name, color_scheme, google_cal_id, display_settings")
+        .eq("id", DISPLAY_HOUSEHOLD_ID)
+        .single();
+
+      if (error || !data) {
+        throw new Error("Failed to load household config");
+      }
+
+      const ds = normalizeDisplaySettings(data.display_settings);
+      ds.members = Array.isArray(data.display_settings?.members)
+        ? data.display_settings.members
+          .map((member) => ({
+            name: String(member?.name || "").trim(),
+            color: String(member?.color || "").trim()
+          }))
+          .filter((member) => member.name)
+        : [];
+
+      adminHouseholdSettings = {
+        assistant_name: data.assistant_name || "",
+        color_scheme: data.color_scheme || "warm",
+        google_cal_id: data.google_cal_id || "",
+        display_settings: ds
+      };
+
+      // Apply the color scheme in admin mode too
+      if (typeof applyColorScheme === "function") {
+        applyColorScheme(adminHouseholdSettings.color_scheme);
+      }
+
+      return adminHouseholdSettings;
+    }
+
+    function renderSettingsMembersList(members) {
+      const list = document.getElementById("settings-members-list");
+      if (!list) return;
+
+      if (!members || members.length === 0) {
+        list.innerHTML = `<p class="admin-panel-note" style="margin:0">No members yet. Add one below.</p>`;
+        return;
+      }
+
+      list.innerHTML = members.map((m, i) => `
+        ${pendingMemberRemovalIndex === i ? `
+          <div class="admin-settings-member-row admin-settings-member-row--confirm" data-member-index="${i}">
+            <span class="admin-settings-member-confirm-text">Remove ${escapeHtml(m.name)}?</span>
+            <div class="admin-settings-member-actions">
+              <button type="button" class="admin-button admin-button--danger admin-button--small" data-member-confirm="${i}"${membersSavePending ? " disabled" : ""}>Confirm</button>
+              <button type="button" class="admin-button admin-button--secondary admin-button--small" data-member-cancel="${i}"${membersSavePending ? " disabled" : ""}>Cancel</button>
+            </div>
+          </div>
+        ` : `
+          <div class="admin-settings-member-row" data-member-index="${i}">
+            <span class="admin-settings-member-color" style="background:${escapeHtml(m.color || "#999")}"></span>
+            <span class="admin-settings-member-name">${escapeHtml(m.name)}</span>
+            <button type="button" class="admin-settings-member-remove" data-member-remove="${i}" aria-label="Remove ${escapeHtml(m.name)}"${membersSavePending ? " disabled" : ""}>
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+        `}
+      `).join("");
+
+      refreshIcons();
+    }
+
+    function renderSettingsScreenOrder(screenOrder) {
+      const list = document.getElementById("settings-screen-order");
+      if (!list) return;
+
+      const ds = adminHouseholdSettings.display_settings || {};
+      const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : CONFIGURABLE_SCREENS;
+
+      list.innerHTML = screenOrder.map((name, i) => {
+        const isActive = activeScreens.includes(name);
+        return `
+          <li class="admin-settings-order-item${isActive ? "" : " is-inactive"}" data-screen-name="${escapeHtml(name)}">
+            <span class="admin-settings-order-item-name">${escapeHtml(SCREEN_LABELS[name] || name)}</span>
+            <div class="admin-settings-order-arrows">
+              <button type="button" class="admin-settings-order-btn" data-order-dir="up" data-order-index="${i}" aria-label="Move up"${i === 0 ? " disabled" : ""}>
+                <i data-lucide="chevron-up"></i>
+              </button>
+              <button type="button" class="admin-settings-order-btn" data-order-dir="down" data-order-index="${i}" aria-label="Move down"${i === screenOrder.length - 1 ? " disabled" : ""}>
+                <i data-lucide="chevron-down"></i>
+              </button>
+            </div>
+          </li>
+        `;
+      }).join("");
+
+      refreshIcons();
+    }
+
+    function renderSettingsTimerList(timerIntervals) {
+      const list = document.getElementById("settings-timer-list");
+      if (!list) return;
+
+      list.innerHTML = TIMER_SCREEN_KEYS.map((key) => {
+        const val = (timerIntervals && timerIntervals[key] != null)
+          ? timerIntervals[key]
+          : TIMER_DEFAULTS[key];
+        return `
+          <div class="admin-settings-timer-row">
+            <span class="admin-settings-timer-label">${escapeHtml(TIMER_LABELS[key])}</span>
+            <input class="admin-settings-timer-input" type="number" min="5" max="600"
+              name="timer_${key}" value="${Number(val)}" aria-label="${escapeHtml(TIMER_LABELS[key])} timer">
+            <span class="admin-settings-timer-unit">s</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function loadAdminSettings() {
+      const ds = adminHouseholdSettings.display_settings || {};
+      const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : CONFIGURABLE_SCREENS;
+      const screenOrder = Array.isArray(ds.screen_order) ? ds.screen_order : CONFIGURABLE_SCREENS;
+      const timerIntervals = ds.timer_intervals || {};
+      const upcomingDays = ds.upcoming_days || 5;
+      const members = Array.isArray(ds.members) ? ds.members : [];
+
+      // Household
+      const nameInput = document.getElementById("settings-assistant-name");
+      if (nameInput) nameInput.value = adminHouseholdSettings.assistant_name || "";
+
+      renderSettingsMembersList(members);
+
+      // Active screen checkboxes
+      CONFIGURABLE_SCREENS.forEach((name) => {
+        const cb = document.querySelector(`[name="screen_${name}"]`);
+        if (cb) cb.checked = activeScreens.includes(name);
+      });
+      enforceMinOneActiveScreen();
+
+      // Screen order
+      renderSettingsScreenOrder(screenOrder);
+
+      // Timers
+      renderSettingsTimerList(timerIntervals);
+
+      // Upcoming days
+      const daysSelect = document.getElementById("settings-upcoming-days");
+      if (daysSelect) daysSelect.value = String(upcomingDays);
+
+      // Color scheme
+      const schemeRadio = document.querySelector(`[name="color_scheme"][value="${adminHouseholdSettings.color_scheme || "warm"}"]`);
+      if (schemeRadio) schemeRadio.checked = true;
+
+      // Google Cal ID
+      const calIdInput = document.getElementById("settings-google-cal-id");
+      if (calIdInput) calIdInput.value = adminHouseholdSettings.google_cal_id || "";
+
+      // Last synced
+      updateAdminLastSyncedLabel();
+    }
+
+    function updateAdminLastSyncedLabel() {
+      const el = document.getElementById("settings-last-synced");
+      if (!el) return;
+      const label = formatRelativeTimestamp(localStorage.getItem(LAST_SYNCED_KEY), "Never synced");
+      el.textContent = label === "Never synced" ? label : `Last synced ${label}`;
+    }
+
+    async function refreshAdminData() {
+      await Promise.all([
+        loadAdminTodos(),
+        loadAdminMealPlan(),
+        loadAdminCalendarMonth(),
+        loadAdminCountdowns({ preserveScroll: true }),
+        ensureAdminHouseholdConfigLoaded(true).then(() => loadAdminSettings())
+      ]);
+    }
+
+    async function saveAssistantSection() {
+      const client = getSupabaseClient();
+      if (!client || assistantSavePending || !adminHouseholdConfigLoaded) return;
+
+      assistantSavePending = true;
+      const saveBtn = document.getElementById("settings-assistant-save");
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
+
+      try {
+        const nameInput = document.getElementById("settings-assistant-name");
+        const newName = nameInput ? nameInput.value.trim() : "";
+
+        adminHouseholdSettings.assistant_name = newName;
+
+        const { data, error } = await client
+          .from("households")
+          .update({ assistant_name: newName || null })
+          .eq("id", DISPLAY_HOUSEHOLD_ID)
+          .select();
+
+        if (error) {
+          showToast("Error saving assistant name.");
+        } else if (!data || data.length === 0) {
+          showToast("Warning: no rows updated — check household ID.");
+        } else {
+          showToast("Assistant name saved.");
+        }
+      } finally {
+        assistantSavePending = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
+      }
+    }
+
+    async function persistMemberList(updatedMembers, successMessage) {
+      const client = getSupabaseClient();
+      if (!client || membersSavePending || !adminHouseholdConfigLoaded) {
+        return false;
+      }
+
+      membersSavePending = true;
+      const addButton = document.getElementById("settings-member-add-btn");
+      if (addButton) {
+        addButton.disabled = true;
+        addButton.textContent = "Saving…";
+      }
+      renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+
+      try {
+        const newDisplaySettings = {
+          ...adminHouseholdSettings.display_settings,
+          members: updatedMembers
+        };
+
+        const { error } = await client
+          .from("households")
+          .update({ display_settings: newDisplaySettings })
+          .eq("id", DISPLAY_HOUSEHOLD_ID);
+
+        if (error) {
+          showToast("Couldn’t save household members. Please try again.");
+          return false;
+        }
+
+        adminHouseholdSettings.display_settings = newDisplaySettings;
+        pendingMemberRemovalIndex = null;
+        renderSettingsMembersList(updatedMembers);
+        showToast(successMessage);
+        return true;
+      } finally {
+        membersSavePending = false;
+        if (addButton) {
+          addButton.disabled = false;
+          addButton.textContent = "Save";
+        }
+        renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+      }
+    }
+
+    async function saveDisplaySection() {
+      const client = getSupabaseClient();
+      if (!client || displaySavePending || !adminHouseholdConfigLoaded) return;
+
+      displaySavePending = true;
+      const saveBtn = document.getElementById("settings-display-save");
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
+
+      try {
+        // Active screens
+        const activeScreens = CONFIGURABLE_SCREENS.filter((name) => {
+          const cb = document.querySelector(`[name="screen_${name}"]`);
+          return cb && cb.checked;
+        });
+        // At least one must remain active
+        if (activeScreens.length === 0) {
+          showToast("At least one screen must stay active.");
+          return;
+        }
+
+        // Screen order — read from rendered list
+        const orderItems = document.querySelectorAll(".admin-settings-order-item");
+        const screenOrder = Array.from(orderItems).map((el) => el.getAttribute("data-screen-name")).filter(Boolean);
+
+        // Timers
+        const timerIntervals = {};
+        TIMER_SCREEN_KEYS.forEach((key) => {
+          const input = document.querySelector(`[name="timer_${key}"]`);
+          if (input) {
+            const val = parseInt(input.value, 10);
+            timerIntervals[key] = val > 0 ? val : TIMER_DEFAULTS[key];
+          } else {
+            timerIntervals[key] = TIMER_DEFAULTS[key];
+          }
+        });
+
+        // Other display settings
+        const daysSelect = document.getElementById("settings-upcoming-days");
+        const upcomingDays = daysSelect ? Number(daysSelect.value) : 5;
+
+        const schemeRadio = document.querySelector("[name='color_scheme']:checked");
+        const colorScheme = schemeRadio ? schemeRadio.value : "warm";
+
+        const newDs = {
+          ...adminHouseholdSettings.display_settings,
+          active_screens: activeScreens,
+          screen_order: screenOrder,
+          timer_intervals: timerIntervals,
+          upcoming_days: upcomingDays
+        };
+
+        const { data, error } = await client
+          .from("households")
+          .update({ color_scheme: colorScheme, display_settings: newDs })
+          .eq("id", DISPLAY_HOUSEHOLD_ID)
+          .select();
+        if (error) {
+          showToast("Error saving display settings.");
+        } else if (!data || data.length === 0) {
+          showToast("Warning: no rows updated — check household ID.");
+        } else {
+          adminHouseholdSettings.display_settings = newDs;
+          adminHouseholdSettings.color_scheme = colorScheme;
+          showToast("Display settings saved.");
+        }
+      } finally {
+        displaySavePending = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
+      }
+    }
+
+    async function saveIntegrationsSection() {
+      const client = getSupabaseClient();
+      if (!client || integrationsSavePending || !adminHouseholdConfigLoaded) return;
+
+      integrationsSavePending = true;
+      const saveBtn = document.getElementById("settings-integrations-save");
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
+
+      try {
+        const calIdInput = document.getElementById("settings-google-cal-id");
+        const newCalId = calIdInput ? calIdInput.value.trim() : "";
+
+        adminHouseholdSettings.google_cal_id = newCalId;
+
+        const { data, error } = await client
+          .from("households")
+          .update({ google_cal_id: newCalId || null })
+          .eq("id", DISPLAY_HOUSEHOLD_ID)
+          .select();
+        if (error) {
+          showToast("Error saving integration settings.");
+        } else if (!data || data.length === 0) {
+          showToast("Warning: no rows updated — check household ID.");
+        } else {
+          showToast("Integration settings saved.");
+        }
+      } finally {
+        integrationsSavePending = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
+      }
+    }
+
+    let adminSyncing = false;
+
+    async function runAdminSync() {
+      if (adminSyncing) return;
+      adminSyncing = true;
+      const btn = document.getElementById("settings-sync-btn");
+      if (btn) btn.classList.add("is-syncing");
+
+      try {
+        // Check for service worker updates
+        if ("serviceWorker" in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+              await registration.update();
+              if (registration.waiting) {
+                navigator.serviceWorker.addEventListener("controllerchange", () => {
+                  window.location.reload();
+                }, { once: true });
+                registration.waiting.postMessage({ type: "SKIP_WAITING" });
+                return; // Page will reload
+              }
+            }
+          } catch {
+            // SW not available — ignore
+          }
+        }
+
+        await refreshAdminData();
+        localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
+        updateAdminLastSyncedLabel();
+        showToast("Sync complete.");
+      } finally {
+        adminSyncing = false;
+        const b = document.getElementById("settings-sync-btn");
+        if (b) b.classList.remove("is-syncing");
+      }
+    }
+
+    function handleSettingsMemberListClick(event) {
+      const removeBtn = event.target.closest("[data-member-remove]");
+      if (removeBtn) {
+        pendingMemberRemovalIndex = parseInt(removeBtn.getAttribute("data-member-remove"), 10);
+        renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+        return;
+      }
+
+      const cancelBtn = event.target.closest("[data-member-cancel]");
+      if (cancelBtn) {
+        pendingMemberRemovalIndex = null;
+        renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+        return;
+      }
+
+      const confirmBtn = event.target.closest("[data-member-confirm]");
+      if (!confirmBtn) return;
+
+      const idx = parseInt(confirmBtn.getAttribute("data-member-confirm"), 10);
+      const members = adminHouseholdSettings.display_settings.members || [];
+      if (!members[idx]) {
+        return;
+      }
+      const updated = members.filter((_, i) => i !== idx);
+      persistMemberList(updated, `${members[idx].name} removed.`);
+    }
+
+    async function handleSettingsMemberAdd() {
+      const input = document.getElementById("settings-member-input");
+      if (!input || membersSavePending) return;
+      const name = input.value.trim();
+      if (!name) return;
+
+      const members = adminHouseholdSettings.display_settings.members || [];
+      if (members.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
+        showToast(`"${name}" is already a member.`);
+        return;
+      }
+
+      const color = PERSON_COLOR_PALETTE[members.length % PERSON_COLOR_PALETTE.length];
+      const updated = [...members, { name, color }];
+      const didSave = await persistMemberList(updated, `${name} added.`);
+      if (didSave) {
+        input.value = "";
+        input.focus();
+      }
+    }
+
+    function handleSettingsScreenOrderClick(event) {
+      const btn = event.target.closest("[data-order-dir]");
+      if (!btn || btn.disabled) return;
+
+      const dir = btn.getAttribute("data-order-dir");
+      const idx = parseInt(btn.getAttribute("data-order-index"), 10);
+      const ds = adminHouseholdSettings.display_settings;
+      const order = Array.isArray(ds.screen_order) ? [...ds.screen_order] : [...CONFIGURABLE_SCREENS];
+
+      const swapIdx = dir === "up" ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= order.length) return;
+
+      [order[idx], order[swapIdx]] = [order[swapIdx], order[idx]];
+      ds.screen_order = order;
+      renderSettingsScreenOrder(order);
+    }
+
+    function enforceMinOneActiveScreen() {
+      const checkboxes = Array.from(document.querySelectorAll("#settings-screen-toggles [type='checkbox']"));
+      const checkedBoxes = checkboxes.filter((cb) => cb.checked);
+      checkboxes.forEach((cb) => {
+        // Disable the last checked box so the user can't uncheck it
+        cb.disabled = checkedBoxes.length === 1 && cb.checked;
+      });
+    }
+
+    function handleSettingsScreenToggleChange() {
+      // Update state so renderSettingsScreenOrder shows the right active/inactive styling
+      const ds = adminHouseholdSettings.display_settings;
+      ds.active_screens = CONFIGURABLE_SCREENS.filter((name) => {
+        const cb = document.querySelector(`[name="screen_${name}"]`);
+        return cb && cb.checked;
+      });
+      const order = Array.isArray(ds.screen_order) ? ds.screen_order : [...CONFIGURABLE_SCREENS];
+      renderSettingsScreenOrder(order);
+      enforceMinOneActiveScreen();
+    }
+
+    function initSettingsListeners() {
+      const memberList = document.getElementById("settings-members-list");
+      if (memberList) memberList.addEventListener("click", handleSettingsMemberListClick);
+
+      const memberAddBtn = document.getElementById("settings-member-add-btn");
+      if (memberAddBtn) memberAddBtn.addEventListener("click", handleSettingsMemberAdd);
+
+      const memberInput = document.getElementById("settings-member-input");
+      if (memberInput) {
+        memberInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") { e.preventDefault(); handleSettingsMemberAdd(); }
+        });
+      }
+
+      const screenToggles = document.getElementById("settings-screen-toggles");
+      if (screenToggles) screenToggles.addEventListener("change", handleSettingsScreenToggleChange);
+
+      const screenOrder = document.getElementById("settings-screen-order");
+      if (screenOrder) screenOrder.addEventListener("click", handleSettingsScreenOrderClick);
+
+      const assistantSave = document.getElementById("settings-assistant-save");
+      if (assistantSave) assistantSave.addEventListener("click", saveAssistantSection);
+
+      const displaySave = document.getElementById("settings-display-save");
+      if (displaySave) displaySave.addEventListener("click", saveDisplaySection);
+
+      const integrationsSave = document.getElementById("settings-integrations-save");
+      if (integrationsSave) integrationsSave.addEventListener("click", saveIntegrationsSection);
+
+      const syncBtn = document.getElementById("settings-sync-btn");
+      if (syncBtn) syncBtn.addEventListener("click", runAdminSync);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
     function initAdminMode() {
       document.body.classList.add("admin-mode");
       displayApp.hidden = true;
@@ -1740,7 +2366,18 @@
       if (adminCalNextBtn) adminCalNextBtn.addEventListener("click", handleAdminCalNext);
       const adminVersionEl = document.getElementById("admin-version-label");
       if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
+      setAdminConfigDependentUiDisabled(true);
+      updateAdminLastSyncedLabel();
+      window.setInterval(updateAdminLastSyncedLabel, 30000);
       loadAdminTodos();
       loadAdminMealPlan();
+      initSettingsListeners();
+      ensureAdminHouseholdConfigLoaded()
+        .then(() => {
+          if (adminScreen === "settings") {
+            loadAdminSettings();
+          }
+        })
+        .catch(() => showToast("Couldn’t load household settings."));
       refreshIcons();
     }
