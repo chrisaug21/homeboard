@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.9.1";
+    const VERSION = "0.9.2";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -435,7 +435,9 @@
         name: row.name || "Unnamed RSVP",
         attending: row.attending === true,
         guestCount: Math.max(0, parseInt(row.guest_count, 10) || 0),
-        createdAt: row.created_at || null
+        createdAt: row.created_at || null,
+        status: row.status || "active",
+        mergedIntoPartyId: row.merged_into_party_id || null
       };
     }
 
@@ -450,7 +452,9 @@
     }
 
     function buildWeddingRsvpSnapshot(rsvps, invitedParties) {
-      const rsvpList = Array.isArray(rsvps) ? rsvps : [];
+      const allRsvps = Array.isArray(rsvps) ? rsvps : [];
+      const rsvpList = allRsvps.filter((rsvp) => rsvp.status === "active");
+      const supersededRsvps = allRsvps.filter((rsvp) => rsvp.status === "superseded");
       const partyList = Array.isArray(invitedParties) ? invitedParties : [];
       const rsvpById = new Map(rsvpList.map((rsvp) => [rsvp.id, rsvp]));
       const hydratedParties = partyList.map((party) => ({
@@ -461,6 +465,9 @@
         party.matchScore = party.linkedRsvp
           ? scoreInvitedPartyMatch(party.linkedRsvp.name, party.name)
           : null;
+        party.supersededRsvps = supersededRsvps
+          .filter((rsvp) => rsvp.mergedIntoPartyId === party.id)
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       });
       const matchedRsvpIds = new Set(
         hydratedParties
@@ -582,10 +589,20 @@
         return null;
       }
 
-      const [{ data: rsvpRows, error: rsvpError }, { data: partyRows, error: partyError }] = await Promise.all([
+      const [
+        { data: activeRsvpRows, error: activeRsvpError },
+        { data: supersededRsvpRows, error: supersededRsvpError },
+        { data: partyRows, error: partyError }
+      ] = await Promise.all([
         client
           .from("rsvps")
-          .select("id, name, attending, guest_count, created_at")
+          .select("id, name, attending, guest_count, created_at, status, merged_into_party_id")
+          .eq("status", "active")
+          .order("created_at", { ascending: false }),
+        client
+          .from("rsvps")
+          .select("id, name, attending, guest_count, created_at, status, merged_into_party_id")
+          .eq("status", "superseded")
           .order("created_at", { ascending: false }),
         client
           .from("invited_parties")
@@ -593,12 +610,15 @@
           .order("name", { ascending: true })
       ]);
 
-      if (rsvpError || partyError || !Array.isArray(rsvpRows) || !Array.isArray(partyRows)) {
+      if (
+        activeRsvpError || supersededRsvpError || partyError
+        || !Array.isArray(activeRsvpRows) || !Array.isArray(supersededRsvpRows) || !Array.isArray(partyRows)
+      ) {
         return null;
       }
 
       return buildWeddingRsvpSnapshot(
-        rsvpRows.map(mapWeddingRsvp),
+        [...activeRsvpRows, ...supersededRsvpRows].map(mapWeddingRsvp),
         partyRows.map(mapInvitedParty)
       );
     }

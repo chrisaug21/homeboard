@@ -131,6 +131,9 @@
       --sage-soft: rgba(34, 197, 94, 0.14);
       --rsvp-clear: #4ade80;
       --rsvp-flagged: #f59e0b;
+      --rsvp-pending-bg: rgba(59, 130, 246, 0.18);
+      --rsvp-review-bg-clear: rgba(34, 197, 94, 0.18);
+      --rsvp-review-bg-flagged: rgba(245, 158, 11, 0.18);
       --rose: #fb7185;
       --rose-soft: rgba(251, 113, 133, 0.14);
       --shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
@@ -158,6 +161,9 @@
       --sage-soft: rgba(13, 148, 136, 0.13);
       --rsvp-clear: #0f766e;
       --rsvp-flagged: #ca8a04;
+      --rsvp-pending-bg: rgba(59, 130, 246, 0.14);
+      --rsvp-review-bg-clear: rgba(13, 148, 136, 0.16);
+      --rsvp-review-bg-flagged: rgba(202, 138, 4, 0.16);
       --rose: #be123c;
       --rose-soft: rgba(190, 18, 60, 0.11);
       --shadow: 0 18px 44px rgba(15, 23, 42, 0.11);
@@ -1577,15 +1583,6 @@
       color: var(--muted);
     }
 
-    .hero-meta-line--review {
-      border: 0;
-      background: none;
-      padding: 0;
-      color: var(--rsvp-flagged);
-      cursor: pointer;
-      font: inherit;
-    }
-
     .hero-number {
       font-family: "Bricolage Grotesque", Manrope, sans-serif;
       font-size: 5.8rem;
@@ -1623,10 +1620,17 @@
     }
 
     .breakdown-row small {
-      margin-top: 4px;
       font-size: 0.78rem;
       font-weight: 600;
       color: var(--muted);
+    }
+
+    .breakdown-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-top: 4px;
+      flex-wrap: wrap;
     }
 
     .breakdown-row--button {
@@ -1662,11 +1666,11 @@
     }
 
     .breakdown-row:nth-child(2) {
-      background: rgba(255, 240, 228, 0.42);
+      background: var(--rsvp-pending-bg);
     }
 
     .breakdown-row:nth-child(3) {
-      background: rgba(244, 232, 236, 0.5);
+      background: var(--rsvp-review-bg-clear);
     }
 
     .names-card {
@@ -1773,6 +1777,14 @@
 
     .rsvp-stat-value--flagged {
       color: var(--rsvp-flagged);
+    }
+
+    #rsvp-review-trigger.breakdown-row--disabled {
+      background: var(--rsvp-review-bg-clear);
+    }
+
+    #rsvp-review-trigger:not(.breakdown-row--disabled) {
+      background: var(--rsvp-review-bg-flagged);
     }
 
     .name-pill--attending .name-status {

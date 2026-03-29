@@ -173,8 +173,6 @@
       document.getElementById("rsvp-review-count").innerHTML = sk("38px", 20);
       document.getElementById("rsvp-names-title").innerHTML = sk("90px", 14);
       document.getElementById("rsvp-names").innerHTML = Array.from({ length: 8 }, skPill).join("");
-      const reviewHeroTrigger = document.getElementById("rsvp-review-hero-trigger");
-      if (reviewHeroTrigger) reviewHeroTrigger.hidden = true;
     }
 
     async function retryCalendar() {
@@ -253,8 +251,6 @@
       document.getElementById("rsvp-pending-count").textContent = "\u2014";
       document.getElementById("rsvp-review-count").textContent = "\u2014";
       document.getElementById("rsvp-names-title").textContent = "";
-      const reviewHeroTrigger = document.getElementById("rsvp-review-hero-trigger");
-      if (reviewHeroTrigger) reviewHeroTrigger.hidden = true;
       const list = document.getElementById("rsvp-names");
       list.innerHTML = `
         <div class="screen-error">
@@ -1203,7 +1199,6 @@
       document.getElementById("rsvp-names-title").textContent = "Guest List";
       const reviewCountEl = document.getElementById("rsvp-review-count");
       const reviewTrigger = document.getElementById("rsvp-review-trigger");
-      const reviewHeroTrigger = document.getElementById("rsvp-review-hero-trigger");
       if (reviewCountEl) {
         reviewCountEl.classList.toggle("rsvp-stat-value--clear", reviewCount === 0);
         reviewCountEl.classList.toggle("rsvp-stat-value--flagged", reviewCount > 0);
@@ -1211,10 +1206,6 @@
       if (reviewTrigger) {
         reviewTrigger.disabled = reviewCount === 0;
         reviewTrigger.classList.toggle("breakdown-row--disabled", reviewCount === 0);
-      }
-      if (reviewHeroTrigger) {
-        reviewHeroTrigger.hidden = reviewCount === 0;
-        reviewHeroTrigger.textContent = `${reviewCount} to review`;
       }
 
       if (!attendingRows.length) {
@@ -1788,7 +1779,6 @@
       const declinedTrigger = document.getElementById("rsvp-declined-trigger");
       const pendingTrigger = document.getElementById("rsvp-pending-trigger");
       const reviewTrigger = document.getElementById("rsvp-review-trigger");
-      const reviewHeroTrigger = document.getElementById("rsvp-review-hero-trigger");
       if (declinedTrigger) {
         declinedTrigger.addEventListener("click", () => {
           const declinedNames = (cachedWeddingSnapshot?.invitedParties || [])
@@ -1810,9 +1800,6 @@
       }
       if (reviewTrigger) {
         reviewTrigger.addEventListener("click", openRsvpReviewModal);
-      }
-      if (reviewHeroTrigger) {
-        reviewHeroTrigger.addEventListener("click", openRsvpReviewModal);
       }
 
       refreshIcons();

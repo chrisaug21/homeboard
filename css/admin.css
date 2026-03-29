@@ -1323,6 +1323,52 @@
       color: var(--ink);
     }
 
+    .admin-rsvp-compare-card strong input {
+      margin-right: 8px;
+    }
+
+    .admin-rsvp-linked-audit {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .admin-rsvp-linked-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(245, 240, 232, 0.76);
+      border: 1px solid rgba(124, 96, 69, 0.1);
+    }
+
+    .admin-rsvp-linked-item--muted {
+      opacity: 0.72;
+    }
+
+    .admin-rsvp-audit-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .admin-rsvp-audit-pill--primary {
+      background: rgba(220, 239, 220, 0.95);
+      color: #166534;
+    }
+
+    .admin-rsvp-audit-pill--secondary {
+      background: rgba(120, 113, 108, 0.16);
+      color: var(--muted);
+    }
+
     .admin-modal-photo-pending[hidden] {
       display: none;
     }

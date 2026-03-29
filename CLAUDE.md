@@ -48,6 +48,10 @@ netlify.toml        — build config, env var injection via sed
 - `invited_parties` — wedding invite list with `name`, `invited_count`, nullable `rsvp_id`, and `created_at`; this is the source of truth for matched vs pending invite parties
 
 ## Wedding RSVP Logic
+- RSVP soft delete uses `rsvps.status`, never hard delete rows
+- Status values: `active` and `superseded`
+- `rsvps.merged_into_party_id` is the explicit link from a superseded RSVP to the invited party it was merged into
+- All RSVP queries used for counts, matching, or display must read `status = 'active'` only
 - Homeboard wedding counts must derive from `rsvps` + `invited_parties`, not from hardcoded totals or subtraction from `households.total_invited_guests`
 - `Attending` = matched attending people only; use the linked RSVP guest count, clamped to the invited party count if an RSVP overstates guests so totals stay consistent
 - `Declined` = full declines plus partial declines (`invited_count - guest_count` when a matched attending RSVP brings fewer guests than invited)
@@ -61,6 +65,7 @@ netlify.toml        — build config, env var injection via sed
   3. full-string similarity is weighted lower
 - Needs Review categories: `Unmatched`, `Duplicate`, `Count mismatch`, `Low confidence`
 - Display mode and admin mode use the same matching helper. High-confidence matches may auto-link on refresh and should log to the browser console. If the best match is already linked above the duplicate threshold, flag it as `Duplicate` instead of auto-linking.
+- Duplicate review modals support merge: choose the primary RSVP, edit the merged guest count, set the secondary RSVP to `superseded`, set its `merged_into_party_id`, link the primary RSVP to the invited party, and save the primary guest count.
 - RSVP review actions live in the shared admin bottom-sheet modal. A resolved issue should disappear from the Needs Review list after the modal action completes.
 
 ## display_settings JSONB shape

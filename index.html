@@ -45,6 +45,9 @@
       --sage-soft: #dcefdc;
       --rsvp-clear: #15803d;
       --rsvp-flagged: #b45309;
+      --rsvp-pending-bg: rgba(191, 219, 254, 0.42);
+      --rsvp-review-bg-clear: rgba(220, 239, 220, 0.72);
+      --rsvp-review-bg-flagged: rgba(247, 217, 170, 0.45);
       --rose: #a64c63;
       --rose-soft: #f8dce3;
       --shadow: 0 18px 44px rgba(98, 73, 46, 0.12);
@@ -176,18 +179,17 @@
                 </div>
                 <div class="hero-meta">
                   <div class="hero-meta-line" id="rsvp-parties-responded">0 / 0 parties responded</div>
-                  <button class="hero-meta-line hero-meta-line--review" type="button" id="rsvp-review-hero-trigger" hidden>0 to review</button>
                 </div>
               </div>
               <div class="breakdown-card">
                 <button class="breakdown-row breakdown-row--button" type="button" id="rsvp-declined-trigger">
-                  <span>Declined</span><strong id="rsvp-declined-count">8</strong><small>guests not coming</small>
+                  <span>Declined</span><div class="breakdown-value-row"><strong id="rsvp-declined-count">8</strong><small>guests not coming</small></div>
                 </button>
                 <button class="breakdown-row breakdown-row--button" type="button" id="rsvp-pending-trigger">
-                  <span>Pending</span><strong id="rsvp-pending-count">10</strong><small>still to hear from</small>
+                  <span>Pending</span><div class="breakdown-value-row"><strong id="rsvp-pending-count">10</strong><small>still to hear from</small></div>
                 </button>
                 <button class="breakdown-row breakdown-row--button" type="button" id="rsvp-review-trigger">
-                  <span>Review RSVPs</span><strong id="rsvp-review-count">0</strong><small>needs attention</small>
+                  <span>Review RSVPs</span><div class="breakdown-value-row"><strong id="rsvp-review-count">0</strong><small>needs attention</small></div>
                 </button>
               </div>
               <div class="names-card">
