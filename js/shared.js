@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.8.3";
+    const VERSION = "0.9.0";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -38,6 +38,8 @@
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const RSVP_RETIRE_AFTER_DATE = "2026-10-10";
+    const RSVP_MATCH_SUGGESTION_THRESHOLD = 2.2;
+    const RSVP_MATCH_AUTO_LINK_THRESHOLD = 6.4;
 
     const mealTypeOptions = [
       {
@@ -298,6 +300,221 @@
 
       const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
       return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+    }
+
+    function normalizeMatchName(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function getMatchTokens(value) {
+      return normalizeMatchName(value)
+        .split(" ")
+        .map((token) => token.trim())
+        .filter(Boolean);
+    }
+
+    function getLastNameToken(value) {
+      const tokens = getMatchTokens(value);
+      return tokens.length ? tokens[tokens.length - 1] : "";
+    }
+
+    function buildBigrams(value) {
+      const normalized = normalizeMatchName(value).replace(/\s+/g, "");
+      if (!normalized) return [];
+      if (normalized.length === 1) return [normalized];
+      const bigrams = [];
+      for (let index = 0; index < normalized.length - 1; index += 1) {
+        bigrams.push(normalized.slice(index, index + 2));
+      }
+      return bigrams;
+    }
+
+    function getDiceCoefficient(a, b) {
+      const first = buildBigrams(a);
+      const second = buildBigrams(b);
+      if (!first.length || !second.length) {
+        return 0;
+      }
+      const remaining = [...second];
+      let matches = 0;
+      first.forEach((token) => {
+        const idx = remaining.indexOf(token);
+        if (idx !== -1) {
+          matches += 1;
+          remaining.splice(idx, 1);
+        }
+      });
+      return (2 * matches) / (first.length + second.length);
+    }
+
+    function scoreInvitedPartyMatch(rsvpName, partyName) {
+      const normalizedRsvp = normalizeMatchName(rsvpName);
+      const normalizedParty = normalizeMatchName(partyName);
+      if (!normalizedRsvp || !normalizedParty) {
+        return 0;
+      }
+
+      const rsvpTokens = getMatchTokens(normalizedRsvp);
+      const partyTokens = getMatchTokens(normalizedParty);
+      const overlapCount = rsvpTokens.filter((token) => partyTokens.includes(token)).length;
+      const lastNameMatches = getLastNameToken(normalizedRsvp) && getLastNameToken(normalizedRsvp) === getLastNameToken(normalizedParty);
+      const firstNameMatches = rsvpTokens[0] && rsvpTokens[0] === partyTokens[0];
+      const exactMatch = normalizedRsvp === normalizedParty;
+      const stringSimilarity = getDiceCoefficient(normalizedRsvp, normalizedParty);
+
+      let score = 0;
+      if (lastNameMatches) score += 4.2;
+      if (firstNameMatches) score += 1.2;
+      if (overlapCount > 0) score += Math.min(2.4, overlapCount * 1.2);
+      if (exactMatch) score += 2.4;
+      score += stringSimilarity * 2.4;
+
+      return Number(score.toFixed(3));
+    }
+
+    function getInvitedPartySuggestions(rsvpName, invitedParties, limit = 3) {
+      return (Array.isArray(invitedParties) ? invitedParties : [])
+        .map((party) => ({
+          ...party,
+          matchScore: scoreInvitedPartyMatch(rsvpName, party.name)
+        }))
+        .filter((party) => party.matchScore >= RSVP_MATCH_SUGGESTION_THRESHOLD)
+        .sort((a, b) => {
+          if (b.matchScore !== a.matchScore) {
+            return b.matchScore - a.matchScore;
+          }
+          return String(a.name || "").localeCompare(String(b.name || ""));
+        })
+        .slice(0, limit);
+    }
+
+    function isHighConfidenceRsvpMatch(score) {
+      return Number(score) >= RSVP_MATCH_AUTO_LINK_THRESHOLD;
+    }
+
+    function mapWeddingRsvp(row) {
+      return {
+        id: row.id,
+        name: row.name || "Unnamed RSVP",
+        attending: row.attending === true,
+        guestCount: Math.max(0, parseInt(row.guest_count, 10) || 0),
+        createdAt: row.created_at || null
+      };
+    }
+
+    function mapInvitedParty(row) {
+      return {
+        id: row.id,
+        name: row.name || "Unnamed Party",
+        invitedCount: Math.max(0, parseInt(row.invited_count, 10) || 0),
+        rsvpId: row.rsvp_id || null,
+        createdAt: row.created_at || null
+      };
+    }
+
+    function buildWeddingRsvpSnapshot(rsvps, invitedParties) {
+      const rsvpList = Array.isArray(rsvps) ? rsvps : [];
+      const partyList = Array.isArray(invitedParties) ? invitedParties : [];
+      const rsvpById = new Map(rsvpList.map((rsvp) => [rsvp.id, rsvp]));
+      const hydratedParties = partyList.map((party) => ({
+        ...party,
+        linkedRsvp: party.rsvpId ? (rsvpById.get(party.rsvpId) || null) : null
+      }));
+      const matchedRsvpIds = new Set(
+        hydratedParties
+          .map((party) => party.rsvpId)
+          .filter(Boolean)
+      );
+
+      return {
+        rsvps: rsvpList,
+        invitedParties: hydratedParties,
+        unmatchedRsvps: rsvpList.filter((rsvp) => !matchedRsvpIds.has(rsvp.id))
+      };
+    }
+
+    async function fetchWeddingRsvpSnapshot() {
+      const client = getSupabaseClient();
+      if (!client) {
+        return null;
+      }
+
+      const [{ data: rsvpRows, error: rsvpError }, { data: partyRows, error: partyError }] = await Promise.all([
+        client
+          .from("rsvps")
+          .select("id, name, attending, guest_count, created_at")
+          .order("created_at", { ascending: false }),
+        client
+          .from("invited_parties")
+          .select("id, name, invited_count, rsvp_id, created_at")
+          .order("name", { ascending: true })
+      ]);
+
+      if (rsvpError || partyError || !Array.isArray(rsvpRows) || !Array.isArray(partyRows)) {
+        return null;
+      }
+
+      return buildWeddingRsvpSnapshot(
+        rsvpRows.map(mapWeddingRsvp),
+        partyRows.map(mapInvitedParty)
+      );
+    }
+
+    async function autoLinkHighConfidenceRsvps(snapshot, options = {}) {
+      const client = getSupabaseClient();
+      if (!client || !snapshot) {
+        return snapshot;
+      }
+
+      const logPrefix = options.logPrefix || "[rsvp-auto-match]";
+      const availableParties = snapshot.invitedParties
+        .filter((party) => !party.rsvpId)
+        .map((party) => ({ ...party }));
+      const updates = [];
+
+      snapshot.unmatchedRsvps.forEach((rsvp) => {
+        const suggestions = getInvitedPartySuggestions(rsvp.name, availableParties, 1);
+        const bestMatch = suggestions[0];
+        if (!bestMatch || !isHighConfidenceRsvpMatch(bestMatch.matchScore)) {
+          return;
+        }
+        updates.push({
+          invitedPartyId: bestMatch.id,
+          rsvpId: rsvp.id,
+          invitedPartyName: bestMatch.name,
+          rsvpName: rsvp.name,
+          score: bestMatch.matchScore
+        });
+        const removeIndex = availableParties.findIndex((party) => party.id === bestMatch.id);
+        if (removeIndex !== -1) {
+          availableParties.splice(removeIndex, 1);
+        }
+      });
+
+      if (!updates.length) {
+        return snapshot;
+      }
+
+      for (const update of updates) {
+        const { error } = await client
+          .from("invited_parties")
+          .update({ rsvp_id: update.rsvpId })
+          .eq("id", update.invitedPartyId)
+          .is("rsvp_id", null);
+
+        if (!error) {
+          console.log(
+            `${logPrefix} linked "${update.invitedPartyName}" to "${update.rsvpName}" (${update.score.toFixed(2)})`
+          );
+        }
+      }
+
+      const refreshed = await fetchWeddingRsvpSnapshot();
+      return refreshed || snapshot;
     }
 
     // Returns { cssClass, label } for a due date urgency pill, or null if no due date.

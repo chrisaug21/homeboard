@@ -34,6 +34,19 @@ netlify.toml        — build + env var injection via sed
 | `meal_plan_notes` | One note per household per week. Keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` = Lucide icon name string |
 | `rsvps` | Wedding table — **do not modify schema** |
+| `invited_parties` | Wedding invite list. `rsvp_id` null = pending; set = matched to an RSVP row |
+
+## RSVP Matching
+- Wedding RSVP counts on Homeboard must come from `rsvps` + `invited_parties`, never from hardcoded totals or subtraction from `households.total_invited_guests`
+- `Confirmed attending` = sum of `rsvps.guest_count` where `attending = true`
+- `Declined` = sum of `invited_parties.invited_count` where `rsvp_id` is set and the linked RSVP has `attending = false`
+- `Pending` = sum of `invited_parties.invited_count` where `rsvp_id` is null
+- `Responded` = count of matched `invited_parties` rows
+- Fuzzy matching logic is shared between display/admin auto-linking and manual suggestions:
+  1. last-word exact match carries the most weight
+  2. word overlap carries medium weight
+  3. full-string similarity carries lower weight
+- High-confidence fuzzy matches may auto-link unmatched RSVPs to unmatched `invited_parties` rows during regular refreshes; log those auto-links to the browser console
 
 ## display_settings JSONB shape
 ```json

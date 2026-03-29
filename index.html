@@ -174,12 +174,16 @@
                 </div>
               </div>
               <div class="breakdown-card">
-                <div class="breakdown-row"><span>Responses</span><strong id="rsvp-attending-count">34</strong></div>
-                <div class="breakdown-row"><span>Declined</span><strong id="rsvp-declined-count">8</strong></div>
-                <div class="breakdown-row"><span>Pending</span><strong id="rsvp-pending-count">10</strong></div>
+                <div class="breakdown-row"><span>Responded</span><strong id="rsvp-responded-count">34</strong></div>
+                <button class="breakdown-row breakdown-row--button" type="button" id="rsvp-declined-trigger">
+                  <span>Declined</span><strong id="rsvp-declined-count">8</strong>
+                </button>
+                <button class="breakdown-row breakdown-row--button" type="button" id="rsvp-pending-trigger">
+                  <span>Pending</span><strong id="rsvp-pending-count">10</strong>
+                </button>
               </div>
               <div class="names-card">
-                <div class="names-title" id="rsvp-names-title">Attending Names</div>
+                <div class="names-title" id="rsvp-names-title">Guest List</div>
                 <div class="names-list">
                   <div class="names-scroll" id="rsvp-names"></div>
                 </div>
@@ -221,6 +225,17 @@
           <button class="display-modal-close" type="button" id="event-detail-close" aria-label="Close"><i data-lucide="x"></i></button>
         </div>
         <div class="display-modal-body" id="event-detail-body"></div>
+      </div>
+    </div>
+
+    <div class="display-modal" id="rsvp-detail-modal" hidden role="dialog" aria-modal="true" aria-labelledby="rsvp-detail-title">
+      <div class="display-modal-backdrop" id="rsvp-detail-backdrop"></div>
+      <div class="display-modal-sheet">
+        <div class="display-modal-header">
+          <h2 class="display-modal-title" id="rsvp-detail-title"></h2>
+          <button class="display-modal-close" type="button" id="rsvp-detail-close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="display-modal-body" id="rsvp-detail-body"></div>
       </div>
     </div>
   </div>
@@ -463,24 +478,42 @@
         </section>
 
       </section>
+
+      <section class="admin-screen" id="admin-screen-rsvp" data-admin-screen="rsvp" hidden>
+        <section class="admin-panel" aria-labelledby="admin-rsvp-unmatched-title">
+          <h2 class="admin-panel-title" id="admin-rsvp-unmatched-title">Unmatched RSVPs</h2>
+          <p class="admin-panel-note" id="admin-rsvp-unmatched-note">Loading RSVP matches…</p>
+          <div class="admin-list" id="admin-rsvp-unmatched-list"></div>
+        </section>
+
+        <section class="admin-panel" aria-labelledby="admin-rsvp-guest-list-title">
+          <h2 class="admin-panel-title" id="admin-rsvp-guest-list-title">Full Guest List</h2>
+          <p class="admin-panel-note" id="admin-rsvp-guest-list-note">Loading invited parties…</p>
+          <div class="admin-list" id="admin-rsvp-guest-list"></div>
+        </section>
+      </section>
     </div>
 
     <nav class="admin-nav" aria-label="Admin navigation">
       <button class="admin-nav-button is-active" type="button" data-admin-nav="todos" aria-current="page">
         <i data-lucide="list-todo"></i>
-        <span>Todos</span>
+        <span>To-do</span>
       </button>
       <button class="admin-nav-button" type="button" data-admin-nav="meal-plan">
         <i data-lucide="utensils-crossed"></i>
-        <span>Meal Plan</span>
+        <span>Meals</span>
       </button>
       <button class="admin-nav-button" type="button" data-admin-nav="countdowns">
         <i data-lucide="sparkles"></i>
-        <span>Countdowns</span>
+        <span>Events</span>
       </button>
       <button class="admin-nav-button" type="button" data-admin-nav="settings">
         <i data-lucide="settings-2"></i>
         <span>Settings</span>
+      </button>
+      <button class="admin-nav-button" type="button" data-admin-nav="rsvp">
+        <i data-lucide="heart"></i>
+        <span>RSVP</span>
       </button>
     </nav>
   </div>

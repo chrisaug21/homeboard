@@ -20,6 +20,7 @@
     let cachedHouseholdConfig = null;
     let cachedSupabaseCountdowns = null;
     let cachedCalendarCountdowns = [];
+    let cachedWeddingSnapshot = null;
     let monthOffset = 0;
     let weekOffset = 0;
     let lastWideFetch = 0; // ms timestamp of last 24-month fetch
@@ -166,7 +167,7 @@
 
       document.getElementById("rsvp-total").innerHTML = sk("80px", 52, "border-radius:10px;");
       document.getElementById("rsvp-total-label").innerHTML = sk("130px", 12, "margin-top:6px;");
-      document.getElementById("rsvp-attending-count").innerHTML = sk("38px", 20);
+      document.getElementById("rsvp-responded-count").innerHTML = sk("38px", 20);
       document.getElementById("rsvp-declined-count").innerHTML = sk("38px", 20);
       document.getElementById("rsvp-pending-count").innerHTML = sk("38px", 20);
       document.getElementById("rsvp-names-title").innerHTML = sk("90px", 14);
@@ -244,7 +245,7 @@
       stopRsvpAutoScroll();
       document.getElementById("rsvp-total").textContent = "\u2014";
       document.getElementById("rsvp-total-label").textContent = "";
-      document.getElementById("rsvp-attending-count").textContent = "\u2014";
+      document.getElementById("rsvp-responded-count").textContent = "\u2014";
       document.getElementById("rsvp-declined-count").textContent = "\u2014";
       document.getElementById("rsvp-pending-count").textContent = "\u2014";
       document.getElementById("rsvp-names-title").textContent = "";
@@ -495,33 +496,16 @@
       });
     }
 
-    function mapSupabaseRsvp(row) {
-      const guestCount = Number(row.guest_count);
-
-      return {
-        name: row.name || "Unnamed Guest",
-        attending: row.attending,
-        guestCount: Number.isFinite(guestCount) && guestCount > 0 ? guestCount : 1
-      };
-    }
-
-    async function fetchRsvps() {
-      const client = getSupabaseClient();
-
-      if (!client) {
+    async function fetchWeddingSnapshotWithAutoMatch() {
+      const snapshot = await fetchWeddingRsvpSnapshot();
+      if (!snapshot) {
         return null;
       }
-
-      const { data, error } = await client
-        .from("rsvps")
-        .select("name, attending, guest_count")
-        .order("name", { ascending: true });
-
-      if (error || !Array.isArray(data)) {
-        return null;
-      }
-
-      return data.map(mapSupabaseRsvp);
+      const nextSnapshot = await autoLinkHighConfidenceRsvps(snapshot, {
+        logPrefix: "[display-rsvp-auto-match]"
+      });
+      cachedWeddingSnapshot = nextSnapshot;
+      return nextSnapshot;
     }
 
     function buildCalendarEventsMap(items) {
@@ -1169,28 +1153,9 @@
       resolveScreen("countdowns");
     }
 
-    function getRsvpStatusLabel(attending) {
-      if (attending === true) {
-        return "Attending";
-      }
-
-      if (attending === false) {
-        return "Declined";
-      }
-
-      return "Pending";
-    }
-
-    function getRsvpStatusClass(attending) {
-      if (attending === true) {
-        return " name-pill--attending";
-      }
-
-      if (attending === false) {
-        return " name-pill--declined";
-      }
-
-      return " name-pill--pending";
+    function formatGuestCountLabel(count) {
+      const safeCount = Math.max(0, Number(count) || 0);
+      return `${safeCount} ${safeCount === 1 ? "guest" : "guests"}`;
     }
 
     function shouldHideRsvpScreen() {
@@ -1210,46 +1175,48 @@
       }
     }
 
-    function renderRsvpBoard(rows, totalInvitedGuests) {
+    function renderRsvpBoard(snapshot) {
       const list = document.getElementById("rsvp-names");
-      const attendingGuests = rows
+      const parties = snapshot.invitedParties || [];
+      const rsvps = snapshot.rsvps || [];
+      const attendingGuests = rsvps
         .filter((row) => row.attending === true)
         .reduce((sum, row) => sum + row.guestCount, 0);
-      const responseCount = rows.filter((row) => row.attending === true).length;
-      const declinedGuests = rows
-        .filter((row) => row.attending === false)
-        .reduce((sum, row) => sum + row.guestCount, 0);
-      const invitedTotal = Number(totalInvitedGuests) || 0;
-      const pendingGuests = invitedTotal > 0
-        ? Math.max(0, invitedTotal - attendingGuests - declinedGuests)
-        : rows.filter((row) => row.attending === null).length;
+      const respondedCount = parties.filter((party) => party.rsvpId).length;
+      const declinedParties = parties.filter((party) => party.linkedRsvp && party.linkedRsvp.attending === false);
+      const pendingParties = parties.filter((party) => !party.rsvpId);
+      const declinedGuests = declinedParties.reduce((sum, party) => sum + party.invitedCount, 0);
+      const pendingGuests = pendingParties.reduce((sum, party) => sum + party.invitedCount, 0);
+      const attendingRows = rsvps
+        .filter((row) => row.attending === true)
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
       document.getElementById("rsvp-total").textContent = String(attendingGuests);
       document.getElementById("rsvp-total-label").textContent = "guests attending so far";
-      document.getElementById("rsvp-attending-count").textContent = String(responseCount);
+      document.getElementById("rsvp-responded-count").textContent = String(respondedCount);
       document.getElementById("rsvp-declined-count").textContent = String(declinedGuests);
       document.getElementById("rsvp-pending-count").textContent = String(pendingGuests);
       document.getElementById("rsvp-names-title").textContent = "Guest List";
 
-      if (!rows.length) {
+      if (!attendingRows.length) {
         stopRsvpAutoScroll();
         list.innerHTML = `
           <div class="name-pill name-pill--pending">
-            <span>No RSVPs yet</span>
-            <span class="name-status">Pending</span>
+            <span>No attending RSVPs yet</span>
+            <span class="name-status">Waiting</span>
           </div>
         `;
         return;
       }
 
-      list.innerHTML = rows.map((row) => `
-        <div class="name-pill${getRsvpStatusClass(row.attending)}">
+      list.innerHTML = attendingRows.map((row) => `
+        <div class="name-pill name-pill--attending">
           <span>${escapeHtml(row.name)}</span>
-          <span class="name-status">${escapeHtml(getRsvpStatusLabel(row.attending))}</span>
+          <span class="name-status">${escapeHtml(formatGuestCountLabel(row.guestCount))}</span>
         </div>
       `).join("");
 
-      startRsvpAutoScroll();
+      stopRsvpAutoScroll();
     }
 
     async function renderRsvpBoardWithData() {
@@ -1263,16 +1230,12 @@
 
       renderRsvpSkeleton();
 
-      const [remoteRsvps, householdConfig] = await Promise.all([
-        fetchRsvps(),
-        fetchHouseholdConfig()
-      ]);
+      const snapshot = await fetchWeddingSnapshotWithAutoMatch();
 
-      if (remoteRsvps === null) {
+      if (snapshot === null) {
         renderRsvpError();
       } else {
-        const totalInvitedGuests = householdConfig ? householdConfig.total_invited_guests : null;
-        renderRsvpBoard(remoteRsvps, totalInvitedGuests);
+        renderRsvpBoard(snapshot);
       }
 
       resolveScreen("rsvp");
@@ -1422,9 +1385,9 @@
 
         // Re-fetch RSVP if visible
         if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
-          const rsvps = await fetchRsvps();
-          if (rsvps !== null) {
-            renderRsvpBoard(rsvps, cachedHouseholdConfig ? cachedHouseholdConfig.total_invited_guests : null);
+          const snapshot = await fetchWeddingSnapshotWithAutoMatch();
+          if (snapshot !== null) {
+            renderRsvpBoard(snapshot);
           }
         }
 
@@ -1642,6 +1605,30 @@
       resetAutoRotate();
     }
 
+    function openRsvpDetailModal(title, names) {
+      const titleEl = document.getElementById("rsvp-detail-title");
+      const bodyEl = document.getElementById("rsvp-detail-body");
+      if (!titleEl || !bodyEl) return;
+
+      titleEl.textContent = title;
+      if (!Array.isArray(names) || !names.length) {
+        bodyEl.innerHTML = `<p class="event-detail-text" style="color:var(--muted);">No parties to show.</p>`;
+      } else {
+        bodyEl.innerHTML = `
+          <div class="rsvp-detail-list">
+            ${names.map((name) => `<div class="rsvp-detail-item">${escapeHtml(name)}</div>`).join("")}
+          </div>
+        `;
+      }
+      document.getElementById("rsvp-detail-modal").hidden = false;
+      resetAutoRotate();
+    }
+
+    function closeRsvpDetailModal() {
+      document.getElementById("rsvp-detail-modal").hidden = true;
+      resetAutoRotate();
+    }
+
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
@@ -1670,6 +1657,9 @@
       window.setInterval(() => {
         const needsWide = (Date.now() - lastWideFetch) >= 24 * 60 * 60 * 1000;
         refreshCalendarData(needsWide);
+        if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
+          renderRsvpBoardWithData();
+        }
       }, 5 * 60 * 1000);
 
       // Week navigation — each click resets the rotation timer
@@ -1752,6 +1742,27 @@
       document.getElementById("event-detail-backdrop").addEventListener("click", closeEventDetailModal);
       document.getElementById("day-detail-close").addEventListener("click", closeDayDetailModal);
       document.getElementById("day-detail-backdrop").addEventListener("click", closeDayDetailModal);
+      document.getElementById("rsvp-detail-close").addEventListener("click", closeRsvpDetailModal);
+      document.getElementById("rsvp-detail-backdrop").addEventListener("click", closeRsvpDetailModal);
+
+      const declinedTrigger = document.getElementById("rsvp-declined-trigger");
+      const pendingTrigger = document.getElementById("rsvp-pending-trigger");
+      if (declinedTrigger) {
+        declinedTrigger.addEventListener("click", () => {
+          const declinedNames = (cachedWeddingSnapshot?.invitedParties || [])
+            .filter((party) => party.linkedRsvp && party.linkedRsvp.attending === false)
+            .map((party) => party.name);
+          openRsvpDetailModal("Declined Parties", declinedNames);
+        });
+      }
+      if (pendingTrigger) {
+        pendingTrigger.addEventListener("click", () => {
+          const pendingNames = (cachedWeddingSnapshot?.invitedParties || [])
+            .filter((party) => !party.rsvpId)
+            .map((party) => party.name);
+          openRsvpDetailModal("Pending Parties", pendingNames);
+        });
+      }
 
       refreshIcons();
     }

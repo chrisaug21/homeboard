@@ -17,6 +17,10 @@
     const adminSavedCountdownsNote = document.getElementById("admin-saved-countdowns-note");
     const adminTodoAddButton = document.getElementById("admin-todo-add-button");
     const adminCountdownAddButton = document.getElementById("admin-countdown-add-button");
+    const adminRsvpUnmatchedList = document.getElementById("admin-rsvp-unmatched-list");
+    const adminRsvpUnmatchedNote = document.getElementById("admin-rsvp-unmatched-note");
+    const adminRsvpGuestList = document.getElementById("admin-rsvp-guest-list");
+    const adminRsvpGuestListNote = document.getElementById("admin-rsvp-guest-list-note");
 
     // Person color palette — distinct from status colors (amber, sage, rose)
     const PERSON_COLOR_PALETTE = [
@@ -81,6 +85,8 @@
     const adminPendingPhotos = new Map();
     let adminCalEvents = [];
     let adminSavedCountdowns = [];
+    let adminWeddingSnapshot = null;
+    let adminRsvpWritePending = false;
     const refreshingCountdowns = new Set();
     let adminCalMonthDate = (() => {
       const d = new Date();
@@ -179,6 +185,35 @@
       }).format(date);
     }
 
+    function formatAdminGuestCount(count) {
+      const safeCount = Math.max(0, Number(count) || 0);
+      return `${safeCount} ${safeCount === 1 ? "guest" : "guests"}`;
+    }
+
+    function getAdminRsvpStatusMeta(party) {
+      if (party.linkedRsvp && party.linkedRsvp.attending === true) {
+        return {
+          label: `Attending • ${formatAdminGuestCount(party.linkedRsvp.guestCount)}`,
+          tone: "admin-rsvp-status--attending",
+          rank: 0
+        };
+      }
+
+      if (party.linkedRsvp && party.linkedRsvp.attending === false) {
+        return {
+          label: "Declined",
+          tone: "admin-rsvp-status--declined",
+          rank: 1
+        };
+      }
+
+      return {
+        label: "Pending",
+        tone: "admin-rsvp-status--pending",
+        rank: 2
+      };
+    }
+
     function showToast(message) {
       window.clearTimeout(toastTimeoutId);
       toastEl.textContent = message;
@@ -250,6 +285,40 @@
       }
       if (event.target.closest("[data-action='close-modal']")) {
         closeAdminModal();
+        return;
+      }
+      const linkSuggestionBtn = event.target.closest("[data-action='link-rsvp-party']");
+      if (linkSuggestionBtn) {
+        const partyId = linkSuggestionBtn.getAttribute("data-party-id");
+        const rsvpId = linkSuggestionBtn.getAttribute("data-rsvp-id");
+        if (partyId && rsvpId) {
+          linkInvitedPartyToRsvp(partyId, rsvpId);
+        }
+        return;
+      }
+      const selectLinkedRsvpBtn = event.target.closest("[data-action='select-linked-rsvp']");
+      if (selectLinkedRsvpBtn) {
+        const form = selectLinkedRsvpBtn.closest("form[data-modal-form='rsvp-party']");
+        if (!form) return;
+        const rsvpIdInput = form.querySelector("[name='linked_rsvp_id']");
+        const label = form.querySelector("[data-role='linked-rsvp-name']");
+        const selectedName = selectLinkedRsvpBtn.getAttribute("data-rsvp-name") || "Matched RSVP";
+        const selectedId = selectLinkedRsvpBtn.getAttribute("data-rsvp-id") || "";
+        if (rsvpIdInput) rsvpIdInput.value = selectedId;
+        if (label) label.textContent = selectedName;
+        form.querySelectorAll(".admin-rsvp-search-result").forEach((row) => row.classList.remove("is-selected"));
+        selectLinkedRsvpBtn.classList.add("is-selected");
+        return;
+      }
+      const unlinkBtn = event.target.closest("[data-action='unlink-rsvp-party']");
+      if (unlinkBtn) {
+        const form = unlinkBtn.closest("form[data-modal-form='rsvp-party']");
+        if (!form) return;
+        const rsvpIdInput = form.querySelector("[name='linked_rsvp_id']");
+        const label = form.querySelector("[data-role='linked-rsvp-name']");
+        if (rsvpIdInput) rsvpIdInput.value = "";
+        if (label) label.textContent = "No linked RSVP";
+        form.querySelectorAll(".admin-rsvp-search-result").forEach((row) => row.classList.remove("is-selected"));
         return;
       }
       if (event.target.closest("[data-action='get-photo-modal']")) {
@@ -331,6 +400,9 @@
         } else {
           saveAdminCountdown(formData);
         }
+      } else if (formType === "rsvp-party") {
+        if (adminRsvpWritePending) return;
+        saveAdminInvitedParty(formData);
       }
     }
 
@@ -1097,6 +1169,10 @@
           .then(() => loadAdminSettings())
           .catch(() => showToast("Couldn’t load household settings."));
       }
+
+      if (target === "rsvp") {
+        loadAdminRsvpScreen();
+      }
     }
 
     function handleAdminMealListClick(event) {
@@ -1604,6 +1680,345 @@
       await loadAdminCountdowns();
     }
 
+    // ── RSVP ─────────────────────────────────────────────────────────────────
+
+    function getManualSearchMatches(query, invitedParties) {
+      const normalizedQuery = normalizeMatchName(query);
+      if (!normalizedQuery) return [];
+      const queryTokens = getMatchTokens(normalizedQuery);
+
+      return invitedParties
+        .filter((party) => {
+          const normalizedName = normalizeMatchName(party.name);
+          if (!normalizedName) return false;
+          if (normalizedName.includes(normalizedQuery)) return true;
+          return queryTokens.every((token) => normalizedName.includes(token));
+        })
+        .slice(0, 8);
+    }
+
+    function buildManualPartySearchResultsHTML(matches, rsvpId) {
+      if (!matches.length) {
+        return '<div class="admin-rsvp-no-match">No open invited parties match that search.</div>';
+      }
+
+      return matches.map((party) => `
+        <div class="admin-rsvp-suggestion">
+          <div>
+            <div class="admin-rsvp-suggestion-title">${escapeHtml(party.name)}</div>
+            <div class="admin-rsvp-suggestion-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))} invited</div>
+          </div>
+          <button class="admin-button admin-button--secondary admin-button--small" type="button"
+            data-action="link-rsvp-party"
+            data-party-id="${escapeHtml(party.id)}"
+            data-rsvp-id="${escapeHtml(rsvpId)}">Link</button>
+        </div>
+      `).join("");
+    }
+
+    function renderAdminRsvpUnmatchedList() {
+      const snapshot = adminWeddingSnapshot;
+      const unmatched = snapshot?.unmatchedRsvps || [];
+      const unmatchedParties = snapshot?.invitedParties?.filter((party) => !party.rsvpId) || [];
+
+      adminRsvpUnmatchedNote.textContent = unmatched.length
+        ? `${unmatched.length} RSVP${unmatched.length === 1 ? "" : "s"} still need a party match.`
+        : "All RSVPs are matched to invited parties.";
+
+      if (!unmatched.length) {
+        adminRsvpUnmatchedList.innerHTML = '<div class="admin-empty">Nothing to review right now.</div>';
+        return;
+      }
+
+      adminRsvpUnmatchedList.innerHTML = unmatched.map((rsvp) => {
+        const suggestions = getInvitedPartySuggestions(rsvp.name, unmatchedParties, 3);
+        const manualMatches = getManualSearchMatches(rsvp.name, unmatchedParties);
+        const responseLabel = rsvp.attending
+          ? `Attending • ${formatAdminGuestCount(rsvp.guestCount)}`
+          : "Declining";
+
+        return `
+          <article class="admin-rsvp-card">
+            <div class="admin-rsvp-card-header">
+              <div class="admin-rsvp-card-title">${escapeHtml(rsvp.name)}</div>
+              <div class="admin-rsvp-card-meta">${escapeHtml(responseLabel)}</div>
+            </div>
+            ${suggestions.length ? `
+              <div class="admin-rsvp-suggestion-list">
+                ${suggestions.map((party) => `
+                  <div class="admin-rsvp-suggestion">
+                    <div>
+                      <div class="admin-rsvp-suggestion-title">${escapeHtml(party.name)}</div>
+                      <div class="admin-rsvp-suggestion-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))} invited • score ${party.matchScore.toFixed(1)}</div>
+                    </div>
+                    <button class="admin-button admin-button--primary admin-button--small" type="button"
+                      data-action="link-rsvp-party"
+                      data-party-id="${escapeHtml(party.id)}"
+                      data-rsvp-id="${escapeHtml(rsvp.id)}">Link</button>
+                  </div>
+                `).join("")}
+              </div>
+            ` : `
+              <div class="admin-rsvp-no-match">No strong suggestions yet. Try a manual search below.</div>
+            `}
+            <div class="admin-rsvp-search-block">
+              <div class="admin-rsvp-search-label">Manual search</div>
+              <input class="admin-input admin-rsvp-search-input" type="text"
+                data-rsvp-search-input="party"
+                data-rsvp-id="${escapeHtml(rsvp.id)}"
+                placeholder="Search invited parties by name"
+                value="${escapeHtml(rsvp.name)}"
+                autocomplete="off">
+              <div class="admin-rsvp-search-results" data-rsvp-search-results="${escapeHtml(rsvp.id)}">
+                ${buildManualPartySearchResultsHTML(manualMatches, rsvp.id)}
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function getAvailableRsvpLinkOptions(currentParty) {
+      const linkedRsvpId = currentParty.rsvpId || "";
+      const availableRsvps = (adminWeddingSnapshot?.unmatchedRsvps || []).slice();
+      if (currentParty.linkedRsvp) {
+        availableRsvps.unshift(currentParty.linkedRsvp);
+      }
+      return {
+        linkedRsvpId,
+        linkedRsvpName: currentParty.linkedRsvp ? currentParty.linkedRsvp.name : "No linked RSVP",
+        options: availableRsvps.filter((rsvp, index, list) =>
+        list.findIndex((candidate) => candidate.id === rsvp.id) === index
+        )
+      };
+    }
+
+    function buildLinkedRsvpOptionListHTML(options, linkedRsvpId) {
+      if (!options.length) {
+        return '<div class="admin-rsvp-no-match">No unmatched RSVPs available to link.</div>';
+      }
+
+      return options.map((rsvp) => `
+        <button class="admin-rsvp-search-result${rsvp.id === linkedRsvpId ? " is-selected" : ""}" type="button"
+          data-action="select-linked-rsvp"
+          data-rsvp-id="${escapeHtml(rsvp.id)}"
+          data-rsvp-name="${escapeHtml(rsvp.name)}">
+          <span>${escapeHtml(rsvp.name)}</span>
+          <span>${escapeHtml(rsvp.attending ? formatAdminGuestCount(rsvp.guestCount) : "Declining")}</span>
+        </button>
+      `).join("");
+    }
+
+    function buildLinkedRsvpResultsHTML(currentParty) {
+      const { linkedRsvpId, linkedRsvpName, options } = getAvailableRsvpLinkOptions(currentParty);
+
+      return `
+        <div class="admin-field">
+          <label>Linked RSVP</label>
+          <div class="admin-rsvp-linked-row">
+            <div class="admin-rsvp-linked-label" data-role="linked-rsvp-name">${escapeHtml(linkedRsvpName)}</div>
+            ${currentParty.linkedRsvp ? `
+              <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="unlink-rsvp-party">Unlink</button>
+            ` : ""}
+          </div>
+          <input type="hidden" name="linked_rsvp_id" value="${escapeHtml(linkedRsvpId)}">
+          <input class="admin-input admin-rsvp-search-input" type="text"
+            data-rsvp-search-input="modal"
+            placeholder="Search RSVPs by name"
+            autocomplete="off">
+          <div class="admin-rsvp-search-results admin-rsvp-search-results--modal">
+            ${buildLinkedRsvpOptionListHTML(options, linkedRsvpId)}
+          </div>
+        </div>
+      `;
+    }
+
+    function buildInvitedPartyFormHTML(party) {
+      return `
+        <form data-modal-form="rsvp-party" novalidate>
+          <input type="hidden" name="party_id" value="${escapeHtml(party.id)}">
+          <div class="admin-field">
+            <label for="modal-rsvp-party-name">Party name</label>
+            <input id="modal-rsvp-party-name" name="party_name" type="text" maxlength="140" required value="${escapeHtml(party.name)}">
+          </div>
+          <div class="admin-field">
+            <label for="modal-rsvp-party-count">Invited count</label>
+            <input id="modal-rsvp-party-count" name="invited_count" type="number" min="0" max="20" required value="${escapeHtml(party.invitedCount)}">
+          </div>
+          ${buildLinkedRsvpResultsHTML(party)}
+          <div class="admin-actions admin-actions--end">
+            <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            <button class="admin-button admin-button--primary" type="submit">Save</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function openInvitedPartyModal(partyId) {
+      const party = adminWeddingSnapshot?.invitedParties?.find((item) => item.id === partyId);
+      if (!party) return;
+      openAdminModal("Edit Party", buildInvitedPartyFormHTML(party));
+    }
+
+    function renderAdminRsvpGuestList() {
+      const snapshot = adminWeddingSnapshot;
+      const parties = [...(snapshot?.invitedParties || [])]
+        .sort((a, b) => {
+          const statusDiff = getAdminRsvpStatusMeta(a).rank - getAdminRsvpStatusMeta(b).rank;
+          if (statusDiff !== 0) return statusDiff;
+          return String(a.name || "").localeCompare(String(b.name || ""));
+        });
+
+      adminRsvpGuestListNote.textContent = parties.length
+        ? `${parties.length} invited part${parties.length === 1 ? "y" : "ies"} total.`
+        : "No invited parties found.";
+
+      if (!parties.length) {
+        adminRsvpGuestList.innerHTML = '<div class="admin-empty">No invited parties found.</div>';
+        return;
+      }
+
+      adminRsvpGuestList.innerHTML = parties.map((party) => {
+        const status = getAdminRsvpStatusMeta(party);
+        return `
+          <button class="admin-rsvp-guest-row" type="button" data-party-id="${escapeHtml(party.id)}">
+            <div class="admin-rsvp-guest-main">
+              <div class="admin-rsvp-guest-title">${escapeHtml(party.name)}</div>
+              <div class="admin-rsvp-guest-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))}</div>
+            </div>
+            <span class="admin-rsvp-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    async function loadAdminRsvpScreen() {
+      adminRsvpUnmatchedNote.textContent = "Loading RSVP matches…";
+      adminRsvpGuestListNote.textContent = "Loading invited parties…";
+      adminRsvpUnmatchedList.innerHTML = '<div class="admin-empty">Loading RSVP matches…</div>';
+      adminRsvpGuestList.innerHTML = '<div class="admin-empty">Loading invited parties…</div>';
+
+      const snapshot = await fetchWeddingRsvpSnapshot();
+      if (!snapshot) {
+        adminRsvpUnmatchedNote.textContent = "Couldn’t load RSVP matches.";
+        adminRsvpGuestListNote.textContent = "Couldn’t load invited parties.";
+        adminRsvpUnmatchedList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        adminRsvpGuestList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        return;
+      }
+
+      adminWeddingSnapshot = await autoLinkHighConfidenceRsvps(snapshot, {
+        logPrefix: "[admin-rsvp-auto-match]"
+      });
+      renderAdminRsvpUnmatchedList();
+      renderAdminRsvpGuestList();
+    }
+
+    async function linkInvitedPartyToRsvp(partyId, rsvpId) {
+      const client = getSupabaseClient();
+      if (!client || adminRsvpWritePending) {
+        return;
+      }
+
+      adminRsvpWritePending = true;
+      const { error } = await client
+        .from("invited_parties")
+        .update({ rsvp_id: rsvpId })
+        .eq("id", partyId);
+      adminRsvpWritePending = false;
+
+      if (error) {
+        showToast("Couldn’t link that RSVP. Please try again.");
+        return;
+      }
+
+      closeAdminModal();
+      await loadAdminRsvpScreen();
+      showToast("RSVP linked.");
+    }
+
+    async function saveAdminInvitedParty(formData) {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast("Couldn’t save RSVP party. Supabase is unavailable.");
+        return;
+      }
+
+      const partyId = String(formData.get("party_id") || "").trim();
+      const partyName = String(formData.get("party_name") || "").trim();
+      const invitedCount = Math.max(0, parseInt(String(formData.get("invited_count") || "0"), 10) || 0);
+      const linkedRsvpId = String(formData.get("linked_rsvp_id") || "").trim() || null;
+      if (!partyId || !partyName) return;
+
+      adminRsvpWritePending = true;
+      setModalSaving(true, "Save");
+
+      const { error } = await client
+        .from("invited_parties")
+        .update({
+          name: partyName,
+          invited_count: invitedCount,
+          rsvp_id: linkedRsvpId
+        })
+        .eq("id", partyId);
+
+      adminRsvpWritePending = false;
+      setModalSaving(false, "Save");
+
+      if (error) {
+        showToast("Couldn’t save party changes.");
+        return;
+      }
+
+      closeAdminModal();
+      await loadAdminRsvpScreen();
+      showToast("Party updated.");
+    }
+
+    function handleAdminRsvpUnmatchedInput(event) {
+      const input = event.target.closest("[data-rsvp-search-input='party']");
+      if (!input) return;
+
+      const rsvpId = input.getAttribute("data-rsvp-id");
+      const results = adminRsvpUnmatchedList.querySelector(`[data-rsvp-search-results="${rsvpId}"]`);
+      if (!results || !rsvpId) return;
+
+      const matches = getManualSearchMatches(
+        input.value,
+        adminWeddingSnapshot?.invitedParties?.filter((party) => !party.rsvpId) || []
+      );
+      results.innerHTML = buildManualPartySearchResultsHTML(matches, rsvpId);
+    }
+
+    function handleAdminModalInput(event) {
+      const input = event.target.closest("[data-rsvp-search-input='modal']");
+      if (!input) return;
+
+      const form = input.closest("form[data-modal-form='rsvp-party']");
+      if (!form) return;
+
+      const partyId = String(form.querySelector("[name='party_id']")?.value || "");
+      const party = adminWeddingSnapshot?.invitedParties?.find((item) => item.id === partyId);
+      if (!party) return;
+
+      const selectedLinkedRsvpId = String(form.querySelector("[name='linked_rsvp_id']")?.value || "");
+      const { options } = getAvailableRsvpLinkOptions(party);
+      const filtered = options.filter((rsvp) =>
+        normalizeMatchName(rsvp.name).includes(normalizeMatchName(input.value))
+      );
+      const results = form.querySelector(".admin-rsvp-search-results--modal");
+      if (results) {
+        results.innerHTML = buildLinkedRsvpOptionListHTML(filtered, selectedLinkedRsvpId);
+      }
+    }
+
+    function handleAdminRsvpListClick(event) {
+      const guestRow = event.target.closest(".admin-rsvp-guest-row[data-party-id]");
+      if (guestRow) {
+        openInvitedPartyModal(guestRow.getAttribute("data-party-id"));
+      }
+    }
+
     function handleAdminCountdownCalListClick(event) {
       const card = event.target.closest("[data-cal-name]");
       if (!card) return;
@@ -1986,6 +2401,7 @@
         loadAdminMealPlan(),
         loadAdminCalendarMonth(),
         loadAdminCountdowns({ preserveScroll: true }),
+        loadAdminRsvpScreen(),
         ensureAdminHouseholdConfigLoaded(true).then(() => loadAdminSettings())
       ]);
     }
@@ -2340,6 +2756,11 @@
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
       adminActiveList.addEventListener("keydown", handleAdminActiveListKeydown);
       adminMealList.addEventListener("click", handleAdminMealListClick);
+      if (adminRsvpUnmatchedList) {
+        adminRsvpUnmatchedList.addEventListener("click", handleAdminRsvpListClick);
+        adminRsvpUnmatchedList.addEventListener("input", handleAdminRsvpUnmatchedInput);
+      }
+      if (adminRsvpGuestList) adminRsvpGuestList.addEventListener("click", handleAdminRsvpListClick);
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
       adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);
@@ -2355,6 +2776,7 @@
       const adminModal = document.getElementById("admin-modal");
       if (adminModal) {
         adminModal.addEventListener("click", handleAdminModalClick);
+        adminModal.addEventListener("input", handleAdminModalInput);
         adminModal.addEventListener("submit", handleAdminModalSubmit);
       }
       document.addEventListener("keydown", handleEscapeKey);

@@ -1589,6 +1589,27 @@
       border: 1px solid rgba(166, 76, 99, 0.14);
     }
 
+    .breakdown-row--button {
+      width: 100%;
+      border: 1px solid rgba(166, 76, 99, 0.14);
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+    }
+
+    .breakdown-row--button:hover,
+    .breakdown-row--button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(166, 76, 99, 0.28);
+    }
+
+    .breakdown-row--button:focus-visible {
+      outline: 3px solid rgba(166, 76, 99, 0.28);
+      outline-offset: 2px;
+    }
+
     .breakdown-row:nth-child(2) {
       background: rgba(255, 240, 228, 0.42);
     }
@@ -1615,8 +1636,9 @@
 
     .names-list {
       min-height: 0;
-      overflow: hidden;
+      overflow-y: auto;
       position: relative;
+      padding-right: 4px;
     }
 
     .names-scroll {
@@ -1624,7 +1646,7 @@
       gap: 10px;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       align-content: start;
-      min-height: 100%;
+      min-height: min-content;
     }
 
     .name-pill {
@@ -1662,6 +1684,21 @@
 
     .name-pill--attending {
       background: rgba(229, 246, 234, 0.92);
+    }
+
+    .rsvp-detail-list {
+      display: grid;
+      gap: 10px;
+      max-height: 56dvh;
+      overflow-y: auto;
+    }
+
+    .rsvp-detail-item {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 248, 250, 0.92);
+      border: 1px solid rgba(166, 76, 99, 0.12);
+      font-weight: 700;
     }
 
     .name-pill--attending .name-status {
