@@ -86,5 +86,12 @@ netlify.toml        — build + env var injection via sed
 - sw.js cache prefix must be `homeboard-v##`
 - When pushing any change: bump `VERSION` in `js/shared.js` (patch for fixes, minor for features), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — document new tables, env vars, or screens as they are added
 
+## Styling Conventions
+- Shared corner radius tokens live in `:root` in `index.html`: use `--button-radius` for admin/display buttons and `--tag-radius` for pills, badges, and other tag-like labels
+- Keep admin action-button sizing responsive: on screens up to 480 px, a lone primary action should fill the row and two-button action rows should split into equal widths
+- The admin nav is a fixed bottom bar pinned flush to the viewport edge; do not reintroduce floating gaps, translucent glass treatment, or drop shadows there
+- Toasts must clear the fixed admin nav so navigation stays tappable while a toast is visible
+- The display footer assistant label (`#household-name`) uses the Google Font `Righteous`; load it from Google Fonts in `index.html` and keep fallback fonts in CSS
+
 ## Local Dev
 `netlify dev` is the only correct local workflow. `file://` and `npx serve .` do not work.

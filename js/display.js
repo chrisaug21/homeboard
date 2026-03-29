@@ -689,8 +689,8 @@
 
       // Append a hidden probe chip to measure real chip height at this screen size
       const probe = document.createElement("div");
-      probe.className = "month-event";
-      probe.textContent = "X";
+      probe.className = "month-event month-event--wrap";
+      probe.textContent = "Sample event title";
       probe.style.cssText = "visibility:hidden;pointer-events:none;";
       eventsEl.appendChild(probe);
       const chipH = probe.offsetHeight;
@@ -722,8 +722,7 @@
           : allEvents.length;
         const visibleEvents = allEvents.slice(0, showCount);
         const overflowCount = allEvents.length - visibleEvents.length;
-        // Allow wrapping only when a single event occupies the cell (extra vertical room)
-        const wrapClass = allEvents.length === 1 ? " month-event--wrap" : "";
+        const wrapClass = " month-event--wrap";
 
         const eventChips = visibleEvents.map((event) => `
           <div class="month-event${wrapClass}"

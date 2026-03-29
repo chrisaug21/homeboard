@@ -96,6 +96,12 @@ netlify.toml        — build config, env var injection via sed
 - Secondary accent: `#15803D` (sage green)
 - Muted text: `#78716C` (warm gray)
 
+## Styling Conventions
+- Shared corner-radius tokens live in `:root` in `index.html`: use `--button-radius` for interactive buttons and `--tag-radius` for pills, badges, date chips, and other tag-like UI
+- On admin mobile layouts up to `480px`, single primary actions should run full width and two-button action rows should split evenly across the row
+- The admin nav is a fixed bottom bar pinned flush to the bottom edge of the viewport; keep toast positioning above it so nav actions stay accessible
+- The display footer assistant label (`#household-name`) uses the Google Font `Righteous`, loaded from Google Fonts in `index.html`
+
 ## Env Vars (never hardcode)
 - `SUPABASE_URL`
 - `SUPABASE_KEY`

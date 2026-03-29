@@ -185,6 +185,14 @@
       }).format(date);
     }
 
+    function formatAdminMealCardDayLabel(date) {
+      return new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric"
+      }).format(date).toUpperCase();
+    }
+
     function formatAdminGuestCount(count) {
       const safeCount = Math.max(0, Number(count) || 0);
       return `${safeCount} ${safeCount === 1 ? "guest" : "guests"}`;
@@ -916,7 +924,7 @@
     }
 
     function renderAdminMealCard(index, date, meal) {
-      const dayLabel = escapeHtml(formatAdminDayLabel(date));
+      const dayLabel = escapeHtml(formatAdminMealCardDayLabel(date));
       const mealType = meal ? getMealTypePresentation(meal.mealType) : null;
 
       return `
