@@ -18,9 +18,38 @@
     const adminTodoAddButton = document.getElementById("admin-todo-add-button");
     const adminCountdownAddButton = document.getElementById("admin-countdown-add-button");
 
-    // Household members for the assignee picker.
-    // TODO: replace with a query from the `users` table once multi-user auth is implemented.
-    const HOUSEHOLD_MEMBERS = ["Chris", "Bailey"];
+    // Person color palette — distinct from status colors (amber, sage, rose)
+    const PERSON_COLOR_PALETTE = [
+      "#2563eb", "#9333ea", "#0891b2", "#be123c",
+      "#c2410c", "#0f766e", "#6d28d9", "#16a34a"
+    ];
+
+    // Screen definitions for settings UI
+    const CONFIGURABLE_SCREENS = ["calendar", "todos", "meals", "countdowns"];
+    const SCREEN_LABELS = { calendar: "Calendar", todos: "To-Do List", meals: "Meal Plan", countdowns: "Countdowns" };
+    const TIMER_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"];
+    const TIMER_LABELS = {
+      upcoming_calendar: "Upcoming Calendar",
+      monthly_calendar: "Monthly Calendar",
+      todos: "To-Do List",
+      meals: "Meal Plan",
+      countdowns: "Countdowns"
+    };
+    const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15 };
+
+    // Loaded from Supabase at admin init; falls back to defaults so todo form always works
+    let adminHouseholdSettings = {
+      assistant_name: "",
+      color_scheme: "warm",
+      google_cal_id: "",
+      display_settings: {
+        members: [
+          { name: "Chris", color: PERSON_COLOR_PALETTE[0] },
+          { name: "Bailey", color: PERSON_COLOR_PALETTE[1] }
+        ]
+      }
+    };
+    let adminSettingsWritePending = false;
 
     let toastTimeoutId = null;
     let adminTodoWritePending = false;
@@ -485,11 +514,14 @@
     function buildTodoFormHTML(todo) {
       const isEdit = !!todo;
       const currentAssignee = isEdit ? (todo.assignee || "") : "";
-      // Preserve any existing assignee that isn't in the standard list (e.g. old data)
-      const extraMember = currentAssignee && !HOUSEHOLD_MEMBERS.includes(currentAssignee)
+      // Read members from settings; fall back to Chris/Bailey if not yet loaded
+      const memberNames = (adminHouseholdSettings.display_settings.members || []).map((m) => m.name);
+      if (memberNames.length === 0) memberNames.push("Chris", "Bailey");
+      // Preserve any existing assignee that isn't in the current list (e.g. old data)
+      const extraMember = currentAssignee && !memberNames.includes(currentAssignee)
         ? [currentAssignee]
         : [];
-      const assigneeOptions = ["", ...HOUSEHOLD_MEMBERS, ...extraMember].map((name) =>
+      const assigneeOptions = ["", ...memberNames, ...extraMember].map((name) =>
         `<option value="${escapeHtml(name)}"${name === currentAssignee ? " selected" : ""}>${escapeHtml(name || "Unassigned")}</option>`
       ).join("");
       return `
@@ -992,6 +1024,10 @@
 
       if (target === "countdowns") {
         loadAdminCountdowns();
+      }
+
+      if (target === "settings") {
+        loadAdminSettings();
       }
     }
 
@@ -1705,6 +1741,447 @@
       return { active, archived };
     }
 
+    // ── Settings ─────────────────────────────────────────────────────────────
+
+    async function loadAdminHouseholdConfig() {
+      const client = getSupabaseClient();
+      if (!client) return;
+
+      const { data, error } = await client
+        .from("households")
+        .select("assistant_name, color_scheme, google_cal_id, display_settings")
+        .eq("id", DISPLAY_HOUSEHOLD_ID)
+        .single();
+
+      if (error || !data) return;
+
+      const ds = data.display_settings || {};
+
+      // Seed members with Chris + Bailey if not yet set for this household
+      if (!Array.isArray(ds.members) || ds.members.length === 0) {
+        ds.members = [
+          { name: "Chris", color: PERSON_COLOR_PALETTE[0] },
+          { name: "Bailey", color: PERSON_COLOR_PALETTE[1] }
+        ];
+      }
+
+      adminHouseholdSettings = {
+        assistant_name: data.assistant_name || "",
+        color_scheme: data.color_scheme || "warm",
+        google_cal_id: data.google_cal_id || "",
+        display_settings: ds
+      };
+    }
+
+    function renderSettingsMembersList(members) {
+      const list = document.getElementById("settings-members-list");
+      if (!list) return;
+
+      if (!members || members.length === 0) {
+        list.innerHTML = `<p class="admin-panel-note" style="margin:0">No members yet. Add one below.</p>`;
+        return;
+      }
+
+      list.innerHTML = members.map((m, i) => `
+        <div class="admin-settings-member-row" data-member-index="${i}">
+          <span class="admin-settings-member-color" style="background:${escapeHtml(m.color || "#999")}"></span>
+          <span class="admin-settings-member-name">${escapeHtml(m.name)}</span>
+          <button type="button" class="admin-settings-member-remove" data-member-index="${i}" aria-label="Remove ${escapeHtml(m.name)}">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      `).join("");
+
+      refreshIcons();
+    }
+
+    function renderSettingsScreenOrder(screenOrder) {
+      const list = document.getElementById("settings-screen-order");
+      if (!list) return;
+
+      const ds = adminHouseholdSettings.display_settings || {};
+      const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : CONFIGURABLE_SCREENS;
+
+      list.innerHTML = screenOrder.map((name, i) => {
+        const isActive = activeScreens.includes(name);
+        return `
+          <li class="admin-settings-order-item${isActive ? "" : " is-inactive"}" data-screen-name="${escapeHtml(name)}">
+            <span class="admin-settings-order-item-name">${escapeHtml(SCREEN_LABELS[name] || name)}</span>
+            <div class="admin-settings-order-arrows">
+              <button type="button" class="admin-settings-order-btn" data-order-dir="up" data-order-index="${i}" aria-label="Move up"${i === 0 ? " disabled" : ""}>
+                <i data-lucide="chevron-up"></i>
+              </button>
+              <button type="button" class="admin-settings-order-btn" data-order-dir="down" data-order-index="${i}" aria-label="Move down"${i === screenOrder.length - 1 ? " disabled" : ""}>
+                <i data-lucide="chevron-down"></i>
+              </button>
+            </div>
+          </li>
+        `;
+      }).join("");
+
+      refreshIcons();
+    }
+
+    function renderSettingsTimerList(timerIntervals) {
+      const list = document.getElementById("settings-timer-list");
+      if (!list) return;
+
+      list.innerHTML = TIMER_SCREEN_KEYS.map((key) => {
+        const val = (timerIntervals && timerIntervals[key] != null)
+          ? timerIntervals[key]
+          : TIMER_DEFAULTS[key];
+        return `
+          <div class="admin-settings-timer-row">
+            <span class="admin-settings-timer-label">${escapeHtml(TIMER_LABELS[key])}</span>
+            <input class="admin-settings-timer-input" type="number" min="5" max="600"
+              name="timer_${key}" value="${Number(val)}" aria-label="${escapeHtml(TIMER_LABELS[key])} timer">
+            <span class="admin-settings-timer-unit">s</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function loadAdminSettings() {
+      const ds = adminHouseholdSettings.display_settings || {};
+      const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : CONFIGURABLE_SCREENS;
+      const screenOrder = Array.isArray(ds.screen_order) ? ds.screen_order : CONFIGURABLE_SCREENS;
+      const timerIntervals = ds.timer_intervals || {};
+      const upcomingDays = ds.upcoming_days || 5;
+      const calendarView = ds.calendar_view || "upcoming";
+      const members = Array.isArray(ds.members) ? ds.members : [];
+
+      // Household
+      const nameInput = document.getElementById("settings-assistant-name");
+      if (nameInput) nameInput.value = adminHouseholdSettings.assistant_name || "";
+
+      renderSettingsMembersList(members);
+
+      // Active screen checkboxes
+      CONFIGURABLE_SCREENS.forEach((name) => {
+        const cb = document.querySelector(`[name="screen_${name}"]`);
+        if (cb) cb.checked = activeScreens.includes(name);
+      });
+
+      // Screen order
+      renderSettingsScreenOrder(screenOrder);
+
+      // Timers
+      renderSettingsTimerList(timerIntervals);
+
+      // Upcoming days
+      const daysSelect = document.getElementById("settings-upcoming-days");
+      if (daysSelect) daysSelect.value = String(upcomingDays);
+
+      // Calendar default view
+      const viewSelect = document.getElementById("settings-calendar-view");
+      if (viewSelect) viewSelect.value = calendarView;
+
+      // Color scheme
+      const schemeRadio = document.querySelector(`[name="color_scheme"][value="${adminHouseholdSettings.color_scheme || "warm"}"]`);
+      if (schemeRadio) schemeRadio.checked = true;
+
+      // Google Cal ID
+      const calIdInput = document.getElementById("settings-google-cal-id");
+      if (calIdInput) calIdInput.value = adminHouseholdSettings.google_cal_id || "";
+
+      // Last synced
+      updateAdminLastSyncedLabel();
+    }
+
+    function updateAdminLastSyncedLabel() {
+      const raw = localStorage.getItem("homeboard_last_synced");
+      const el = document.getElementById("settings-last-synced");
+      if (!el) return;
+      if (!raw) { el.textContent = "Never synced"; return; }
+      const date = new Date(raw);
+      if (isNaN(date.getTime())) { el.textContent = "Never synced"; return; }
+      el.textContent = `Last synced: ${new Intl.DateTimeFormat("en-US", {
+        month: "short", day: "numeric",
+        hour: "numeric", minute: "2-digit"
+      }).format(date)}`;
+    }
+
+    async function saveHouseholdSection() {
+      const client = getSupabaseClient();
+      if (!client || adminSettingsWritePending) return;
+
+      adminSettingsWritePending = true;
+      const saveBtn = document.getElementById("settings-household-save");
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
+
+      try {
+        const nameInput = document.getElementById("settings-assistant-name");
+        const newName = nameInput ? nameInput.value.trim() : "";
+
+        // Collect current members from the rendered list
+        const rows = document.querySelectorAll(".admin-settings-member-row");
+        const newMembers = [];
+        rows.forEach((row) => {
+          const nameEl = row.querySelector(".admin-settings-member-name");
+          const colorEl = row.querySelector(".admin-settings-member-color");
+          if (nameEl && colorEl) {
+            const bg = colorEl.style.background;
+            newMembers.push({ name: nameEl.textContent.trim(), color: bg });
+          }
+        });
+
+        adminHouseholdSettings.assistant_name = newName;
+        adminHouseholdSettings.display_settings.members = newMembers;
+
+        const newDs = { ...adminHouseholdSettings.display_settings, members: newMembers };
+
+        const { error } = await client
+          .from("households")
+          .update({ assistant_name: newName || null, display_settings: newDs })
+          .eq("id", DISPLAY_HOUSEHOLD_ID);
+
+        if (error) {
+          showToast("Error saving household settings.");
+        } else {
+          showToast("Household settings saved.");
+        }
+      } finally {
+        adminSettingsWritePending = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
+      }
+    }
+
+    async function saveDisplaySection() {
+      const client = getSupabaseClient();
+      if (!client || adminSettingsWritePending) return;
+
+      adminSettingsWritePending = true;
+      const saveBtn = document.getElementById("settings-display-save");
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
+
+      try {
+        // Active screens
+        const activeScreens = CONFIGURABLE_SCREENS.filter((name) => {
+          const cb = document.querySelector(`[name="screen_${name}"]`);
+          return cb && cb.checked;
+        });
+        // At least one must remain active
+        if (activeScreens.length === 0) {
+          showToast("At least one screen must stay active.");
+          return;
+        }
+
+        // Screen order — read from rendered list
+        const orderItems = document.querySelectorAll(".admin-settings-order-item");
+        const screenOrder = Array.from(orderItems).map((el) => el.getAttribute("data-screen-name")).filter(Boolean);
+
+        // Timers
+        const timerIntervals = {};
+        TIMER_SCREEN_KEYS.forEach((key) => {
+          const input = document.querySelector(`[name="timer_${key}"]`);
+          if (input) {
+            const val = parseInt(input.value, 10);
+            timerIntervals[key] = val > 0 ? val : TIMER_DEFAULTS[key];
+          } else {
+            timerIntervals[key] = TIMER_DEFAULTS[key];
+          }
+        });
+
+        // Other display settings
+        const daysSelect = document.getElementById("settings-upcoming-days");
+        const upcomingDays = daysSelect ? Number(daysSelect.value) : 5;
+
+        const viewSelect = document.getElementById("settings-calendar-view");
+        const calendarView = viewSelect ? viewSelect.value : "upcoming";
+
+        const schemeRadio = document.querySelector("[name='color_scheme']:checked");
+        const colorScheme = schemeRadio ? schemeRadio.value : "warm";
+
+        const newDs = {
+          ...adminHouseholdSettings.display_settings,
+          active_screens: activeScreens,
+          screen_order: screenOrder,
+          timer_intervals: timerIntervals,
+          upcoming_days: upcomingDays,
+          calendar_view: calendarView
+        };
+
+        adminHouseholdSettings.display_settings = newDs;
+        adminHouseholdSettings.color_scheme = colorScheme;
+
+        const { error } = await client
+          .from("households")
+          .update({ color_scheme: colorScheme, display_settings: newDs })
+          .eq("id", DISPLAY_HOUSEHOLD_ID);
+
+        if (error) {
+          showToast("Error saving display settings.");
+        } else {
+          showToast("Display settings saved.");
+        }
+      } finally {
+        adminSettingsWritePending = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
+      }
+    }
+
+    async function saveIntegrationsSection() {
+      const client = getSupabaseClient();
+      if (!client || adminSettingsWritePending) return;
+
+      adminSettingsWritePending = true;
+      const saveBtn = document.getElementById("settings-integrations-save");
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
+
+      try {
+        const calIdInput = document.getElementById("settings-google-cal-id");
+        const newCalId = calIdInput ? calIdInput.value.trim() : "";
+
+        adminHouseholdSettings.google_cal_id = newCalId;
+
+        const { error } = await client
+          .from("households")
+          .update({ google_cal_id: newCalId || null })
+          .eq("id", DISPLAY_HOUSEHOLD_ID);
+
+        if (error) {
+          showToast("Error saving integration settings.");
+        } else {
+          showToast("Integration settings saved.");
+        }
+      } finally {
+        adminSettingsWritePending = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
+      }
+    }
+
+    let adminSyncing = false;
+
+    async function runAdminSync() {
+      if (adminSyncing) return;
+      adminSyncing = true;
+      const btn = document.getElementById("settings-sync-btn");
+      if (btn) btn.classList.add("is-syncing");
+
+      try {
+        // Check for service worker updates
+        if ("serviceWorker" in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+              await registration.update();
+              if (registration.waiting) {
+                navigator.serviceWorker.addEventListener("controllerchange", () => {
+                  window.location.reload();
+                }, { once: true });
+                registration.waiting.postMessage({ type: "SKIP_WAITING" });
+                return; // Page will reload
+              }
+            }
+          } catch {
+            // SW not available — ignore
+          }
+        }
+
+        localStorage.setItem("homeboard_last_synced", new Date().toISOString());
+        updateAdminLastSyncedLabel();
+        showToast("Sync complete.");
+      } finally {
+        adminSyncing = false;
+        const b = document.getElementById("settings-sync-btn");
+        if (b) b.classList.remove("is-syncing");
+      }
+    }
+
+    function handleSettingsMemberListClick(event) {
+      const removeBtn = event.target.closest("[data-member-index]");
+      if (!removeBtn || !removeBtn.classList.contains("admin-settings-member-remove")) return;
+
+      const idx = parseInt(removeBtn.getAttribute("data-member-index"), 10);
+      const members = adminHouseholdSettings.display_settings.members || [];
+      if (members.length <= 1) {
+        showToast("At least one member must remain.");
+        return;
+      }
+      const updated = members.filter((_, i) => i !== idx);
+      adminHouseholdSettings.display_settings.members = updated;
+      renderSettingsMembersList(updated);
+    }
+
+    function handleSettingsMemberAdd() {
+      const input = document.getElementById("settings-member-input");
+      if (!input) return;
+      const name = input.value.trim();
+      if (!name) return;
+
+      const members = adminHouseholdSettings.display_settings.members || [];
+      if (members.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
+        showToast(`"${name}" is already a member.`);
+        return;
+      }
+
+      const color = PERSON_COLOR_PALETTE[members.length % PERSON_COLOR_PALETTE.length];
+      const updated = [...members, { name, color }];
+      adminHouseholdSettings.display_settings.members = updated;
+      renderSettingsMembersList(updated);
+      input.value = "";
+      input.focus();
+    }
+
+    function handleSettingsScreenOrderClick(event) {
+      const btn = event.target.closest("[data-order-dir]");
+      if (!btn || btn.disabled) return;
+
+      const dir = btn.getAttribute("data-order-dir");
+      const idx = parseInt(btn.getAttribute("data-order-index"), 10);
+      const ds = adminHouseholdSettings.display_settings;
+      const order = Array.isArray(ds.screen_order) ? [...ds.screen_order] : [...CONFIGURABLE_SCREENS];
+
+      const swapIdx = dir === "up" ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= order.length) return;
+
+      [order[idx], order[swapIdx]] = [order[swapIdx], order[idx]];
+      ds.screen_order = order;
+      renderSettingsScreenOrder(order);
+    }
+
+    function handleSettingsScreenToggleChange() {
+      // Update the order list to reflect active/inactive state
+      const ds = adminHouseholdSettings.display_settings;
+      const order = Array.isArray(ds.screen_order) ? ds.screen_order : [...CONFIGURABLE_SCREENS];
+      renderSettingsScreenOrder(order);
+    }
+
+    function initSettingsListeners() {
+      const memberList = document.getElementById("settings-members-list");
+      if (memberList) memberList.addEventListener("click", handleSettingsMemberListClick);
+
+      const memberAddBtn = document.getElementById("settings-member-add-btn");
+      if (memberAddBtn) memberAddBtn.addEventListener("click", handleSettingsMemberAdd);
+
+      const memberInput = document.getElementById("settings-member-input");
+      if (memberInput) {
+        memberInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") { e.preventDefault(); handleSettingsMemberAdd(); }
+        });
+      }
+
+      const screenToggles = document.getElementById("settings-screen-toggles");
+      if (screenToggles) screenToggles.addEventListener("change", handleSettingsScreenToggleChange);
+
+      const screenOrder = document.getElementById("settings-screen-order");
+      if (screenOrder) screenOrder.addEventListener("click", handleSettingsScreenOrderClick);
+
+      const householdSave = document.getElementById("settings-household-save");
+      if (householdSave) householdSave.addEventListener("click", saveHouseholdSection);
+
+      const displaySave = document.getElementById("settings-display-save");
+      if (displaySave) displaySave.addEventListener("click", saveDisplaySection);
+
+      const integrationsSave = document.getElementById("settings-integrations-save");
+      if (integrationsSave) integrationsSave.addEventListener("click", saveIntegrationsSection);
+
+      const syncBtn = document.getElementById("settings-sync-btn");
+      if (syncBtn) syncBtn.addEventListener("click", runAdminSync);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
     function initAdminMode() {
       document.body.classList.add("admin-mode");
       displayApp.hidden = true;
@@ -1742,5 +2219,7 @@
       if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
       loadAdminTodos();
       loadAdminMealPlan();
+      initSettingsListeners();
+      loadAdminHouseholdConfig();
       refreshIcons();
     }

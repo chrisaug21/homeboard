@@ -12,6 +12,11 @@
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
       var mode = pathname === "/admin" ? "admin" : "display";
+      // Auto-redirect mobile screens to admin view
+      if (mode !== "admin" && window.innerWidth <= 768) {
+        window.location.replace("/admin");
+        return;
+      }
       document.documentElement.setAttribute("data-mode", mode);
       var manifestLink = document.createElement("link");
       manifestLink.rel = "manifest";
@@ -128,7 +133,7 @@
           </div>
         </section>
 
-        <section class="screen">
+        <section class="screen screen--todos">
           <div class="panel">
             <div class="screen-title-row">
               <div class="eyebrow"><i data-lucide="list-todo"></i> To-do List</div>
@@ -137,7 +142,7 @@
           </div>
         </section>
 
-        <section class="screen">
+        <section class="screen screen--meals">
           <div class="panel">
             <div class="screen-title-row">
               <div class="eyebrow"><i data-lucide="utensils-crossed"></i> Dinner Plan</div>
@@ -188,7 +193,13 @@
     <footer class="progress-bar" aria-label="Screen progress">
       <span id="household-name" class="household-name" aria-hidden="true">Homeboard</span>
       <div class="progress-dots" id="progress-dots"></div>
-      <span id="version-label" class="version-label" aria-hidden="true"></span>
+      <div class="footer-right">
+        <span id="display-last-synced" class="last-synced-label" aria-hidden="true"></span>
+        <button class="sync-btn" id="display-sync-btn" type="button" aria-label="Sync now">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+        <span id="version-label" class="version-label" aria-hidden="true"></span>
+      </div>
     </footer>
 
     <div class="display-modal" id="day-detail-modal" hidden role="dialog" aria-modal="true" aria-labelledby="day-detail-title">
@@ -305,15 +316,152 @@
       </section>
 
       <section class="admin-screen" id="admin-screen-settings" data-admin-screen="settings" hidden>
-        <section class="admin-panel admin-placeholder" aria-labelledby="admin-settings-title">
-          <div class="admin-placeholder-icon" aria-hidden="true">
-            <i data-lucide="settings-2"></i>
+
+        <!-- Household -->
+        <section class="admin-panel" aria-labelledby="settings-household-title">
+          <h2 class="admin-panel-title" id="settings-household-title">Household</h2>
+          <div class="admin-settings-stack">
+            <div class="admin-field">
+              <label for="settings-assistant-name">Assistant name</label>
+              <input id="settings-assistant-name" type="text" maxlength="60"
+                placeholder="Leave blank to show &ldquo;Homeboard&rdquo;" autocomplete="off">
+              <p class="admin-field-hint">Shown in the bottom bar of the display view.</p>
+            </div>
+            <div class="admin-settings-subsection">
+              <div class="admin-settings-subsection-label">Household members</div>
+              <div id="settings-members-list" class="admin-settings-member-list"></div>
+              <div class="admin-form-row admin-form-row--add-member">
+                <input id="settings-member-input" type="text" maxlength="60"
+                  placeholder="Member name" autocomplete="off">
+                <button type="button" id="settings-member-add-btn"
+                  class="admin-button admin-button--secondary">Add</button>
+              </div>
+            </div>
           </div>
-          <div>
-            <h2 class="admin-panel-title" id="admin-settings-title">Settings</h2>
-            <p class="admin-panel-note">Household settings will live here next.</p>
+          <div class="admin-actions admin-actions--end">
+            <button type="button" id="settings-household-save"
+              class="admin-button admin-button--primary">Save</button>
           </div>
         </section>
+
+        <!-- Display -->
+        <section class="admin-panel" aria-labelledby="settings-display-title">
+          <h2 class="admin-panel-title" id="settings-display-title">Display</h2>
+          <div class="admin-settings-stack">
+
+            <div class="admin-settings-subsection">
+              <div class="admin-settings-subsection-label">Active screens</div>
+              <div class="admin-settings-toggle-list" id="settings-screen-toggles">
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="screen_calendar" value="calendar">
+                  <span>Calendar</span>
+                </label>
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="screen_todos" value="todos">
+                  <span>To-Do List</span>
+                </label>
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="screen_meals" value="meals">
+                  <span>Meal Plan</span>
+                </label>
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="screen_countdowns" value="countdowns">
+                  <span>Countdowns</span>
+                </label>
+              </div>
+              <p class="admin-field-hint">At least one screen must stay active. Calendar controls both Upcoming and Monthly views.</p>
+            </div>
+
+            <div class="admin-settings-subsection">
+              <div class="admin-settings-subsection-label">Screen order</div>
+              <ol id="settings-screen-order" class="admin-settings-order-list"></ol>
+              <p class="admin-field-hint">Use arrows to reorder. Inactive screens are grayed out.</p>
+            </div>
+
+            <div class="admin-settings-subsection">
+              <div class="admin-settings-subsection-label">Rotation timers</div>
+              <div id="settings-timer-list" class="admin-settings-timer-list"></div>
+              <p class="admin-field-hint">Seconds each screen stays visible before advancing.</p>
+            </div>
+
+            <div class="admin-form-row">
+              <div class="admin-field">
+                <label for="settings-upcoming-days">Upcoming view days</label>
+                <select id="settings-upcoming-days">
+                  <option value="5">5 days</option>
+                  <option value="7">7 days</option>
+                </select>
+              </div>
+              <div class="admin-field">
+                <label for="settings-calendar-view">Default calendar view</label>
+                <select id="settings-calendar-view">
+                  <option value="upcoming">Upcoming</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="admin-field">
+              <label>Color scheme</label>
+              <div class="admin-settings-scheme-list" id="settings-color-scheme">
+                <label class="admin-settings-scheme-option">
+                  <input type="radio" name="color_scheme" value="warm">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--warm"></span>
+                  <span>Warm</span>
+                </label>
+                <label class="admin-settings-scheme-option">
+                  <input type="radio" name="color_scheme" value="dark">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--dark"></span>
+                  <span>Dark</span>
+                </label>
+                <label class="admin-settings-scheme-option">
+                  <input type="radio" name="color_scheme" value="slate">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--slate"></span>
+                  <span>Slate</span>
+                </label>
+              </div>
+            </div>
+
+          </div>
+          <div class="admin-actions admin-actions--end">
+            <button type="button" id="settings-display-save"
+              class="admin-button admin-button--primary">Save</button>
+          </div>
+        </section>
+
+        <!-- Integrations -->
+        <section class="admin-panel" aria-labelledby="settings-integrations-title">
+          <h2 class="admin-panel-title" id="settings-integrations-title">Integrations</h2>
+          <div class="admin-settings-stack">
+            <div class="admin-field">
+              <label for="settings-google-cal-id">Google Calendar ID</label>
+              <!-- Future enhancement: support toggling multiple calendars -->
+              <input id="settings-google-cal-id" type="text" maxlength="200"
+                placeholder="example@group.calendar.google.com"
+                autocomplete="off" spellcheck="false">
+              <p class="admin-field-hint">The calendar ID to pull events from. Found in Google Calendar &rsaquo; Settings &rsaquo; Integrate calendar.</p>
+            </div>
+          </div>
+          <div class="admin-actions admin-actions--end">
+            <button type="button" id="settings-integrations-save"
+              class="admin-button admin-button--primary">Save</button>
+          </div>
+        </section>
+
+        <!-- Sync -->
+        <section class="admin-panel" aria-labelledby="settings-sync-title">
+          <h2 class="admin-panel-title" id="settings-sync-title">Sync</h2>
+          <div class="admin-sync-row">
+            <button type="button" id="settings-sync-btn"
+              class="admin-button admin-button--primary admin-sync-btn">
+              <i data-lucide="refresh-cw"></i>
+              Sync now
+            </button>
+            <span id="settings-last-synced" class="admin-sync-timestamp"></span>
+          </div>
+          <p class="admin-panel-note" style="margin-top:10px;">Re-fetches all data and checks for app updates. If a new version is available, the page reloads automatically.</p>
+        </section>
+
       </section>
     </div>
 

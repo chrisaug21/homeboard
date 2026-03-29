@@ -11,8 +11,10 @@
     let pointerStartX = null;
     let pointerDeltaX = 0;
     let rsvpScrollId = null;
-    // Number of days shown in the Upcoming view — increase here when settings PR lands
-    const UPCOMING_DAYS = 5;
+    // Number of days shown in the Upcoming view — read from display_settings.upcoming_days
+    let UPCOMING_DAYS = 5;
+    // Per-screen rotation timers in seconds (keyed by screen type, fallback 30s)
+    let screenTimers = {};
 
     let calendarEventsMap = new Map();
     let cachedHouseholdConfig = null;
@@ -994,7 +996,10 @@
         const section = document.createElement("section");
         section.className = "screen countdown-screen";
         section.innerHTML = countdownTemplate(item, index + 1);
-        track.insertBefore(section, document.querySelector(".rsvp-screen"));
+        // Insert after the last existing countdown-screen to keep them grouped
+        const allCountdowns = track.querySelectorAll(".countdown-screen");
+        const lastCountdown = allCountdowns[allCountdowns.length - 1];
+        lastCountdown.insertAdjacentElement("afterend", section);
       });
 
       reconcileRotationState();
@@ -1096,6 +1101,7 @@
       cachedSupabaseCountdowns = supabaseCountdowns;
 
       updateHouseholdName(householdConfig);
+      applyDisplaySettings(householdConfig);
 
       const calendarLoaded = await refreshCalendarData(true); // wide fetch on initial load
 
@@ -1245,6 +1251,212 @@
       if (householdNameEl) householdNameEl.textContent = name;
     }
 
+    function applyColorScheme(scheme) {
+      const validSchemes = ["warm", "dark", "slate"];
+      const chosen = validSchemes.includes(scheme) ? scheme : "warm";
+      if (chosen === "warm") {
+        document.documentElement.removeAttribute("data-scheme");
+      } else {
+        document.documentElement.setAttribute("data-scheme", chosen);
+      }
+    }
+
+    function applyActiveScreens(activeScreens) {
+      // Groups that can be toggled: calendar (both views), todos, meals, countdowns
+      const groups = {
+        calendar: [
+          track.querySelector(".screen--calendar"),
+          track.querySelector(".screen--month")
+        ].filter(Boolean),
+        todos: [track.querySelector(".screen--todos")].filter(Boolean),
+        meals: [track.querySelector(".screen--meals")].filter(Boolean),
+        countdowns: Array.from(track.querySelectorAll(".countdown-screen"))
+      };
+
+      for (const [name, els] of Object.entries(groups)) {
+        if (!activeScreens.includes(name)) {
+          els.forEach((el) => el.remove());
+        }
+      }
+
+      reconcileRotationState();
+    }
+
+    function applyScreenOrder(screenOrder) {
+      // Move screen groups to match the desired order, keeping RSVP always last
+      const rsvpScreen = track.querySelector(".rsvp-screen");
+
+      const groups = {
+        calendar: [
+          track.querySelector(".screen--calendar"),
+          track.querySelector(".screen--month")
+        ].filter(Boolean),
+        todos: [track.querySelector(".screen--todos")].filter(Boolean),
+        meals: [track.querySelector(".screen--meals")].filter(Boolean),
+        countdowns: Array.from(track.querySelectorAll(".countdown-screen"))
+      };
+
+      // Insert each group in order, before the RSVP screen (or at end if RSVP retired)
+      const anchor = rsvpScreen || null;
+      for (const screenName of screenOrder) {
+        const els = groups[screenName] || [];
+        for (const el of els) {
+          track.insertBefore(el, anchor);
+        }
+      }
+    }
+
+    function applyDisplaySettings(config) {
+      if (!config) return;
+      const ds = config.display_settings || {};
+
+      // Apply upcoming days
+      const upcomingDays = Number(ds.upcoming_days);
+      if (upcomingDays === 5 || upcomingDays === 7) {
+        UPCOMING_DAYS = upcomingDays;
+      }
+
+      // Apply per-screen timers (seed with defaults, then overlay saved values)
+      screenTimers = {
+        upcoming_calendar: 30,
+        monthly_calendar: 60,
+        todos: 45,
+        meals: 30,
+        countdowns: 15,
+        default: 30
+      };
+      if (ds.timer_intervals && typeof ds.timer_intervals === "object") {
+        for (const [key, val] of Object.entries(ds.timer_intervals)) {
+          const parsed = parseInt(val, 10);
+          if (parsed > 0) screenTimers[key] = parsed;
+        }
+      }
+
+      // Apply color scheme
+      applyColorScheme(config.color_scheme || "warm");
+
+      // Apply active screens (must come before screen order)
+      const defaultScreens = ["calendar", "todos", "meals", "countdowns"];
+      const activeScreens = Array.isArray(ds.active_screens) && ds.active_screens.length > 0
+        ? ds.active_screens
+        : defaultScreens;
+      applyActiveScreens(activeScreens);
+
+      // Apply screen order
+      const screenOrder = Array.isArray(ds.screen_order) && ds.screen_order.length > 0
+        ? ds.screen_order
+        : defaultScreens;
+      applyScreenOrder(screenOrder);
+
+      // Apply calendar default view (set starting screen index)
+      if (ds.calendar_view === "monthly") {
+        const monthScreen = track.querySelector(".screen--month");
+        if (monthScreen) {
+          const idx = Array.from(track.children).indexOf(monthScreen);
+          if (idx >= 0) currentIndex = idx;
+        }
+      }
+    }
+
+    const LAST_SYNCED_KEY = "homeboard_last_synced";
+
+    function updateLastSyncedLabel() {
+      const raw = localStorage.getItem(LAST_SYNCED_KEY);
+      const el = document.getElementById("display-last-synced");
+      if (!el) return;
+      if (!raw) {
+        el.textContent = "";
+        return;
+      }
+      const date = new Date(raw);
+      if (isNaN(date.getTime())) {
+        el.textContent = "";
+        return;
+      }
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMin = Math.floor(diffMs / 60000);
+      if (diffMin < 1) {
+        el.textContent = "just now";
+      } else if (diffMin < 60) {
+        el.textContent = `${diffMin}m ago`;
+      } else {
+        el.textContent = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
+      }
+    }
+
+    let isSyncing = false;
+
+    async function runFullSync() {
+      if (isSyncing) return;
+      isSyncing = true;
+      const syncBtn = document.getElementById("display-sync-btn");
+      if (syncBtn) syncBtn.classList.add("is-syncing");
+
+      try {
+        // Re-fetch all data in parallel
+        const [remoteTodos, remoteMeals, weeklyNote] = await Promise.all([
+          fetchTodos(),
+          fetchMeals(),
+          fetchWeeklyNote()
+        ]);
+
+        if (remoteTodos !== null) renderTodoItems(remoteTodos);
+        if (remoteMeals !== null) renderMeals(remoteMeals, weeklyNote || "");
+
+        // Re-fetch calendar (wide fetch refreshes countdowns too)
+        const [newConfig, newSupabaseCountdowns] = await Promise.all([
+          fetchHouseholdConfig(),
+          fetchCountdowns()
+        ]);
+
+        if (newConfig) {
+          cachedHouseholdConfig = newConfig;
+          updateHouseholdName(newConfig);
+        }
+
+        if (newSupabaseCountdowns !== null) {
+          cachedSupabaseCountdowns = newSupabaseCountdowns;
+        }
+
+        await refreshCalendarData(true);
+
+        // Re-fetch RSVP if visible
+        if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
+          const rsvps = await fetchRsvps();
+          if (rsvps !== null) {
+            renderRsvpBoard(rsvps, cachedHouseholdConfig ? cachedHouseholdConfig.total_invited_guests : null);
+          }
+        }
+
+        // Check for service worker updates
+        if ("serviceWorker" in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+              await registration.update();
+              if (registration.waiting) {
+                navigator.serviceWorker.addEventListener("controllerchange", () => {
+                  window.location.reload();
+                }, { once: true });
+                registration.waiting.postMessage({ type: "SKIP_WAITING" });
+                return; // Page will reload
+              }
+            }
+          } catch {
+            // SW not available — ignore
+          }
+        }
+
+        localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
+        updateLastSyncedLabel();
+      } finally {
+        isSyncing = false;
+        const btn = document.getElementById("display-sync-btn");
+        if (btn) btn.classList.remove("is-syncing");
+      }
+    }
+
     function goToScreen(index) {
       const screenCount = getScreenCount();
       const isForwardWrap = index >= screenCount;
@@ -1271,9 +1483,25 @@
       renderProgress();
     }
 
+    function getTimerForCurrentScreen() {
+      const screen = track.children[currentIndex];
+      if (!screen) return (screenTimers.default || 30) * 1000;
+      if (screen.classList.contains("screen--calendar")) return (screenTimers.upcoming_calendar || 30) * 1000;
+      if (screen.classList.contains("screen--month")) return (screenTimers.monthly_calendar || 60) * 1000;
+      if (screen.classList.contains("screen--todos")) return (screenTimers.todos || 45) * 1000;
+      if (screen.classList.contains("screen--meals")) return (screenTimers.meals || 30) * 1000;
+      if (screen.classList.contains("countdown-screen")) return (screenTimers.countdowns || 15) * 1000;
+      return (screenTimers.default || 30) * 1000;
+    }
+
     function resetAutoRotate() {
-      window.clearInterval(autoRotateId);
-      autoRotateId = window.setInterval(nextScreen, rotationIntervalMs);
+      window.clearTimeout(autoRotateId);
+      autoRotateId = window.setTimeout(autoAdvanceAndSchedule, getTimerForCurrentScreen());
+    }
+
+    function autoAdvanceAndSchedule() {
+      nextScreen();
+      autoRotateId = window.setTimeout(autoAdvanceAndSchedule, getTimerForCurrentScreen());
     }
 
     function nextScreen() {
@@ -1417,6 +1645,9 @@
       adminApp.hidden = true;
       const versionEl = document.getElementById("version-label");
       if (versionEl) versionEl.textContent = `v${VERSION}`;
+      updateLastSyncedLabel();
+      const syncBtn = document.getElementById("display-sync-btn");
+      if (syncBtn) syncBtn.addEventListener("click", runFullSync);
       renderCalendarAndCountdowns();
       renderTodos();
       renderMealsWithData();
