@@ -1027,7 +1027,7 @@
       }
 
       if (target === "settings") {
-        loadAdminSettings();
+        loadAdminHouseholdConfig().then(() => loadAdminSettings());
       }
     }
 
@@ -1765,12 +1765,26 @@
         ];
       }
 
+      // Normalize screen key names in case old DB data has "meal_plan" instead of "meals"
+      const normalizeScreenKey = (k) => k === "meal_plan" ? "meals" : k;
+      if (Array.isArray(ds.screen_order)) {
+        ds.screen_order = ds.screen_order.map(normalizeScreenKey);
+      }
+      if (Array.isArray(ds.active_screens)) {
+        ds.active_screens = ds.active_screens.map(normalizeScreenKey);
+      }
+
       adminHouseholdSettings = {
         assistant_name: data.assistant_name || "",
         color_scheme: data.color_scheme || "warm",
         google_cal_id: data.google_cal_id || "",
         display_settings: ds
       };
+
+      // Apply the color scheme in admin mode too
+      if (typeof applyColorScheme === "function") {
+        applyColorScheme(adminHouseholdSettings.color_scheme);
+      }
     }
 
     function renderSettingsMembersList(members) {
@@ -1847,7 +1861,9 @@
       const screenOrder = Array.isArray(ds.screen_order) ? ds.screen_order : CONFIGURABLE_SCREENS;
       const timerIntervals = ds.timer_intervals || {};
       const upcomingDays = ds.upcoming_days || 5;
-      const calendarView = ds.calendar_view || "upcoming";
+      const rawView = ds.calendar_view || "upcoming";
+      const calendarView = (rawView === "month" || rawView === "monthly") ? "monthly"
+        : "upcoming";
       const members = Array.isArray(ds.members) ? ds.members : [];
 
       // Household
@@ -1861,6 +1877,7 @@
         const cb = document.querySelector(`[name="screen_${name}"]`);
         if (cb) cb.checked = activeScreens.includes(name);
       });
+      enforceMinOneActiveScreen();
 
       // Screen order
       renderSettingsScreenOrder(screenOrder);
@@ -1913,20 +1930,11 @@
         const nameInput = document.getElementById("settings-assistant-name");
         const newName = nameInput ? nameInput.value.trim() : "";
 
-        // Collect current members from the rendered list
-        const rows = document.querySelectorAll(".admin-settings-member-row");
-        const newMembers = [];
-        rows.forEach((row) => {
-          const nameEl = row.querySelector(".admin-settings-member-name");
-          const colorEl = row.querySelector(".admin-settings-member-color");
-          if (nameEl && colorEl) {
-            const bg = colorEl.style.background;
-            newMembers.push({ name: nameEl.textContent.trim(), color: bg });
-          }
-        });
+        // Use in-memory state for members — add/remove handlers keep it up to date
+        // (DOM reading is unreliable: colorEl.style.background returns rgb() not hex)
+        const newMembers = adminHouseholdSettings.display_settings.members || [];
 
         adminHouseholdSettings.assistant_name = newName;
-        adminHouseholdSettings.display_settings.members = newMembers;
 
         const newDs = { ...adminHouseholdSettings.display_settings, members: newMembers };
 
@@ -2140,11 +2148,25 @@
       renderSettingsScreenOrder(order);
     }
 
+    function enforceMinOneActiveScreen() {
+      const checkboxes = Array.from(document.querySelectorAll("#settings-screen-toggles [type='checkbox']"));
+      const checkedBoxes = checkboxes.filter((cb) => cb.checked);
+      checkboxes.forEach((cb) => {
+        // Disable the last checked box so the user can't uncheck it
+        cb.disabled = checkedBoxes.length === 1 && cb.checked;
+      });
+    }
+
     function handleSettingsScreenToggleChange() {
-      // Update the order list to reflect active/inactive state
+      // Update state so renderSettingsScreenOrder shows the right active/inactive styling
       const ds = adminHouseholdSettings.display_settings;
+      ds.active_screens = CONFIGURABLE_SCREENS.filter((name) => {
+        const cb = document.querySelector(`[name="screen_${name}"]`);
+        return cb && cb.checked;
+      });
       const order = Array.isArray(ds.screen_order) ? ds.screen_order : [...CONFIGURABLE_SCREENS];
       renderSettingsScreenOrder(order);
+      enforceMinOneActiveScreen();
     }
 
     function initSettingsListeners() {

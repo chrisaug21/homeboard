@@ -1446,21 +1446,4 @@
       margin-top: 14px;
     }
 
-    /* Selects share the same base style as inputs */
-    .admin-field select {
-      width: 100%;
-      min-width: 0;
-      border: 1px solid rgba(124, 96, 69, 0.16);
-      border-radius: 16px;
-      padding: 14px 16px;
-      background: rgba(255, 255, 255, 0.84);
-      color: var(--ink);
-      font: inherit;
-      appearance: auto;
-    }
 
-    .admin-field select:focus-visible {
-      outline: 2px solid rgba(180, 83, 9, 0.22);
-      outline-offset: 2px;
-      border-color: rgba(180, 83, 9, 0.3);
-    }

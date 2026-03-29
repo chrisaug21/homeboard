@@ -957,6 +957,11 @@
       }
 
       const firstCountdownScreen = existingCountdownScreens[0];
+      if (!firstCountdownScreen) {
+        // Countdown screen was removed (screen is inactive) — nothing to render into.
+        reconcileRotationState();
+        return;
+      }
       const countdownTemplate = (item, index) => {
         const hasImage = Boolean(item.image_url);
         const variantIndex = index % 4;
@@ -1349,7 +1354,8 @@
       applyScreenOrder(screenOrder);
 
       // Apply calendar default view (set starting screen index)
-      if (ds.calendar_view === "monthly") {
+      // Normalize: DB may store "month" or "monthly"; both mean monthly view
+      if (ds.calendar_view === "monthly" || ds.calendar_view === "month") {
         const monthScreen = track.querySelector(".screen--month");
         if (monthScreen) {
           const idx = Array.from(track.children).indexOf(monthScreen);
@@ -1413,6 +1419,7 @@
         if (newConfig) {
           cachedHouseholdConfig = newConfig;
           updateHouseholdName(newConfig);
+          applyDisplaySettings(newConfig);
         }
 
         if (newSupabaseCountdowns !== null) {
