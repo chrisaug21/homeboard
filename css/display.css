@@ -300,8 +300,8 @@
       border-color: rgba(245, 158, 11, 0.3);
     }
     html[data-scheme="dark"] .meal-note-card {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 240, 220, 0.12);
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.22);
     }
 
     /* Countdown cards */
