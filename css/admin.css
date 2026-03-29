@@ -1420,12 +1420,17 @@
       background: rgba(247, 217, 170, 0.20);
     }
 
+    .admin-settings-scheme-option:has(input:focus-visible) {
+      outline: 3px solid rgba(180, 83, 9, 0.28);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+    }
+
     .admin-settings-scheme-option input[type="radio"] {
       position: absolute;
       opacity: 0;
-      width: 0;
-      height: 0;
-      pointer-events: none;
+      width: 16px;
+      height: 16px;
     }
 
     .admin-settings-scheme-swatch {

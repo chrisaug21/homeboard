@@ -29,9 +29,17 @@
       upcoming_calendar: track.querySelector(".screen--calendar"),
       monthly_calendar: track.querySelector(".screen--month"),
       todos: track.querySelector(".screen--todos"),
-      meals: track.querySelector(".screen--meals"),
-      countdowns: track.querySelector(".countdown-screen")
+      meals: track.querySelector(".screen--meals")
     };
+
+    function getRegisteredScreens(screenName) {
+      if (screenName === "countdowns") {
+        return Array.from(track.querySelectorAll(".countdown-screen"));
+      }
+
+      const screen = displayScreenRegistry[screenName];
+      return screen ? [screen] : [];
+    }
 
     function markPending(screenId) {
       pendingScreens.add(screenId);
@@ -257,7 +265,10 @@
     }
 
     function getVisibleScreens() {
-      return Array.from(track.children).filter((screen) => !screen.classList.contains("screen--disabled"));
+      return Array.from(track.children).filter((screen) =>
+        !screen.classList.contains("screen--disabled")
+        && !screen.classList.contains("screen--empty-hidden")
+      );
     }
 
     function getAssigneeClass(assignee) {
@@ -957,24 +968,34 @@
     }
 
     function renderCountdowns(countdownItems) {
-      const existingCountdownScreens = Array.from(track.querySelectorAll(".countdown-screen"));
+      let existingCountdownScreens = Array.from(track.querySelectorAll(".countdown-screen"));
       existingCountdownScreens.forEach((screen, index) => {
         if (index > 0) {
           screen.remove();
         }
       });
 
+      existingCountdownScreens = Array.from(track.querySelectorAll(".countdown-screen"));
+      let firstCountdownScreen = existingCountdownScreens[0];
+
+      if (!firstCountdownScreen) {
+        firstCountdownScreen = document.createElement("section");
+        firstCountdownScreen.className = "screen countdown-screen";
+        const rsvpScreen = track.querySelector(".rsvp-screen");
+        track.insertBefore(firstCountdownScreen, rsvpScreen || null);
+      }
+
       if (!countdownItems.length) {
-        existingCountdownScreens.forEach((screen) => screen.remove());
+        firstCountdownScreen.innerHTML = "";
+        firstCountdownScreen.classList.add("screen--empty-hidden");
+        firstCountdownScreen.setAttribute("aria-hidden", "true");
         reconcileRotationState();
         return;
       }
 
-      const firstCountdownScreen = existingCountdownScreens[0];
-      if (!firstCountdownScreen) {
-        // Countdown screen was removed (screen is inactive) — nothing to render into.
-        reconcileRotationState();
-        return;
+      firstCountdownScreen.classList.remove("screen--empty-hidden");
+      if (!firstCountdownScreen.classList.contains("screen--disabled")) {
+        firstCountdownScreen.removeAttribute("aria-hidden");
       }
       const countdownTemplate = (item, index) => {
         const hasImage = Boolean(item.image_url);
@@ -1013,7 +1034,10 @@
 
       countdownItems.slice(1).forEach((item, index) => {
         const section = document.createElement("section");
-        section.className = "screen countdown-screen";
+        section.className = `screen countdown-screen${firstCountdownScreen.classList.contains("screen--disabled") ? " screen--disabled" : ""}`;
+        if (section.classList.contains("screen--disabled")) {
+          section.setAttribute("aria-hidden", "true");
+        }
         section.innerHTML = countdownTemplate(item, index + 1);
         // Insert after the last existing countdown-screen to keep them grouped
         const allCountdowns = track.querySelectorAll(".countdown-screen");
@@ -1281,19 +1305,19 @@
     }
 
     function applyActiveScreens(activeScreens) {
-      for (const [name, el] of Object.entries(displayScreenRegistry)) {
-        if (!el) {
-          continue;
-        }
-
-        if (activeScreens.includes(name)) {
-          el.classList.remove("screen--disabled");
-          el.removeAttribute("aria-hidden");
-        } else {
-          el.classList.add("screen--disabled");
-          el.setAttribute("aria-hidden", "true");
-        }
-      }
+      DISPLAY_SCREEN_KEYS.forEach((name) => {
+        getRegisteredScreens(name).forEach((screen) => {
+          if (activeScreens.includes(name)) {
+            screen.classList.remove("screen--disabled");
+            if (!screen.classList.contains("screen--empty-hidden")) {
+              screen.removeAttribute("aria-hidden");
+            }
+          } else {
+            screen.classList.add("screen--disabled");
+            screen.setAttribute("aria-hidden", "true");
+          }
+        });
+      });
 
       reconcileRotationState();
     }
@@ -1302,10 +1326,11 @@
       const rsvpScreen = track.querySelector(".rsvp-screen");
       const anchor = rsvpScreen || null;
       for (const screenName of screenOrder) {
-        const el = displayScreenRegistry[screenName];
-        if (el && el.parentElement === track) {
-          track.insertBefore(el, anchor);
-        }
+        getRegisteredScreens(screenName).forEach((screen) => {
+          if (screen.parentElement === track) {
+            track.insertBefore(screen, anchor);
+          }
+        });
       }
     }
 

@@ -514,6 +514,10 @@
       display: none !important;
     }
 
+    .screen--empty-hidden {
+      display: none !important;
+    }
+
     .panel {
       width: 100%;
       height: 100%;

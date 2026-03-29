@@ -2119,9 +2119,6 @@
           upcoming_days: upcomingDays
         };
 
-        adminHouseholdSettings.display_settings = newDs;
-        adminHouseholdSettings.color_scheme = colorScheme;
-
         const { data, error } = await client
           .from("households")
           .update({ color_scheme: colorScheme, display_settings: newDs })
@@ -2132,6 +2129,8 @@
         } else if (!data || data.length === 0) {
           showToast("Warning: no rows updated — check household ID.");
         } else {
+          adminHouseholdSettings.display_settings = newDs;
+          adminHouseholdSettings.color_scheme = colorScheme;
           showToast("Display settings saved.");
         }
       } finally {
