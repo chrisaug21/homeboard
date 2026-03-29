@@ -57,6 +57,8 @@
     let integrationsSavePending = false;
     let membersSavePending = false;
     let pendingMemberRemovalIndex = null;
+    let adminHouseholdConfigPromise = null;
+    let adminHouseholdConfigLoaded = false;
 
     let toastTimeoutId = null;
     let adminTodoWritePending = false;
@@ -86,6 +88,52 @@
       d.setHours(0, 0, 0, 0);
       return d;
     })();
+
+    function setAdminConfigDependentUiDisabled(disabled) {
+      const elementIds = [
+        "settings-assistant-name",
+        "settings-assistant-save",
+        "settings-member-input",
+        "settings-member-add-btn",
+        "settings-display-save",
+        "settings-integrations-save"
+      ];
+
+      elementIds.forEach((id) => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.disabled = disabled;
+        }
+      });
+
+      const displayInputs = document.querySelectorAll("#admin-screen-settings input, #admin-screen-settings select, #admin-screen-settings button");
+      displayInputs.forEach((element) => {
+        if (element.id !== "settings-sync-btn") {
+          element.disabled = disabled;
+        }
+      });
+    }
+
+    async function ensureAdminHouseholdConfigLoaded(forceReload = false) {
+      if (forceReload || !adminHouseholdConfigPromise) {
+        setAdminConfigDependentUiDisabled(true);
+        adminHouseholdConfigLoaded = false;
+        adminHouseholdConfigPromise = loadAdminHouseholdConfig()
+          .then(() => {
+            adminHouseholdConfigLoaded = true;
+            setAdminConfigDependentUiDisabled(false);
+          })
+          .catch((error) => {
+            adminHouseholdConfigLoaded = false;
+            setAdminConfigDependentUiDisabled(true);
+            adminHouseholdConfigPromise = null;
+            throw error;
+          });
+      }
+
+      await adminHouseholdConfigPromise;
+      return adminHouseholdConfigLoaded;
+    }
 
     function buildMealTypeOptionsHTML(selectedType) {
       return mealTypeOptions.map((option) =>
@@ -559,13 +607,25 @@
       `;
     }
 
-    function openAddTodoModal() {
+    async function openAddTodoModal() {
+      try {
+        await ensureAdminHouseholdConfigLoaded();
+      } catch {
+        showToast("Couldn’t load household settings.");
+        return;
+      }
       adminModalType = "add-todo";
       adminModalContext = null;
       openAdminModal("Add Todo", buildTodoFormHTML(null));
     }
 
-    function openEditTodoModal(todo) {
+    async function openEditTodoModal(todo) {
+      try {
+        await ensureAdminHouseholdConfigLoaded();
+      } catch {
+        showToast("Couldn’t load household settings.");
+        return;
+      }
       adminModalType = "edit-todo";
       adminModalContext = { id: todo.id };
       openAdminModal("Edit Todo", buildTodoFormHTML(todo));
@@ -1033,7 +1093,9 @@
       }
 
       if (target === "settings") {
-        loadAdminHouseholdConfig().then(() => loadAdminSettings());
+        ensureAdminHouseholdConfigLoaded()
+          .then(() => loadAdminSettings())
+          .catch(() => showToast("Couldn’t load household settings."));
       }
     }
 
@@ -1751,7 +1813,9 @@
 
     async function loadAdminHouseholdConfig() {
       const client = getSupabaseClient();
-      if (!client) return;
+      if (!client) {
+        throw new Error("Supabase client unavailable");
+      }
 
       const { data, error } = await client
         .from("households")
@@ -1759,7 +1823,9 @@
         .eq("id", DISPLAY_HOUSEHOLD_ID)
         .single();
 
-      if (error || !data) return;
+      if (error || !data) {
+        throw new Error("Failed to load household config");
+      }
 
       const ds = normalizeDisplaySettings(data.display_settings);
       ds.members = Array.isArray(data.display_settings?.members)
@@ -1782,6 +1848,8 @@
       if (typeof applyColorScheme === "function") {
         applyColorScheme(adminHouseholdSettings.color_scheme);
       }
+
+      return adminHouseholdSettings;
     }
 
     function renderSettingsMembersList(members) {
@@ -1912,9 +1980,19 @@
       el.textContent = label === "Never synced" ? label : `Last synced ${label}`;
     }
 
+    async function refreshAdminData() {
+      await Promise.all([
+        loadAdminTodos(),
+        loadAdminMealPlan(),
+        loadAdminCalendarMonth(),
+        loadAdminCountdowns({ preserveScroll: true }),
+        ensureAdminHouseholdConfigLoaded(true).then(() => loadAdminSettings())
+      ]);
+    }
+
     async function saveAssistantSection() {
       const client = getSupabaseClient();
-      if (!client || assistantSavePending) return;
+      if (!client || assistantSavePending || !adminHouseholdConfigLoaded) return;
 
       assistantSavePending = true;
       const saveBtn = document.getElementById("settings-assistant-save");
@@ -1947,7 +2025,7 @@
 
     async function persistMemberList(updatedMembers, successMessage) {
       const client = getSupabaseClient();
-      if (!client || membersSavePending) {
+      if (!client || membersSavePending || !adminHouseholdConfigLoaded) {
         return false;
       }
 
@@ -1992,7 +2070,7 @@
 
     async function saveDisplaySection() {
       const client = getSupabaseClient();
-      if (!client || displaySavePending) return;
+      if (!client || displaySavePending || !adminHouseholdConfigLoaded) return;
 
       displaySavePending = true;
       const saveBtn = document.getElementById("settings-display-save");
@@ -2064,7 +2142,7 @@
 
     async function saveIntegrationsSection() {
       const client = getSupabaseClient();
-      if (!client || integrationsSavePending) return;
+      if (!client || integrationsSavePending || !adminHouseholdConfigLoaded) return;
 
       integrationsSavePending = true;
       const saveBtn = document.getElementById("settings-integrations-save");
@@ -2122,6 +2200,7 @@
           }
         }
 
+        await refreshAdminData();
         localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
         updateAdminLastSyncedLabel();
         showToast("Sync complete.");
@@ -2288,11 +2367,18 @@
       if (adminCalNextBtn) adminCalNextBtn.addEventListener("click", handleAdminCalNext);
       const adminVersionEl = document.getElementById("admin-version-label");
       if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
+      setAdminConfigDependentUiDisabled(true);
       updateAdminLastSyncedLabel();
       window.setInterval(updateAdminLastSyncedLabel, 30000);
       loadAdminTodos();
       loadAdminMealPlan();
       initSettingsListeners();
-      loadAdminHouseholdConfig();
+      ensureAdminHouseholdConfigLoaded()
+        .then(() => {
+          if (adminScreen === "settings") {
+            loadAdminSettings();
+          }
+        })
+        .catch(() => showToast("Couldn’t load household settings."));
       refreshIcons();
     }

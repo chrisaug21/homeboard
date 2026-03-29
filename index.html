@@ -321,11 +321,10 @@
         <section class="admin-panel" aria-labelledby="settings-assistant-title">
           <h2 class="admin-panel-title" id="settings-assistant-title">Assistant Name</h2>
           <div class="admin-settings-stack">
-            <div class="admin-field">
-              <label for="settings-assistant-name">Assistant name</label>
-              <input id="settings-assistant-name" type="text" maxlength="60"
-                placeholder="Leave blank to show &ldquo;Homeboard&rdquo;" autocomplete="off">
+            <div class="admin-settings-subsection">
               <p class="admin-field-hint">Shown in the bottom bar of the display view.</p>
+              <input id="settings-assistant-name" class="admin-input" type="text" maxlength="60"
+                placeholder="Leave blank to show &ldquo;Homeboard&rdquo;" autocomplete="off" aria-label="Assistant name">
             </div>
           </div>
           <div class="admin-actions admin-actions--end">
@@ -355,6 +354,7 @@
 
             <div class="admin-settings-subsection">
               <div class="admin-settings-subsection-label">Active screens</div>
+              <p class="admin-field-hint">At least one screen must stay active.</p>
               <div class="admin-settings-toggle-list" id="settings-screen-toggles">
                 <label class="admin-settings-toggle">
                   <input type="checkbox" name="screen_upcoming_calendar" value="upcoming_calendar">
@@ -377,19 +377,18 @@
                   <span>Countdowns</span>
                 </label>
               </div>
-              <p class="admin-field-hint">At least one screen must stay active.</p>
             </div>
 
             <div class="admin-settings-subsection">
               <div class="admin-settings-subsection-label">Screen order</div>
-              <ol id="settings-screen-order" class="admin-settings-order-list"></ol>
               <p class="admin-field-hint">Use arrows to reorder. Inactive screens are grayed out.</p>
+              <ol id="settings-screen-order" class="admin-settings-order-list"></ol>
             </div>
 
             <div class="admin-settings-subsection">
               <div class="admin-settings-subsection-label">Rotation timers</div>
-              <div id="settings-timer-list" class="admin-settings-timer-list"></div>
               <p class="admin-field-hint">Seconds each screen stays visible before advancing.</p>
+              <div id="settings-timer-list" class="admin-settings-timer-list"></div>
             </div>
 
             <div class="admin-form-row">
@@ -452,6 +451,7 @@
         <!-- Sync -->
         <section class="admin-panel" aria-labelledby="settings-sync-title">
           <h2 class="admin-panel-title" id="settings-sync-title">Sync</h2>
+          <p class="admin-field-hint">Re-fetches all data and checks for app updates. If a new version is available, the page reloads automatically.</p>
           <div class="admin-sync-row">
             <button type="button" id="settings-sync-btn"
               class="admin-button admin-button--primary admin-sync-btn">
@@ -460,7 +460,6 @@
             </button>
             <span id="settings-last-synced" class="admin-sync-timestamp"></span>
           </div>
-          <p class="admin-panel-note" style="margin-top:10px;">Re-fetches all data and checks for app updates. If a new version is available, the page reloads automatically.</p>
         </section>
 
       </section>

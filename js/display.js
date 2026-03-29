@@ -253,7 +253,11 @@
     }
 
     function getScreenCount() {
-      return track.children.length;
+      return getVisibleScreens().length;
+    }
+
+    function getVisibleScreens() {
+      return Array.from(track.children).filter((screen) => !screen.classList.contains("screen--disabled"));
     }
 
     function getAssigneeClass(assignee) {
@@ -878,7 +882,8 @@
     }
 
     function reconcileRotationState() {
-      const screenCount = getScreenCount();
+      const visibleScreens = getVisibleScreens();
+      const screenCount = visibleScreens.length;
 
       if (!screenCount) {
         return;
@@ -1250,9 +1255,9 @@
     }
 
     function renderProgress() {
-      const screenCount = getScreenCount();
-      progressDots.innerHTML = Array.from({ length: screenCount }, (_, index) => {
-        const isRsvpScreen = track.children[index] && track.children[index].classList.contains("rsvp-screen");
+      const visibleScreens = getVisibleScreens();
+      progressDots.innerHTML = Array.from({ length: visibleScreens.length }, (_, index) => {
+        const isRsvpScreen = visibleScreens[index] && visibleScreens[index].classList.contains("rsvp-screen");
         const activeClass = index === currentIndex ? " active" + (isRsvpScreen ? " rsvp-active" : "") : "";
         return `<span class="dot${activeClass}" aria-hidden="true"></span>`;
       }).join("");
@@ -1276,19 +1281,17 @@
     }
 
     function applyActiveScreens(activeScreens) {
-      const anchor = track.querySelector(".rsvp-screen") || null;
-
       for (const [name, el] of Object.entries(displayScreenRegistry)) {
         if (!el) {
           continue;
         }
 
         if (activeScreens.includes(name)) {
-          if (el.parentElement !== track) {
-            track.insertBefore(el, anchor);
-          }
-        } else if (el.parentElement === track) {
-          el.remove();
+          el.classList.remove("screen--disabled");
+          el.removeAttribute("aria-hidden");
+        } else {
+          el.classList.add("screen--disabled");
+          el.setAttribute("aria-hidden", "true");
         }
       }
 
@@ -1430,6 +1433,9 @@
 
     function goToScreen(index) {
       const screenCount = getScreenCount();
+      if (!screenCount) {
+        return;
+      }
       const isForwardWrap = index >= screenCount;
       const isBackwardWrap = index < 0;
 
@@ -1455,7 +1461,7 @@
     }
 
     function getTimerForCurrentScreen() {
-      const screen = track.children[currentIndex];
+      const screen = getVisibleScreens()[currentIndex];
       if (!screen) return (screenTimers.default || 30) * 1000;
       if (screen.classList.contains("screen--calendar")) return (screenTimers.upcoming_calendar || 30) * 1000;
       if (screen.classList.contains("screen--month")) return (screenTimers.monthly_calendar || 60) * 1000;
