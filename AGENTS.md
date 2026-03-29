@@ -50,9 +50,10 @@ netlify.toml        — build + env var injection via sed
 - `Review RSVPs` = flagged RSVP count only; categories are `Unmatched`, `Duplicate`, `Count mismatch`, and `Low confidence`
 - The totals must reconcile: `attending + declined + pending = total invited_count across invited_parties`
 - Fuzzy matching logic is shared between display/admin auto-linking and manual suggestions:
-  1. last-word exact match carries the most weight
+  1. surname matching carries the most weight, including a strong bonus when the RSVP's last meaningful token appears anywhere in the invited party name
   2. word overlap carries medium weight
   3. full-string similarity carries lower weight
+- Single-word RSVPs get a special pass: if that word exactly matches the first name of exactly one invited party across all parties, treat it as high confidence
 - Duplicate detection must score new RSVPs against all `invited_parties` rows, including already-matched parties; only the final auto-link step may restrict to unmatched parties
 - High-confidence fuzzy matches may auto-link unmatched RSVPs to unmatched `invited_parties` rows during regular refreshes; if the best-scoring party is already matched above the duplicate threshold, flag the RSVP as `Duplicate` instead of auto-linking, not `Unmatched`
 - Duplicate review modals must support merge: choose the primary RSVP, edit the merged guest count, set the secondary RSVP to `superseded`, set its `merged_into_party_id`, link the primary RSVP to the invited party, and save the primary guest count

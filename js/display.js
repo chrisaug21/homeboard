@@ -1640,13 +1640,34 @@
       resetAutoRotate();
     }
 
+    function getDisplayReviewResponseLabel(rsvp) {
+      if (!rsvp) {
+        return "";
+      }
+      return rsvp.attending
+        ? `Attending • ${formatGuestCountLabel(rsvp.guestCount)}`
+        : "Declining";
+    }
+
     function openRsvpReviewModal() {
-      const count = cachedWeddingSnapshot?.reviewItems?.length || 0;
+      const reviewItems = cachedWeddingSnapshot?.reviewItems || [];
+      const count = reviewItems.length;
       if (!count) return;
       const bodyEl = document.getElementById("rsvp-review-body");
       bodyEl.innerHTML = `
         <div class="rsvp-review-copy">
-          <p>We found <strong>${count}</strong> responses that might be duplicates, have unexpected guest counts, or couldn't be matched to your guest list.</p>
+          <p><strong>${count}</strong> RSVP${count === 1 ? "" : "s"} need${count === 1 ? "s" : ""} a closer look.</p>
+          <div class="rsvp-detail-list rsvp-review-list">
+            ${reviewItems.map((item) => `
+              <div class="rsvp-detail-item rsvp-review-item">
+                <div class="rsvp-review-item-header">
+                  <span>${escapeHtml(item.rsvp?.name || "Unnamed RSVP")}</span>
+                  <span class="rsvp-review-badge">${escapeHtml(item.issueLabel || "Review")}</span>
+                </div>
+                <div class="rsvp-review-item-meta">${escapeHtml(getDisplayReviewResponseLabel(item.rsvp))}</div>
+              </div>
+            `).join("")}
+          </div>
           <p class="rsvp-review-cta">Open the RSVP tab in the admin on your phone to sort these out.</p>
         </div>
       `;

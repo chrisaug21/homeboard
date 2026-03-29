@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.9.3";
+    const VERSION = "0.9.4";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -43,6 +43,7 @@
     const RSVP_MATCH_LOW_CONFIDENCE_THRESHOLD = 4.6;
     const RSVP_MATCH_AUTO_LINK_THRESHOLD = 6.4;
     const RSVP_LOW_CONFIDENCE_CONFIRM_KEY = "homeboard_rsvp_low_confidence_confirmations";
+    const RSVP_GENERIC_FAMILY_TOKENS = ["family", "household", "guests", "guest", "party", "crew"];
 
     const mealTypeOptions = [
       {
@@ -325,6 +326,21 @@
       return tokens.length ? tokens[tokens.length - 1] : "";
     }
 
+    function getPrimaryFamilyToken(value) {
+      const tokens = getMatchTokens(value);
+      for (let index = tokens.length - 1; index >= 0; index -= 1) {
+        if (!RSVP_GENERIC_FAMILY_TOKENS.includes(tokens[index])) {
+          return tokens[index];
+        }
+      }
+      return tokens.length ? tokens[tokens.length - 1] : "";
+    }
+
+    function getFirstNameToken(value) {
+      const tokens = getMatchTokens(value);
+      return tokens.length ? tokens[0] : "";
+    }
+
     function buildBigrams(value) {
       const normalized = normalizeMatchName(value).replace(/\s+/g, "");
       if (!normalized) return [];
@@ -365,12 +381,15 @@
       const partyTokens = getMatchTokens(normalizedParty);
       const overlapCount = rsvpTokens.filter((token) => partyTokens.includes(token)).length;
       const lastNameMatches = getLastNameToken(normalizedRsvp) && getLastNameToken(normalizedRsvp) === getLastNameToken(normalizedParty);
+      const primaryFamilyToken = getPrimaryFamilyToken(normalizedRsvp);
+      const familyTokenAppearsInParty = primaryFamilyToken && partyTokens.includes(primaryFamilyToken);
       const firstNameMatches = rsvpTokens[0] && rsvpTokens[0] === partyTokens[0];
       const exactMatch = normalizedRsvp === normalizedParty;
       const stringSimilarity = getDiceCoefficient(normalizedRsvp, normalizedParty);
 
       let score = 0;
       if (lastNameMatches) score += 4.2;
+      if (familyTokenAppearsInParty && !lastNameMatches) score += 4.4;
       if (firstNameMatches) score += 1.2;
       if (overlapCount > 0) score += Math.min(2.4, overlapCount * 1.2);
       if (exactMatch) score += 2.4;
@@ -379,11 +398,31 @@
       return Number(score.toFixed(3));
     }
 
+    function getUniqueSingleNameMatch(rsvpName, invitedParties) {
+      const tokens = getMatchTokens(rsvpName);
+      if (tokens.length !== 1) {
+        return null;
+      }
+
+      const targetName = tokens[0];
+      const matches = (Array.isArray(invitedParties) ? invitedParties : [])
+        .filter((party) => getFirstNameToken(party.name) === targetName)
+        .map((party) => ({
+          ...party,
+          matchScore: Math.max(scoreInvitedPartyMatch(rsvpName, party.name), RSVP_MATCH_AUTO_LINK_THRESHOLD)
+        }));
+
+      return matches.length === 1 ? matches[0] : null;
+    }
+
     function getInvitedPartySuggestions(rsvpName, invitedParties, limit = 3, minScore = RSVP_MATCH_SUGGESTION_THRESHOLD) {
+      const uniqueSingleNameMatch = getUniqueSingleNameMatch(rsvpName, invitedParties);
       return (Array.isArray(invitedParties) ? invitedParties : [])
         .map((party) => ({
           ...party,
-          matchScore: scoreInvitedPartyMatch(rsvpName, party.name)
+          matchScore: uniqueSingleNameMatch && uniqueSingleNameMatch.id === party.id
+            ? uniqueSingleNameMatch.matchScore
+            : scoreInvitedPartyMatch(rsvpName, party.name)
         }))
         .filter((party) => party.matchScore >= minScore)
         .sort((a, b) => {
