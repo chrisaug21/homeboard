@@ -29,7 +29,7 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 4. **Dinner Plan** — this week's dinner entries (Mon–Sun)
 5. **Looking Forward** — countdown cards to upcoming events with Lucide icons and days-remaining
 6. **Wedding Pulse** — live RSVP tracker (Chris & Bailey only, hidden starting Oct 11, 2026)
-   Counts are driven by `rsvps` + `invited_parties`, declined/pending totals open name-list modals, and the guest list shows attending RSVPs only
+   Counts are driven by `rsvps` + `invited_parties`, the hero shows parties responded plus review count, declined/pending totals open name-list modals, and review flags open a display explainer modal
 
 ## Admin Tabs
 
@@ -57,7 +57,8 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 - Rotation timers, color scheme, Google Calendar ID, and sync controls
 
 ### RSVP
-- Unmatched RSVPs show submitted name, attending/declining status, guest count when attending, fuzzy match suggestions, and manual party search/linking
+- Needs Review shows flagged RSVP rows for `Unmatched`, `Duplicate`, `Count mismatch`, and `Low confidence`
+- Each review row opens the shared bottom-sheet modal with issue-specific actions
 - Full guest list shows every `invited_parties` row sorted Attending → Declined → Pending
 - Tapping a party opens a shared bottom-sheet modal to edit the party name, invited count, and linked RSVP, including unlinking or manual relinking
 - High-confidence matches can auto-link during refresh using the same scoring logic as the admin suggestions
@@ -79,10 +80,12 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 ## Wedding RSVP Matching
 
 - Homeboard wedding counts must come from `rsvps` + `invited_parties`, not from hardcoded totals or subtracting from `households.total_invited_guests`
-- `Confirmed attending` = sum of `rsvps.guest_count` where `attending = true`
-- `Declined` = sum of `invited_parties.invited_count` where `rsvp_id` is set and the linked RSVP has `attending = false`
+- `Attending` = matched attending people only; clamp over-counted RSVPs to the invited party size so totals still reconcile
+- `Declined` = full declines plus partial declines for under-count RSVPs
 - `Pending` = sum of `invited_parties.invited_count` where `rsvp_id` is null
 - `Responded` = count of matched `invited_parties`
+- `Review RSVPs` = count of flagged RSVP rows in Needs Review
+- `attending + declined + pending` must equal the total invited count across `invited_parties`
 - Fuzzy match scoring is shared by the admin RSVP tab and automatic refresh linking:
   1. last-word exact match has the highest weight
   2. any word overlap has medium weight

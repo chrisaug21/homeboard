@@ -43,6 +43,8 @@
       --amber-soft: #f7d9aa;
       --sage: #15803d;
       --sage-soft: #dcefdc;
+      --rsvp-clear: #15803d;
+      --rsvp-flagged: #b45309;
       --rose: #a64c63;
       --rose-soft: #f8dce3;
       --shadow: 0 18px 44px rgba(98, 73, 46, 0.12);
@@ -167,19 +169,25 @@
             </div>
             <div class="rsvp-layout">
               <div class="hero-card">
-                <div>
+                <div class="hero-card-main">
                   <div class="summary-label" style="color:var(--rose);">Confirmed Guests</div>
                   <div class="hero-number" id="rsvp-total">34</div>
                   <div class="hero-label" id="rsvp-total-label">attending so far</div>
                 </div>
+                <div class="hero-meta">
+                  <div class="hero-meta-line" id="rsvp-parties-responded">0 / 0 parties responded</div>
+                  <button class="hero-meta-line hero-meta-line--review" type="button" id="rsvp-review-hero-trigger" hidden>0 to review</button>
+                </div>
               </div>
               <div class="breakdown-card">
-                <div class="breakdown-row"><span>Responded</span><strong id="rsvp-responded-count">34</strong></div>
                 <button class="breakdown-row breakdown-row--button" type="button" id="rsvp-declined-trigger">
-                  <span>Declined</span><strong id="rsvp-declined-count">8</strong>
+                  <span>Declined</span><strong id="rsvp-declined-count">8</strong><small>guests not coming</small>
                 </button>
                 <button class="breakdown-row breakdown-row--button" type="button" id="rsvp-pending-trigger">
-                  <span>Pending</span><strong id="rsvp-pending-count">10</strong>
+                  <span>Pending</span><strong id="rsvp-pending-count">10</strong><small>still to hear from</small>
+                </button>
+                <button class="breakdown-row breakdown-row--button" type="button" id="rsvp-review-trigger">
+                  <span>Review RSVPs</span><strong id="rsvp-review-count">0</strong><small>needs attention</small>
                 </button>
               </div>
               <div class="names-card">
@@ -236,6 +244,17 @@
           <button class="display-modal-close" type="button" id="rsvp-detail-close" aria-label="Close"><i data-lucide="x"></i></button>
         </div>
         <div class="display-modal-body" id="rsvp-detail-body"></div>
+      </div>
+    </div>
+
+    <div class="display-modal" id="rsvp-review-modal" hidden role="dialog" aria-modal="true" aria-labelledby="rsvp-review-title">
+      <div class="display-modal-backdrop" id="rsvp-review-backdrop"></div>
+      <div class="display-modal-sheet">
+        <div class="display-modal-header">
+          <h2 class="display-modal-title" id="rsvp-review-title">RSVPs Need a Closer Look</h2>
+          <button class="display-modal-close" type="button" id="rsvp-review-close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="display-modal-body" id="rsvp-review-body"></div>
       </div>
     </div>
   </div>
@@ -480,8 +499,8 @@
       </section>
 
       <section class="admin-screen" id="admin-screen-rsvp" data-admin-screen="rsvp" hidden>
-        <section class="admin-panel" aria-labelledby="admin-rsvp-unmatched-title">
-          <h2 class="admin-panel-title" id="admin-rsvp-unmatched-title">Unmatched RSVPs</h2>
+        <section class="admin-panel" aria-labelledby="admin-rsvp-review-title">
+          <h2 class="admin-panel-title" id="admin-rsvp-review-title">Needs Review</h2>
           <p class="admin-panel-note" id="admin-rsvp-unmatched-note">Loading RSVP matches…</p>
           <div class="admin-list" id="admin-rsvp-unmatched-list"></div>
         </section>

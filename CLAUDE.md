@@ -49,15 +49,19 @@ netlify.toml        — build config, env var injection via sed
 
 ## Wedding RSVP Logic
 - Homeboard wedding counts must derive from `rsvps` + `invited_parties`, not from hardcoded totals or subtraction from `households.total_invited_guests`
-- `Confirmed attending` = sum of `rsvps.guest_count` where `attending = true`
-- `Declined` = sum of `invited_parties.invited_count` where `rsvp_id` is set and the linked RSVP has `attending = false`
+- `Attending` = matched attending people only; use the linked RSVP guest count, clamped to the invited party count if an RSVP overstates guests so totals stay consistent
+- `Declined` = full declines plus partial declines (`invited_count - guest_count` when a matched attending RSVP brings fewer guests than invited)
 - `Pending` = sum of `invited_parties.invited_count` where `rsvp_id` is null
 - `Responded` = count of matched `invited_parties`
+- `Review RSVPs` = count of flagged RSVP rows in `Needs Review`
+- Display totals must reconcile: `attending + declined + pending = total invited_count across invited_parties`
 - Shared fuzzy match scoring for RSVP linking:
   1. exact last-word match is weighted highest
   2. any word overlap is weighted medium
   3. full-string similarity is weighted lower
-- Display mode and admin mode use the same matching helper. High-confidence matches may auto-link on refresh and should log to the browser console.
+- Needs Review categories: `Unmatched`, `Duplicate`, `Count mismatch`, `Low confidence`
+- Display mode and admin mode use the same matching helper. High-confidence matches may auto-link on refresh and should log to the browser console. If the best match is already linked above the duplicate threshold, flag it as `Duplicate` instead of auto-linking.
+- RSVP review actions live in the shared admin bottom-sheet modal. A resolved issue should disappear from the Needs Review list after the modal action completes.
 
 ## display_settings JSONB shape
 ```json

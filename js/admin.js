@@ -321,6 +321,37 @@
         form.querySelectorAll(".admin-rsvp-search-result").forEach((row) => row.classList.remove("is-selected"));
         return;
       }
+      const deleteRsvpBtn = event.target.closest("[data-action='review-delete-rsvp']");
+      if (deleteRsvpBtn) {
+        const rsvpId = deleteRsvpBtn.getAttribute("data-rsvp-id");
+        const resolution = deleteRsvpBtn.getAttribute("data-resolution");
+        if (rsvpId) {
+          if (resolution === "replace-with-current") {
+            resolveDuplicateByReplacingCompetingRsvp(rsvpId);
+          } else {
+            deleteReviewRsvp(rsvpId);
+          }
+        }
+        return;
+      }
+      const confirmLowConfidenceBtn = event.target.closest("[data-action='review-confirm-low-confidence']");
+      if (confirmLowConfidenceBtn) {
+        const rsvpId = confirmLowConfidenceBtn.getAttribute("data-rsvp-id");
+        const partyId = confirmLowConfidenceBtn.getAttribute("data-party-id");
+        if (rsvpId && partyId) {
+          confirmLowConfidenceReview(rsvpId, partyId);
+        }
+        return;
+      }
+      const relinkBtn = event.target.closest("[data-action='review-relink']");
+      if (relinkBtn) {
+        const rsvpId = relinkBtn.getAttribute("data-rsvp-id");
+        const partyId = relinkBtn.getAttribute("data-party-id");
+        if (rsvpId && partyId) {
+          unlinkPartyAndReopenReview(partyId, rsvpId);
+        }
+        return;
+      }
       if (event.target.closest("[data-action='get-photo-modal']")) {
         handleGetPhotoModal();
         return;
@@ -403,6 +434,9 @@
       } else if (formType === "rsvp-party") {
         if (adminRsvpWritePending) return;
         saveAdminInvitedParty(formData);
+      } else if (formType === "review-guest-count") {
+        if (adminRsvpWritePending) return;
+        saveReviewGuestCount(formData);
       }
     }
 
@@ -1697,6 +1731,20 @@
         .slice(0, 8);
     }
 
+    function getReviewItemByRsvpId(rsvpId) {
+      return adminWeddingSnapshot?.reviewItems?.find((item) => item.rsvp.id === rsvpId) || null;
+    }
+
+    function getReviewResponseLabel(rsvp) {
+      return rsvp.attending
+        ? `Attending • ${formatAdminGuestCount(rsvp.guestCount)}`
+        : "Declining";
+    }
+
+    function buildReviewIssueBadge(issueLabel) {
+      return `<span class="admin-rsvp-issue-badge">${escapeHtml(issueLabel)}</span>`;
+    }
+
     function buildManualPartySearchResultsHTML(matches, rsvpId) {
       if (!matches.length) {
         return '<div class="admin-rsvp-no-match">No open invited parties match that search.</div>';
@@ -1716,66 +1764,172 @@
       `).join("");
     }
 
+    function buildReviewPartySearchSection(rsvp, initialQuery = rsvp.name) {
+      const unmatchedParties = adminWeddingSnapshot?.invitedParties?.filter((party) => !party.rsvpId) || [];
+      const suggestions = getInvitedPartySuggestions(rsvp.name, unmatchedParties, 3);
+      const manualMatches = getManualSearchMatches(initialQuery, unmatchedParties);
+
+      return `
+        ${suggestions.length ? `
+          <div class="admin-rsvp-suggestion-list">
+            ${suggestions.map((party) => `
+              <div class="admin-rsvp-suggestion">
+                <div>
+                  <div class="admin-rsvp-suggestion-title">${escapeHtml(party.name)}</div>
+                  <div class="admin-rsvp-suggestion-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))} invited • score ${party.matchScore.toFixed(1)}</div>
+                </div>
+                <button class="admin-button admin-button--primary admin-button--small" type="button"
+                  data-action="link-rsvp-party"
+                  data-party-id="${escapeHtml(party.id)}"
+                  data-rsvp-id="${escapeHtml(rsvp.id)}">Link</button>
+              </div>
+            `).join("")}
+          </div>
+        ` : '<div class="admin-rsvp-no-match">No strong fuzzy matches yet.</div>'}
+        <div class="admin-rsvp-search-block">
+          <div class="admin-rsvp-search-label">Manual search</div>
+          <input class="admin-input admin-rsvp-search-input" type="text"
+            data-rsvp-search-input="review"
+            data-rsvp-id="${escapeHtml(rsvp.id)}"
+            placeholder="Search invited parties by name"
+            value="${escapeHtml(initialQuery)}"
+            autocomplete="off">
+          <div class="admin-rsvp-search-results" data-rsvp-search-results="${escapeHtml(rsvp.id)}">
+            ${buildManualPartySearchResultsHTML(manualMatches, rsvp.id)}
+          </div>
+        </div>
+      `;
+    }
+
+    function buildReviewModalHTML(reviewItem) {
+      if (!reviewItem) {
+        return `<div class="admin-empty">That RSVP no longer needs review.</div>`;
+      }
+
+      if (reviewItem.issueType === "unmatched") {
+        return `
+          <div class="admin-rsvp-review-modal">
+            <div class="admin-rsvp-review-header">
+              ${buildReviewIssueBadge(reviewItem.issueLabel)}
+              <div class="admin-rsvp-card-title">${escapeHtml(reviewItem.rsvp.name)}</div>
+              <div class="admin-rsvp-card-meta">${escapeHtml(getReviewResponseLabel(reviewItem.rsvp))}</div>
+            </div>
+            ${buildReviewPartySearchSection(reviewItem.rsvp)}
+          </div>
+        `;
+      }
+
+      if (reviewItem.issueType === "duplicate") {
+        return `
+          <div class="admin-rsvp-review-modal">
+            <div class="admin-rsvp-review-header">
+              ${buildReviewIssueBadge(reviewItem.issueLabel)}
+              <div class="admin-rsvp-card-title">${escapeHtml(reviewItem.rsvp.name)}</div>
+              <div class="admin-rsvp-card-meta">${escapeHtml(getReviewResponseLabel(reviewItem.rsvp))}</div>
+            </div>
+            <div class="admin-rsvp-compare">
+              <div class="admin-rsvp-compare-card">
+                <strong>Current RSVP</strong>
+                <span>${escapeHtml(reviewItem.rsvp.name)}</span>
+                <span>${escapeHtml(getReviewResponseLabel(reviewItem.rsvp))}</span>
+              </div>
+              <div class="admin-rsvp-compare-card">
+                <strong>Competing RSVP</strong>
+                <span>${escapeHtml(reviewItem.competingRsvp?.name || "Unknown RSVP")}</span>
+                <span>${escapeHtml(getReviewResponseLabel(reviewItem.competingRsvp || { attending: false, guestCount: 0 }))}</span>
+              </div>
+            </div>
+            <div class="admin-rsvp-action-row">
+              <button class="admin-button admin-button--secondary" type="button"
+                data-action="review-delete-rsvp"
+                data-rsvp-id="${escapeHtml(reviewItem.rsvp.id)}">Delete current RSVP</button>
+              <button class="admin-button admin-button--primary" type="button"
+                data-action="review-delete-rsvp"
+                data-rsvp-id="${escapeHtml(reviewItem.competingRsvp?.id || "")}"
+                data-resolution="replace-with-current">Delete competing RSVP</button>
+            </div>
+            ${buildReviewPartySearchSection(reviewItem.rsvp)}
+          </div>
+        `;
+      }
+
+      if (reviewItem.issueType === "count_mismatch") {
+        return `
+          <form data-modal-form="review-guest-count" novalidate>
+            <input type="hidden" name="rsvp_id" value="${escapeHtml(reviewItem.rsvp.id)}">
+            <div class="admin-rsvp-review-modal">
+              <div class="admin-rsvp-review-header">
+                ${buildReviewIssueBadge(reviewItem.issueLabel)}
+                <div class="admin-rsvp-card-title">${escapeHtml(reviewItem.rsvp.name)}</div>
+                <div class="admin-rsvp-card-meta">${escapeHtml(reviewItem.matchedParty.name)} invited ${escapeHtml(formatAdminGuestCount(reviewItem.matchedParty.invitedCount))}, but the RSVP says ${escapeHtml(formatAdminGuestCount(reviewItem.rsvp.guestCount))}.</div>
+              </div>
+              <div class="admin-field">
+                <label for="review-guest-count">Correct guest count</label>
+                <input id="review-guest-count" name="guest_count" type="number" min="0" max="20" value="${escapeHtml(reviewItem.rsvp.guestCount)}" required>
+              </div>
+              <div class="admin-actions admin-actions--end">
+                <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+                <button class="admin-button admin-button--primary" type="submit">Save</button>
+              </div>
+            </div>
+          </form>
+        `;
+      }
+
+      return `
+        <div class="admin-rsvp-review-modal">
+          <div class="admin-rsvp-review-header">
+            ${buildReviewIssueBadge(reviewItem.issueLabel)}
+            <div class="admin-rsvp-card-title">${escapeHtml(reviewItem.rsvp.name)}</div>
+            <div class="admin-rsvp-card-meta">${escapeHtml(getReviewResponseLabel(reviewItem.rsvp))}</div>
+          </div>
+          <div class="admin-rsvp-compare-card">
+            <strong>Matched party</strong>
+            <span>${escapeHtml(reviewItem.matchedParty?.name || "Unknown party")}</span>
+            <span>Score ${Number(reviewItem.bestScore || 0).toFixed(1)}</span>
+          </div>
+          <div class="admin-rsvp-action-row">
+            <button class="admin-button admin-button--primary" type="button"
+              data-action="review-confirm-low-confidence"
+              data-rsvp-id="${escapeHtml(reviewItem.rsvp.id)}"
+              data-party-id="${escapeHtml(reviewItem.matchedParty?.id || "")}">Confirm match</button>
+            <button class="admin-button admin-button--secondary" type="button"
+              data-action="review-relink"
+              data-rsvp-id="${escapeHtml(reviewItem.rsvp.id)}"
+              data-party-id="${escapeHtml(reviewItem.matchedParty?.id || "")}">Re-link</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function openReviewModal(rsvpId) {
+      const reviewItem = getReviewItemByRsvpId(rsvpId);
+      adminModalType = "review-rsvp";
+      adminModalContext = { rsvpId };
+      openAdminModal("Review RSVP", buildReviewModalHTML(reviewItem));
+    }
+
     function renderAdminRsvpUnmatchedList() {
-      const snapshot = adminWeddingSnapshot;
-      const unmatched = snapshot?.unmatchedRsvps || [];
-      const unmatchedParties = snapshot?.invitedParties?.filter((party) => !party.rsvpId) || [];
+      const reviewItems = adminWeddingSnapshot?.reviewItems || [];
 
-      adminRsvpUnmatchedNote.textContent = unmatched.length
-        ? `${unmatched.length} RSVP${unmatched.length === 1 ? "" : "s"} still need a party match.`
-        : "All RSVPs are matched to invited parties.";
+      adminRsvpUnmatchedNote.textContent = "RSVPs that need your attention — unmatched, possible duplicates, unexpected guest counts, or uncertain matches.";
 
-      if (!unmatched.length) {
+      if (!reviewItems.length) {
         adminRsvpUnmatchedList.innerHTML = '<div class="admin-empty">Nothing to review right now.</div>';
         return;
       }
 
-      adminRsvpUnmatchedList.innerHTML = unmatched.map((rsvp) => {
-        const suggestions = getInvitedPartySuggestions(rsvp.name, unmatchedParties, 3);
-        const manualMatches = getManualSearchMatches(rsvp.name, unmatchedParties);
-        const responseLabel = rsvp.attending
-          ? `Attending • ${formatAdminGuestCount(rsvp.guestCount)}`
-          : "Declining";
-
-        return `
-          <article class="admin-rsvp-card">
-            <div class="admin-rsvp-card-header">
-              <div class="admin-rsvp-card-title">${escapeHtml(rsvp.name)}</div>
-              <div class="admin-rsvp-card-meta">${escapeHtml(responseLabel)}</div>
-            </div>
-            ${suggestions.length ? `
-              <div class="admin-rsvp-suggestion-list">
-                ${suggestions.map((party) => `
-                  <div class="admin-rsvp-suggestion">
-                    <div>
-                      <div class="admin-rsvp-suggestion-title">${escapeHtml(party.name)}</div>
-                      <div class="admin-rsvp-suggestion-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))} invited • score ${party.matchScore.toFixed(1)}</div>
-                    </div>
-                    <button class="admin-button admin-button--primary admin-button--small" type="button"
-                      data-action="link-rsvp-party"
-                      data-party-id="${escapeHtml(party.id)}"
-                      data-rsvp-id="${escapeHtml(rsvp.id)}">Link</button>
-                  </div>
-                `).join("")}
-              </div>
-            ` : `
-              <div class="admin-rsvp-no-match">No strong suggestions yet. Try a manual search below.</div>
-            `}
-            <div class="admin-rsvp-search-block">
-              <div class="admin-rsvp-search-label">Manual search</div>
-              <input class="admin-input admin-rsvp-search-input" type="text"
-                data-rsvp-search-input="party"
-                data-rsvp-id="${escapeHtml(rsvp.id)}"
-                placeholder="Search invited parties by name"
-                value="${escapeHtml(rsvp.name)}"
-                autocomplete="off">
-              <div class="admin-rsvp-search-results" data-rsvp-search-results="${escapeHtml(rsvp.id)}">
-                ${buildManualPartySearchResultsHTML(manualMatches, rsvp.id)}
-              </div>
-            </div>
-          </article>
-        `;
-      }).join("");
+      adminRsvpUnmatchedList.innerHTML = reviewItems.map((item) => `
+        <button class="admin-rsvp-review-row" type="button" data-review-rsvp-id="${escapeHtml(item.rsvp.id)}">
+          <div class="admin-rsvp-review-main">
+            <div class="admin-rsvp-guest-title">${escapeHtml(item.rsvp.name)}</div>
+            <div class="admin-rsvp-card-meta">${escapeHtml(getReviewResponseLabel(item.rsvp))}</div>
+          </div>
+          <div class="admin-rsvp-review-side">
+            ${buildReviewIssueBadge(item.issueLabel)}
+          </div>
+        </button>
+      `).join("");
     }
 
     function getAvailableRsvpLinkOptions(currentParty) {
@@ -1885,6 +2039,9 @@
             <div class="admin-rsvp-guest-main">
               <div class="admin-rsvp-guest-title">${escapeHtml(party.name)}</div>
               <div class="admin-rsvp-guest-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))}</div>
+              ${party.linkedRsvp && party.linkedRsvp.attending === true && party.invitedCount > 1 && party.linkedRsvp.guestCount < party.invitedCount ? `
+                <span class="admin-rsvp-under-count-pill">${escapeHtml(`${party.linkedRsvp.guestCount} of ${party.invitedCount} invited`)}</span>
+              ` : ""}
             </div>
             <span class="admin-rsvp-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
           </button>
@@ -1932,6 +2089,7 @@
         return;
       }
 
+      setLowConfidenceMatchConfirmed(rsvpId, partyId, false);
       closeAdminModal();
       await loadAdminRsvpScreen();
       showToast("RSVP linked.");
@@ -1976,7 +2134,7 @@
     }
 
     function handleAdminRsvpUnmatchedInput(event) {
-      const input = event.target.closest("[data-rsvp-search-input='party']");
+      const input = event.target.closest("[data-rsvp-search-input='review']");
       if (!input) return;
 
       const rsvpId = input.getAttribute("data-rsvp-id");
@@ -1991,6 +2149,21 @@
     }
 
     function handleAdminModalInput(event) {
+      const reviewInput = event.target.closest("[data-rsvp-search-input='review']");
+      if (reviewInput) {
+        const rsvpId = reviewInput.getAttribute("data-rsvp-id");
+        const modal = reviewInput.closest("#admin-modal-body");
+        const results = modal && modal.querySelector(`[data-rsvp-search-results="${rsvpId}"]`);
+        if (results && rsvpId) {
+          const matches = getManualSearchMatches(
+            reviewInput.value,
+            adminWeddingSnapshot?.invitedParties?.filter((party) => !party.rsvpId) || []
+          );
+          results.innerHTML = buildManualPartySearchResultsHTML(matches, rsvpId);
+        }
+        return;
+      }
+
       const input = event.target.closest("[data-rsvp-search-input='modal']");
       if (!input) return;
 
@@ -2012,7 +2185,113 @@
       }
     }
 
+    async function saveReviewGuestCount(formData) {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast("Couldn’t save guest count. Supabase is unavailable.");
+        return;
+      }
+
+      const rsvpId = String(formData.get("rsvp_id") || "").trim();
+      const guestCount = Math.max(0, parseInt(String(formData.get("guest_count") || "0"), 10) || 0);
+      if (!rsvpId) return;
+
+      adminRsvpWritePending = true;
+      setModalSaving(true, "Save");
+      const { error } = await client
+        .from("rsvps")
+        .update({ guest_count: guestCount })
+        .eq("id", rsvpId);
+      adminRsvpWritePending = false;
+      setModalSaving(false, "Save");
+
+      if (error) {
+        showToast("Couldn’t save guest count.");
+        return;
+      }
+
+      closeAdminModal();
+      await loadAdminRsvpScreen();
+      showToast("Guest count updated.");
+    }
+
+    async function deleteReviewRsvp(rsvpId) {
+      const client = getSupabaseClient();
+      if (!client || !rsvpId) return;
+      if (!window.confirm("Delete this RSVP?")) return;
+
+      adminRsvpWritePending = true;
+      await client.from("invited_parties").update({ rsvp_id: null }).eq("rsvp_id", rsvpId);
+      const { error } = await client.from("rsvps").delete().eq("id", rsvpId);
+      adminRsvpWritePending = false;
+
+      if (error) {
+        showToast("Couldn’t delete that RSVP.");
+        return;
+      }
+
+      closeAdminModal();
+      await loadAdminRsvpScreen();
+      showToast("RSVP deleted.");
+    }
+
+    async function resolveDuplicateByReplacingCompetingRsvp(competingRsvpId) {
+      const reviewItem = getReviewItemByRsvpId(adminModalContext?.rsvpId);
+      if (!reviewItem || !reviewItem.competingParty || !competingRsvpId) return;
+      if (!window.confirm("Delete the competing RSVP and replace it with the current one?")) return;
+
+      const client = getSupabaseClient();
+      if (!client) return;
+
+      adminRsvpWritePending = true;
+      await client.from("invited_parties").update({ rsvp_id: reviewItem.rsvp.id }).eq("id", reviewItem.competingParty.id);
+      const { error } = await client.from("rsvps").delete().eq("id", competingRsvpId);
+      adminRsvpWritePending = false;
+
+      if (error) {
+        showToast("Couldn’t replace the competing RSVP.");
+        return;
+      }
+
+      closeAdminModal();
+      await loadAdminRsvpScreen();
+      showToast("Duplicate resolved.");
+    }
+
+    async function confirmLowConfidenceReview(rsvpId, partyId) {
+      setLowConfidenceMatchConfirmed(rsvpId, partyId, true);
+      closeAdminModal();
+      await loadAdminRsvpScreen();
+      showToast("Match confirmed.");
+    }
+
+    async function unlinkPartyAndReopenReview(partyId, rsvpId) {
+      const client = getSupabaseClient();
+      if (!client) return;
+
+      adminRsvpWritePending = true;
+      const { error } = await client
+        .from("invited_parties")
+        .update({ rsvp_id: null })
+        .eq("id", partyId);
+      adminRsvpWritePending = false;
+
+      if (error) {
+        showToast("Couldn’t unlink that party.");
+        return;
+      }
+
+      setLowConfidenceMatchConfirmed(rsvpId, partyId, false);
+      await loadAdminRsvpScreen();
+      openReviewModal(rsvpId);
+    }
+
     function handleAdminRsvpListClick(event) {
+      const reviewRow = event.target.closest(".admin-rsvp-review-row[data-review-rsvp-id]");
+      if (reviewRow) {
+        openReviewModal(reviewRow.getAttribute("data-review-rsvp-id"));
+        return;
+      }
       const guestRow = event.target.closest(".admin-rsvp-guest-row[data-party-id]");
       if (guestRow) {
         openInvitedPartyModal(guestRow.getAttribute("data-party-id"));

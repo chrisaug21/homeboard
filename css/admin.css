@@ -1136,6 +1136,43 @@
       color: var(--muted);
     }
 
+    .admin-rsvp-review-row {
+      width: 100%;
+      border: 1px solid rgba(124, 96, 69, 0.12);
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+    }
+
+    .admin-rsvp-review-main,
+    .admin-rsvp-review-side,
+    .admin-rsvp-review-header,
+    .admin-rsvp-review-modal {
+      display: grid;
+      gap: 6px;
+    }
+
+    .admin-rsvp-issue-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(247, 217, 170, 0.42);
+      color: #9a3412;
+      font-size: 0.74rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
     .admin-rsvp-suggestion-list,
     .admin-rsvp-search-results {
       display: grid;
@@ -1190,6 +1227,19 @@
       display: grid;
       gap: 4px;
       min-width: 0;
+    }
+
+    .admin-rsvp-under-count-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(247, 217, 170, 0.42);
+      color: #9a3412;
+      font-size: 0.72rem;
+      font-weight: 800;
     }
 
     .admin-rsvp-status {
@@ -1255,6 +1305,22 @@
     .admin-rsvp-search-result.is-selected {
       border-color: rgba(180, 83, 9, 0.3);
       background: rgba(247, 217, 170, 0.34);
+    }
+
+    .admin-rsvp-compare,
+    .admin-rsvp-action-row {
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-rsvp-compare-card {
+      display: grid;
+      gap: 4px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(245, 240, 232, 0.76);
+      border: 1px solid rgba(124, 96, 69, 0.1);
+      color: var(--ink);
     }
 
     .admin-modal-photo-pending[hidden] {

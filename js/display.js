@@ -167,11 +167,14 @@
 
       document.getElementById("rsvp-total").innerHTML = sk("80px", 52, "border-radius:10px;");
       document.getElementById("rsvp-total-label").innerHTML = sk("130px", 12, "margin-top:6px;");
-      document.getElementById("rsvp-responded-count").innerHTML = sk("38px", 20);
+      document.getElementById("rsvp-parties-responded").innerHTML = sk("110px", 12);
       document.getElementById("rsvp-declined-count").innerHTML = sk("38px", 20);
       document.getElementById("rsvp-pending-count").innerHTML = sk("38px", 20);
+      document.getElementById("rsvp-review-count").innerHTML = sk("38px", 20);
       document.getElementById("rsvp-names-title").innerHTML = sk("90px", 14);
       document.getElementById("rsvp-names").innerHTML = Array.from({ length: 8 }, skPill).join("");
+      const reviewHeroTrigger = document.getElementById("rsvp-review-hero-trigger");
+      if (reviewHeroTrigger) reviewHeroTrigger.hidden = true;
     }
 
     async function retryCalendar() {
@@ -245,10 +248,13 @@
       stopRsvpAutoScroll();
       document.getElementById("rsvp-total").textContent = "\u2014";
       document.getElementById("rsvp-total-label").textContent = "";
-      document.getElementById("rsvp-responded-count").textContent = "\u2014";
+      document.getElementById("rsvp-parties-responded").textContent = "";
       document.getElementById("rsvp-declined-count").textContent = "\u2014";
       document.getElementById("rsvp-pending-count").textContent = "\u2014";
+      document.getElementById("rsvp-review-count").textContent = "\u2014";
       document.getElementById("rsvp-names-title").textContent = "";
+      const reviewHeroTrigger = document.getElementById("rsvp-review-hero-trigger");
+      if (reviewHeroTrigger) reviewHeroTrigger.hidden = true;
       const list = document.getElementById("rsvp-names");
       list.innerHTML = `
         <div class="screen-error">
@@ -1177,26 +1183,39 @@
 
     function renderRsvpBoard(snapshot) {
       const list = document.getElementById("rsvp-names");
-      const parties = snapshot.invitedParties || [];
-      const rsvps = snapshot.rsvps || [];
-      const attendingGuests = rsvps
-        .filter((row) => row.attending === true)
-        .reduce((sum, row) => sum + row.guestCount, 0);
-      const respondedCount = parties.filter((party) => party.rsvpId).length;
-      const declinedParties = parties.filter((party) => party.linkedRsvp && party.linkedRsvp.attending === false);
-      const pendingParties = parties.filter((party) => !party.rsvpId);
-      const declinedGuests = declinedParties.reduce((sum, party) => sum + party.invitedCount, 0);
-      const pendingGuests = pendingParties.reduce((sum, party) => sum + party.invitedCount, 0);
-      const attendingRows = rsvps
-        .filter((row) => row.attending === true)
+      const stats = snapshot.stats || {};
+      const reviewCount = stats.reviewCount || 0;
+      const attendingRows = (snapshot.invitedParties || [])
+        .filter((party) => party.linkedRsvp && party.linkedRsvp.attending === true)
+        .map((party) => ({
+          name: party.linkedRsvp.name,
+          guestCount: Math.min(party.linkedRsvp.guestCount, party.invitedCount),
+          createdAt: party.linkedRsvp.createdAt || null
+        }))
         .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-      document.getElementById("rsvp-total").textContent = String(attendingGuests);
+      document.getElementById("rsvp-total").textContent = String(stats.attendingGuests || 0);
       document.getElementById("rsvp-total-label").textContent = "guests attending so far";
-      document.getElementById("rsvp-responded-count").textContent = String(respondedCount);
-      document.getElementById("rsvp-declined-count").textContent = String(declinedGuests);
-      document.getElementById("rsvp-pending-count").textContent = String(pendingGuests);
+      document.getElementById("rsvp-parties-responded").textContent = `${stats.respondedParties || 0} / ${stats.totalParties || 0} parties responded`;
+      document.getElementById("rsvp-declined-count").textContent = String(stats.declinedGuests || 0);
+      document.getElementById("rsvp-pending-count").textContent = String(stats.pendingGuests || 0);
+      document.getElementById("rsvp-review-count").textContent = String(reviewCount);
       document.getElementById("rsvp-names-title").textContent = "Guest List";
+      const reviewCountEl = document.getElementById("rsvp-review-count");
+      const reviewTrigger = document.getElementById("rsvp-review-trigger");
+      const reviewHeroTrigger = document.getElementById("rsvp-review-hero-trigger");
+      if (reviewCountEl) {
+        reviewCountEl.classList.toggle("rsvp-stat-value--clear", reviewCount === 0);
+        reviewCountEl.classList.toggle("rsvp-stat-value--flagged", reviewCount > 0);
+      }
+      if (reviewTrigger) {
+        reviewTrigger.disabled = reviewCount === 0;
+        reviewTrigger.classList.toggle("breakdown-row--disabled", reviewCount === 0);
+      }
+      if (reviewHeroTrigger) {
+        reviewHeroTrigger.hidden = reviewCount === 0;
+        reviewHeroTrigger.textContent = `${reviewCount} to review`;
+      }
 
       if (!attendingRows.length) {
         stopRsvpAutoScroll();
@@ -1629,6 +1648,25 @@
       resetAutoRotate();
     }
 
+    function openRsvpReviewModal() {
+      const count = cachedWeddingSnapshot?.reviewItems?.length || 0;
+      if (!count) return;
+      const bodyEl = document.getElementById("rsvp-review-body");
+      bodyEl.innerHTML = `
+        <div class="rsvp-review-copy">
+          <p>We found <strong>${count}</strong> responses that might be duplicates, have unexpected guest counts, or couldn't be matched to your guest list.</p>
+          <p class="rsvp-review-cta">Open the RSVP tab in the admin on your phone to sort these out.</p>
+        </div>
+      `;
+      document.getElementById("rsvp-review-modal").hidden = false;
+      resetAutoRotate();
+    }
+
+    function closeRsvpReviewModal() {
+      document.getElementById("rsvp-review-modal").hidden = true;
+      resetAutoRotate();
+    }
+
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
@@ -1744,13 +1782,20 @@
       document.getElementById("day-detail-backdrop").addEventListener("click", closeDayDetailModal);
       document.getElementById("rsvp-detail-close").addEventListener("click", closeRsvpDetailModal);
       document.getElementById("rsvp-detail-backdrop").addEventListener("click", closeRsvpDetailModal);
+      document.getElementById("rsvp-review-close").addEventListener("click", closeRsvpReviewModal);
+      document.getElementById("rsvp-review-backdrop").addEventListener("click", closeRsvpReviewModal);
 
       const declinedTrigger = document.getElementById("rsvp-declined-trigger");
       const pendingTrigger = document.getElementById("rsvp-pending-trigger");
+      const reviewTrigger = document.getElementById("rsvp-review-trigger");
+      const reviewHeroTrigger = document.getElementById("rsvp-review-hero-trigger");
       if (declinedTrigger) {
         declinedTrigger.addEventListener("click", () => {
           const declinedNames = (cachedWeddingSnapshot?.invitedParties || [])
-            .filter((party) => party.linkedRsvp && party.linkedRsvp.attending === false)
+            .filter((party) =>
+              (party.linkedRsvp && party.linkedRsvp.attending === false)
+              || (party.linkedRsvp && party.linkedRsvp.attending === true && party.linkedRsvp.guestCount < party.invitedCount)
+            )
             .map((party) => party.name);
           openRsvpDetailModal("Declined Parties", declinedNames);
         });
@@ -1762,6 +1807,12 @@
             .map((party) => party.name);
           openRsvpDetailModal("Pending Parties", pendingNames);
         });
+      }
+      if (reviewTrigger) {
+        reviewTrigger.addEventListener("click", openRsvpReviewModal);
+      }
+      if (reviewHeroTrigger) {
+        reviewHeroTrigger.addEventListener("click", openRsvpReviewModal);
       }
 
       refreshIcons();

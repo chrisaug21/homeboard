@@ -129,6 +129,8 @@
       --amber-soft: rgba(245, 158, 11, 0.18);
       --sage: #22c55e;
       --sage-soft: rgba(34, 197, 94, 0.14);
+      --rsvp-clear: #4ade80;
+      --rsvp-flagged: #f59e0b;
       --rose: #fb7185;
       --rose-soft: rgba(251, 113, 133, 0.14);
       --shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
@@ -154,6 +156,8 @@
       --amber-soft: rgba(3, 105, 161, 0.11);
       --sage: #0d9488;
       --sage-soft: rgba(13, 148, 136, 0.13);
+      --rsvp-clear: #0f766e;
+      --rsvp-flagged: #ca8a04;
       --rose: #be123c;
       --rose-soft: rgba(190, 18, 60, 0.11);
       --shadow: 0 18px 44px rgba(15, 23, 42, 0.11);
@@ -1548,9 +1552,38 @@
     .hero-card {
       padding: 18px 22px;
       display: flex;
-      flex-direction: column;
-      justify-content: center;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
       min-height: 0;
+    }
+
+    .hero-card-main {
+      display: grid;
+      gap: 4px;
+    }
+
+    .hero-meta {
+      margin-left: auto;
+      display: grid;
+      gap: 6px;
+      text-align: right;
+      align-self: flex-start;
+    }
+
+    .hero-meta-line {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .hero-meta-line--review {
+      border: 0;
+      background: none;
+      padding: 0;
+      color: var(--rsvp-flagged);
+      cursor: pointer;
+      font: inherit;
     }
 
     .hero-number {
@@ -1589,6 +1622,13 @@
       border: 1px solid rgba(166, 76, 99, 0.14);
     }
 
+    .breakdown-row small {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
     .breakdown-row--button {
       width: 100%;
       border: 1px solid rgba(166, 76, 99, 0.14);
@@ -1608,6 +1648,17 @@
     .breakdown-row--button:focus-visible {
       outline: 3px solid rgba(166, 76, 99, 0.28);
       outline-offset: 2px;
+    }
+
+    .breakdown-row--disabled {
+      cursor: default;
+    }
+
+    .breakdown-row--disabled:hover,
+    .breakdown-row--disabled:focus-visible {
+      transform: none;
+      border-color: rgba(166, 76, 99, 0.14);
+      outline: none;
     }
 
     .breakdown-row:nth-child(2) {
@@ -1699,6 +1750,29 @@
       background: rgba(255, 248, 250, 0.92);
       border: 1px solid rgba(166, 76, 99, 0.12);
       font-weight: 700;
+    }
+
+    .rsvp-review-copy {
+      display: grid;
+      gap: 12px;
+      line-height: 1.6;
+    }
+
+    .rsvp-review-copy p {
+      margin: 0;
+    }
+
+    .rsvp-review-cta {
+      font-weight: 700;
+      color: var(--rsvp-flagged);
+    }
+
+    .rsvp-stat-value--clear {
+      color: var(--rsvp-clear);
+    }
+
+    .rsvp-stat-value--flagged {
+      color: var(--rsvp-flagged);
     }
 
     .name-pill--attending .name-status {
