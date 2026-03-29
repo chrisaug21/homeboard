@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.8.3";
+    const VERSION = "0.9.6";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -38,6 +38,12 @@
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const RSVP_RETIRE_AFTER_DATE = "2026-10-10";
+    const RSVP_MATCH_SUGGESTION_THRESHOLD = 2.2;
+    const RSVP_MATCH_DUPLICATE_THRESHOLD = 5.2;
+    const RSVP_MATCH_LOW_CONFIDENCE_THRESHOLD = 4.6;
+    const RSVP_MATCH_AUTO_LINK_THRESHOLD = 6.4;
+    const RSVP_LOW_CONFIDENCE_CONFIRM_KEY = "homeboard_rsvp_low_confidence_confirmations";
+    const RSVP_GENERIC_FAMILY_TOKENS = ["family", "household", "guests", "guest", "party", "crew"];
 
     const mealTypeOptions = [
       {
@@ -298,6 +304,459 @@
 
       const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
       return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+    }
+
+    function normalizeMatchName(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function getMatchTokens(value) {
+      return normalizeMatchName(value)
+        .split(" ")
+        .map((token) => token.trim())
+        .filter(Boolean);
+    }
+
+    function getLastNameToken(value) {
+      const tokens = getMatchTokens(value);
+      return tokens.length ? tokens[tokens.length - 1] : "";
+    }
+
+    function getPrimaryFamilyToken(value) {
+      const tokens = getMatchTokens(value);
+      for (let index = tokens.length - 1; index >= 0; index -= 1) {
+        if (!RSVP_GENERIC_FAMILY_TOKENS.includes(tokens[index])) {
+          return tokens[index];
+        }
+      }
+      return tokens.length ? tokens[tokens.length - 1] : "";
+    }
+
+    function getFirstNameToken(value) {
+      const tokens = getMatchTokens(value);
+      return tokens.length ? tokens[0] : "";
+    }
+
+    function buildBigrams(value) {
+      const normalized = normalizeMatchName(value).replace(/\s+/g, "");
+      if (!normalized) return [];
+      if (normalized.length === 1) return [normalized];
+      const bigrams = [];
+      for (let index = 0; index < normalized.length - 1; index += 1) {
+        bigrams.push(normalized.slice(index, index + 2));
+      }
+      return bigrams;
+    }
+
+    function getDiceCoefficient(a, b) {
+      const first = buildBigrams(a);
+      const second = buildBigrams(b);
+      if (!first.length || !second.length) {
+        return 0;
+      }
+      const remaining = [...second];
+      let matches = 0;
+      first.forEach((token) => {
+        const idx = remaining.indexOf(token);
+        if (idx !== -1) {
+          matches += 1;
+          remaining.splice(idx, 1);
+        }
+      });
+      return (2 * matches) / (first.length + second.length);
+    }
+
+    function scoreInvitedPartyMatch(rsvpName, partyName) {
+      const normalizedRsvp = normalizeMatchName(rsvpName);
+      const normalizedParty = normalizeMatchName(partyName);
+      if (!normalizedRsvp || !normalizedParty) {
+        return 0;
+      }
+
+      const rsvpTokens = getMatchTokens(normalizedRsvp);
+      const partyTokens = getMatchTokens(normalizedParty);
+      const overlapCount = rsvpTokens.filter((token) => partyTokens.includes(token)).length;
+      const lastNameMatches = getLastNameToken(normalizedRsvp) && getLastNameToken(normalizedRsvp) === getLastNameToken(normalizedParty);
+      const primaryFamilyToken = getPrimaryFamilyToken(normalizedRsvp);
+      const familyTokenAppearsInParty = primaryFamilyToken && partyTokens.includes(primaryFamilyToken);
+      const firstNameMatches = rsvpTokens[0] && rsvpTokens[0] === partyTokens[0];
+      const exactMatch = normalizedRsvp === normalizedParty;
+      const stringSimilarity = getDiceCoefficient(normalizedRsvp, normalizedParty);
+
+      let score = 0;
+      if (lastNameMatches) score += 4.2;
+      if (familyTokenAppearsInParty && !lastNameMatches) score += 4.4;
+      if (firstNameMatches) score += 1.2;
+      if (overlapCount > 0) score += Math.min(2.4, overlapCount * 1.2);
+      if (exactMatch) score += 2.4;
+      score += stringSimilarity * 2.4;
+
+      return Number(score.toFixed(3));
+    }
+
+    function getUniqueSingleNameMatch(rsvpName, invitedParties) {
+      const tokens = getMatchTokens(rsvpName);
+      if (tokens.length !== 1) {
+        return null;
+      }
+
+      const targetName = tokens[0];
+      const matches = (Array.isArray(invitedParties) ? invitedParties : [])
+        .filter((party) => getFirstNameToken(party.name) === targetName)
+        .map((party) => ({
+          ...party,
+          matchScore: Math.max(scoreInvitedPartyMatch(rsvpName, party.name), RSVP_MATCH_AUTO_LINK_THRESHOLD)
+        }));
+
+      return matches.length === 1 ? matches[0] : null;
+    }
+
+    function getInvitedPartySuggestions(rsvpName, invitedParties, limit = 3, minScore = RSVP_MATCH_SUGGESTION_THRESHOLD) {
+      const uniqueSingleNameMatch = getUniqueSingleNameMatch(rsvpName, invitedParties);
+      return (Array.isArray(invitedParties) ? invitedParties : [])
+        .map((party) => ({
+          ...party,
+          matchScore: uniqueSingleNameMatch && uniqueSingleNameMatch.id === party.id
+            ? uniqueSingleNameMatch.matchScore
+            : scoreInvitedPartyMatch(rsvpName, party.name)
+        }))
+        .filter((party) => party.matchScore >= minScore)
+        .sort((a, b) => {
+          if (b.matchScore !== a.matchScore) {
+            return b.matchScore - a.matchScore;
+          }
+          return String(a.name || "").localeCompare(String(b.name || ""));
+        })
+        .slice(0, limit);
+    }
+
+    function getBestInvitedPartyMatch(rsvpName, invitedParties) {
+      return getInvitedPartySuggestions(rsvpName, invitedParties, 1, 0)[0] || null;
+    }
+
+    function isHighConfidenceRsvpMatch(score) {
+      return Number(score) >= RSVP_MATCH_AUTO_LINK_THRESHOLD;
+    }
+
+    function readLowConfidenceConfirmations() {
+      try {
+        return JSON.parse(localStorage.getItem(RSVP_LOW_CONFIDENCE_CONFIRM_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function getLowConfidenceConfirmationKey(rsvpId, partyId) {
+      return `${rsvpId}:${partyId}`;
+    }
+
+    function isLowConfidenceMatchConfirmed(rsvpId, partyId) {
+      if (!rsvpId || !partyId) return false;
+      const saved = readLowConfidenceConfirmations();
+      return Boolean(saved[getLowConfidenceConfirmationKey(rsvpId, partyId)]);
+    }
+
+    function setLowConfidenceMatchConfirmed(rsvpId, partyId, confirmed = true) {
+      if (!rsvpId || !partyId) return;
+      const saved = readLowConfidenceConfirmations();
+      const key = getLowConfidenceConfirmationKey(rsvpId, partyId);
+      if (confirmed) {
+        saved[key] = true;
+      } else {
+        delete saved[key];
+      }
+      localStorage.setItem(RSVP_LOW_CONFIDENCE_CONFIRM_KEY, JSON.stringify(saved));
+    }
+
+    function mapWeddingRsvp(row) {
+      return {
+        id: row.id,
+        name: row.name || "Unnamed RSVP",
+        attending: row.attending === true,
+        guestCount: Math.max(0, parseInt(row.guest_count, 10) || 0),
+        createdAt: row.created_at || null,
+        status: row.status || "active",
+        mergedIntoPartyId: row.merged_into_party_id || null
+      };
+    }
+
+    function mapInvitedParty(row) {
+      return {
+        id: row.id,
+        name: row.name || "Unnamed Party",
+        invitedCount: Math.max(0, parseInt(row.invited_count, 10) || 0),
+        rsvpId: row.rsvp_id || null,
+        createdAt: row.created_at || null
+      };
+    }
+
+    function buildWeddingRsvpSnapshot(rsvps, invitedParties) {
+      const allRsvps = Array.isArray(rsvps) ? rsvps : [];
+      const rsvpList = allRsvps.filter((rsvp) => rsvp.status === "active");
+      const supersededRsvps = allRsvps.filter((rsvp) => rsvp.status === "superseded");
+      const partyList = Array.isArray(invitedParties) ? invitedParties : [];
+      const rsvpById = new Map(rsvpList.map((rsvp) => [rsvp.id, rsvp]));
+      const hydratedParties = partyList.map((party) => ({
+        ...party,
+        linkedRsvp: party.rsvpId ? (rsvpById.get(party.rsvpId) || null) : null
+      }));
+      hydratedParties.forEach((party) => {
+        party.matchScore = party.linkedRsvp
+          ? scoreInvitedPartyMatch(party.linkedRsvp.name, party.name)
+          : null;
+        party.supersededRsvps = supersededRsvps
+          .filter((rsvp) => rsvp.mergedIntoPartyId === party.id)
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      });
+      const matchedRsvpIds = new Set(
+        hydratedParties
+          .map((party) => party.rsvpId)
+          .filter(Boolean)
+      );
+      const unmatchedRsvps = rsvpList.filter((rsvp) => !matchedRsvpIds.has(rsvp.id));
+      const reviewItems = [];
+      const unmatchedBestMatches = new Map();
+      const duplicateMatchesByParty = new Map();
+
+      unmatchedRsvps.forEach((rsvp) => {
+        const bestOverallMatch = getBestInvitedPartyMatch(rsvp.name, hydratedParties);
+        unmatchedBestMatches.set(rsvp.id, bestOverallMatch);
+        if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
+          const duplicateMatches = duplicateMatchesByParty.get(bestOverallMatch.id) || [];
+          duplicateMatches.push({ rsvp, bestScore: bestOverallMatch.matchScore });
+          duplicateMatchesByParty.set(bestOverallMatch.id, duplicateMatches);
+        }
+      });
+
+      unmatchedRsvps.forEach((rsvp) => {
+        const bestOverallMatch = unmatchedBestMatches.get(rsvp.id) || null;
+        if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
+          const duplicateParty = hydratedParties.find((party) => party.id === bestOverallMatch.id) || null;
+          const duplicateMatches = duplicateMatchesByParty.get(bestOverallMatch.id) || [];
+          reviewItems.push({
+            id: rsvp.id,
+            issueType: "duplicate",
+            issueLabel: "Duplicate",
+            rsvp,
+            matchedParty: null,
+            competingParty: duplicateParty,
+            competingRsvp: rsvpById.get(bestOverallMatch.rsvpId) || null,
+            competingRsvps: duplicateMatches
+              .map((match) => match.rsvp)
+              .filter((matchRsvp) => matchRsvp.id !== rsvp.id)
+              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)),
+            suggestions: [],
+            bestScore: bestOverallMatch.matchScore
+          });
+          return;
+        }
+
+        reviewItems.push({
+          id: rsvp.id,
+          issueType: "unmatched",
+          issueLabel: "Unmatched",
+          rsvp,
+          matchedParty: null,
+          competingParty: null,
+          competingRsvp: null,
+          competingRsvps: [],
+          suggestions: getInvitedPartySuggestions(
+            rsvp.name,
+            hydratedParties.filter((party) => !party.rsvpId),
+            3
+          ),
+          bestScore: bestOverallMatch ? bestOverallMatch.matchScore : 0
+        });
+      });
+
+      hydratedParties.forEach((party) => {
+        if (!party.linkedRsvp) return;
+
+        if (party.linkedRsvp.attending === true && party.linkedRsvp.guestCount > party.invitedCount) {
+          reviewItems.push({
+            id: party.linkedRsvp.id,
+            issueType: "count_mismatch",
+            issueLabel: "Count mismatch",
+            rsvp: party.linkedRsvp,
+            matchedParty: party,
+            competingParty: null,
+            competingRsvp: null,
+            competingRsvps: [],
+            suggestions: [],
+            bestScore: party.matchScore || 0
+          });
+          return;
+        }
+
+        if (
+          (party.matchScore || 0) < RSVP_MATCH_LOW_CONFIDENCE_THRESHOLD
+          && !isLowConfidenceMatchConfirmed(party.linkedRsvp.id, party.id)
+        ) {
+          reviewItems.push({
+            id: party.linkedRsvp.id,
+            issueType: "low_confidence",
+            issueLabel: "Low confidence",
+            rsvp: party.linkedRsvp,
+            matchedParty: party,
+            competingParty: null,
+            competingRsvp: null,
+            competingRsvps: [],
+            suggestions: getInvitedPartySuggestions(party.linkedRsvp.name, hydratedParties, 3, 0),
+            bestScore: party.matchScore || 0
+          });
+        }
+      });
+
+      const attendingGuests = hydratedParties.reduce((sum, party) => {
+        if (!party.linkedRsvp || party.linkedRsvp.attending !== true) return sum;
+        return sum + Math.min(party.linkedRsvp.guestCount, party.invitedCount);
+      }, 0);
+      const declinedGuests = hydratedParties.reduce((sum, party) => {
+        if (!party.linkedRsvp) return sum;
+        if (party.linkedRsvp.attending === false) {
+          return sum + party.invitedCount;
+        }
+        if (party.linkedRsvp.attending === true && party.linkedRsvp.guestCount < party.invitedCount) {
+          return sum + (party.invitedCount - party.linkedRsvp.guestCount);
+        }
+        return sum;
+      }, 0);
+      const pendingGuests = hydratedParties
+        .filter((party) => !party.rsvpId)
+        .reduce((sum, party) => sum + party.invitedCount, 0);
+      const totalInvitedGuests = hydratedParties.reduce((sum, party) => sum + party.invitedCount, 0);
+
+      return {
+        rsvps: rsvpList,
+        invitedParties: hydratedParties,
+        unmatchedRsvps,
+        reviewItems,
+        stats: {
+          attendingGuests,
+          declinedGuests,
+          pendingGuests,
+          totalInvitedGuests,
+          reviewCount: reviewItems.length,
+          respondedParties: hydratedParties.filter((party) => party.rsvpId).length,
+          totalParties: hydratedParties.length
+        }
+      };
+    }
+
+    async function fetchWeddingRsvpSnapshot() {
+      const client = getSupabaseClient();
+      if (!client) {
+        return null;
+      }
+
+      const [
+        { data: activeRsvpRows, error: activeRsvpError },
+        { data: supersededRsvpRows, error: supersededRsvpError },
+        { data: partyRows, error: partyError }
+      ] = await Promise.all([
+        client
+          .from("rsvps")
+          .select("id, name, attending, guest_count, created_at, status, merged_into_party_id")
+          .eq("status", "active")
+          .order("created_at", { ascending: false }),
+        client
+          .from("rsvps")
+          .select("id, name, attending, guest_count, created_at, status, merged_into_party_id")
+          .eq("status", "superseded")
+          .order("created_at", { ascending: false }),
+        client
+          .from("invited_parties")
+          .select("id, name, invited_count, rsvp_id, created_at")
+          .order("name", { ascending: true })
+      ]);
+
+      if (
+        activeRsvpError || supersededRsvpError || partyError
+        || !Array.isArray(activeRsvpRows) || !Array.isArray(supersededRsvpRows) || !Array.isArray(partyRows)
+      ) {
+        return null;
+      }
+
+      return buildWeddingRsvpSnapshot(
+        [...activeRsvpRows, ...supersededRsvpRows].map(mapWeddingRsvp),
+        partyRows.map(mapInvitedParty)
+      );
+    }
+
+    async function autoLinkHighConfidenceRsvps(snapshot, options = {}) {
+      const client = getSupabaseClient();
+      if (!client || !snapshot) {
+        return snapshot;
+      }
+
+      const logPrefix = options.logPrefix || "[rsvp-auto-match]";
+      const availableParties = snapshot.invitedParties
+        .filter((party) => !party.rsvpId)
+        .map((party) => ({ ...party }));
+      const updates = [];
+      const candidateUpdates = [];
+
+      snapshot.unmatchedRsvps.forEach((rsvp) => {
+        const bestOverallMatch = getBestInvitedPartyMatch(rsvp.name, snapshot.invitedParties);
+        if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
+          return;
+        }
+
+        const bestMatch = getInvitedPartySuggestions(rsvp.name, availableParties, 1, 0)[0];
+        if (!bestMatch || !isHighConfidenceRsvpMatch(bestMatch.matchScore)) {
+          return;
+        }
+        candidateUpdates.push({
+          invitedPartyId: bestMatch.id,
+          rsvpId: rsvp.id,
+          invitedPartyName: bestMatch.name,
+          rsvpName: rsvp.name,
+          score: bestMatch.matchScore
+        });
+      });
+
+      candidateUpdates
+        .sort((a, b) => {
+          if (b.score !== a.score) {
+            return b.score - a.score;
+          }
+          return String(a.rsvpName || "").localeCompare(String(b.rsvpName || ""));
+        })
+        .forEach((candidate) => {
+          const removeIndex = availableParties.findIndex((party) => party.id === candidate.invitedPartyId);
+          if (removeIndex === -1) {
+            return;
+          }
+          updates.push(candidate);
+          if (removeIndex !== -1) {
+            availableParties.splice(removeIndex, 1);
+          }
+        });
+
+      if (!updates.length) {
+        return snapshot;
+      }
+
+      for (const update of updates) {
+        const { error } = await client
+          .from("invited_parties")
+          .update({ rsvp_id: update.rsvpId })
+          .eq("id", update.invitedPartyId)
+          .is("rsvp_id", null);
+
+        if (!error) {
+          console.log(
+            `${logPrefix} linked "${update.invitedPartyName}" to "${update.rsvpName}" (${update.score.toFixed(2)})`
+          );
+        }
+      }
+
+      const refreshed = await fetchWeddingRsvpSnapshot();
+      return refreshed || snapshot;
     }
 
     // Returns { cssClass, label } for a due date urgency pill, or null if no due date.

@@ -34,6 +34,31 @@ netlify.toml        — build + env var injection via sed
 | `meal_plan_notes` | One note per household per week. Keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` = Lucide icon name string |
 | `rsvps` | Wedding table — **do not modify schema** |
+| `invited_parties` | Wedding invite list. `rsvp_id` null = pending; set = matched to an RSVP row |
+
+## RSVP Matching
+- RSVP soft delete uses `rsvps.status`, never hard delete rows
+- Status values: `active` and `superseded`
+- `rsvps.merged_into_party_id` is the explicit audit link from a superseded RSVP to the invited party it was merged into
+- All RSVP queries used for counts, matching, or display must read `status = 'active'` only
+- Wedding RSVP counts on Homeboard must come from `rsvps` + `invited_parties`, never from hardcoded totals or subtraction from `households.total_invited_guests`
+- `Attending` = matched attending people only; use the linked RSVP guest count, clamped to the invited party count if the RSVP overstates guests so totals still reconcile
+- `Declined` = full declines plus partial declines (`invited_count - guest_count` when a matched attending RSVP brings fewer guests than invited)
+- The display `Declined Parties` modal only lists full declines where the linked RSVP has `attending = false`; partial under-counts stay in the guest list
+- `Pending` = sum of `invited_parties.invited_count` where `rsvp_id` is null
+- `Responded` = count of matched `invited_parties` rows
+- `Review RSVPs` = flagged RSVP count only; categories are `Unmatched`, `Duplicate`, `Count mismatch`, and `Low confidence`
+- The totals must reconcile: `attending + declined + pending = total invited_count across invited_parties`
+- Fuzzy matching logic is shared between display/admin auto-linking and manual suggestions:
+  1. surname matching carries the most weight, including a strong bonus when the RSVP's last meaningful token appears anywhere in the invited party name
+  2. word overlap carries medium weight
+  3. full-string similarity carries lower weight
+- Single-word RSVPs get a special pass: if that word exactly matches the first name of exactly one invited party across all parties, treat it as high confidence
+- Duplicate detection must score new RSVPs against all `invited_parties` rows, including already-matched parties; only the final auto-link step may restrict to unmatched parties
+- High-confidence fuzzy matches may auto-link unmatched RSVPs to unmatched `invited_parties` rows during regular refreshes; if the best-scoring party is already matched above the duplicate threshold, flag the RSVP as `Duplicate` instead of auto-linking, not `Unmatched`
+- Duplicate review modals use a single confirm flow: show the currently linked RSVP plus any number of competing active RSVPs for that party, choose the primary RSVP, edit the guest count, link the primary RSVP to the invited party, and set every other conflict RSVP to `superseded` with `merged_into_party_id`
+- Review actions must stay in the shared admin modal pattern: tap a review row, resolve the issue in the modal, close automatically when the issue is fully resolved
+- On the display guest list, matched attending parties with `guest_count < invited_count` keep their attending row but use an amber guest-count pill instead of the default green pill
 
 ## display_settings JSONB shape
 ```json
@@ -49,7 +74,7 @@ netlify.toml        — build + env var injection via sed
 - `upcoming_calendar` and `monthly_calendar` are separate display screens everywhere in code and settings. Do not collapse them back into a single `calendar` key.
 - The old "Default calendar view" setting has been removed. Rotation order now comes only from `screen_order`.
 - `upcoming_days` → drives the `UPCOMING_DAYS` variable in `display.js`. Update both together.
-- RSVP screen is **hardcoded to this household** and excluded from `active_screens` and `screen_order`. It retires Oct 9 2026 — remove via code change after that date.
+- RSVP screen is **hardcoded to this household** and excluded from `active_screens` and `screen_order`. It is hidden starting Oct 11, 2026 — remove via code change after that date.
 - Google Calendar: single calendar ID in `households.google_cal_id`. **Future**: support toggling multiple calendars.
 - Recurring to-dos: planned future PR, requires schema change to `todos`.
 

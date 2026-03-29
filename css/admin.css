@@ -233,6 +233,14 @@
       line-height: 1.4;
     }
 
+    .admin-field-error {
+      margin: 2px 0 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--rose);
+      line-height: 1.4;
+    }
+
     .admin-week-nav-btn svg {
       width: 16px;
       height: 16px;
@@ -589,7 +597,7 @@
       bottom: 16px;
       z-index: 10;
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
       padding: 10px;
       border-radius: 24px;
@@ -1104,6 +1112,275 @@
       gap: 14px;
     }
 
+    .admin-rsvp-card {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(124, 96, 69, 0.12);
+    }
+
+    .admin-rsvp-card-header {
+      display: grid;
+      gap: 4px;
+    }
+
+    .admin-rsvp-card-title,
+    .admin-rsvp-guest-title,
+    .admin-rsvp-suggestion-title {
+      font-size: 1rem;
+      font-weight: 800;
+      line-height: 1.3;
+      color: var(--ink);
+    }
+
+    .admin-rsvp-card-meta,
+    .admin-rsvp-guest-meta,
+    .admin-rsvp-suggestion-meta,
+    .admin-rsvp-search-label,
+    .admin-rsvp-no-match {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .admin-rsvp-review-row {
+      width: 100%;
+      border: 1px solid rgba(124, 96, 69, 0.12);
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+    }
+
+    .admin-rsvp-review-main,
+    .admin-rsvp-review-side,
+    .admin-rsvp-review-header,
+    .admin-rsvp-review-modal {
+      display: grid;
+      gap: 6px;
+    }
+
+    .admin-rsvp-review-modal {
+      padding-top: 10px;
+    }
+
+    .admin-rsvp-issue-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(247, 217, 170, 0.42);
+      color: #9a3412;
+      font-size: 0.74rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .admin-rsvp-suggestion-list,
+    .admin-rsvp-search-results {
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-rsvp-suggestion {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(245, 240, 232, 0.76);
+      border: 1px solid rgba(124, 96, 69, 0.1);
+    }
+
+    .admin-rsvp-search-block {
+      display: grid;
+      gap: 8px;
+    }
+
+    .admin-rsvp-guest-row {
+      width: 100%;
+      border: 1px solid rgba(124, 96, 69, 0.12);
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+      transition: transform 140ms ease, border-color 140ms ease;
+    }
+
+    .admin-rsvp-guest-row:hover,
+    .admin-rsvp-guest-row:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(180, 83, 9, 0.28);
+    }
+
+    .admin-rsvp-guest-row:focus-visible {
+      outline: 3px solid var(--ink);
+      outline-offset: 3px;
+    }
+
+    .admin-rsvp-guest-main {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .admin-rsvp-under-count-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(247, 217, 170, 0.42);
+      color: #9a3412;
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .admin-rsvp-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .admin-rsvp-status--attending {
+      background: rgba(220, 239, 220, 0.95);
+      color: #166534;
+    }
+
+    .admin-rsvp-status--declined {
+      background: rgba(248, 220, 227, 0.95);
+      color: #9f1239;
+    }
+
+    .admin-rsvp-status--pending {
+      background: rgba(247, 217, 170, 0.45);
+      color: #9a3412;
+    }
+
+    .admin-rsvp-linked-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .admin-rsvp-linked-label {
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .admin-rsvp-search-results--modal {
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .admin-rsvp-search-result {
+      width: 100%;
+      border: 1px solid rgba(124, 96, 69, 0.12);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.76);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--ink);
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+    }
+
+    .admin-rsvp-search-result.is-selected {
+      border-color: rgba(180, 83, 9, 0.3);
+      background: rgba(247, 217, 170, 0.34);
+    }
+
+    .admin-rsvp-compare,
+    .admin-rsvp-action-row {
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-rsvp-compare-card {
+      display: grid;
+      gap: 4px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(245, 240, 232, 0.76);
+      border: 1px solid rgba(124, 96, 69, 0.1);
+      color: var(--ink);
+    }
+
+    .admin-rsvp-compare-card strong input {
+      margin-right: 8px;
+    }
+
+    .admin-rsvp-linked-audit {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .admin-rsvp-linked-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(245, 240, 232, 0.76);
+      border: 1px solid rgba(124, 96, 69, 0.1);
+    }
+
+    .admin-rsvp-linked-item--muted {
+      opacity: 0.72;
+    }
+
+    .admin-rsvp-audit-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .admin-rsvp-audit-pill--primary {
+      background: rgba(220, 239, 220, 0.95);
+      color: #166534;
+    }
+
+    .admin-rsvp-audit-pill--secondary {
+      background: rgba(120, 113, 108, 0.16);
+      color: var(--muted);
+    }
+
     .admin-modal-photo-pending[hidden] {
       display: none;
     }
@@ -1587,5 +1864,63 @@
     html[data-scheme="dark"] .admin-modal-photo-pending {
       background: rgba(255, 255, 255, 0.06);
       border-color: rgba(255, 240, 220, 0.11);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-card,
+    html[data-scheme="dark"] .admin-rsvp-review-row,
+    html[data-scheme="dark"] .admin-rsvp-suggestion,
+    html[data-scheme="dark"] .admin-rsvp-guest-row,
+    html[data-scheme="dark"] .admin-rsvp-search-result,
+    html[data-scheme="dark"] .admin-rsvp-compare-card,
+    html[data-scheme="dark"] .admin-rsvp-suggestion-list,
+    html[data-scheme="dark"] .admin-rsvp-search-results {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 240, 220, 0.11);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-review-row:hover,
+    html[data-scheme="dark"] .admin-rsvp-review-row:focus-visible,
+    html[data-scheme="dark"] .admin-rsvp-guest-row:hover,
+    html[data-scheme="dark"] .admin-rsvp-guest-row:focus-visible,
+    html[data-scheme="dark"] .admin-rsvp-search-result.is-selected {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-card-title,
+    html[data-scheme="dark"] .admin-rsvp-guest-title,
+    html[data-scheme="dark"] .admin-rsvp-suggestion-title,
+    html[data-scheme="dark"] .admin-rsvp-linked-label {
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-card-meta,
+    html[data-scheme="dark"] .admin-rsvp-guest-meta,
+    html[data-scheme="dark"] .admin-rsvp-suggestion-meta,
+    html[data-scheme="dark"] .admin-rsvp-search-label,
+    html[data-scheme="dark"] .admin-rsvp-no-match {
+      color: var(--muted);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-status--attending {
+      background: rgba(34, 197, 94, 0.18);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-status--declined {
+      background: rgba(244, 114, 182, 0.18);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-status--pending {
+      background: rgba(245, 158, 11, 0.18);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-issue-badge,
+    html[data-scheme="dark"] .admin-rsvp-under-count-pill {
+      background: rgba(245, 158, 11, 0.18);
       color: var(--ink);
     }

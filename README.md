@@ -29,21 +29,22 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 4. **Dinner Plan** — this week's dinner entries (Mon–Sun)
 5. **Looking Forward** — countdown cards to upcoming events with Lucide icons and days-remaining
 6. **Wedding Pulse** — live RSVP tracker (Chris & Bailey only, hidden starting Oct 11, 2026)
+   Counts are driven by `rsvps` + `invited_parties`, the hero shows parties responded plus review count, declined/pending totals open name-list modals, and review flags open a display explainer modal
 
 ## Admin Tabs
 
-### Todos
+### To-do
 - Add tasks with title, optional assignee, optional due date
 - Mark tasks complete (archives them) or restore archived tasks
 - Archived tasks live in a collapsible drawer
 
-### Meal Plan
+### Meals
 - Week navigation — previous, current, and next week
 - Tap any day row to open an inline edit form
 - Enter dinner name and type (cooking at home, ordering in, going out, leftovers)
 - Save writes directly to the week; cancel closes the inline form
 
-### Countdowns
+### Events
 - Tap a Google Calendar event to pre-fill the countdown form
 - Or enter name, date, and Lucide icon name manually
 - Saved countdowns appear on the display's "Looking Forward" screen
@@ -54,6 +55,13 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 - Household members for todo assignee options
 - Independent Active Screens and Screen Order controls for `upcoming_calendar` and `monthly_calendar`
 - Rotation timers, color scheme, Google Calendar ID, and sync controls
+
+### RSVP
+- Needs Review shows flagged RSVP rows for `Unmatched`, `Duplicate`, `Count mismatch`, and `Low confidence`
+- Each review row opens the shared bottom-sheet modal with issue-specific actions
+- Full guest list shows every `invited_parties` row sorted Attending → Declined → Pending
+- Tapping a party opens a shared bottom-sheet modal to edit the party name, invited count, and linked RSVP, including unlinking or manual relinking
+- High-confidence matches can auto-link during refresh using the same scoring logic as the admin suggestions
 
 ## Supabase Tables
 
@@ -67,6 +75,21 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 | `countdowns` (updated) | Added `unsplash_image_url` — stores JSON `{url, credit}` for Unsplash background photos |
 | `countdowns` | `icon` is a Lucide icon name string (e.g. `"plane"`) |
 | `rsvps` | Wedding RSVP table — do not modify schema |
+| `invited_parties` | Wedding invite source of truth. `rsvp_id = null` means pending; set means matched to an RSVP |
+
+## Wedding RSVP Matching
+
+- Homeboard wedding counts must come from `rsvps` + `invited_parties`, not from hardcoded totals or subtracting from `households.total_invited_guests`
+- `Attending` = matched attending people only; clamp over-counted RSVPs to the invited party size so totals still reconcile
+- `Declined` = full declines plus partial declines for under-count RSVPs
+- `Pending` = sum of `invited_parties.invited_count` where `rsvp_id` is null
+- `Responded` = count of matched `invited_parties`
+- `Review RSVPs` = count of flagged RSVP rows in Needs Review
+- `attending + declined + pending` must equal the total invited count across `invited_parties`
+- Fuzzy match scoring is shared by the admin RSVP tab and automatic refresh linking:
+  1. last-word exact match has the highest weight
+  2. any word overlap has medium weight
+  3. full-string similarity has lower weight
 
 ## File Structure
 
