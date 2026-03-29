@@ -55,6 +55,7 @@ netlify.toml        — build config, env var injection via sed
 - Homeboard wedding counts must derive from `rsvps` + `invited_parties`, not from hardcoded totals or subtraction from `households.total_invited_guests`
 - `Attending` = matched attending people only; use the linked RSVP guest count, clamped to the invited party count if an RSVP overstates guests so totals stay consistent
 - `Declined` = full declines plus partial declines (`invited_count - guest_count` when a matched attending RSVP brings fewer guests than invited)
+- The display `Declined Parties` modal lists only full declines where the linked RSVP has `attending = false`; partial under-counts stay visible in the guest list
 - `Pending` = sum of `invited_parties.invited_count` where `rsvp_id` is null
 - `Responded` = count of matched `invited_parties`
 - `Review RSVPs` = count of flagged RSVP rows in `Needs Review`
@@ -64,9 +65,10 @@ netlify.toml        — build config, env var injection via sed
   2. any word overlap is weighted medium
   3. full-string similarity is weighted lower
 - Needs Review categories: `Unmatched`, `Duplicate`, `Count mismatch`, `Low confidence`
-- Display mode and admin mode use the same matching helper. High-confidence matches may auto-link on refresh and should log to the browser console. If the best match is already linked above the duplicate threshold, flag it as `Duplicate` instead of auto-linking.
+- Display mode and admin mode use the same matching helper. Duplicate detection must score against all `invited_parties`, including already-matched parties. High-confidence matches may auto-link on refresh and should log to the browser console, but only after that all-parties duplicate check passes. If the best match is already linked above the duplicate threshold, flag it as `Duplicate` instead of auto-linking or treating it as `Unmatched`.
 - Duplicate review modals support merge: choose the primary RSVP, edit the merged guest count, set the secondary RSVP to `superseded`, set its `merged_into_party_id`, link the primary RSVP to the invited party, and save the primary guest count.
 - RSVP review actions live in the shared admin bottom-sheet modal. A resolved issue should disappear from the Needs Review list after the modal action completes.
+- On the display guest list, matched attending parties with `guest_count < invited_count` stay in the list and use an amber guest-count pill to signal the under-count.
 
 ## display_settings JSONB shape
 ```json

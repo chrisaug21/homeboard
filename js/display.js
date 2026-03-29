@@ -1186,6 +1186,7 @@
         .map((party) => ({
           name: party.linkedRsvp.name,
           guestCount: Math.min(party.linkedRsvp.guestCount, party.invitedCount),
+          isUnderCount: party.linkedRsvp.guestCount < party.invitedCount,
           createdAt: party.linkedRsvp.createdAt || null
         }))
         .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -1220,7 +1221,7 @@
       }
 
       list.innerHTML = attendingRows.map((row) => `
-        <div class="name-pill name-pill--attending">
+        <div class="name-pill name-pill--attending${row.isUnderCount ? " name-pill--undercount" : ""}">
           <span>${escapeHtml(row.name)}</span>
           <span class="name-status">${escapeHtml(formatGuestCountLabel(row.guestCount))}</span>
         </div>
@@ -1782,10 +1783,7 @@
       if (declinedTrigger) {
         declinedTrigger.addEventListener("click", () => {
           const declinedNames = (cachedWeddingSnapshot?.invitedParties || [])
-            .filter((party) =>
-              (party.linkedRsvp && party.linkedRsvp.attending === false)
-              || (party.linkedRsvp && party.linkedRsvp.attending === true && party.linkedRsvp.guestCount < party.invitedCount)
-            )
+            .filter((party) => party.linkedRsvp && party.linkedRsvp.attending === false)
             .map((party) => party.name);
           openRsvpDetailModal("Declined Parties", declinedNames);
         });

@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.9.2";
+    const VERSION = "0.9.3";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -395,6 +395,10 @@
         .slice(0, limit);
     }
 
+    function getBestInvitedPartyMatch(rsvpName, invitedParties) {
+      return getInvitedPartySuggestions(rsvpName, invitedParties, 1, 0)[0] || null;
+    }
+
     function isHighConfidenceRsvpMatch(score) {
       return Number(score) >= RSVP_MATCH_AUTO_LINK_THRESHOLD;
     }
@@ -478,7 +482,7 @@
       const reviewItems = [];
 
       unmatchedRsvps.forEach((rsvp) => {
-        const bestOverallMatch = getInvitedPartySuggestions(rsvp.name, hydratedParties, 1, 0)[0] || null;
+        const bestOverallMatch = getBestInvitedPartyMatch(rsvp.name, hydratedParties);
         if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
           reviewItems.push({
             id: rsvp.id,
@@ -636,7 +640,7 @@
       const updates = [];
 
       snapshot.unmatchedRsvps.forEach((rsvp) => {
-        const bestOverallMatch = getInvitedPartySuggestions(rsvp.name, snapshot.invitedParties, 1, 0)[0] || null;
+        const bestOverallMatch = getBestInvitedPartyMatch(rsvp.name, snapshot.invitedParties);
         if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
           return;
         }
