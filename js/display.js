@@ -1227,7 +1227,7 @@
         </div>
       `).join("");
 
-      stopRsvpAutoScroll();
+      startRsvpAutoScroll();
     }
 
     async function renderRsvpBoardWithData() {
@@ -1239,11 +1239,13 @@
         return;
       }
 
+      cachedWeddingSnapshot = null;
       renderRsvpSkeleton();
 
       const snapshot = await fetchWeddingSnapshotWithAutoMatch();
 
       if (snapshot === null) {
+        cachedWeddingSnapshot = null;
         renderRsvpError();
       } else {
         renderRsvpBoard(snapshot);
@@ -1399,6 +1401,8 @@
           const snapshot = await fetchWeddingSnapshotWithAutoMatch();
           if (snapshot !== null) {
             renderRsvpBoard(snapshot);
+          } else {
+            cachedWeddingSnapshot = null;
           }
         }
 

@@ -35,7 +35,7 @@ netlify.toml        — build config, env var injection via sed
 3. To-Do List
 4. Meal Plan (dinner only on display)
 5. Countdown Board (Lucide icons)
-6. RSVP Live Board (Chris & Bailey only — reads `rsvps` table, **hardcoded to this household, retires Oct 9 2026**; intentionally excluded from active-screen toggles; remove via code change after that date)
+6. RSVP Live Board (Chris & Bailey only — reads `rsvps` table, **hardcoded to this household, hidden starting Oct 11, 2026**; intentionally excluded from active-screen toggles; remove via code change after that date)
 
 ## Supabase Tables
 - `households` — `assistant_name`, `color_scheme`, `google_cal_id`, `google_cal_key`, `display_settings` (JSONB), `total_invited_guests`, admin PIN

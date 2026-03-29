@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.9.5";
+    const VERSION = "0.9.6";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -309,7 +309,7 @@
     function normalizeMatchName(value) {
       return String(value || "")
         .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
         .replace(/\s+/g, " ")
         .trim();
     }
@@ -698,6 +698,7 @@
         .filter((party) => !party.rsvpId)
         .map((party) => ({ ...party }));
       const updates = [];
+      const candidateUpdates = [];
 
       snapshot.unmatchedRsvps.forEach((rsvp) => {
         const bestOverallMatch = getBestInvitedPartyMatch(rsvp.name, snapshot.invitedParties);
@@ -709,18 +710,32 @@
         if (!bestMatch || !isHighConfidenceRsvpMatch(bestMatch.matchScore)) {
           return;
         }
-        updates.push({
+        candidateUpdates.push({
           invitedPartyId: bestMatch.id,
           rsvpId: rsvp.id,
           invitedPartyName: bestMatch.name,
           rsvpName: rsvp.name,
           score: bestMatch.matchScore
         });
-        const removeIndex = availableParties.findIndex((party) => party.id === bestMatch.id);
-        if (removeIndex !== -1) {
-          availableParties.splice(removeIndex, 1);
-        }
       });
+
+      candidateUpdates
+        .sort((a, b) => {
+          if (b.score !== a.score) {
+            return b.score - a.score;
+          }
+          return String(a.rsvpName || "").localeCompare(String(b.rsvpName || ""));
+        })
+        .forEach((candidate) => {
+          const removeIndex = availableParties.findIndex((party) => party.id === candidate.invitedPartyId);
+          if (removeIndex === -1) {
+            return;
+          }
+          updates.push(candidate);
+          if (removeIndex !== -1) {
+            availableParties.splice(removeIndex, 1);
+          }
+        });
 
       if (!updates.length) {
         return snapshot;

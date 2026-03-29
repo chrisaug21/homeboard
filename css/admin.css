@@ -233,6 +233,14 @@
       line-height: 1.4;
     }
 
+    .admin-field-error {
+      margin: 2px 0 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--rose);
+      line-height: 1.4;
+    }
+
     .admin-week-nav-btn svg {
       width: 16px;
       height: 16px;
@@ -1856,5 +1864,63 @@
     html[data-scheme="dark"] .admin-modal-photo-pending {
       background: rgba(255, 255, 255, 0.06);
       border-color: rgba(255, 240, 220, 0.11);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-card,
+    html[data-scheme="dark"] .admin-rsvp-review-row,
+    html[data-scheme="dark"] .admin-rsvp-suggestion,
+    html[data-scheme="dark"] .admin-rsvp-guest-row,
+    html[data-scheme="dark"] .admin-rsvp-search-result,
+    html[data-scheme="dark"] .admin-rsvp-compare-card,
+    html[data-scheme="dark"] .admin-rsvp-suggestion-list,
+    html[data-scheme="dark"] .admin-rsvp-search-results {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 240, 220, 0.11);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-review-row:hover,
+    html[data-scheme="dark"] .admin-rsvp-review-row:focus-visible,
+    html[data-scheme="dark"] .admin-rsvp-guest-row:hover,
+    html[data-scheme="dark"] .admin-rsvp-guest-row:focus-visible,
+    html[data-scheme="dark"] .admin-rsvp-search-result.is-selected {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-card-title,
+    html[data-scheme="dark"] .admin-rsvp-guest-title,
+    html[data-scheme="dark"] .admin-rsvp-suggestion-title,
+    html[data-scheme="dark"] .admin-rsvp-linked-label {
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-card-meta,
+    html[data-scheme="dark"] .admin-rsvp-guest-meta,
+    html[data-scheme="dark"] .admin-rsvp-suggestion-meta,
+    html[data-scheme="dark"] .admin-rsvp-search-label,
+    html[data-scheme="dark"] .admin-rsvp-no-match {
+      color: var(--muted);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-status--attending {
+      background: rgba(34, 197, 94, 0.18);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-status--declined {
+      background: rgba(244, 114, 182, 0.18);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-status--pending {
+      background: rgba(245, 158, 11, 0.18);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-issue-badge,
+    html[data-scheme="dark"] .admin-rsvp-under-count-pill {
+      background: rgba(245, 158, 11, 0.18);
       color: var(--ink);
     }

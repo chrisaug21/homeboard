@@ -412,6 +412,11 @@
       background: rgba(255, 255, 255, 0.14);
       color: #e7ddd5;
     }
+    html[data-scheme="dark"] .rsvp-detail-item {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 240, 220, 0.11);
+      color: var(--ink);
+    }
 
     /* ── Slate scheme component overrides ─────────────────────────────────────
        Purpose: replace hardcoded amber/warm rgba() values with slate-blue

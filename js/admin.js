@@ -224,6 +224,50 @@
       }, 2800);
     }
 
+    function clearFieldError(input) {
+      if (!input) return;
+      input.removeAttribute("aria-invalid");
+      input.style.borderColor = "";
+      const field = input.closest(".admin-field");
+      const errorEl = field && field.querySelector(".admin-field-error");
+      if (errorEl) {
+        errorEl.remove();
+      }
+    }
+
+    function setFieldError(input, message) {
+      if (!input) return;
+      clearFieldError(input);
+      input.setAttribute("aria-invalid", "true");
+      input.style.borderColor = "var(--rose)";
+      const field = input.closest(".admin-field");
+      if (!field) return;
+      const errorEl = document.createElement("div");
+      errorEl.className = "admin-field-error";
+      errorEl.textContent = message;
+      field.appendChild(errorEl);
+    }
+
+    function validatePositiveIntegerField(form, fieldName, message) {
+      const input = form.querySelector(`[name='${fieldName}']`);
+      if (!input) return null;
+      const rawValue = String(input.value || "").trim();
+      const parsedValue = Number(rawValue);
+      if (!rawValue || !Number.isInteger(parsedValue) || parsedValue <= 0) {
+        setFieldError(input, message);
+        input.focus();
+        return null;
+      }
+      clearFieldError(input);
+      return parsedValue;
+    }
+
+    function applyExpectedPartyRsvpState(query, expectedRsvpId) {
+      return expectedRsvpId
+        ? query.eq("rsvp_id", expectedRsvpId)
+        : query.is("rsvp_id", null);
+    }
+
     function setModalSaving(isBusy, defaultLabel) {
       const btn = document.querySelector("#admin-modal-body [type='submit']");
       if (btn) {
@@ -420,7 +464,9 @@
         }
       } else if (formType === "rsvp-party") {
         if (adminRsvpWritePending) return;
-        saveAdminInvitedParty(formData);
+        const invitedCount = validatePositiveIntegerField(form, "invited_count", "Invited count must be at least 1.");
+        if (invitedCount === null) return;
+        saveAdminInvitedParty(formData, invitedCount);
       } else if (formType === "review-guest-count") {
         if (adminRsvpWritePending) return;
         saveReviewGuestCount(formData);
@@ -2022,7 +2068,7 @@
           </div>
           <div class="admin-field">
             <label for="modal-rsvp-party-count">Invited count</label>
-            <input id="modal-rsvp-party-count" name="invited_count" type="number" min="0" max="20" required value="${escapeHtml(party.invitedCount)}">
+            <input id="modal-rsvp-party-count" name="invited_count" type="number" min="1" max="20" required value="${escapeHtml(party.invitedCount)}">
           </div>
           ${buildLinkedRsvpResultsHTML(party)}
           <div class="admin-actions admin-actions--end">
@@ -2103,14 +2149,16 @@
       }
 
       adminRsvpWritePending = true;
-      const { error } = await client
+      const { data, error } = await client
         .from("invited_parties")
         .update({ rsvp_id: rsvpId })
-        .eq("id", partyId);
+        .eq("id", partyId)
+        .is("rsvp_id", null)
+        .select("id");
       adminRsvpWritePending = false;
 
-      if (error) {
-        showToast("Couldn’t link that RSVP. Please try again.");
+      if (error || !Array.isArray(data) || !data.length) {
+        showToast("That party changed since this screen loaded. Refresh and try again.");
         return;
       }
 
@@ -2120,7 +2168,7 @@
       showToast("RSVP linked.");
     }
 
-    async function saveAdminInvitedParty(formData) {
+    async function saveAdminInvitedParty(formData, validatedInvitedCount = null) {
       const client = getSupabaseClient();
       if (!client) {
         showToast("Couldn’t save RSVP party. Supabase is unavailable.");
@@ -2129,27 +2177,33 @@
 
       const partyId = String(formData.get("party_id") || "").trim();
       const partyName = String(formData.get("party_name") || "").trim();
-      const invitedCount = Math.max(0, parseInt(String(formData.get("invited_count") || "0"), 10) || 0);
+      const invitedCount = validatedInvitedCount ?? Math.max(0, parseInt(String(formData.get("invited_count") || "0"), 10) || 0);
       const linkedRsvpId = String(formData.get("linked_rsvp_id") || "").trim() || null;
+      const currentParty = adminWeddingSnapshot?.invitedParties?.find((item) => item.id === partyId);
+      const expectedLinkedRsvpId = currentParty?.rsvpId || null;
       if (!partyId || !partyName) return;
 
       adminRsvpWritePending = true;
       setModalSaving(true, "Save");
 
-      const { error } = await client
-        .from("invited_parties")
-        .update({
-          name: partyName,
-          invited_count: invitedCount,
-          rsvp_id: linkedRsvpId
-        })
-        .eq("id", partyId);
+      const { data, error } = await applyExpectedPartyRsvpState(
+        client
+          .from("invited_parties")
+          .update({
+            name: partyName,
+            invited_count: invitedCount,
+            rsvp_id: linkedRsvpId
+          })
+          .eq("id", partyId),
+        expectedLinkedRsvpId
+      )
+        .select("id");
 
       adminRsvpWritePending = false;
       setModalSaving(false, "Save");
 
-      if (error) {
-        showToast("Couldn’t save party changes.");
+      if (error || !Array.isArray(data) || !data.length) {
+        showToast("That party changed since this screen loaded. Refresh and try again.");
         return;
       }
 
@@ -2174,6 +2228,10 @@
     }
 
     function handleAdminModalInput(event) {
+      if (event.target.matches("[name='invited_count']")) {
+        clearFieldError(event.target);
+      }
+
       const primaryRsvpRadio = event.target.closest("input[name='primary_rsvp_id']");
       if (primaryRsvpRadio) {
         const form = primaryRsvpRadio.closest("form[data-modal-form='review-merge-duplicate']");
@@ -2309,14 +2367,16 @@
       if (!client) return;
 
       adminRsvpWritePending = true;
-      const { error } = await client
+      const { data, error } = await client
         .from("invited_parties")
         .update({ rsvp_id: null })
-        .eq("id", partyId);
+        .eq("id", partyId)
+        .eq("rsvp_id", rsvpId)
+        .select("id");
       adminRsvpWritePending = false;
 
-      if (error) {
-        showToast("Couldn’t unlink that party.");
+      if (error || !Array.isArray(data) || !data.length) {
+        showToast("That party changed since this screen loaded. Refresh and try again.");
         return;
       }
 
