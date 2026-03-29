@@ -25,9 +25,15 @@
     ];
 
     // Screen definitions for settings UI
-    const CONFIGURABLE_SCREENS = ["calendar", "todos", "meals", "countdowns"];
-    const SCREEN_LABELS = { calendar: "Calendar", todos: "To-Do List", meals: "Meal Plan", countdowns: "Countdowns" };
-    const TIMER_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"];
+    const CONFIGURABLE_SCREENS = [...DISPLAY_SCREEN_KEYS];
+    const SCREEN_LABELS = {
+      upcoming_calendar: "Upcoming Calendar",
+      monthly_calendar: "Monthly Calendar",
+      todos: "To-Do List",
+      meals: "Meal Plan",
+      countdowns: "Countdowns"
+    };
+    const TIMER_SCREEN_KEYS = [...DISPLAY_SCREEN_KEYS];
     const TIMER_LABELS = {
       upcoming_calendar: "Upcoming Calendar",
       monthly_calendar: "Monthly Calendar",
@@ -43,15 +49,14 @@
       color_scheme: "warm",
       google_cal_id: "",
       display_settings: {
-        members: [
-          { name: "Chris", color: PERSON_COLOR_PALETTE[0] },
-          { name: "Bailey", color: PERSON_COLOR_PALETTE[1] }
-        ]
+        members: []
       }
     };
-    let householdSavePending = false;
+    let assistantSavePending = false;
     let displaySavePending = false;
     let integrationsSavePending = false;
+    let membersSavePending = false;
+    let pendingMemberRemovalIndex = null;
 
     let toastTimeoutId = null;
     let adminTodoWritePending = false;
@@ -516,9 +521,8 @@
     function buildTodoFormHTML(todo) {
       const isEdit = !!todo;
       const currentAssignee = isEdit ? (todo.assignee || "") : "";
-      // Read members from settings; fall back to Chris/Bailey if not yet loaded
+      // Read members from settings
       const memberNames = (adminHouseholdSettings.display_settings.members || []).map((m) => m.name);
-      if (memberNames.length === 0) memberNames.push("Chris", "Bailey");
       // Preserve any existing assignee that isn't in the current list (e.g. old data)
       const extraMember = currentAssignee && !memberNames.includes(currentAssignee)
         ? [currentAssignee]
@@ -1757,24 +1761,15 @@
 
       if (error || !data) return;
 
-      const ds = data.display_settings || {};
-
-      // Seed members with Chris + Bailey if not yet set for this household
-      if (!Array.isArray(ds.members) || ds.members.length === 0) {
-        ds.members = [
-          { name: "Chris", color: PERSON_COLOR_PALETTE[0] },
-          { name: "Bailey", color: PERSON_COLOR_PALETTE[1] }
-        ];
-      }
-
-      // Normalize screen key names in case old DB data has "meal_plan" instead of "meals"
-      const normalizeScreenKey = (k) => k === "meal_plan" ? "meals" : k;
-      if (Array.isArray(ds.screen_order)) {
-        ds.screen_order = ds.screen_order.map(normalizeScreenKey);
-      }
-      if (Array.isArray(ds.active_screens)) {
-        ds.active_screens = ds.active_screens.map(normalizeScreenKey);
-      }
+      const ds = normalizeDisplaySettings(data.display_settings);
+      ds.members = Array.isArray(data.display_settings?.members)
+        ? data.display_settings.members
+          .map((member) => ({
+            name: String(member?.name || "").trim(),
+            color: String(member?.color || "").trim()
+          }))
+          .filter((member) => member.name)
+        : [];
 
       adminHouseholdSettings = {
         assistant_name: data.assistant_name || "",
@@ -1799,13 +1794,23 @@
       }
 
       list.innerHTML = members.map((m, i) => `
-        <div class="admin-settings-member-row" data-member-index="${i}">
-          <span class="admin-settings-member-color" style="background:${escapeHtml(m.color || "#999")}"></span>
-          <span class="admin-settings-member-name">${escapeHtml(m.name)}</span>
-          <button type="button" class="admin-settings-member-remove" data-member-index="${i}" aria-label="Remove ${escapeHtml(m.name)}">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
+        ${pendingMemberRemovalIndex === i ? `
+          <div class="admin-settings-member-row admin-settings-member-row--confirm" data-member-index="${i}">
+            <span class="admin-settings-member-confirm-text">Remove ${escapeHtml(m.name)}?</span>
+            <div class="admin-settings-member-actions">
+              <button type="button" class="admin-button admin-button--danger admin-button--small" data-member-confirm="${i}"${membersSavePending ? " disabled" : ""}>Confirm</button>
+              <button type="button" class="admin-button admin-button--secondary admin-button--small" data-member-cancel="${i}"${membersSavePending ? " disabled" : ""}>Cancel</button>
+            </div>
+          </div>
+        ` : `
+          <div class="admin-settings-member-row" data-member-index="${i}">
+            <span class="admin-settings-member-color" style="background:${escapeHtml(m.color || "#999")}"></span>
+            <span class="admin-settings-member-name">${escapeHtml(m.name)}</span>
+            <button type="button" class="admin-settings-member-remove" data-member-remove="${i}" aria-label="Remove ${escapeHtml(m.name)}"${membersSavePending ? " disabled" : ""}>
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+        `}
       `).join("");
 
       refreshIcons();
@@ -1863,9 +1868,6 @@
       const screenOrder = Array.isArray(ds.screen_order) ? ds.screen_order : CONFIGURABLE_SCREENS;
       const timerIntervals = ds.timer_intervals || {};
       const upcomingDays = ds.upcoming_days || 5;
-      const rawView = ds.calendar_view || "upcoming";
-      const calendarView = (rawView === "month" || rawView === "monthly") ? "monthly"
-        : "upcoming";
       const members = Array.isArray(ds.members) ? ds.members : [];
 
       // Household
@@ -1891,10 +1893,6 @@
       const daysSelect = document.getElementById("settings-upcoming-days");
       if (daysSelect) daysSelect.value = String(upcomingDays);
 
-      // Calendar default view
-      const viewSelect = document.getElementById("settings-calendar-view");
-      if (viewSelect) viewSelect.value = calendarView;
-
       // Color scheme
       const schemeRadio = document.querySelector(`[name="color_scheme"][value="${adminHouseholdSettings.color_scheme || "warm"}"]`);
       if (schemeRadio) schemeRadio.checked = true;
@@ -1908,56 +1906,87 @@
     }
 
     function updateAdminLastSyncedLabel() {
-      const raw = localStorage.getItem("homeboard_last_synced");
       const el = document.getElementById("settings-last-synced");
       if (!el) return;
-      if (!raw) { el.textContent = "Never synced"; return; }
-      const date = new Date(raw);
-      if (isNaN(date.getTime())) { el.textContent = "Never synced"; return; }
-      el.textContent = `Last synced: ${new Intl.DateTimeFormat("en-US", {
-        month: "short", day: "numeric",
-        hour: "numeric", minute: "2-digit"
-      }).format(date)}`;
+      const label = formatRelativeTimestamp(localStorage.getItem(LAST_SYNCED_KEY), "Never synced");
+      el.textContent = label === "Never synced" ? label : `Last synced ${label}`;
     }
 
-    async function saveHouseholdSection() {
+    async function saveAssistantSection() {
       const client = getSupabaseClient();
-      if (!client || householdSavePending) return;
+      if (!client || assistantSavePending) return;
 
-      householdSavePending = true;
-      const saveBtn = document.getElementById("settings-household-save");
+      assistantSavePending = true;
+      const saveBtn = document.getElementById("settings-assistant-save");
       if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
 
       try {
         const nameInput = document.getElementById("settings-assistant-name");
         const newName = nameInput ? nameInput.value.trim() : "";
 
-        // Use in-memory state for members — add/remove handlers keep it up to date
-        // (DOM reading is unreliable: colorEl.style.background returns rgb() not hex)
-        const newMembers = adminHouseholdSettings.display_settings.members || [];
-
         adminHouseholdSettings.assistant_name = newName;
-
-        const newDs = { ...adminHouseholdSettings.display_settings, members: newMembers };
 
         const { data, error } = await client
           .from("households")
-          .update({ assistant_name: newName || null, display_settings: newDs })
+          .update({ assistant_name: newName || null })
           .eq("id", DISPLAY_HOUSEHOLD_ID)
           .select();
-        console.log("[saveHouseholdSection] id:", DISPLAY_HOUSEHOLD_ID, "data:", data, "error:", error);
 
         if (error) {
-          showToast("Error saving household settings.");
+          showToast("Error saving assistant name.");
         } else if (!data || data.length === 0) {
           showToast("Warning: no rows updated — check household ID.");
-          console.warn("[saveHouseholdSection] 0 rows affected. Household ID may be wrong.");
         } else {
-          showToast("Household settings saved.");
+          showToast("Assistant name saved.");
         }
       } finally {
-        householdSavePending = false;
+        assistantSavePending = false;
         if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
+      }
+    }
+
+    async function persistMemberList(updatedMembers, successMessage) {
+      const client = getSupabaseClient();
+      if (!client || membersSavePending) {
+        return false;
+      }
+
+      membersSavePending = true;
+      const addButton = document.getElementById("settings-member-add-btn");
+      if (addButton) {
+        addButton.disabled = true;
+        addButton.textContent = "Saving…";
+      }
+      renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+
+      try {
+        const newDisplaySettings = {
+          ...adminHouseholdSettings.display_settings,
+          members: updatedMembers
+        };
+
+        const { error } = await client
+          .from("households")
+          .update({ display_settings: newDisplaySettings })
+          .eq("id", DISPLAY_HOUSEHOLD_ID);
+
+        if (error) {
+          showToast("Couldn’t save household members. Please try again.");
+          return false;
+        }
+
+        adminHouseholdSettings.display_settings = newDisplaySettings;
+        pendingMemberRemovalIndex = null;
+        renderSettingsMembersList(updatedMembers);
+        showToast(successMessage);
+        return true;
+      } finally {
+        membersSavePending = false;
+        if (addButton) {
+          addButton.disabled = false;
+          addButton.textContent = "Save";
+        }
+        renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
       }
     }
 
@@ -2001,9 +2030,6 @@
         const daysSelect = document.getElementById("settings-upcoming-days");
         const upcomingDays = daysSelect ? Number(daysSelect.value) : 5;
 
-        const viewSelect = document.getElementById("settings-calendar-view");
-        const calendarView = viewSelect ? viewSelect.value : "upcoming";
-
         const schemeRadio = document.querySelector("[name='color_scheme']:checked");
         const colorScheme = schemeRadio ? schemeRadio.value : "warm";
 
@@ -2012,8 +2038,7 @@
           active_screens: activeScreens,
           screen_order: screenOrder,
           timer_intervals: timerIntervals,
-          upcoming_days: upcomingDays,
-          calendar_view: calendarView
+          upcoming_days: upcomingDays
         };
 
         adminHouseholdSettings.display_settings = newDs;
@@ -2024,13 +2049,10 @@
           .update({ color_scheme: colorScheme, display_settings: newDs })
           .eq("id", DISPLAY_HOUSEHOLD_ID)
           .select();
-        console.log("[saveDisplaySection] id:", DISPLAY_HOUSEHOLD_ID, "data:", data, "error:", error);
-
         if (error) {
           showToast("Error saving display settings.");
         } else if (!data || data.length === 0) {
           showToast("Warning: no rows updated — check household ID.");
-          console.warn("[saveDisplaySection] 0 rows affected. Household ID may be wrong.");
         } else {
           showToast("Display settings saved.");
         }
@@ -2059,13 +2081,10 @@
           .update({ google_cal_id: newCalId || null })
           .eq("id", DISPLAY_HOUSEHOLD_ID)
           .select();
-        console.log("[saveIntegrationsSection] id:", DISPLAY_HOUSEHOLD_ID, "data:", data, "error:", error);
-
         if (error) {
           showToast("Error saving integration settings.");
         } else if (!data || data.length === 0) {
           showToast("Warning: no rows updated — check household ID.");
-          console.warn("[saveIntegrationsSection] 0 rows affected. Household ID may be wrong.");
         } else {
           showToast("Integration settings saved.");
         }
@@ -2103,7 +2122,7 @@
           }
         }
 
-        localStorage.setItem("homeboard_last_synced", new Date().toISOString());
+        localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
         updateAdminLastSyncedLabel();
         showToast("Sync complete.");
       } finally {
@@ -2114,23 +2133,35 @@
     }
 
     function handleSettingsMemberListClick(event) {
-      const removeBtn = event.target.closest("[data-member-index]");
-      if (!removeBtn || !removeBtn.classList.contains("admin-settings-member-remove")) return;
+      const removeBtn = event.target.closest("[data-member-remove]");
+      if (removeBtn) {
+        pendingMemberRemovalIndex = parseInt(removeBtn.getAttribute("data-member-remove"), 10);
+        renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+        return;
+      }
 
-      const idx = parseInt(removeBtn.getAttribute("data-member-index"), 10);
+      const cancelBtn = event.target.closest("[data-member-cancel]");
+      if (cancelBtn) {
+        pendingMemberRemovalIndex = null;
+        renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+        return;
+      }
+
+      const confirmBtn = event.target.closest("[data-member-confirm]");
+      if (!confirmBtn) return;
+
+      const idx = parseInt(confirmBtn.getAttribute("data-member-confirm"), 10);
       const members = adminHouseholdSettings.display_settings.members || [];
-      if (members.length <= 1) {
-        showToast("At least one member must remain.");
+      if (!members[idx]) {
         return;
       }
       const updated = members.filter((_, i) => i !== idx);
-      adminHouseholdSettings.display_settings.members = updated;
-      renderSettingsMembersList(updated);
+      persistMemberList(updated, `${members[idx].name} removed.`);
     }
 
-    function handleSettingsMemberAdd() {
+    async function handleSettingsMemberAdd() {
       const input = document.getElementById("settings-member-input");
-      if (!input) return;
+      if (!input || membersSavePending) return;
       const name = input.value.trim();
       if (!name) return;
 
@@ -2142,10 +2173,11 @@
 
       const color = PERSON_COLOR_PALETTE[members.length % PERSON_COLOR_PALETTE.length];
       const updated = [...members, { name, color }];
-      adminHouseholdSettings.display_settings.members = updated;
-      renderSettingsMembersList(updated);
-      input.value = "";
-      input.focus();
+      const didSave = await persistMemberList(updated, `${name} added.`);
+      if (didSave) {
+        input.value = "";
+        input.focus();
+      }
     }
 
     function handleSettingsScreenOrderClick(event) {
@@ -2206,8 +2238,8 @@
       const screenOrder = document.getElementById("settings-screen-order");
       if (screenOrder) screenOrder.addEventListener("click", handleSettingsScreenOrderClick);
 
-      const householdSave = document.getElementById("settings-household-save");
-      if (householdSave) householdSave.addEventListener("click", saveHouseholdSection);
+      const assistantSave = document.getElementById("settings-assistant-save");
+      if (assistantSave) assistantSave.addEventListener("click", saveAssistantSection);
 
       const displaySave = document.getElementById("settings-display-save");
       if (displaySave) displaySave.addEventListener("click", saveDisplaySection);
@@ -2256,6 +2288,8 @@
       if (adminCalNextBtn) adminCalNextBtn.addEventListener("click", handleAdminCalNext);
       const adminVersionEl = document.getElementById("admin-version-label");
       if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
+      updateAdminLastSyncedLabel();
+      window.setInterval(updateAdminLastSyncedLabel, 30000);
       loadAdminTodos();
       loadAdminMealPlan();
       initSettingsListeners();

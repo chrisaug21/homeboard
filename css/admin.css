@@ -92,7 +92,24 @@
       font: inherit;
     }
 
+    .admin-input {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid rgba(124, 96, 69, 0.16);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.84);
+      color: var(--ink);
+      font: inherit;
+    }
+
     .admin-field input:focus-visible {
+      outline: 2px solid rgba(180, 83, 9, 0.22);
+      outline-offset: 2px;
+      border-color: rgba(180, 83, 9, 0.3);
+    }
+
+    .admin-input:focus-visible {
       outline: 2px solid rgba(180, 83, 9, 0.22);
       outline-offset: 2px;
       border-color: rgba(180, 83, 9, 0.3);
@@ -136,6 +153,11 @@
       cursor: wait;
       opacity: 0.6;
       transform: none;
+    }
+
+    .admin-button--small {
+      padding: 8px 12px;
+      font-size: 0.82rem;
     }
 
     .admin-button--primary {
@@ -1148,6 +1170,12 @@
       border: 1px solid rgba(124, 96, 69, 0.12);
     }
 
+    .admin-settings-member-row--confirm {
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
     .admin-settings-member-color {
       width: 13px;
       height: 13px;
@@ -1161,6 +1189,19 @@
       flex: 1;
       font-weight: 600;
       font-size: 0.95rem;
+    }
+
+    .admin-settings-member-confirm-text {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--ink);
+    }
+
+    .admin-settings-member-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
     }
 
     .admin-settings-member-remove {
@@ -1190,6 +1231,12 @@
     /* Add member form row */
     .admin-form-row--add-member {
       grid-template-columns: 1fr auto;
+      align-items: stretch;
+    }
+
+    .admin-form-row--add-member .admin-input,
+    .admin-form-row--add-member .admin-button {
+      height: 48px;
     }
 
     /* Active screen toggles */
@@ -1446,4 +1493,91 @@
       margin-top: 14px;
     }
 
+    html[data-scheme="dark"] .admin-mode-pill {
+      background: rgba(245, 158, 11, 0.14);
+      color: #fbbf24;
+    }
 
+    html[data-scheme="dark"] .admin-panel,
+    html[data-scheme="dark"] .admin-drawer,
+    html[data-scheme="dark"] .admin-nav,
+    html[data-scheme="dark"] .admin-modal-sheet {
+      background: rgba(36, 31, 28, 0.94);
+      border-color: rgba(255, 240, 220, 0.11);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+    }
+
+    html[data-scheme="dark"] .admin-panel-title,
+    html[data-scheme="dark"] .admin-drawer-title,
+    html[data-scheme="dark"] .admin-settings-member-confirm-text,
+    html[data-scheme="dark"] .admin-settings-order-item-name,
+    html[data-scheme="dark"] .admin-settings-timer-label,
+    html[data-scheme="dark"] .admin-settings-toggle span,
+    html[data-scheme="dark"] .admin-settings-scheme-option span:last-child,
+    html[data-scheme="dark"] .admin-version-label,
+    html[data-scheme="dark"] .admin-sync-timestamp {
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-panel-note,
+    html[data-scheme="dark"] .admin-field label,
+    html[data-scheme="dark"] .admin-field-hint,
+    html[data-scheme="dark"] .admin-drawer-note,
+    html[data-scheme="dark"] .admin-week-nav-label,
+    html[data-scheme="dark"] .admin-settings-subsection-label,
+    html[data-scheme="dark"] .admin-settings-timer-unit,
+    html[data-scheme="dark"] .admin-countdown-meta-item,
+    html[data-scheme="dark"] .admin-edit-photo-credit,
+    html[data-scheme="dark"] .admin-form-photo-preview-meta,
+    html[data-scheme="dark"] .admin-modal-photo-pending-meta,
+    html[data-scheme="dark"] .admin-nav-button,
+    html[data-scheme="dark"] .admin-icon-link {
+      color: #cbbeb3;
+    }
+
+    html[data-scheme="dark"] .admin-field input,
+    html[data-scheme="dark"] .admin-field select,
+    html[data-scheme="dark"] .admin-input,
+    html[data-scheme="dark"] .admin-settings-timer-input,
+    html[data-scheme="dark"] .admin-meal-note-textarea {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 240, 220, 0.14);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-button--secondary,
+    html[data-scheme="dark"] .admin-week-nav-btn,
+    html[data-scheme="dark"] .admin-drawer-icon,
+    html[data-scheme="dark"] .admin-modal-close,
+    html[data-scheme="dark"] .admin-settings-order-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--ink);
+      border-color: rgba(255, 240, 220, 0.12);
+    }
+
+    html[data-scheme="dark"] .admin-button--ghost-danger:hover,
+    html[data-scheme="dark"] .admin-button--ghost-danger:focus-visible,
+    html[data-scheme="dark"] .admin-nav-button.is-active,
+    html[data-scheme="dark"] .admin-settings-toggle:has(input:checked),
+    html[data-scheme="dark"] .admin-settings-scheme-option:has(input:checked),
+    html[data-scheme="dark"] .admin-settings-order-btn:hover:not(:disabled) {
+      background: rgba(245, 158, 11, 0.16);
+    }
+
+    html[data-scheme="dark"] .admin-todo-card,
+    html[data-scheme="dark"] .admin-meal-card,
+    html[data-scheme="dark"] .admin-cal-event-card,
+    html[data-scheme="dark"] .admin-saved-countdown-card,
+    html[data-scheme="dark"] .admin-settings-member-row,
+    html[data-scheme="dark"] .admin-settings-toggle,
+    html[data-scheme="dark"] .admin-settings-order-item,
+    html[data-scheme="dark"] .admin-settings-timer-row,
+    html[data-scheme="dark"] .admin-settings-scheme-option,
+    html[data-scheme="dark"] .admin-empty,
+    html[data-scheme="dark"] .admin-edit-photo-preview,
+    html[data-scheme="dark"] .admin-form-photo-preview,
+    html[data-scheme="dark"] .admin-modal-photo-pending {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 240, 220, 0.11);
+      color: var(--ink);
+    }

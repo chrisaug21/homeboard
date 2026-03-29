@@ -39,14 +39,15 @@ netlify.toml        — build + env var injection via sed
 ```json
 {
   "members":        [{"name": "Chris", "color": "#2563eb"}],
-  "active_screens": ["calendar", "todos", "meals", "countdowns"],
-  "screen_order":   ["calendar", "todos", "meals", "countdowns"],
+  "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
+  "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
   "timer_intervals": {"upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15},
-  "upcoming_days":  5,
-  "calendar_view":  "upcoming"
+  "upcoming_days":  5
 }
 ```
 - `members` → todo assignee picker. **Future**: migrate to `users` table when multi-user auth is implemented.
+- `upcoming_calendar` and `monthly_calendar` are separate display screens everywhere in code and settings. Do not collapse them back into a single `calendar` key.
+- The old "Default calendar view" setting has been removed. Rotation order now comes only from `screen_order`.
 - `upcoming_days` → drives the `UPCOMING_DAYS` variable in `display.js`. Update both together.
 - RSVP screen is **hardcoded to this household** and excluded from `active_screens` and `screen_order`. It retires Oct 9 2026 — remove via code change after that date.
 - Google Calendar: single calendar ID in `households.google_cal_id`. **Future**: support toggling multiple calendars.

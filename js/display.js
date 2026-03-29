@@ -25,6 +25,13 @@
     let lastWideFetch = 0; // ms timestamp of last 24-month fetch
     let initialLoadComplete = false;
     const pendingScreens = new Set();
+    const displayScreenRegistry = {
+      upcoming_calendar: track.querySelector(".screen--calendar"),
+      monthly_calendar: track.querySelector(".screen--month"),
+      todos: track.querySelector(".screen--todos"),
+      meals: track.querySelector(".screen--meals"),
+      countdowns: track.querySelector(".countdown-screen")
+    };
 
     function markPending(screenId) {
       pendingScreens.add(screenId);
@@ -34,6 +41,8 @@
       pendingScreens.delete(screenId);
       if (!initialLoadComplete && pendingScreens.size === 0) {
         initialLoadComplete = true;
+        localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
+        updateLastSyncedLabel();
         resetAutoRotate();
       }
     }
@@ -1267,20 +1276,19 @@
     }
 
     function applyActiveScreens(activeScreens) {
-      // Groups that can be toggled: calendar (both views), todos, meals, countdowns
-      const groups = {
-        calendar: [
-          track.querySelector(".screen--calendar"),
-          track.querySelector(".screen--month")
-        ].filter(Boolean),
-        todos: [track.querySelector(".screen--todos")].filter(Boolean),
-        meals: [track.querySelector(".screen--meals")].filter(Boolean),
-        countdowns: Array.from(track.querySelectorAll(".countdown-screen"))
-      };
+      const anchor = track.querySelector(".rsvp-screen") || null;
 
-      for (const [name, els] of Object.entries(groups)) {
-        if (!activeScreens.includes(name)) {
-          els.forEach((el) => el.remove());
+      for (const [name, el] of Object.entries(displayScreenRegistry)) {
+        if (!el) {
+          continue;
+        }
+
+        if (activeScreens.includes(name)) {
+          if (el.parentElement !== track) {
+            track.insertBefore(el, anchor);
+          }
+        } else if (el.parentElement === track) {
+          el.remove();
         }
       }
 
@@ -1288,24 +1296,11 @@
     }
 
     function applyScreenOrder(screenOrder) {
-      // Move screen groups to match the desired order, keeping RSVP always last
       const rsvpScreen = track.querySelector(".rsvp-screen");
-
-      const groups = {
-        calendar: [
-          track.querySelector(".screen--calendar"),
-          track.querySelector(".screen--month")
-        ].filter(Boolean),
-        todos: [track.querySelector(".screen--todos")].filter(Boolean),
-        meals: [track.querySelector(".screen--meals")].filter(Boolean),
-        countdowns: Array.from(track.querySelectorAll(".countdown-screen"))
-      };
-
-      // Insert each group in order, before the RSVP screen (or at end if RSVP retired)
       const anchor = rsvpScreen || null;
       for (const screenName of screenOrder) {
-        const els = groups[screenName] || [];
-        for (const el of els) {
+        const el = displayScreenRegistry[screenName];
+        if (el && el.parentElement === track) {
           track.insertBefore(el, anchor);
         }
       }
@@ -1313,7 +1308,7 @@
 
     function applyDisplaySettings(config) {
       if (!config) return;
-      const ds = config.display_settings || {};
+      const ds = normalizeDisplaySettings(config.display_settings);
 
       // Apply upcoming days
       const upcomingDays = Number(ds.upcoming_days);
@@ -1341,7 +1336,7 @@
       applyColorScheme(config.color_scheme || "warm");
 
       // Apply active screens (must come before screen order)
-      const defaultScreens = ["calendar", "todos", "meals", "countdowns"];
+      const defaultScreens = [...DISPLAY_SCREEN_KEYS];
       const activeScreens = Array.isArray(ds.active_screens) && ds.active_screens.length > 0
         ? ds.active_screens
         : defaultScreens;
@@ -1352,48 +1347,12 @@
         ? ds.screen_order
         : defaultScreens;
       applyScreenOrder(screenOrder);
-
-      // Apply calendar default view — controls which calendar screen leads in rotation
-      // Normalize: DB may store "month" or "monthly"; both mean monthly view
-      if (ds.calendar_view === "monthly" || ds.calendar_view === "month") {
-        const monthScreen = track.querySelector(".screen--month");
-        const calScreen = track.querySelector(".screen--calendar");
-        if (monthScreen && calScreen) {
-          // Move monthly before upcoming in DOM so it leads the rotation
-          track.insertBefore(monthScreen, calScreen);
-        }
-        if (monthScreen) {
-          const idx = Array.from(track.children).indexOf(monthScreen);
-          if (idx >= 0) currentIndex = idx;
-        }
-      }
     }
 
-    const LAST_SYNCED_KEY = "homeboard_last_synced";
-
     function updateLastSyncedLabel() {
-      const raw = localStorage.getItem(LAST_SYNCED_KEY);
       const el = document.getElementById("display-last-synced");
       if (!el) return;
-      if (!raw) {
-        el.textContent = "";
-        return;
-      }
-      const date = new Date(raw);
-      if (isNaN(date.getTime())) {
-        el.textContent = "";
-        return;
-      }
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMin = Math.floor(diffMs / 60000);
-      if (diffMin < 1) {
-        el.textContent = "just now";
-      } else if (diffMin < 60) {
-        el.textContent = `${diffMin}m ago`;
-      } else {
-        el.textContent = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
-      }
+      el.textContent = formatRelativeTimestamp(localStorage.getItem(LAST_SYNCED_KEY), "");
     }
 
     let isSyncing = false;
@@ -1658,6 +1617,7 @@
       const versionEl = document.getElementById("version-label");
       if (versionEl) versionEl.textContent = `v${VERSION}`;
       updateLastSyncedLabel();
+      window.setInterval(updateLastSyncedLabel, 30000);
       const syncBtn = document.getElementById("display-sync-btn");
       if (syncBtn) syncBtn.addEventListener("click", runFullSync);
       renderCalendarAndCountdowns();

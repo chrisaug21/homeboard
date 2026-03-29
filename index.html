@@ -317,9 +317,9 @@
 
       <section class="admin-screen" id="admin-screen-settings" data-admin-screen="settings" hidden>
 
-        <!-- Household -->
-        <section class="admin-panel" aria-labelledby="settings-household-title">
-          <h2 class="admin-panel-title" id="settings-household-title">Household</h2>
+        <!-- Assistant Name -->
+        <section class="admin-panel" aria-labelledby="settings-assistant-title">
+          <h2 class="admin-panel-title" id="settings-assistant-title">Assistant Name</h2>
           <div class="admin-settings-stack">
             <div class="admin-field">
               <label for="settings-assistant-name">Assistant name</label>
@@ -327,20 +327,24 @@
                 placeholder="Leave blank to show &ldquo;Homeboard&rdquo;" autocomplete="off">
               <p class="admin-field-hint">Shown in the bottom bar of the display view.</p>
             </div>
-            <div class="admin-settings-subsection">
-              <div class="admin-settings-subsection-label">Household members</div>
-              <div id="settings-members-list" class="admin-settings-member-list"></div>
-              <div class="admin-form-row admin-form-row--add-member">
-                <input id="settings-member-input" type="text" maxlength="60"
-                  placeholder="Member name" autocomplete="off">
-                <button type="button" id="settings-member-add-btn"
-                  class="admin-button admin-button--secondary">Add</button>
-              </div>
-            </div>
           </div>
           <div class="admin-actions admin-actions--end">
-            <button type="button" id="settings-household-save"
+            <button type="button" id="settings-assistant-save"
               class="admin-button admin-button--primary">Save</button>
+          </div>
+        </section>
+
+        <!-- Household Members -->
+        <section class="admin-panel" aria-labelledby="settings-members-title">
+          <h2 class="admin-panel-title" id="settings-members-title">Household Members</h2>
+          <div class="admin-settings-stack">
+            <div id="settings-members-list" class="admin-settings-member-list"></div>
+            <div class="admin-form-row admin-form-row--add-member">
+              <input id="settings-member-input" class="admin-input" type="text" maxlength="60"
+                placeholder="Member name" autocomplete="off">
+              <button type="button" id="settings-member-add-btn"
+                class="admin-button admin-button--primary">Save</button>
+            </div>
           </div>
         </section>
 
@@ -353,8 +357,12 @@
               <div class="admin-settings-subsection-label">Active screens</div>
               <div class="admin-settings-toggle-list" id="settings-screen-toggles">
                 <label class="admin-settings-toggle">
-                  <input type="checkbox" name="screen_calendar" value="calendar">
-                  <span>Calendar</span>
+                  <input type="checkbox" name="screen_upcoming_calendar" value="upcoming_calendar">
+                  <span>Upcoming Calendar</span>
+                </label>
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="screen_monthly_calendar" value="monthly_calendar">
+                  <span>Monthly Calendar</span>
                 </label>
                 <label class="admin-settings-toggle">
                   <input type="checkbox" name="screen_todos" value="todos">
@@ -369,7 +377,7 @@
                   <span>Countdowns</span>
                 </label>
               </div>
-              <p class="admin-field-hint">At least one screen must stay active. Calendar controls both Upcoming and Monthly views.</p>
+              <p class="admin-field-hint">At least one screen must stay active.</p>
             </div>
 
             <div class="admin-settings-subsection">
@@ -390,13 +398,6 @@
                 <select id="settings-upcoming-days">
                   <option value="5">5 days</option>
                   <option value="7">7 days</option>
-                </select>
-              </div>
-              <div class="admin-field">
-                <label for="settings-calendar-view">Default calendar view</label>
-                <select id="settings-calendar-view">
-                  <option value="upcoming">Upcoming</option>
-                  <option value="monthly">Monthly</option>
                 </select>
               </div>
             </div>

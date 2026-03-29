@@ -30,11 +30,12 @@ netlify.toml        — build config, env var injection via sed
 - **Admin Mode** — portrait phone, at `/admin`
 
 ## Display Screens (in order)
-1. Calendar (Google Cal read-only) — controlled by `display_settings.active_screens` and `screen_order`
-2. To-Do List
-3. Meal Plan (dinner only on display)
-4. Countdown Board (Lucide icons)
-5. RSVP Live Board (Chris & Bailey only — reads `rsvps` table, **hardcoded to this household, retires Oct 9 2026**; intentionally excluded from active-screen toggles; remove via code change after that date)
+1. Upcoming Calendar (Google Cal read-only) — controlled independently by `display_settings.active_screens` and `screen_order`
+2. Monthly Calendar (Google Cal read-only) — controlled independently by `display_settings.active_screens` and `screen_order`
+3. To-Do List
+4. Meal Plan (dinner only on display)
+5. Countdown Board (Lucide icons)
+6. RSVP Live Board (Chris & Bailey only — reads `rsvps` table, **hardcoded to this household, retires Oct 9 2026**; intentionally excluded from active-screen toggles; remove via code change after that date)
 
 ## Supabase Tables
 - `households` — `assistant_name`, `color_scheme`, `google_cal_id`, `google_cal_key`, `display_settings` (JSONB), `total_invited_guests`, admin PIN
@@ -49,14 +50,15 @@ netlify.toml        — build config, env var injection via sed
 ```json
 {
   "members":        [{"name": "Chris", "color": "#2563eb"}, ...],
-  "active_screens": ["calendar", "todos", "meals", "countdowns"],
-  "screen_order":   ["calendar", "todos", "meals", "countdowns"],
+  "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
+  "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
   "timer_intervals": { "upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15 },
-  "upcoming_days":  5,
-  "calendar_view":  "upcoming"
+  "upcoming_days":  5
 }
 ```
 - `display_settings.members` drives the todo assignee picker and is managed via the Settings screen. **Planned migration**: move to `users` table when multi-user auth is implemented.
+- `upcoming_calendar` and `monthly_calendar` are separate screens across display rotation and admin settings. Never write the legacy `calendar` key back to Supabase.
+- The "Default calendar view" setting has been removed. Whichever calendar screen appears first in `screen_order` renders first.
 - `display_settings.upcoming_days` drives the `UPCOMING_DAYS` variable in `display.js`. Update both together if changing upcoming-view logic.
 - Google Calendar currently reads a single calendar ID (`households.google_cal_id`). **Future enhancement**: support toggling multiple calendars from the Integrations settings.
 - **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.

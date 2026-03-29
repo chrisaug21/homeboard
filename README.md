@@ -50,7 +50,10 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 - Browse icons at [lucide.dev/icons](https://lucide.dev/icons)
 
 ### Settings
-- Placeholder — household settings coming soon
+- Assistant name shown in the display footer
+- Household members for todo assignee options
+- Independent Active Screens and Screen Order controls for `upcoming_calendar` and `monthly_calendar`
+- Rotation timers, color scheme, Google Calendar ID, and sync controls
 
 ## Supabase Tables
 

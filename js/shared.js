@@ -28,10 +28,12 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.8.2";
+    const VERSION = "0.8.3";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
+    const LAST_SYNCED_KEY = "homeboard_last_synced";
+    const DISPLAY_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"];
 
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
@@ -193,6 +195,109 @@
       start.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
       start.setHours(0, 0, 0, 0);
       return start;
+    }
+
+    function normalizeDisplayScreenKey(key) {
+      if (key === "calendar") {
+        return "calendar";
+      }
+
+      if (key === "meal_plan") {
+        return "meals";
+      }
+
+      return key;
+    }
+
+    function expandLegacyCalendarScreen(screenKey) {
+      if (screenKey === "calendar") {
+        return ["upcoming_calendar", "monthly_calendar"];
+      }
+
+      return [screenKey];
+    }
+
+    function normalizeDisplayScreenList(screenList, fallback = DISPLAY_SCREEN_KEYS) {
+      if (!Array.isArray(screenList) || screenList.length === 0) {
+        return [...fallback];
+      }
+
+      const normalized = [];
+      screenList.forEach((key) => {
+        expandLegacyCalendarScreen(normalizeDisplayScreenKey(key)).forEach((expandedKey) => {
+          if (DISPLAY_SCREEN_KEYS.includes(expandedKey) && !normalized.includes(expandedKey)) {
+            normalized.push(expandedKey);
+          }
+        });
+      });
+
+      return normalized.length > 0 ? normalized : [...fallback];
+    }
+
+    function normalizeTimerIntervals(timerIntervals) {
+      const normalized = {};
+      const source = timerIntervals && typeof timerIntervals === "object" ? timerIntervals : {};
+      const legacyCalendarTimer = parseInt(source.calendar, 10);
+
+      DISPLAY_SCREEN_KEYS.forEach((key) => {
+        const rawValue = source[key];
+        const parsedValue = parseInt(rawValue, 10);
+
+        if (Number.isFinite(parsedValue) && parsedValue > 0) {
+          normalized[key] = parsedValue;
+          return;
+        }
+
+        if ((key === "upcoming_calendar" || key === "monthly_calendar")
+          && Number.isFinite(legacyCalendarTimer)
+          && legacyCalendarTimer > 0) {
+          normalized[key] = legacyCalendarTimer;
+        }
+      });
+
+      return normalized;
+    }
+
+    function normalizeDisplaySettings(displaySettings) {
+      const settings = displaySettings && typeof displaySettings === "object"
+        ? { ...displaySettings }
+        : {};
+
+      settings.active_screens = normalizeDisplayScreenList(settings.active_screens);
+      settings.screen_order = normalizeDisplayScreenList(settings.screen_order);
+      settings.timer_intervals = normalizeTimerIntervals(settings.timer_intervals);
+      delete settings.calendar_view;
+
+      return settings;
+    }
+
+    function formatRelativeTimestamp(value, emptyLabel = "") {
+      if (!value) {
+        return emptyLabel;
+      }
+
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return emptyLabel;
+      }
+
+      const diffMs = Date.now() - date.getTime();
+      if (diffMs < 60 * 1000) {
+        return "just now";
+      }
+
+      const diffMinutes = Math.floor(diffMs / (60 * 1000));
+      if (diffMinutes < 60) {
+        return `${diffMinutes} minute${diffMinutes === 1 ? "" : "s"} ago`;
+      }
+
+      const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+      if (diffHours < 24) {
+        return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+      }
+
+      const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+      return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
     }
 
     // Returns { cssClass, label } for a due date urgency pill, or null if no due date.
