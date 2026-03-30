@@ -233,7 +233,7 @@
           </div>
           <div class="countdown-error">
             <i data-lucide="wifi-off"></i>
-            <p class="screen-error-msg">Couldn't load countdowns \u2014 tap to retry</p>
+            <p class="screen-error-msg">Something went wrong loading your data \u2014 tap to retry</p>
             <button class="screen-error-retry" type="button">Tap to retry</button>
           </div>
         </div>
@@ -257,7 +257,7 @@
       list.innerHTML = `
         <div class="screen-error">
           <i data-lucide="wifi-off"></i>
-          <p class="screen-error-msg">Couldn't load RSVP data \u2014 tap to retry</p>
+          <p class="screen-error-msg">Something went wrong loading your data \u2014 tap to retry</p>
           <button class="screen-error-retry" type="button">Tap to retry</button>
         </div>
       `;
@@ -375,7 +375,7 @@
     async function completeTodoFromDisplay(todoId, cardEl) {
       const client = getSupabaseClient();
       if (!client) {
-        showDisplayToast("Couldn\u2019t complete \u2014 Supabase unavailable.");
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
       cardEl.classList.add("is-completing");
@@ -387,7 +387,7 @@
         .is("archived_at", null);
       if (error) {
         cardEl.classList.remove("is-completing");
-        showDisplayToast("Couldn\u2019t save \u2014 please try again.");
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
       cardEl.classList.add("is-done");
@@ -812,11 +812,15 @@
     async function renderTodos() {
       markPending("todos");
       renderTodoSkeleton();
-      const remoteTodos = await fetchTodos();
+      let remoteTodos = await fetchTodos();
+      if (remoteTodos === null) {
+        await new Promise((resolve) => window.setTimeout(resolve, 150));
+        remoteTodos = await fetchTodos();
+      }
       if (remoteTodos === null) {
         renderScreenError(
           document.getElementById("todo-list"),
-          "Couldn\u2019t load tasks \u2014 tap to retry",
+          "Something went wrong loading your data \u2014 tap to retry",
           renderTodos
         );
       } else {
@@ -966,7 +970,7 @@
       if (remoteMeals === null) {
         renderScreenError(
           document.getElementById("meal-grid"),
-          "Couldn't load meal plan \u2014 tap to retry",
+          "Something went wrong loading your data \u2014 tap to retry",
           renderMealsWithData
         );
       } else {

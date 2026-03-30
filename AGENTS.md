@@ -97,11 +97,12 @@ netlify.toml        — build + env var injection via sed
 - The display to-do screen must scroll vertically, not via CSS columns or any layout that conflicts with horizontal screen-swipe gestures
 - Admin loading states should use skeleton loaders that roughly match the final card/form layout instead of plain `Loading…` text
 - Admin todo assignee pills should use the member color from `display_settings.members`; fall back to the neutral pill only when no configured color exists
-- The admin to-do loader depends on both the todo query and `display_settings.members`; keep stale-request protection so the skeleton cannot outlive a completed load or lock in neutral assignee pills after settings arrive
+- The admin to-do loader must not fail just because household settings fail; load the todo data first, then re-render for member colors if `display_settings.members` arrives later
 - The RSVP display guest-list empty state is a centered neutral waiting state with muted blue styling, not a small rose warning/error pill
 - The RSVP display confirmed-guest total should use the pending-blue tone at `0` and the rose tone only when the count is `1+`
 - The admin RSVP `Pending` pill should use the same pending-blue waiting-state treatment as the RSVP display, not amber warning styling
 - The countdown admin calendar-event picker should hide events dated before today; this filtering applies to selectable source events, not saved countdown rows
+- User-facing error messages must never mention Supabase, backend services, table names, or internal config details; use plain language like `Something went wrong loading your data. Please try refreshing.` or `Something went wrong saving your changes. Please try again.`
 
 ## Local Dev
 `netlify dev` is the only correct local workflow. `file://` and `npx serve .` do not work.

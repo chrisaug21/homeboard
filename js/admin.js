@@ -237,6 +237,18 @@
       }, 2800);
     }
 
+    function friendlyLoadMessage() {
+      return "Something went wrong loading your data. Please try refreshing.";
+    }
+
+    function friendlySaveMessage() {
+      return "Something went wrong saving your changes. Please try again.";
+    }
+
+    function friendlyDeleteMessage() {
+      return "Something went wrong deleting this item. Please try again.";
+    }
+
     function getConfiguredMemberColor(name) {
       const members = adminHouseholdSettings?.display_settings?.members;
       if (!Array.isArray(members)) {
@@ -807,10 +819,7 @@
       adminArchivedList.innerHTML = skeleton.archived;
 
       try {
-        const [todoGroups] = await Promise.all([
-          fetchAdminTodos(),
-          ensureAdminHouseholdConfigLoaded().catch(() => false)
-        ]);
+        const todoGroups = await fetchAdminTodos();
 
         if (requestId !== adminTodoLoadRequestId) {
           return;
@@ -819,12 +828,20 @@
         if (!todoGroups) {
           adminActiveSummary.textContent = "Couldn't load household tasks.";
           adminArchivedSummary.textContent = "Couldn't load completed household tasks.";
-          adminActiveList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
-          adminArchivedList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+          adminActiveList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+          adminArchivedList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
           return;
         }
 
         renderAdminTodoLists(todoGroups);
+
+        ensureAdminHouseholdConfigLoaded()
+          .then(() => {
+            if (requestId === adminTodoLoadRequestId) {
+              renderAdminTodoLists(todoGroups);
+            }
+          })
+          .catch(() => {});
       } catch (error) {
         if (requestId !== adminTodoLoadRequestId) {
           return;
@@ -833,8 +850,8 @@
         console.error("Failed to load admin todos.", error);
         adminActiveSummary.textContent = "Couldn't load household tasks.";
         adminArchivedSummary.textContent = "Couldn't load completed household tasks.";
-        adminActiveList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
-        adminArchivedList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        adminActiveList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+        adminArchivedList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
       }
     }
 
@@ -842,7 +859,7 @@
       const client = getSupabaseClient();
 
       if (!client) {
-        showToast("Couldn't save todo. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -870,7 +887,7 @@
 
       if (error) {
         setModalSaving(false, "Add Todo");
-        showToast("Couldn't save todo. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -881,7 +898,7 @@
     async function updateAdminTodo(id, formData) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn\u2019t save todo. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -909,7 +926,7 @@
 
       if (error) {
         setModalSaving(false, "Save Changes");
-        showToast("Couldn\u2019t update todo. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -962,7 +979,7 @@
       try {
         await ensureAdminHouseholdConfigLoaded();
       } catch {
-        showToast("Couldn’t load household settings.");
+        showToast(friendlyLoadMessage());
         return;
       }
       adminModalType = "add-todo";
@@ -974,7 +991,7 @@
       try {
         await ensureAdminHouseholdConfigLoaded();
       } catch {
-        showToast("Couldn’t load household settings.");
+        showToast(friendlyLoadMessage());
         return;
       }
       adminModalType = "edit-todo";
@@ -987,7 +1004,7 @@
 
       if (!client || adminTodoWritePending) {
         if (!client) {
-          showToast("Couldn't complete todo. Supabase is unavailable.");
+          showToast(friendlySaveMessage());
         }
         return;
       }
@@ -1005,7 +1022,7 @@
 
       if (error) {
         adminTodoWritePending = false;
-        showToast("Couldn't complete todo. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1017,7 +1034,7 @@
     async function archiveAdminTodoWithAnimation(todoId, cardEl) {
       const client = getSupabaseClient();
       if (!client || adminTodoWritePending) {
-        if (!client) showToast("Couldn\u2019t complete todo. Supabase is unavailable.");
+        if (!client) showToast(friendlySaveMessage());
         return;
       }
       adminTodoWritePending = true;
@@ -1033,7 +1050,7 @@
       if (error) {
         adminTodoWritePending = false;
         cardEl.classList.remove("is-completing");
-        showToast("Couldn\u2019t complete todo. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1248,7 +1265,7 @@
       const noteText = String(formData.get("note") || "").trim();
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn\u2019t save note. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
       adminNoteWritePending = true;
@@ -1266,7 +1283,7 @@
 
       if (error) {
         setModalSaving(false, "Save Note");
-        showToast("Couldn\u2019t save note. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1305,13 +1322,13 @@
         adminMealWeekLabel.textContent = "Couldn\u2019t load meals.";
         adminWeekPrevBtn.disabled = adminWeekOffset <= -1;
         adminWeekNextBtn.disabled = adminWeekOffset >= 1;
-        adminMealList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        adminMealList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
         return;
       }
 
       adminMealPlanRows = mealRows;
       if (noteText === null) {
-        showToast("Couldn\u2019t load this week\u2019s note.");
+        showToast(friendlyLoadMessage());
         adminCurrentNote = "";
       } else {
         adminCurrentNote = noteText;
@@ -1324,7 +1341,7 @@
       const client = getSupabaseClient();
 
       if (!client || adminMealWritePending || adminNoteWritePending) {
-        if (!client) showToast("Couldn\u2019t save meal. Supabase is unavailable.");
+        if (!client) showToast(friendlySaveMessage());
         return;
       }
 
@@ -1381,7 +1398,7 @@
           submitBtn.disabled = false;
           submitBtn.textContent = "Save";
         }
-        showToast("Couldn\u2019t save meal. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1447,7 +1464,7 @@
         renderAdminSettingsSkeleton();
         ensureAdminHouseholdConfigLoaded()
           .then(() => loadAdminSettings())
-          .catch(() => showToast("Couldn’t load household settings."));
+          .catch(() => showToast(friendlyLoadMessage()));
       }
 
       if (target === "rsvp") {
@@ -1520,8 +1537,8 @@
       const calItems = await fetchAdminCalendarEvents();
       adminCalEvents = calItems || [];
       if (!calItems) {
-        adminCalEventsNote.textContent = "Google Calendar not configured for this household.";
-        adminCalEventList.innerHTML = '<div class="admin-empty">Add a google_cal_id to the households table to enable this.</div>';
+        adminCalEventsNote.textContent = "Add a calendar in Settings to see events here.";
+        adminCalEventList.innerHTML = '<div class="admin-empty">Add a calendar in Settings to see events here.</div>';
       } else {
         adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
         renderAdminCalEventList();
@@ -1698,8 +1715,8 @@
       adminSavedCountdowns = savedRows || [];
 
       if (!calItems) {
-        adminCalEventsNote.textContent = "Google Calendar not configured for this household.";
-        adminCalEventList.innerHTML = '<div class="admin-empty">Add a google_cal_id to the households table to enable this.</div>';
+        adminCalEventsNote.textContent = "Add a calendar in Settings to see events here.";
+        adminCalEventList.innerHTML = '<div class="admin-empty">Add a calendar in Settings to see events here.</div>';
       } else {
         adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
         renderAdminCalEventList();
@@ -1707,7 +1724,7 @@
 
       if (!savedRows) {
         adminSavedCountdownsNote.textContent = "Couldn\u2019t load saved countdowns.";
-        adminSavedCountdownList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        adminSavedCountdownList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
       } else {
         renderAdminSavedCountdowns();
       }
@@ -1830,7 +1847,7 @@
       const client = getSupabaseClient();
 
       if (!client) {
-        showToast("Couldn't save countdown. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1870,7 +1887,7 @@
       if (error || !insertedRow) {
         adminCountdownWritePending = false;
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Save Countdown"; }
-        showToast("Couldn\u2019t save countdown. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1898,7 +1915,7 @@
     async function updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, removePhoto) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn\u2019t update countdown. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1921,7 +1938,7 @@
       adminCountdownEditPending = false;
 
       if (error) {
-        showToast("Couldn\u2019t update countdown. Please try again.");
+        showToast(friendlySaveMessage());
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = "Save Changes";
@@ -1955,7 +1972,7 @@
       const client = getSupabaseClient();
 
       if (!client) {
-        showToast("Couldn't delete countdown. Supabase is unavailable.");
+        showToast(friendlyDeleteMessage());
         return;
       }
 
@@ -1966,7 +1983,7 @@
         .eq("household_id", DISPLAY_HOUSEHOLD_ID);
 
       if (error) {
-        showToast("Couldn't delete countdown. Please try again.");
+        showToast(friendlyDeleteMessage());
         return;
       }
 
@@ -2350,8 +2367,8 @@
       if (!snapshot) {
         adminRsvpUnmatchedNote.textContent = "Couldn’t load RSVP matches.";
         adminRsvpGuestListNote.textContent = "Couldn’t load invited parties.";
-        adminRsvpUnmatchedList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
-        adminRsvpGuestList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        adminRsvpUnmatchedList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+        adminRsvpGuestList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
         return;
       }
 
@@ -2391,7 +2408,7 @@
     async function saveAdminInvitedParty(formData, validatedInvitedCount = null) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn’t save RSVP party. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -2502,7 +2519,7 @@
     async function saveReviewGuestCount(formData) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn’t save guest count. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -2521,7 +2538,7 @@
       setModalSaving(false, "Save");
 
       if (error) {
-        showToast("Couldn’t save guest count.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -2533,7 +2550,7 @@
     async function mergeDuplicateReview(formData) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn’t merge these RSVPs. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -2566,7 +2583,7 @@
       setModalSaving(false, "Confirm");
 
       if (partyUpdate.error || primaryUpdate.error || secondaryError) {
-        showToast("Couldn’t confirm that duplicate.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -3032,9 +3049,9 @@
           .select();
 
         if (error) {
-          showToast("Error saving assistant name.");
+          showToast(friendlySaveMessage());
         } else if (!data || data.length === 0) {
-          showToast("Warning: no rows updated — check household ID.");
+          showToast(friendlySaveMessage());
         } else {
           showToast("Assistant name saved.");
         }
@@ -3070,7 +3087,7 @@
           .eq("id", DISPLAY_HOUSEHOLD_ID);
 
         if (error) {
-          showToast("Couldn’t save household members. Please try again.");
+          showToast(friendlySaveMessage());
           return false;
         }
 
@@ -3146,9 +3163,9 @@
           .eq("id", DISPLAY_HOUSEHOLD_ID)
           .select();
         if (error) {
-          showToast("Error saving display settings.");
+          showToast(friendlySaveMessage());
         } else if (!data || data.length === 0) {
-          showToast("Warning: no rows updated — check household ID.");
+          showToast(friendlySaveMessage());
         } else {
           adminHouseholdSettings.display_settings = newDs;
           adminHouseholdSettings.color_scheme = colorScheme;
@@ -3180,9 +3197,9 @@
           .eq("id", DISPLAY_HOUSEHOLD_ID)
           .select();
         if (error) {
-          showToast("Error saving integration settings.");
+          showToast(friendlySaveMessage());
         } else if (!data || data.length === 0) {
-          showToast("Warning: no rows updated — check household ID.");
+          showToast(friendlySaveMessage());
         } else {
           showToast("Integration settings saved.");
         }
@@ -3406,6 +3423,6 @@
             loadAdminSettings();
           }
         })
-        .catch(() => showToast("Couldn’t load household settings."));
+        .catch(() => showToast(friendlyLoadMessage()));
       refreshIcons();
     }
