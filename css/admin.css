@@ -1015,7 +1015,6 @@
       font-size: 0.65rem;
       font-weight: 700;
       letter-spacing: 0.08em;
-      text-transform: uppercase;
       color: var(--amber);
       opacity: 0.55;
       margin-left: auto;
@@ -1770,6 +1769,7 @@
       display: flex;
       align-items: center;
       gap: 14px;
+      margin-top: 10px;
       flex-wrap: wrap;
     }
 

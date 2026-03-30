@@ -104,6 +104,7 @@ netlify.toml        — build config, env var injection via sed
 - The display footer assistant label (`#household-name`) uses the Google Font `Righteous`, loaded from Google Fonts in `index.html`
 - The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not re-case it in JS or force uppercase in CSS
 - The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
+- The Settings screen sync row should keep visible spacing below its helper copy so the sync button/timestamp do not crowd the paragraph above
 - Admin tabs should use skeleton loaders that approximate the final layout while data is loading, especially on the RSVP screen
 - Todo assignee pills in both admin and display should use one shared member-color lookup helper sourced from `display_settings.members`; never duplicate the lookup logic, never hardcode per-person colors, and use the neutral fallback only when no configured color exists
 - The admin to-do screen must not fail just because household settings fail; render the todo data first, then re-render for member colors if `display_settings.members` arrives afterward
@@ -111,6 +112,7 @@ netlify.toml        — build config, env var injection via sed
 - The admin RSVP `Pending` pill should use the same pending-blue waiting-state styling as the RSVP display, not the amber warning tone
 - Hide pre-today Google Calendar events from the admin countdown source-event picker; do not delete or mutate saved countdown rows
 - User-facing error messages must stay non-technical: never mention Supabase, service names, table names, or raw config instructions. Use plain patterns like `Something went wrong loading your data. Please try refreshing.` and `Something went wrong saving your changes. Please try again.`
+- User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
 
 ## Env Vars (never hardcode)
 - `SUPABASE_URL`

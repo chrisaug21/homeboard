@@ -1,4 +1,4 @@
-const CACHE_NAME = "homeboard-v0.9.13";
+const CACHE_NAME = "homeboard-v1.0.0";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",

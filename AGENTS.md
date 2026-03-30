@@ -95,6 +95,7 @@ netlify.toml        — build + env var injection via sed
 - The display footer assistant label (`#household-name`) uses the Google Font `Righteous`; load it from Google Fonts in `index.html` and keep fallback fonts in CSS
 - The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not force title case or uppercase it in JS or CSS
 - The display to-do screen must scroll vertically, not via CSS columns or any layout that conflicts with horizontal screen-swipe gestures
+- The Settings screen sync row should keep a little breathing room below its helper text; do not let the sync button/timestamp sit flush against the paragraph above
 - Admin loading states should use skeleton loaders that roughly match the final card/form layout instead of plain `Loading…` text
 - Todo assignee pills in both admin and display must use a single shared member-color lookup helper sourced from `display_settings.members`; never duplicate the lookup logic, never hardcode per-person colors, and fall back to the neutral pill only when no configured color exists
 - The admin to-do loader must not fail just because household settings fail; load the todo data first, then re-render for member colors if `display_settings.members` arrives later
@@ -103,6 +104,7 @@ netlify.toml        — build + env var injection via sed
 - The admin RSVP `Pending` pill should use the same pending-blue waiting-state treatment as the RSVP display, not amber warning styling
 - The countdown admin calendar-event picker should hide events dated before today; this filtering applies to selectable source events, not saved countdown rows
 - User-facing error messages must never mention Supabase, backend services, table names, or internal config details; use plain language like `Something went wrong loading your data. Please try refreshing.` or `Something went wrong saving your changes. Please try again.`
+- User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
 
 ## Local Dev
 `netlify dev` is the only correct local workflow. `file://` and `npx serve .` do not work.
