@@ -87,6 +87,7 @@
     let adminSavedCountdowns = [];
     let adminWeddingSnapshot = null;
     let adminRsvpWritePending = false;
+    let adminTodoLoadRequestId = 0;
     const refreshingCountdowns = new Set();
     let adminCalMonthDate = (() => {
       const d = new Date();
@@ -798,23 +799,43 @@
     }
 
     async function loadAdminTodos() {
+      const requestId = ++adminTodoLoadRequestId;
       adminActiveSummary.textContent = "Loading household tasks…";
       adminArchivedSummary.textContent = "Loading completed household tasks…";
       const skeleton = buildAdminTodoSkeletonHTML();
       adminActiveList.innerHTML = skeleton.active;
       adminArchivedList.innerHTML = skeleton.archived;
 
-      const todoGroups = await fetchAdminTodos();
+      try {
+        const [todoGroups] = await Promise.all([
+          fetchAdminTodos(),
+          ensureAdminHouseholdConfigLoaded().catch(() => false)
+        ]);
 
-      if (!todoGroups) {
+        if (requestId !== adminTodoLoadRequestId) {
+          return;
+        }
+
+        if (!todoGroups) {
+          adminActiveSummary.textContent = "Couldn't load household tasks.";
+          adminArchivedSummary.textContent = "Couldn't load completed household tasks.";
+          adminActiveList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+          adminArchivedList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+          return;
+        }
+
+        renderAdminTodoLists(todoGroups);
+      } catch (error) {
+        if (requestId !== adminTodoLoadRequestId) {
+          return;
+        }
+
+        console.error("Failed to load admin todos.", error);
         adminActiveSummary.textContent = "Couldn't load household tasks.";
         adminArchivedSummary.textContent = "Couldn't load completed household tasks.";
         adminActiveList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
         adminArchivedList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
-        return;
       }
-
-      renderAdminTodoLists(todoGroups);
     }
 
     async function createAdminTodo(formData) {
@@ -3380,6 +3401,7 @@
       initSettingsListeners();
       ensureAdminHouseholdConfigLoaded()
         .then(() => {
+          loadAdminTodos();
           if (adminScreen === "settings") {
             loadAdminSettings();
           }

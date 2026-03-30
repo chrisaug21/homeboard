@@ -305,21 +305,6 @@
       `;
     }
 
-    function toDisplayLabelCase(value) {
-      const input = String(value || "").trim();
-      if (!input) {
-        return "Homeboard";
-      }
-
-      if (input === input.toUpperCase()) {
-        return input;
-      }
-
-      return input
-        .toLowerCase()
-        .replace(/\b([a-z])/g, (match) => match.toUpperCase());
-    }
-
     function mapSupabaseTodo(todo) {
       return {
         id: todo.id,
@@ -1309,11 +1294,9 @@
     }
 
     function updateHouseholdName(config) {
-      const name = toDisplayLabelCase(
-        config && config.assistant_name && config.assistant_name.trim()
-          ? config.assistant_name.trim()
-          : "Homeboard"
-      );
+      const name = config && config.assistant_name && config.assistant_name.trim()
+        ? config.assistant_name.trim()
+        : "Homeboard";
       if (householdNameEl) householdNameEl.textContent = name;
     }
 

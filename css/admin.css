@@ -1298,8 +1298,8 @@
     }
 
     .admin-rsvp-status--pending {
-      background: rgba(247, 217, 170, 0.45);
-      color: #9a3412;
+      background: var(--rsvp-pending-bg);
+      color: #1e3a5f;
     }
 
     .admin-rsvp-status--under-count {
@@ -1973,7 +1973,7 @@
     }
 
     html[data-scheme="dark"] .admin-rsvp-status--pending {
-      background: rgba(245, 158, 11, 0.18);
+      background: var(--rsvp-pending-bg);
       color: var(--ink);
     }
 
