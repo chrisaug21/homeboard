@@ -105,7 +105,7 @@ netlify.toml        — build config, env var injection via sed
 - The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not re-case it in JS or force uppercase in CSS
 - The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
 - Admin tabs should use skeleton loaders that approximate the final layout while data is loading, especially on the RSVP screen
-- Admin todo assignee pills should use the configured member color from `display_settings.members`
+- Todo assignee pills in both admin and display should use the configured member color from `display_settings.members`; never hardcode per-person colors, and use the neutral fallback only when no configured color exists
 - The admin to-do screen must not fail just because household settings fail; render the todo data first, then re-render for member colors if `display_settings.members` arrives afterward
 - The RSVP display guest-list empty state is a centered neutral waiting state in the pending-blue tone, with a matching zero-count color for the confirmed guest total
 - The admin RSVP `Pending` pill should use the same pending-blue waiting-state styling as the RSVP display, not the amber warning tone

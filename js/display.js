@@ -293,8 +293,6 @@
       const memberColor = getMemberColor(assignee);
 
       if (!memberColor) {
-        if (assignee === "Chris") return `<span class="todo-assignee todo-assignee--chris">${escapeHtml(assignee)}</span>`;
-        if (assignee === "Bailey") return `<span class="todo-assignee todo-assignee--bailey">${escapeHtml(assignee)}</span>`;
         return `<span class="todo-assignee todo-assignee--other">${escapeHtml(assignee)}</span>`;
       }
 
