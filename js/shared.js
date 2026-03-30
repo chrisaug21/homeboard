@@ -168,6 +168,24 @@
       }).format(date);
     }
 
+    function hexToRgba(hex, alpha = 1) {
+      const normalized = String(hex || "").trim().replace(/^#/, "");
+      const expanded = normalized.length === 3
+        ? normalized.split("").map((char) => char + char).join("")
+        : normalized;
+
+      if (!/^[0-9a-fA-F]{6}$/.test(expanded)) {
+        return `rgba(120, 113, 108, ${alpha})`;
+      }
+
+      const intValue = parseInt(expanded, 16);
+      const red = (intValue >> 16) & 255;
+      const green = (intValue >> 8) & 255;
+      const blue = intValue & 255;
+
+      return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    }
+
     function formatLongDate(dateString) {
       const parsedDate = parseLocalDateString(dateString);
 
