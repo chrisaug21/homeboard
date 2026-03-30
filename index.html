@@ -7,7 +7,7 @@
   <title>Homeboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=Righteous&display=swap" rel="stylesheet">
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -58,6 +58,8 @@
       --radius-lg: 28px;
       --radius-md: 22px;
       --radius-sm: 16px;
+      --button-radius: 8px;
+      --tag-radius: 12px;
       --header-height: 72px;
       --footer-height: 34px;
       --screen-gap: 28px;
@@ -532,13 +534,13 @@
         <i data-lucide="sparkles"></i>
         <span>Events</span>
       </button>
-      <button class="admin-nav-button" type="button" data-admin-nav="settings">
-        <i data-lucide="settings-2"></i>
-        <span>Settings</span>
-      </button>
       <button class="admin-nav-button" type="button" data-admin-nav="rsvp">
         <i data-lucide="heart"></i>
         <span>RSVP</span>
+      </button>
+      <button class="admin-nav-button" type="button" data-admin-nav="settings">
+        <i data-lucide="settings-2"></i>
+        <span>Settings</span>
       </button>
     </nav>
   </div>

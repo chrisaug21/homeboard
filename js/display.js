@@ -18,6 +18,7 @@
 
     let calendarEventsMap = new Map();
     let cachedHouseholdConfig = null;
+    let cachedDisplayTodos = null;
     let cachedSupabaseCountdowns = null;
     let cachedCalendarCountdowns = [];
     let cachedWeddingSnapshot = null;
@@ -233,7 +234,7 @@
           </div>
           <div class="countdown-error">
             <i data-lucide="wifi-off"></i>
-            <p class="screen-error-msg">Couldn't load countdowns \u2014 tap to retry</p>
+            <p class="screen-error-msg">Something went wrong loading your data \u2014 tap to retry</p>
             <button class="screen-error-retry" type="button">Tap to retry</button>
           </div>
         </div>
@@ -252,10 +253,12 @@
       document.getElementById("rsvp-review-count").textContent = "\u2014";
       document.getElementById("rsvp-names-title").textContent = "";
       const list = document.getElementById("rsvp-names");
+      document.getElementById("rsvp-total").classList.remove("hero-number--empty", "hero-number--active");
+      list.classList.remove("names-scroll--empty");
       list.innerHTML = `
         <div class="screen-error">
           <i data-lucide="wifi-off"></i>
-          <p class="screen-error-msg">Couldn't load RSVP data \u2014 tap to retry</p>
+          <p class="screen-error-msg">Something went wrong loading your data \u2014 tap to retry</p>
           <button class="screen-error-retry" type="button">Tap to retry</button>
         </div>
       `;
@@ -274,10 +277,18 @@
       );
     }
 
-    function getAssigneeClass(assignee) {
-      if (assignee === "Chris") return "todo-assignee todo-assignee--chris";
-      if (assignee === "Bailey") return "todo-assignee todo-assignee--bailey";
-      return "todo-assignee todo-assignee--other";
+    function getAssigneeMarkup(assignee) {
+      const memberColor = getConfiguredMemberColor(cachedHouseholdConfig?.display_settings?.members, assignee);
+
+      if (!memberColor) {
+        return `<span class="todo-assignee todo-assignee--other">${escapeHtml(assignee)}</span>`;
+      }
+
+      return `
+        <span class="todo-assignee todo-assignee--custom" style="background:${escapeHtml(hexToRgba(memberColor, 0.16))};color:${escapeHtml(memberColor)}">
+          ${escapeHtml(assignee)}
+        </span>
+      `;
     }
 
     function mapSupabaseTodo(todo) {
@@ -290,6 +301,7 @@
     }
 
     function renderTodoItems(todoItems) {
+      cachedDisplayTodos = todoItems;
       const list = document.getElementById("todo-list");
 
       if (!todoItems.length) {
@@ -308,9 +320,7 @@
         const pill = todo.duePill
           ? `<span class="todo-due-pill ${escapeHtml(todo.duePill.cssClass)}">${escapeHtml(todo.duePill.label)}</span>`
           : "";
-        const assignee = todo.assignee
-          ? `<span class="${getAssigneeClass(todo.assignee)}">${escapeHtml(todo.assignee)}</span>`
-          : "";
+        const assignee = todo.assignee ? getAssigneeMarkup(todo.assignee) : "";
         return `
           <article class="todo-card" data-todo-id="${escapeHtml(todo.id)}">
             <button class="todo-check-btn" type="button" aria-label="Complete ${escapeHtml(todo.title)}">
@@ -352,7 +362,7 @@
     async function completeTodoFromDisplay(todoId, cardEl) {
       const client = getSupabaseClient();
       if (!client) {
-        showDisplayToast("Couldn\u2019t complete \u2014 Supabase unavailable.");
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
       cardEl.classList.add("is-completing");
@@ -364,7 +374,7 @@
         .is("archived_at", null);
       if (error) {
         cardEl.classList.remove("is-completing");
-        showDisplayToast("Couldn\u2019t save \u2014 please try again.");
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
       cardEl.classList.add("is-done");
@@ -689,8 +699,8 @@
 
       // Append a hidden probe chip to measure real chip height at this screen size
       const probe = document.createElement("div");
-      probe.className = "month-event";
-      probe.textContent = "X";
+      probe.className = "month-event month-event--wrap";
+      probe.textContent = "Sample event title";
       probe.style.cssText = "visibility:hidden;pointer-events:none;";
       eventsEl.appendChild(probe);
       const chipH = probe.offsetHeight;
@@ -722,8 +732,7 @@
           : allEvents.length;
         const visibleEvents = allEvents.slice(0, showCount);
         const overflowCount = allEvents.length - visibleEvents.length;
-        // Allow wrapping only when a single event occupies the cell (extra vertical room)
-        const wrapClass = allEvents.length === 1 ? " month-event--wrap" : "";
+        const wrapClass = " month-event--wrap";
 
         const eventChips = visibleEvents.map((event) => `
           <div class="month-event${wrapClass}"
@@ -790,11 +799,15 @@
     async function renderTodos() {
       markPending("todos");
       renderTodoSkeleton();
-      const remoteTodos = await fetchTodos();
+      let remoteTodos = await fetchTodos();
+      if (remoteTodos === null) {
+        await new Promise((resolve) => window.setTimeout(resolve, 150));
+        remoteTodos = await fetchTodos();
+      }
       if (remoteTodos === null) {
         renderScreenError(
           document.getElementById("todo-list"),
-          "Couldn\u2019t load tasks \u2014 tap to retry",
+          "Something went wrong loading your data \u2014 tap to retry",
           renderTodos
         );
       } else {
@@ -944,7 +957,7 @@
       if (remoteMeals === null) {
         renderScreenError(
           document.getElementById("meal-grid"),
-          "Couldn't load meal plan \u2014 tap to retry",
+          "Something went wrong loading your data \u2014 tap to retry",
           renderMealsWithData
         );
       } else {
@@ -1131,6 +1144,9 @@
 
       updateHouseholdName(householdConfig);
       applyDisplaySettings(householdConfig);
+      if (cachedDisplayTodos !== null) {
+        renderTodoItems(cachedDisplayTodos);
+      }
 
       const calendarLoaded = await refreshCalendarData(true); // wide fetch on initial load
 
@@ -1179,8 +1195,10 @@
 
     function renderRsvpBoard(snapshot) {
       const list = document.getElementById("rsvp-names");
+      const totalEl = document.getElementById("rsvp-total");
       const stats = snapshot.stats || {};
       const reviewCount = stats.reviewCount || 0;
+      const attendingGuestCount = stats.attendingGuests || 0;
       const attendingRows = (snapshot.invitedParties || [])
         .filter((party) => party.linkedRsvp && party.linkedRsvp.attending === true)
         .map((party) => ({
@@ -1191,7 +1209,9 @@
         }))
         .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-      document.getElementById("rsvp-total").textContent = String(stats.attendingGuests || 0);
+      totalEl.textContent = String(attendingGuestCount);
+      totalEl.classList.toggle("hero-number--empty", attendingGuestCount === 0);
+      totalEl.classList.toggle("hero-number--active", attendingGuestCount > 0);
       document.getElementById("rsvp-total-label").textContent = "guests attending so far";
       document.getElementById("rsvp-parties-responded").textContent = `${stats.respondedParties || 0} / ${stats.totalParties || 0} parties responded`;
       document.getElementById("rsvp-declined-count").textContent = String(stats.declinedGuests || 0);
@@ -1211,15 +1231,19 @@
 
       if (!attendingRows.length) {
         stopRsvpAutoScroll();
+        list.classList.add("names-scroll--empty");
         list.innerHTML = `
-          <div class="name-pill name-pill--pending">
-            <span>No attending RSVPs yet</span>
-            <span class="name-status">Waiting</span>
+          <div class="rsvp-empty-state">
+            <div class="rsvp-empty-icon"><i data-lucide="heart"></i></div>
+            <div class="rsvp-empty-headline">No RSVPs yet</div>
+            <div class="rsvp-empty-copy">Confirmed guests will appear here as responses come in</div>
           </div>
         `;
+        refreshIcons();
         return;
       }
 
+      list.classList.remove("names-scroll--empty");
       list.innerHTML = attendingRows.map((row) => `
         <div class="name-pill name-pill--attending${row.isUnderCount ? " name-pill--undercount" : ""}">
           <span>${escapeHtml(row.name)}</span>
@@ -1388,6 +1412,9 @@
           cachedHouseholdConfig = newConfig;
           updateHouseholdName(newConfig);
           applyDisplaySettings(newConfig);
+          if (cachedDisplayTodos !== null) {
+            renderTodoItems(cachedDisplayTodos);
+          }
         }
 
         if (newSupabaseCountdowns !== null) {

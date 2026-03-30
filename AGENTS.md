@@ -59,6 +59,7 @@ netlify.toml        — build + env var injection via sed
 - Duplicate review modals use a single confirm flow: show the currently linked RSVP plus any number of competing active RSVPs for that party, choose the primary RSVP, edit the guest count, link the primary RSVP to the invited party, and set every other conflict RSVP to `superseded` with `merged_into_party_id`
 - Review actions must stay in the shared admin modal pattern: tap a review row, resolve the issue in the modal, close automatically when the issue is fully resolved
 - On the display guest list, matched attending parties with `guest_count < invited_count` keep their attending row but use an amber guest-count pill instead of the default green pill
+- On the admin RSVP guest list, under-counted attending parties should use a single amber status pill reading `Attending • X of Y`; do not show a second under-count pill on the left
 
 ## display_settings JSONB shape
 ```json
@@ -85,6 +86,25 @@ netlify.toml        — build + env var injection via sed
 - Never hardcode `SUPABASE_URL` or `SUPABASE_KEY` — injected by Netlify at build
 - sw.js cache prefix must be `homeboard-v##`
 - When pushing any change: bump `VERSION` in `js/shared.js` (patch for fixes, minor for features), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — document new tables, env vars, or screens as they are added
+
+## Styling Conventions
+- Shared corner radius tokens live in `:root` in `index.html`: use `--button-radius` for admin/display buttons and `--tag-radius` for pills, badges, and other tag-like labels
+- Keep admin action-button sizing responsive: on screens up to 480 px, a lone primary action should fill the row and two-button action rows should split into equal widths
+- The admin nav is a fixed bottom bar pinned flush to the viewport edge; do not reintroduce floating gaps, translucent glass treatment, or drop shadows there
+- Toasts must clear the fixed admin nav so navigation stays tappable while a toast is visible
+- The display footer assistant label (`#household-name`) uses the Google Font `Righteous`; load it from Google Fonts in `index.html` and keep fallback fonts in CSS
+- The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not force title case or uppercase it in JS or CSS
+- The display to-do screen must scroll vertically, not via CSS columns or any layout that conflicts with horizontal screen-swipe gestures
+- The Settings screen sync row should keep a little breathing room below its helper text; do not let the sync button/timestamp sit flush against the paragraph above
+- Admin loading states should use skeleton loaders that roughly match the final card/form layout instead of plain `Loading…` text
+- Todo assignee pills in both admin and display must use a single shared member-color lookup helper sourced from `display_settings.members`; never duplicate the lookup logic, never hardcode per-person colors, and fall back to the neutral pill only when no configured color exists
+- The admin to-do loader must not fail just because household settings fail; load the todo data first, then re-render for member colors if `display_settings.members` arrives later
+- The RSVP display guest-list empty state is a centered neutral waiting state with muted blue styling, not a small rose warning/error pill
+- The RSVP display confirmed-guest total should use the pending-blue tone at `0` and the rose tone only when the count is `1+`
+- The admin RSVP `Pending` pill should use the same pending-blue waiting-state treatment as the RSVP display, not amber warning styling
+- The countdown admin calendar-event picker should hide events dated before today; this filtering applies to selectable source events, not saved countdown rows
+- User-facing error messages must never mention Supabase, backend services, table names, or internal config details; use plain language like `Something went wrong loading your data. Please try refreshing.` or `Something went wrong saving your changes. Please try again.`
+- User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
 
 ## Local Dev
 `netlify dev` is the only correct local workflow. `file://` and `npx serve .` do not work.

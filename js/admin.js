@@ -87,6 +87,7 @@
     let adminSavedCountdowns = [];
     let adminWeddingSnapshot = null;
     let adminRsvpWritePending = false;
+    let adminTodoLoadRequestId = 0;
     const refreshingCountdowns = new Set();
     let adminCalMonthDate = (() => {
       const d = new Date();
@@ -185,6 +186,14 @@
       }).format(date);
     }
 
+    function formatAdminMealCardDayLabel(date) {
+      return new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric"
+      }).format(date).toUpperCase();
+    }
+
     function formatAdminGuestCount(count) {
       const safeCount = Math.max(0, Number(count) || 0);
       return `${safeCount} ${safeCount === 1 ? "guest" : "guests"}`;
@@ -192,9 +201,13 @@
 
     function getAdminRsvpStatusMeta(party) {
       if (party.linkedRsvp && party.linkedRsvp.attending === true) {
+        const guestCount = Math.min(party.linkedRsvp.guestCount, party.invitedCount);
+        const isUnderCount = guestCount < party.invitedCount;
         return {
-          label: `Attending • ${formatAdminGuestCount(party.linkedRsvp.guestCount)}`,
-          tone: "admin-rsvp-status--attending",
+          label: isUnderCount
+            ? `Attending • ${guestCount} of ${party.invitedCount}`
+            : `Attending • ${formatAdminGuestCount(guestCount)}`,
+          tone: isUnderCount ? "admin-rsvp-status--under-count" : "admin-rsvp-status--attending",
           rank: 0
         };
       }
@@ -222,6 +235,180 @@
       toastTimeoutId = window.setTimeout(() => {
         toastEl.classList.remove("is-visible");
       }, 2800);
+    }
+
+    function friendlyLoadMessage() {
+      return "Something went wrong loading your data. Please try refreshing.";
+    }
+
+    function friendlySaveMessage() {
+      return "Something went wrong saving your changes. Please try again.";
+    }
+
+    function friendlyDeleteMessage() {
+      return "Something went wrong deleting this item. Please try again.";
+    }
+
+    function buildAdminAssigneePill(name) {
+      const memberColor = getConfiguredMemberColor(adminHouseholdSettings?.display_settings?.members, name);
+
+      if (!memberColor) {
+        return `<span class="admin-pill">${escapeHtml(name)}</span>`;
+      }
+
+      return `
+        <span class="admin-pill admin-pill--member" style="background:${escapeHtml(hexToRgba(memberColor, 0.16))};color:${escapeHtml(memberColor)}">
+          ${escapeHtml(name)}
+        </span>
+      `;
+    }
+
+    function buildAdminTodoSkeletonHTML() {
+      const activeCard = () => `
+        <article class="admin-todo-card admin-todo-card--active admin-skeleton-card" aria-hidden="true">
+          <div class="todo-check-btn"><div class="todo-check"></div></div>
+          <div class="admin-todo-body">
+            <div class="sk" style="width:72%;height:18px;"></div>
+            <div class="admin-todo-meta">
+              <span class="sk" style="width:92px;height:28px;border-radius:12px;"></span>
+              <span class="sk" style="width:74px;height:28px;border-radius:12px;"></span>
+            </div>
+          </div>
+        </article>
+      `;
+
+      const archivedCard = () => `
+        <article class="admin-todo-card admin-skeleton-card" aria-hidden="true">
+          <div class="admin-todo-body">
+            <div class="sk" style="width:68%;height:18px;"></div>
+            <div class="admin-todo-meta">
+              <span class="sk" style="width:90px;height:28px;border-radius:12px;"></span>
+            </div>
+          </div>
+        </article>
+      `;
+
+      return {
+        active: Array.from({ length: 4 }, activeCard).join(""),
+        archived: Array.from({ length: 3 }, archivedCard).join("")
+      };
+    }
+
+    function buildAdminMealSkeletonHTML() {
+      return Array.from({ length: 7 }, () => `
+        <article class="admin-meal-card admin-skeleton-card" aria-hidden="true">
+          <div class="admin-meal-card-top">
+            <div class="sk" style="width:92px;height:12px;"></div>
+            <span class="sk" style="width:78px;height:28px;border-radius:12px;"></span>
+          </div>
+          <div class="sk" style="width:78%;height:20px;"></div>
+        </article>
+      `).join("");
+    }
+
+    function buildAdminCalendarSkeletonHTML() {
+      return Array.from({ length: 4 }, () => `
+        <article class="admin-cal-event-card admin-skeleton-card" aria-hidden="true">
+          <div class="sk" style="width:62%;height:18px;"></div>
+          <div class="admin-cal-event-meta">
+            <span class="sk" style="width:84px;height:28px;border-radius:12px;"></span>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function buildAdminCountdownSkeletonHTML() {
+      return Array.from({ length: 3 }, () => `
+        <article class="admin-saved-countdown-card admin-skeleton-card" aria-hidden="true">
+          <div class="admin-countdown-card-main">
+            <div class="sk" style="width:72px;height:96px;border-radius:8px;"></div>
+            <div class="admin-countdown-card-body">
+              <div class="sk" style="width:70%;height:18px;"></div>
+              <div class="admin-countdown-card-meta">
+                <span class="sk" style="width:96px;height:12px;"></span>
+                <span class="sk" style="width:88px;height:12px;"></span>
+              </div>
+            </div>
+          </div>
+          <div class="admin-countdown-actions">
+            <span class="sk" style="width:64px;height:32px;border-radius:8px;"></span>
+            <span class="sk" style="width:104px;height:32px;border-radius:8px;"></span>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function buildAdminRsvpReviewSkeletonHTML() {
+      return Array.from({ length: 4 }, () => `
+        <article class="admin-rsvp-review-row admin-skeleton-card" aria-hidden="true">
+          <div class="admin-rsvp-review-main">
+            <div class="sk" style="width:136px;height:18px;"></div>
+            <div class="sk" style="width:110px;height:12px;"></div>
+          </div>
+          <div class="admin-rsvp-review-side">
+            <span class="sk" style="width:92px;height:28px;border-radius:12px;"></span>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function buildAdminRsvpGuestSkeletonHTML() {
+      return Array.from({ length: 5 }, () => `
+        <article class="admin-rsvp-guest-row admin-skeleton-card" aria-hidden="true">
+          <div class="admin-rsvp-guest-main">
+            <div class="sk" style="width:160px;height:18px;"></div>
+            <div class="sk" style="width:96px;height:12px;"></div>
+          </div>
+          <span class="sk" style="width:128px;height:30px;border-radius:12px;"></span>
+        </article>
+      `).join("");
+    }
+
+    function renderAdminSettingsSkeleton() {
+      const membersList = document.getElementById("settings-members-list");
+      const orderList = document.getElementById("settings-screen-order");
+      const timerList = document.getElementById("settings-timer-list");
+      const assistantInput = document.getElementById("settings-assistant-name");
+      const memberInput = document.getElementById("settings-member-input");
+      const googleCalInput = document.getElementById("settings-google-cal-id");
+      const upcomingDays = document.getElementById("settings-upcoming-days");
+
+      if (membersList) {
+        membersList.innerHTML = Array.from({ length: 3 }, () => `
+          <div class="admin-settings-member-row admin-skeleton-card" aria-hidden="true">
+            <span class="sk" style="width:13px;height:13px;border-radius:50%;"></span>
+            <span class="sk" style="width:132px;height:16px;"></span>
+          </div>
+        `).join("");
+      }
+
+      if (orderList) {
+        orderList.innerHTML = Array.from({ length: 5 }, () => `
+          <li class="admin-settings-order-item admin-skeleton-card" aria-hidden="true">
+            <span class="sk" style="width:150px;height:16px;"></span>
+            <div class="admin-settings-order-arrows">
+              <span class="sk" style="width:28px;height:28px;border-radius:8px;"></span>
+              <span class="sk" style="width:28px;height:28px;border-radius:8px;"></span>
+            </div>
+          </li>
+        `).join("");
+      }
+
+      if (timerList) {
+        timerList.innerHTML = Array.from({ length: 5 }, () => `
+          <div class="admin-settings-timer-row admin-skeleton-card" aria-hidden="true">
+            <span class="sk" style="width:132px;height:16px;"></span>
+            <span class="sk" style="width:68px;height:36px;border-radius:8px;"></span>
+            <span class="sk" style="width:18px;height:12px;"></span>
+          </div>
+        `).join("");
+      }
+
+      [assistantInput, memberInput, googleCalInput, upcomingDays].forEach((element) => {
+        if (!element) return;
+        element.value = "";
+        element.classList.add("admin-input--skeleton");
+      });
     }
 
     function clearFieldError(input) {
@@ -518,7 +705,7 @@
 
       const meta = `
         <div class="admin-todo-meta">
-          <span class="admin-pill">${assignee}</span>
+          ${buildAdminAssigneePill(assignee)}
           ${dueMarkup}
         </div>
       `;
@@ -611,29 +798,55 @@
     }
 
     async function loadAdminTodos() {
+      const requestId = ++adminTodoLoadRequestId;
       adminActiveSummary.textContent = "Loading household tasks…";
       adminArchivedSummary.textContent = "Loading completed household tasks…";
-      adminActiveList.innerHTML = '<div class="admin-empty">Loading household tasks…</div>';
-      adminArchivedList.innerHTML = '<div class="admin-empty">Loading completed household tasks…</div>';
+      const skeleton = buildAdminTodoSkeletonHTML();
+      adminActiveList.innerHTML = skeleton.active;
+      adminArchivedList.innerHTML = skeleton.archived;
 
-      const todoGroups = await fetchAdminTodos();
+      try {
+        const todoGroups = await fetchAdminTodos();
 
-      if (!todoGroups) {
+        if (requestId !== adminTodoLoadRequestId) {
+          return;
+        }
+
+        if (!todoGroups) {
+          adminActiveSummary.textContent = "Couldn't load household tasks.";
+          adminArchivedSummary.textContent = "Couldn't load completed household tasks.";
+          adminActiveList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+          adminArchivedList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+          return;
+        }
+
+        renderAdminTodoLists(todoGroups);
+
+        ensureAdminHouseholdConfigLoaded()
+          .then(() => {
+            if (requestId === adminTodoLoadRequestId) {
+              renderAdminTodoLists(todoGroups);
+            }
+          })
+          .catch(() => {});
+      } catch (error) {
+        if (requestId !== adminTodoLoadRequestId) {
+          return;
+        }
+
+        console.error("Failed to load admin todos.", error);
         adminActiveSummary.textContent = "Couldn't load household tasks.";
         adminArchivedSummary.textContent = "Couldn't load completed household tasks.";
-        adminActiveList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
-        adminArchivedList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
-        return;
+        adminActiveList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+        adminArchivedList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
       }
-
-      renderAdminTodoLists(todoGroups);
     }
 
     async function createAdminTodo(formData) {
       const client = getSupabaseClient();
 
       if (!client) {
-        showToast("Couldn't save todo. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -661,7 +874,7 @@
 
       if (error) {
         setModalSaving(false, "Add Todo");
-        showToast("Couldn't save todo. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -672,7 +885,7 @@
     async function updateAdminTodo(id, formData) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn\u2019t save todo. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -700,7 +913,7 @@
 
       if (error) {
         setModalSaving(false, "Save Changes");
-        showToast("Couldn\u2019t update todo. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -753,7 +966,7 @@
       try {
         await ensureAdminHouseholdConfigLoaded();
       } catch {
-        showToast("Couldn’t load household settings.");
+        showToast(friendlyLoadMessage());
         return;
       }
       adminModalType = "add-todo";
@@ -765,7 +978,7 @@
       try {
         await ensureAdminHouseholdConfigLoaded();
       } catch {
-        showToast("Couldn’t load household settings.");
+        showToast(friendlyLoadMessage());
         return;
       }
       adminModalType = "edit-todo";
@@ -778,7 +991,7 @@
 
       if (!client || adminTodoWritePending) {
         if (!client) {
-          showToast("Couldn't complete todo. Supabase is unavailable.");
+          showToast(friendlySaveMessage());
         }
         return;
       }
@@ -796,7 +1009,7 @@
 
       if (error) {
         adminTodoWritePending = false;
-        showToast("Couldn't complete todo. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -808,7 +1021,7 @@
     async function archiveAdminTodoWithAnimation(todoId, cardEl) {
       const client = getSupabaseClient();
       if (!client || adminTodoWritePending) {
-        if (!client) showToast("Couldn\u2019t complete todo. Supabase is unavailable.");
+        if (!client) showToast(friendlySaveMessage());
         return;
       }
       adminTodoWritePending = true;
@@ -824,7 +1037,7 @@
       if (error) {
         adminTodoWritePending = false;
         cardEl.classList.remove("is-completing");
-        showToast("Couldn\u2019t complete todo. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -916,7 +1129,7 @@
     }
 
     function renderAdminMealCard(index, date, meal) {
-      const dayLabel = escapeHtml(formatAdminDayLabel(date));
+      const dayLabel = escapeHtml(formatAdminMealCardDayLabel(date));
       const mealType = meal ? getMealTypePresentation(meal.mealType) : null;
 
       return `
@@ -1039,7 +1252,7 @@
       const noteText = String(formData.get("note") || "").trim();
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn\u2019t save note. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
       adminNoteWritePending = true;
@@ -1057,7 +1270,7 @@
 
       if (error) {
         setModalSaving(false, "Save Note");
-        showToast("Couldn\u2019t save note. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1084,7 +1297,7 @@
       adminMealWeekLabel.textContent = "Loading\u2026";
       adminWeekPrevBtn.disabled = true;
       adminWeekNextBtn.disabled = true;
-      adminMealList.innerHTML = '<div class="admin-empty">Loading meals\u2026</div>';
+      adminMealList.innerHTML = buildAdminMealSkeletonHTML();
       if (adminMealNoteWrap) adminMealNoteWrap.innerHTML = "";
 
       const [mealRows, noteText] = await Promise.all([
@@ -1096,13 +1309,13 @@
         adminMealWeekLabel.textContent = "Couldn\u2019t load meals.";
         adminWeekPrevBtn.disabled = adminWeekOffset <= -1;
         adminWeekNextBtn.disabled = adminWeekOffset >= 1;
-        adminMealList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        adminMealList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
         return;
       }
 
       adminMealPlanRows = mealRows;
       if (noteText === null) {
-        showToast("Couldn\u2019t load this week\u2019s note.");
+        showToast(friendlyLoadMessage());
         adminCurrentNote = "";
       } else {
         adminCurrentNote = noteText;
@@ -1115,7 +1328,7 @@
       const client = getSupabaseClient();
 
       if (!client || adminMealWritePending || adminNoteWritePending) {
-        if (!client) showToast("Couldn\u2019t save meal. Supabase is unavailable.");
+        if (!client) showToast(friendlySaveMessage());
         return;
       }
 
@@ -1172,7 +1385,7 @@
           submitBtn.disabled = false;
           submitBtn.textContent = "Save";
         }
-        showToast("Couldn\u2019t save meal. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1235,9 +1448,10 @@
       }
 
       if (target === "settings") {
+        renderAdminSettingsSkeleton();
         ensureAdminHouseholdConfigLoaded()
           .then(() => loadAdminSettings())
-          .catch(() => showToast("Couldn’t load household settings."));
+          .catch(() => showToast(friendlyLoadMessage()));
       }
 
       if (target === "rsvp") {
@@ -1305,15 +1519,15 @@
 
     async function loadAdminCalendarMonth() {
       adminCalEventsNote.textContent = "Loading\u2026";
-      adminCalEventList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
+      adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
       updateAdminCalMonthLabel();
       const calItems = await fetchAdminCalendarEvents();
       adminCalEvents = calItems || [];
       if (!calItems) {
-        adminCalEventsNote.textContent = "Google Calendar not configured for this household.";
-        adminCalEventList.innerHTML = '<div class="admin-empty">Add a google_cal_id to the households table to enable this.</div>';
+        adminCalEventsNote.textContent = "Add a calendar in Settings to see events here.";
+        adminCalEventList.innerHTML = '<div class="admin-empty">Add a calendar in Settings to see events here.</div>';
       } else {
-        adminCalEventsNote.textContent = calItems.length ? "Tap an event to flag it as a countdown." : "No events this month.";
+        adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
         renderAdminCalEventList();
       }
       refreshIcons();
@@ -1360,13 +1574,26 @@
       );
     }
 
+    function getVisibleAdminCalendarEvents() {
+      const todayKey = formatDateKey(new Date());
+      return adminCalEvents.filter((item) => {
+        const startRaw = item.start && (item.start.dateTime || item.start.date);
+        const eventDate = item.start && item.start.date
+          ? item.start.date
+          : (startRaw ? startRaw.slice(0, 10) : "");
+        return eventDate && eventDate >= todayKey;
+      });
+    }
+
     function renderAdminCalEventList() {
-      if (!adminCalEvents.length) {
+      const visibleCalendarEvents = getVisibleAdminCalendarEvents();
+
+      if (!visibleCalendarEvents.length) {
         adminCalEventList.innerHTML = '<div class="admin-empty">No upcoming calendar events found.</div>';
         return;
       }
 
-      adminCalEventList.innerHTML = adminCalEvents.map((item) => {
+      adminCalEventList.innerHTML = visibleCalendarEvents.map((item) => {
         const startRaw = item.start && (item.start.dateTime || item.start.date);
         const eventDate = item.start && item.start.date
           ? item.start.date
@@ -1462,9 +1689,9 @@
       const savedScrollY = preserveScroll ? window.scrollY : 0;
       updateAdminCalMonthLabel();
       adminCalEventsNote.textContent = "Loading calendar events\u2026";
-      adminCalEventList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
+      adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
       adminSavedCountdownsNote.textContent = "Loading\u2026";
-      adminSavedCountdownList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
+      adminSavedCountdownList.innerHTML = buildAdminCountdownSkeletonHTML();
 
       const [calItems, savedRows] = await Promise.all([
         fetchAdminCalendarEvents(),
@@ -1475,16 +1702,16 @@
       adminSavedCountdowns = savedRows || [];
 
       if (!calItems) {
-        adminCalEventsNote.textContent = "Google Calendar not configured for this household.";
-        adminCalEventList.innerHTML = '<div class="admin-empty">Add a google_cal_id to the households table to enable this.</div>';
+        adminCalEventsNote.textContent = "Add a calendar in Settings to see events here.";
+        adminCalEventList.innerHTML = '<div class="admin-empty">Add a calendar in Settings to see events here.</div>';
       } else {
-        adminCalEventsNote.textContent = calItems.length ? "Tap an event to flag it as a countdown." : "No events this month.";
+        adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
         renderAdminCalEventList();
       }
 
       if (!savedRows) {
         adminSavedCountdownsNote.textContent = "Couldn\u2019t load saved countdowns.";
-        adminSavedCountdownList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        adminSavedCountdownList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
       } else {
         renderAdminSavedCountdowns();
       }
@@ -1607,7 +1834,7 @@
       const client = getSupabaseClient();
 
       if (!client) {
-        showToast("Couldn't save countdown. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1647,7 +1874,7 @@
       if (error || !insertedRow) {
         adminCountdownWritePending = false;
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Save Countdown"; }
-        showToast("Couldn\u2019t save countdown. Please try again.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1675,7 +1902,7 @@
     async function updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, removePhoto) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn\u2019t update countdown. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -1698,7 +1925,7 @@
       adminCountdownEditPending = false;
 
       if (error) {
-        showToast("Couldn\u2019t update countdown. Please try again.");
+        showToast(friendlySaveMessage());
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = "Save Changes";
@@ -1732,7 +1959,7 @@
       const client = getSupabaseClient();
 
       if (!client) {
-        showToast("Couldn't delete countdown. Supabase is unavailable.");
+        showToast(friendlyDeleteMessage());
         return;
       }
 
@@ -1743,7 +1970,7 @@
         .eq("household_id", DISPLAY_HOUSEHOLD_ID);
 
       if (error) {
-        showToast("Couldn't delete countdown. Please try again.");
+        showToast(friendlyDeleteMessage());
         return;
       }
 
@@ -2110,9 +2337,6 @@
             <div class="admin-rsvp-guest-main">
               <div class="admin-rsvp-guest-title">${escapeHtml(party.name)}</div>
               <div class="admin-rsvp-guest-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))}</div>
-              ${party.linkedRsvp && party.linkedRsvp.attending === true && party.invitedCount > 1 && party.linkedRsvp.guestCount < party.invitedCount ? `
-                <span class="admin-rsvp-under-count-pill">${escapeHtml(`${party.linkedRsvp.guestCount} of ${party.invitedCount} invited`)}</span>
-              ` : ""}
             </div>
             <span class="admin-rsvp-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
           </button>
@@ -2123,15 +2347,15 @@
     async function loadAdminRsvpScreen() {
       adminRsvpUnmatchedNote.textContent = "Loading RSVP matches…";
       adminRsvpGuestListNote.textContent = "Loading invited parties…";
-      adminRsvpUnmatchedList.innerHTML = '<div class="admin-empty">Loading RSVP matches…</div>';
-      adminRsvpGuestList.innerHTML = '<div class="admin-empty">Loading invited parties…</div>';
+      adminRsvpUnmatchedList.innerHTML = buildAdminRsvpReviewSkeletonHTML();
+      adminRsvpGuestList.innerHTML = buildAdminRsvpGuestSkeletonHTML();
 
       const snapshot = await fetchWeddingRsvpSnapshot();
       if (!snapshot) {
         adminRsvpUnmatchedNote.textContent = "Couldn’t load RSVP matches.";
         adminRsvpGuestListNote.textContent = "Couldn’t load invited parties.";
-        adminRsvpUnmatchedList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
-        adminRsvpGuestList.innerHTML = '<div class="admin-empty">Supabase is unavailable right now.</div>';
+        adminRsvpUnmatchedList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+        adminRsvpGuestList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
         return;
       }
 
@@ -2171,7 +2395,7 @@
     async function saveAdminInvitedParty(formData, validatedInvitedCount = null) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn’t save RSVP party. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -2282,7 +2506,7 @@
     async function saveReviewGuestCount(formData) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn’t save guest count. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -2301,7 +2525,7 @@
       setModalSaving(false, "Save");
 
       if (error) {
-        showToast("Couldn’t save guest count.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -2313,7 +2537,7 @@
     async function mergeDuplicateReview(formData) {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Couldn’t merge these RSVPs. Supabase is unavailable.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -2346,7 +2570,7 @@
       setModalSaving(false, "Confirm");
 
       if (partyUpdate.error || primaryUpdate.error || secondaryError) {
-        showToast("Couldn’t confirm that duplicate.");
+        showToast(friendlySaveMessage());
         return;
       }
 
@@ -2730,10 +2954,19 @@
       const timerIntervals = ds.timer_intervals || {};
       const upcomingDays = ds.upcoming_days || 5;
       const members = Array.isArray(ds.members) ? ds.members : [];
+      const assistantInput = document.getElementById("settings-assistant-name");
+      const memberInput = document.getElementById("settings-member-input");
+      const calIdInput = document.getElementById("settings-google-cal-id");
+      const daysSelect = document.getElementById("settings-upcoming-days");
+
+      [assistantInput, memberInput, calIdInput, daysSelect].forEach((element) => {
+        if (element) {
+          element.classList.remove("admin-input--skeleton");
+        }
+      });
 
       // Household
-      const nameInput = document.getElementById("settings-assistant-name");
-      if (nameInput) nameInput.value = adminHouseholdSettings.assistant_name || "";
+      if (assistantInput) assistantInput.value = adminHouseholdSettings.assistant_name || "";
 
       renderSettingsMembersList(members);
 
@@ -2751,7 +2984,6 @@
       renderSettingsTimerList(timerIntervals);
 
       // Upcoming days
-      const daysSelect = document.getElementById("settings-upcoming-days");
       if (daysSelect) daysSelect.value = String(upcomingDays);
 
       // Color scheme
@@ -2759,7 +2991,6 @@
       if (schemeRadio) schemeRadio.checked = true;
 
       // Google Cal ID
-      const calIdInput = document.getElementById("settings-google-cal-id");
       if (calIdInput) calIdInput.value = adminHouseholdSettings.google_cal_id || "";
 
       // Last synced
@@ -2805,9 +3036,9 @@
           .select();
 
         if (error) {
-          showToast("Error saving assistant name.");
+          showToast(friendlySaveMessage());
         } else if (!data || data.length === 0) {
-          showToast("Warning: no rows updated — check household ID.");
+          showToast(friendlySaveMessage());
         } else {
           showToast("Assistant name saved.");
         }
@@ -2843,7 +3074,7 @@
           .eq("id", DISPLAY_HOUSEHOLD_ID);
 
         if (error) {
-          showToast("Couldn’t save household members. Please try again.");
+          showToast(friendlySaveMessage());
           return false;
         }
 
@@ -2919,9 +3150,9 @@
           .eq("id", DISPLAY_HOUSEHOLD_ID)
           .select();
         if (error) {
-          showToast("Error saving display settings.");
+          showToast(friendlySaveMessage());
         } else if (!data || data.length === 0) {
-          showToast("Warning: no rows updated — check household ID.");
+          showToast(friendlySaveMessage());
         } else {
           adminHouseholdSettings.display_settings = newDs;
           adminHouseholdSettings.color_scheme = colorScheme;
@@ -2953,9 +3184,9 @@
           .eq("id", DISPLAY_HOUSEHOLD_ID)
           .select();
         if (error) {
-          showToast("Error saving integration settings.");
+          showToast(friendlySaveMessage());
         } else if (!data || data.length === 0) {
-          showToast("Warning: no rows updated — check household ID.");
+          showToast(friendlySaveMessage());
         } else {
           showToast("Integration settings saved.");
         }
@@ -3174,10 +3405,11 @@
       initSettingsListeners();
       ensureAdminHouseholdConfigLoaded()
         .then(() => {
+          loadAdminTodos();
           if (adminScreen === "settings") {
             loadAdminSettings();
           }
         })
-        .catch(() => showToast("Couldn’t load household settings."));
+        .catch(() => showToast(friendlyLoadMessage()));
       refreshIcons();
     }
