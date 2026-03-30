@@ -482,6 +482,10 @@
       color: var(--amber);
     }
 
+    .admin-pill--member {
+      border: 1px solid rgba(124, 96, 69, 0.08);
+    }
+
     .admin-empty {
       padding: 18px;
       border-radius: 20px;
@@ -489,6 +493,25 @@
       color: var(--muted);
       text-align: center;
       background: rgba(255, 255, 255, 0.4);
+    }
+
+    .admin-skeleton-card {
+      pointer-events: none;
+    }
+
+    .admin-input--skeleton {
+      color: transparent !important;
+      caret-color: transparent;
+      border-color: transparent !important;
+      background:
+        linear-gradient(90deg, rgba(124, 96, 69, 0.08), rgba(124, 96, 69, 0.18), rgba(124, 96, 69, 0.08));
+      background-size: 200% 100%;
+      animation: admin-skeleton-shimmer 1.6s linear infinite;
+    }
+
+    @keyframes admin-skeleton-shimmer {
+      from { background-position: 200% 0; }
+      to { background-position: -200% 0; }
     }
 
     .admin-placeholder {
@@ -1279,6 +1302,11 @@
       color: #9a3412;
     }
 
+    .admin-rsvp-status--under-count {
+      background: rgba(247, 217, 170, 0.45);
+      color: #9a3412;
+    }
+
     .admin-rsvp-linked-row {
       display: flex;
       align-items: center;
@@ -1945,6 +1973,11 @@
     }
 
     html[data-scheme="dark"] .admin-rsvp-status--pending {
+      background: rgba(245, 158, 11, 0.18);
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-rsvp-status--under-count {
       background: rgba(245, 158, 11, 0.18);
       color: var(--ink);
     }

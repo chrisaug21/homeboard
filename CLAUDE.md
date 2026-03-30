@@ -70,6 +70,7 @@ netlify.toml        — build config, env var injection via sed
 - Duplicate review modals use a single confirm flow: show the linked RSVP plus any number of competing active RSVPs for that party, choose the primary RSVP, edit the guest count, link the primary RSVP to the invited party, and set every other conflict RSVP to `superseded` with `merged_into_party_id`.
 - RSVP review actions live in the shared admin bottom-sheet modal. A resolved issue should disappear from the Needs Review list after the modal action completes.
 - On the display guest list, matched attending parties with `guest_count < invited_count` stay in the list and use an amber guest-count pill to signal the under-count.
+- On the admin RSVP guest list, under-counted attending parties should collapse into one amber status pill that reads `Attending • X of Y`; exact-match attending counts keep the normal green attending pill.
 
 ## display_settings JSONB shape
 ```json
@@ -101,6 +102,11 @@ netlify.toml        — build config, env var injection via sed
 - On admin mobile layouts up to `480px`, single primary actions should run full width and two-button action rows should split evenly across the row
 - The admin nav is a fixed bottom bar pinned flush to the bottom edge of the viewport; keep toast positioning above it so nav actions stay accessible
 - The display footer assistant label (`#household-name`) uses the Google Font `Righteous`, loaded from Google Fonts in `index.html`
+- The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
+- Admin tabs should use skeleton loaders that approximate the final layout while data is loading, especially on the RSVP screen
+- Admin todo assignee pills should use the configured member color from `display_settings.members`
+- The RSVP display guest-list empty state is a centered neutral waiting state in the pending-blue tone, with a matching zero-count color for the confirmed guest total
+- Hide pre-today Google Calendar events from the admin countdown source-event picker; do not delete or mutate saved countdown rows
 
 ## Env Vars (never hardcode)
 - `SUPABASE_URL`

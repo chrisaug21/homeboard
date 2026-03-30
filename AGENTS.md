@@ -59,6 +59,7 @@ netlify.toml        — build + env var injection via sed
 - Duplicate review modals use a single confirm flow: show the currently linked RSVP plus any number of competing active RSVPs for that party, choose the primary RSVP, edit the guest count, link the primary RSVP to the invited party, and set every other conflict RSVP to `superseded` with `merged_into_party_id`
 - Review actions must stay in the shared admin modal pattern: tap a review row, resolve the issue in the modal, close automatically when the issue is fully resolved
 - On the display guest list, matched attending parties with `guest_count < invited_count` keep their attending row but use an amber guest-count pill instead of the default green pill
+- On the admin RSVP guest list, under-counted attending parties should use a single amber status pill reading `Attending • X of Y`; do not show a second under-count pill on the left
 
 ## display_settings JSONB shape
 ```json
@@ -92,6 +93,12 @@ netlify.toml        — build + env var injection via sed
 - The admin nav is a fixed bottom bar pinned flush to the viewport edge; do not reintroduce floating gaps, translucent glass treatment, or drop shadows there
 - Toasts must clear the fixed admin nav so navigation stays tappable while a toast is visible
 - The display footer assistant label (`#household-name`) uses the Google Font `Righteous`; load it from Google Fonts in `index.html` and keep fallback fonts in CSS
+- The display to-do screen must scroll vertically, not via CSS columns or any layout that conflicts with horizontal screen-swipe gestures
+- Admin loading states should use skeleton loaders that roughly match the final card/form layout instead of plain `Loading…` text
+- Admin todo assignee pills should use the member color from `display_settings.members`; fall back to the neutral pill only when no configured color exists
+- The RSVP display guest-list empty state is a centered neutral waiting state with muted blue styling, not a small rose warning/error pill
+- The RSVP display confirmed-guest total should use the pending-blue tone at `0` and the rose tone only when the count is `1+`
+- The countdown admin calendar-event picker should hide events dated before today; this filtering applies to selectable source events, not saved countdown rows
 
 ## Local Dev
 `netlify dev` is the only correct local workflow. `file://` and `npx serve .` do not work.

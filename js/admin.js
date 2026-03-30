@@ -200,9 +200,13 @@
 
     function getAdminRsvpStatusMeta(party) {
       if (party.linkedRsvp && party.linkedRsvp.attending === true) {
+        const guestCount = Math.min(party.linkedRsvp.guestCount, party.invitedCount);
+        const isUnderCount = guestCount < party.invitedCount;
         return {
-          label: `Attending • ${formatAdminGuestCount(party.linkedRsvp.guestCount)}`,
-          tone: "admin-rsvp-status--attending",
+          label: isUnderCount
+            ? `Attending • ${guestCount} of ${party.invitedCount}`
+            : `Attending • ${formatAdminGuestCount(guestCount)}`,
+          tone: isUnderCount ? "admin-rsvp-status--under-count" : "admin-rsvp-status--attending",
           rank: 0
         };
       }
@@ -230,6 +234,181 @@
       toastTimeoutId = window.setTimeout(() => {
         toastEl.classList.remove("is-visible");
       }, 2800);
+    }
+
+    function getConfiguredMemberColor(name) {
+      const members = adminHouseholdSettings?.display_settings?.members;
+      if (!Array.isArray(members)) {
+        return "";
+      }
+
+      const match = members.find((member) =>
+        String(member?.name || "").trim().toLowerCase() === String(name || "").trim().toLowerCase()
+      );
+
+      return String(match?.color || "").trim();
+    }
+
+    function buildAdminAssigneePill(name) {
+      const memberColor = getConfiguredMemberColor(name);
+
+      if (!memberColor) {
+        return `<span class="admin-pill">${escapeHtml(name)}</span>`;
+      }
+
+      return `
+        <span class="admin-pill admin-pill--member" style="background:${escapeHtml(hexToRgba(memberColor, 0.16))};color:${escapeHtml(memberColor)}">
+          ${escapeHtml(name)}
+        </span>
+      `;
+    }
+
+    function buildAdminTodoSkeletonHTML() {
+      const activeCard = () => `
+        <article class="admin-todo-card admin-todo-card--active admin-skeleton-card" aria-hidden="true">
+          <div class="todo-check-btn"><div class="todo-check"></div></div>
+          <div class="admin-todo-body">
+            <div class="sk" style="width:72%;height:18px;"></div>
+            <div class="admin-todo-meta">
+              <span class="sk" style="width:92px;height:28px;border-radius:12px;"></span>
+              <span class="sk" style="width:74px;height:28px;border-radius:12px;"></span>
+            </div>
+          </div>
+        </article>
+      `;
+
+      const archivedCard = () => `
+        <article class="admin-todo-card admin-skeleton-card" aria-hidden="true">
+          <div class="admin-todo-body">
+            <div class="sk" style="width:68%;height:18px;"></div>
+            <div class="admin-todo-meta">
+              <span class="sk" style="width:90px;height:28px;border-radius:12px;"></span>
+            </div>
+          </div>
+        </article>
+      `;
+
+      return {
+        active: Array.from({ length: 4 }, activeCard).join(""),
+        archived: Array.from({ length: 3 }, archivedCard).join("")
+      };
+    }
+
+    function buildAdminMealSkeletonHTML() {
+      return Array.from({ length: 7 }, () => `
+        <article class="admin-meal-card admin-skeleton-card" aria-hidden="true">
+          <div class="admin-meal-card-top">
+            <div class="sk" style="width:92px;height:12px;"></div>
+            <span class="sk" style="width:78px;height:28px;border-radius:12px;"></span>
+          </div>
+          <div class="sk" style="width:78%;height:20px;"></div>
+        </article>
+      `).join("");
+    }
+
+    function buildAdminCalendarSkeletonHTML() {
+      return Array.from({ length: 4 }, () => `
+        <article class="admin-cal-event-card admin-skeleton-card" aria-hidden="true">
+          <div class="sk" style="width:62%;height:18px;"></div>
+          <div class="admin-cal-event-meta">
+            <span class="sk" style="width:84px;height:28px;border-radius:12px;"></span>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function buildAdminCountdownSkeletonHTML() {
+      return Array.from({ length: 3 }, () => `
+        <article class="admin-saved-countdown-card admin-skeleton-card" aria-hidden="true">
+          <div class="admin-countdown-card-main">
+            <div class="sk" style="width:72px;height:96px;border-radius:8px;"></div>
+            <div class="admin-countdown-card-body">
+              <div class="sk" style="width:70%;height:18px;"></div>
+              <div class="admin-countdown-card-meta">
+                <span class="sk" style="width:96px;height:12px;"></span>
+                <span class="sk" style="width:88px;height:12px;"></span>
+              </div>
+            </div>
+          </div>
+          <div class="admin-countdown-actions">
+            <span class="sk" style="width:64px;height:32px;border-radius:8px;"></span>
+            <span class="sk" style="width:104px;height:32px;border-radius:8px;"></span>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function buildAdminRsvpReviewSkeletonHTML() {
+      return Array.from({ length: 4 }, () => `
+        <article class="admin-rsvp-review-row admin-skeleton-card" aria-hidden="true">
+          <div class="admin-rsvp-review-main">
+            <div class="sk" style="width:136px;height:18px;"></div>
+            <div class="sk" style="width:110px;height:12px;"></div>
+          </div>
+          <div class="admin-rsvp-review-side">
+            <span class="sk" style="width:92px;height:28px;border-radius:12px;"></span>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function buildAdminRsvpGuestSkeletonHTML() {
+      return Array.from({ length: 5 }, () => `
+        <article class="admin-rsvp-guest-row admin-skeleton-card" aria-hidden="true">
+          <div class="admin-rsvp-guest-main">
+            <div class="sk" style="width:160px;height:18px;"></div>
+            <div class="sk" style="width:96px;height:12px;"></div>
+          </div>
+          <span class="sk" style="width:128px;height:30px;border-radius:12px;"></span>
+        </article>
+      `).join("");
+    }
+
+    function renderAdminSettingsSkeleton() {
+      const membersList = document.getElementById("settings-members-list");
+      const orderList = document.getElementById("settings-screen-order");
+      const timerList = document.getElementById("settings-timer-list");
+      const assistantInput = document.getElementById("settings-assistant-name");
+      const memberInput = document.getElementById("settings-member-input");
+      const googleCalInput = document.getElementById("settings-google-cal-id");
+      const upcomingDays = document.getElementById("settings-upcoming-days");
+
+      if (membersList) {
+        membersList.innerHTML = Array.from({ length: 3 }, () => `
+          <div class="admin-settings-member-row admin-skeleton-card" aria-hidden="true">
+            <span class="sk" style="width:13px;height:13px;border-radius:50%;"></span>
+            <span class="sk" style="width:132px;height:16px;"></span>
+          </div>
+        `).join("");
+      }
+
+      if (orderList) {
+        orderList.innerHTML = Array.from({ length: 5 }, () => `
+          <li class="admin-settings-order-item admin-skeleton-card" aria-hidden="true">
+            <span class="sk" style="width:150px;height:16px;"></span>
+            <div class="admin-settings-order-arrows">
+              <span class="sk" style="width:28px;height:28px;border-radius:8px;"></span>
+              <span class="sk" style="width:28px;height:28px;border-radius:8px;"></span>
+            </div>
+          </li>
+        `).join("");
+      }
+
+      if (timerList) {
+        timerList.innerHTML = Array.from({ length: 5 }, () => `
+          <div class="admin-settings-timer-row admin-skeleton-card" aria-hidden="true">
+            <span class="sk" style="width:132px;height:16px;"></span>
+            <span class="sk" style="width:68px;height:36px;border-radius:8px;"></span>
+            <span class="sk" style="width:18px;height:12px;"></span>
+          </div>
+        `).join("");
+      }
+
+      [assistantInput, memberInput, googleCalInput, upcomingDays].forEach((element) => {
+        if (!element) return;
+        element.value = "";
+        element.classList.add("admin-input--skeleton");
+      });
     }
 
     function clearFieldError(input) {
@@ -526,7 +705,7 @@
 
       const meta = `
         <div class="admin-todo-meta">
-          <span class="admin-pill">${assignee}</span>
+          ${buildAdminAssigneePill(assignee)}
           ${dueMarkup}
         </div>
       `;
@@ -621,8 +800,9 @@
     async function loadAdminTodos() {
       adminActiveSummary.textContent = "Loading household tasks…";
       adminArchivedSummary.textContent = "Loading completed household tasks…";
-      adminActiveList.innerHTML = '<div class="admin-empty">Loading household tasks…</div>';
-      adminArchivedList.innerHTML = '<div class="admin-empty">Loading completed household tasks…</div>';
+      const skeleton = buildAdminTodoSkeletonHTML();
+      adminActiveList.innerHTML = skeleton.active;
+      adminArchivedList.innerHTML = skeleton.archived;
 
       const todoGroups = await fetchAdminTodos();
 
@@ -1092,7 +1272,7 @@
       adminMealWeekLabel.textContent = "Loading\u2026";
       adminWeekPrevBtn.disabled = true;
       adminWeekNextBtn.disabled = true;
-      adminMealList.innerHTML = '<div class="admin-empty">Loading meals\u2026</div>';
+      adminMealList.innerHTML = buildAdminMealSkeletonHTML();
       if (adminMealNoteWrap) adminMealNoteWrap.innerHTML = "";
 
       const [mealRows, noteText] = await Promise.all([
@@ -1243,6 +1423,7 @@
       }
 
       if (target === "settings") {
+        renderAdminSettingsSkeleton();
         ensureAdminHouseholdConfigLoaded()
           .then(() => loadAdminSettings())
           .catch(() => showToast("Couldn’t load household settings."));
@@ -1313,7 +1494,7 @@
 
     async function loadAdminCalendarMonth() {
       adminCalEventsNote.textContent = "Loading\u2026";
-      adminCalEventList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
+      adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
       updateAdminCalMonthLabel();
       const calItems = await fetchAdminCalendarEvents();
       adminCalEvents = calItems || [];
@@ -1321,7 +1502,7 @@
         adminCalEventsNote.textContent = "Google Calendar not configured for this household.";
         adminCalEventList.innerHTML = '<div class="admin-empty">Add a google_cal_id to the households table to enable this.</div>';
       } else {
-        adminCalEventsNote.textContent = calItems.length ? "Tap an event to flag it as a countdown." : "No events this month.";
+        adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
         renderAdminCalEventList();
       }
       refreshIcons();
@@ -1368,13 +1549,26 @@
       );
     }
 
+    function getVisibleAdminCalendarEvents() {
+      const todayKey = formatDateKey(new Date());
+      return adminCalEvents.filter((item) => {
+        const startRaw = item.start && (item.start.dateTime || item.start.date);
+        const eventDate = item.start && item.start.date
+          ? item.start.date
+          : (startRaw ? startRaw.slice(0, 10) : "");
+        return eventDate && eventDate >= todayKey;
+      });
+    }
+
     function renderAdminCalEventList() {
-      if (!adminCalEvents.length) {
+      const visibleCalendarEvents = getVisibleAdminCalendarEvents();
+
+      if (!visibleCalendarEvents.length) {
         adminCalEventList.innerHTML = '<div class="admin-empty">No upcoming calendar events found.</div>';
         return;
       }
 
-      adminCalEventList.innerHTML = adminCalEvents.map((item) => {
+      adminCalEventList.innerHTML = visibleCalendarEvents.map((item) => {
         const startRaw = item.start && (item.start.dateTime || item.start.date);
         const eventDate = item.start && item.start.date
           ? item.start.date
@@ -1470,9 +1664,9 @@
       const savedScrollY = preserveScroll ? window.scrollY : 0;
       updateAdminCalMonthLabel();
       adminCalEventsNote.textContent = "Loading calendar events\u2026";
-      adminCalEventList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
+      adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
       adminSavedCountdownsNote.textContent = "Loading\u2026";
-      adminSavedCountdownList.innerHTML = '<div class="admin-empty">Loading\u2026</div>';
+      adminSavedCountdownList.innerHTML = buildAdminCountdownSkeletonHTML();
 
       const [calItems, savedRows] = await Promise.all([
         fetchAdminCalendarEvents(),
@@ -1486,7 +1680,7 @@
         adminCalEventsNote.textContent = "Google Calendar not configured for this household.";
         adminCalEventList.innerHTML = '<div class="admin-empty">Add a google_cal_id to the households table to enable this.</div>';
       } else {
-        adminCalEventsNote.textContent = calItems.length ? "Tap an event to flag it as a countdown." : "No events this month.";
+        adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
         renderAdminCalEventList();
       }
 
@@ -2118,9 +2312,6 @@
             <div class="admin-rsvp-guest-main">
               <div class="admin-rsvp-guest-title">${escapeHtml(party.name)}</div>
               <div class="admin-rsvp-guest-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))}</div>
-              ${party.linkedRsvp && party.linkedRsvp.attending === true && party.invitedCount > 1 && party.linkedRsvp.guestCount < party.invitedCount ? `
-                <span class="admin-rsvp-under-count-pill">${escapeHtml(`${party.linkedRsvp.guestCount} of ${party.invitedCount} invited`)}</span>
-              ` : ""}
             </div>
             <span class="admin-rsvp-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
           </button>
@@ -2131,8 +2322,8 @@
     async function loadAdminRsvpScreen() {
       adminRsvpUnmatchedNote.textContent = "Loading RSVP matches…";
       adminRsvpGuestListNote.textContent = "Loading invited parties…";
-      adminRsvpUnmatchedList.innerHTML = '<div class="admin-empty">Loading RSVP matches…</div>';
-      adminRsvpGuestList.innerHTML = '<div class="admin-empty">Loading invited parties…</div>';
+      adminRsvpUnmatchedList.innerHTML = buildAdminRsvpReviewSkeletonHTML();
+      adminRsvpGuestList.innerHTML = buildAdminRsvpGuestSkeletonHTML();
 
       const snapshot = await fetchWeddingRsvpSnapshot();
       if (!snapshot) {
@@ -2738,10 +2929,19 @@
       const timerIntervals = ds.timer_intervals || {};
       const upcomingDays = ds.upcoming_days || 5;
       const members = Array.isArray(ds.members) ? ds.members : [];
+      const assistantInput = document.getElementById("settings-assistant-name");
+      const memberInput = document.getElementById("settings-member-input");
+      const calIdInput = document.getElementById("settings-google-cal-id");
+      const daysSelect = document.getElementById("settings-upcoming-days");
+
+      [assistantInput, memberInput, calIdInput, daysSelect].forEach((element) => {
+        if (element) {
+          element.classList.remove("admin-input--skeleton");
+        }
+      });
 
       // Household
-      const nameInput = document.getElementById("settings-assistant-name");
-      if (nameInput) nameInput.value = adminHouseholdSettings.assistant_name || "";
+      if (assistantInput) assistantInput.value = adminHouseholdSettings.assistant_name || "";
 
       renderSettingsMembersList(members);
 
@@ -2759,7 +2959,6 @@
       renderSettingsTimerList(timerIntervals);
 
       // Upcoming days
-      const daysSelect = document.getElementById("settings-upcoming-days");
       if (daysSelect) daysSelect.value = String(upcomingDays);
 
       // Color scheme
@@ -2767,7 +2966,6 @@
       if (schemeRadio) schemeRadio.checked = true;
 
       // Google Cal ID
-      const calIdInput = document.getElementById("settings-google-cal-id");
       if (calIdInput) calIdInput.value = adminHouseholdSettings.google_cal_id || "";
 
       // Last synced

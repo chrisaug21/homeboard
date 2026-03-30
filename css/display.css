@@ -1060,11 +1060,13 @@
 
     /* Two-column scrollable layout — fills left column first, then right */
     .todo-list {
-      column-count: 2;
-      column-gap: 14px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
       overflow-y: auto;
       flex: 1;
       min-height: 0;
+      align-content: start;
     }
 
     .todo-card {
@@ -1079,7 +1081,6 @@
       min-width: 0;
       transition: opacity 0.25s, transform 0.2s;
       break-inside: avoid;
-      margin-bottom: 14px;
     }
 
     .todo-card.is-completing {
@@ -1463,6 +1464,7 @@
       justify-content: center;
       gap: 20px;
       min-width: 0;
+      width: 100%;
     }
 
     .countdown-card--photo .countdown-icon,
@@ -1471,7 +1473,7 @@
     }
 
     .countdown-card--photo .countdown-name {
-      max-width: 14ch;
+      max-width: 100%;
     }
 
     .countdown-card--photo .countdown-caption {
@@ -1551,7 +1553,7 @@
       font-size: 1.05rem;
       line-height: 1.35;
       color: var(--muted);
-      max-width: 24rem;
+      max-width: 100%;
       white-space: nowrap;
     }
 
@@ -1614,6 +1616,14 @@
       font-size: 5.8rem;
       font-weight: 800;
       line-height: 0.92;
+      color: var(--rose);
+    }
+
+    .hero-number--empty {
+      color: #6b8fb8;
+    }
+
+    .hero-number--active {
       color: var(--rose);
     }
 
@@ -1720,6 +1730,7 @@
       overflow-y: auto;
       position: relative;
       padding-right: 4px;
+      display: grid;
     }
 
     .names-scroll {
@@ -1728,6 +1739,12 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
       align-content: start;
       min-height: min-content;
+    }
+
+    .names-scroll--empty {
+      min-height: 100%;
+      grid-template-columns: 1fr;
+      align-content: stretch;
     }
 
     .name-pill {
@@ -1765,6 +1782,49 @@
 
     .name-pill--attending {
       background: rgba(229, 246, 234, 0.92);
+    }
+
+    .rsvp-empty-state {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      justify-items: center;
+      gap: 12px;
+      min-height: 100%;
+      text-align: center;
+      padding: 24px;
+      color: #6b8fb8;
+    }
+
+    .rsvp-empty-icon {
+      width: 52px;
+      height: 52px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid rgba(107, 143, 184, 0.28);
+      background: rgba(191, 219, 254, 0.24);
+      color: #6b8fb8;
+    }
+
+    .rsvp-empty-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke-width: 1.8;
+    }
+
+    .rsvp-empty-headline {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #6b8fb8;
+    }
+
+    .rsvp-empty-copy {
+      max-width: 24rem;
+      font-size: 0.98rem;
+      line-height: 1.45;
+      color: #6b8fb8;
     }
 
     .rsvp-detail-list {

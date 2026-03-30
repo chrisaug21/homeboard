@@ -252,6 +252,8 @@
       document.getElementById("rsvp-review-count").textContent = "\u2014";
       document.getElementById("rsvp-names-title").textContent = "";
       const list = document.getElementById("rsvp-names");
+      document.getElementById("rsvp-total").classList.remove("hero-number--empty", "hero-number--active");
+      list.classList.remove("names-scroll--empty");
       list.innerHTML = `
         <div class="screen-error">
           <i data-lucide="wifi-off"></i>
@@ -274,10 +276,48 @@
       );
     }
 
-    function getAssigneeClass(assignee) {
-      if (assignee === "Chris") return "todo-assignee todo-assignee--chris";
-      if (assignee === "Bailey") return "todo-assignee todo-assignee--bailey";
-      return "todo-assignee todo-assignee--other";
+    function getMemberColor(name) {
+      const members = cachedHouseholdConfig?.display_settings?.members;
+      if (!Array.isArray(members)) {
+        return "";
+      }
+
+      const match = members.find((member) =>
+        String(member?.name || "").trim().toLowerCase() === String(name || "").trim().toLowerCase()
+      );
+
+      return String(match?.color || "").trim();
+    }
+
+    function getAssigneeMarkup(assignee) {
+      const memberColor = getMemberColor(assignee);
+
+      if (!memberColor) {
+        if (assignee === "Chris") return `<span class="todo-assignee todo-assignee--chris">${escapeHtml(assignee)}</span>`;
+        if (assignee === "Bailey") return `<span class="todo-assignee todo-assignee--bailey">${escapeHtml(assignee)}</span>`;
+        return `<span class="todo-assignee todo-assignee--other">${escapeHtml(assignee)}</span>`;
+      }
+
+      return `
+        <span class="todo-assignee todo-assignee--custom" style="background:${escapeHtml(hexToRgba(memberColor, 0.16))};color:${escapeHtml(memberColor)}">
+          ${escapeHtml(assignee)}
+        </span>
+      `;
+    }
+
+    function toDisplayLabelCase(value) {
+      const input = String(value || "").trim();
+      if (!input) {
+        return "Homeboard";
+      }
+
+      if (input === input.toUpperCase()) {
+        return input;
+      }
+
+      return input
+        .toLowerCase()
+        .replace(/\b([a-z])/g, (match) => match.toUpperCase());
     }
 
     function mapSupabaseTodo(todo) {
@@ -308,9 +348,7 @@
         const pill = todo.duePill
           ? `<span class="todo-due-pill ${escapeHtml(todo.duePill.cssClass)}">${escapeHtml(todo.duePill.label)}</span>`
           : "";
-        const assignee = todo.assignee
-          ? `<span class="${getAssigneeClass(todo.assignee)}">${escapeHtml(todo.assignee)}</span>`
-          : "";
+        const assignee = todo.assignee ? getAssigneeMarkup(todo.assignee) : "";
         return `
           <article class="todo-card" data-todo-id="${escapeHtml(todo.id)}">
             <button class="todo-check-btn" type="button" aria-label="Complete ${escapeHtml(todo.title)}">
@@ -1178,8 +1216,10 @@
 
     function renderRsvpBoard(snapshot) {
       const list = document.getElementById("rsvp-names");
+      const totalEl = document.getElementById("rsvp-total");
       const stats = snapshot.stats || {};
       const reviewCount = stats.reviewCount || 0;
+      const attendingGuestCount = stats.attendingGuests || 0;
       const attendingRows = (snapshot.invitedParties || [])
         .filter((party) => party.linkedRsvp && party.linkedRsvp.attending === true)
         .map((party) => ({
@@ -1190,7 +1230,9 @@
         }))
         .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-      document.getElementById("rsvp-total").textContent = String(stats.attendingGuests || 0);
+      totalEl.textContent = String(attendingGuestCount);
+      totalEl.classList.toggle("hero-number--empty", attendingGuestCount === 0);
+      totalEl.classList.toggle("hero-number--active", attendingGuestCount > 0);
       document.getElementById("rsvp-total-label").textContent = "guests attending so far";
       document.getElementById("rsvp-parties-responded").textContent = `${stats.respondedParties || 0} / ${stats.totalParties || 0} parties responded`;
       document.getElementById("rsvp-declined-count").textContent = String(stats.declinedGuests || 0);
@@ -1210,15 +1252,19 @@
 
       if (!attendingRows.length) {
         stopRsvpAutoScroll();
+        list.classList.add("names-scroll--empty");
         list.innerHTML = `
-          <div class="name-pill name-pill--pending">
-            <span>No attending RSVPs yet</span>
-            <span class="name-status">Waiting</span>
+          <div class="rsvp-empty-state">
+            <div class="rsvp-empty-icon"><i data-lucide="heart"></i></div>
+            <div class="rsvp-empty-headline">No RSVPs yet</div>
+            <div class="rsvp-empty-copy">Confirmed guests will appear here as responses come in</div>
           </div>
         `;
+        refreshIcons();
         return;
       }
 
+      list.classList.remove("names-scroll--empty");
       list.innerHTML = attendingRows.map((row) => `
         <div class="name-pill name-pill--attending${row.isUnderCount ? " name-pill--undercount" : ""}">
           <span>${escapeHtml(row.name)}</span>
@@ -1263,9 +1309,11 @@
     }
 
     function updateHouseholdName(config) {
-      const name = config && config.assistant_name && config.assistant_name.trim()
-        ? config.assistant_name.trim()
-        : "Homeboard";
+      const name = toDisplayLabelCase(
+        config && config.assistant_name && config.assistant_name.trim()
+          ? config.assistant_name.trim()
+          : "Homeboard"
+      );
       if (householdNameEl) householdNameEl.textContent = name;
     }
 
