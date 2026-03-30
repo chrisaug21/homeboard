@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "0.9.12";
+    const VERSION = "0.9.13";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -184,6 +184,23 @@
       const blue = intValue & 255;
 
       return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    }
+
+    function getConfiguredMemberColor(members, name) {
+      if (!Array.isArray(members)) {
+        return "";
+      }
+
+      const normalizedName = String(name || "").trim().toLowerCase();
+      if (!normalizedName) {
+        return "";
+      }
+
+      const match = members.find((member) =>
+        String(member?.name || "").trim().toLowerCase() === normalizedName
+      );
+
+      return String(match?.color || "").trim();
     }
 
     function formatLongDate(dateString) {

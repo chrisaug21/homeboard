@@ -18,6 +18,7 @@
 
     let calendarEventsMap = new Map();
     let cachedHouseholdConfig = null;
+    let cachedDisplayTodos = null;
     let cachedSupabaseCountdowns = null;
     let cachedCalendarCountdowns = [];
     let cachedWeddingSnapshot = null;
@@ -276,21 +277,8 @@
       );
     }
 
-    function getMemberColor(name) {
-      const members = cachedHouseholdConfig?.display_settings?.members;
-      if (!Array.isArray(members)) {
-        return "";
-      }
-
-      const match = members.find((member) =>
-        String(member?.name || "").trim().toLowerCase() === String(name || "").trim().toLowerCase()
-      );
-
-      return String(match?.color || "").trim();
-    }
-
     function getAssigneeMarkup(assignee) {
-      const memberColor = getMemberColor(assignee);
+      const memberColor = getConfiguredMemberColor(cachedHouseholdConfig?.display_settings?.members, assignee);
 
       if (!memberColor) {
         return `<span class="todo-assignee todo-assignee--other">${escapeHtml(assignee)}</span>`;
@@ -313,6 +301,7 @@
     }
 
     function renderTodoItems(todoItems) {
+      cachedDisplayTodos = todoItems;
       const list = document.getElementById("todo-list");
 
       if (!todoItems.length) {
@@ -1155,6 +1144,9 @@
 
       updateHouseholdName(householdConfig);
       applyDisplaySettings(householdConfig);
+      if (cachedDisplayTodos !== null) {
+        renderTodoItems(cachedDisplayTodos);
+      }
 
       const calendarLoaded = await refreshCalendarData(true); // wide fetch on initial load
 
@@ -1420,6 +1412,9 @@
           cachedHouseholdConfig = newConfig;
           updateHouseholdName(newConfig);
           applyDisplaySettings(newConfig);
+          if (cachedDisplayTodos !== null) {
+            renderTodoItems(cachedDisplayTodos);
+          }
         }
 
         if (newSupabaseCountdowns !== null) {

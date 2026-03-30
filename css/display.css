@@ -279,14 +279,6 @@
       background: rgba(255, 255, 255, 0.06);
       border-color: var(--border);
     }
-    html[data-scheme="dark"] .todo-assignee--chris {
-      background: rgba(96, 165, 250, 0.2);
-      color: #bfdbfe;
-    }
-    html[data-scheme="dark"] .todo-assignee--bailey {
-      background: rgba(244, 114, 182, 0.18);
-      color: #fbcfe8;
-    }
     html[data-scheme="dark"] .todo-assignee--other {
       background: rgba(255, 255, 255, 0.1);
       color: #e7ddd5;
@@ -1173,18 +1165,6 @@
       font-size: 0.88rem;
       font-weight: 700;
       white-space: nowrap;
-    }
-
-    .todo-assignee--chris {
-      /* slate blue */
-      background: rgba(71, 100, 145, 0.14);
-      color: #3b5a8a;
-    }
-
-    .todo-assignee--bailey {
-      /* dusty rose */
-      background: rgba(180, 90, 110, 0.14);
-      color: #8a3b50;
     }
 
     .todo-assignee--other {

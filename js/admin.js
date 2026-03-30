@@ -249,21 +249,8 @@
       return "Something went wrong deleting this item. Please try again.";
     }
 
-    function getConfiguredMemberColor(name) {
-      const members = adminHouseholdSettings?.display_settings?.members;
-      if (!Array.isArray(members)) {
-        return "";
-      }
-
-      const match = members.find((member) =>
-        String(member?.name || "").trim().toLowerCase() === String(name || "").trim().toLowerCase()
-      );
-
-      return String(match?.color || "").trim();
-    }
-
     function buildAdminAssigneePill(name) {
-      const memberColor = getConfiguredMemberColor(name);
+      const memberColor = getConfiguredMemberColor(adminHouseholdSettings?.display_settings?.members, name);
 
       if (!memberColor) {
         return `<span class="admin-pill">${escapeHtml(name)}</span>`;
