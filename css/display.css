@@ -141,7 +141,8 @@
       --rose: #fb7185;
       --rose-soft: rgba(251, 113, 133, 0.14);
       --shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
-      --display-nav-active-bg: var(--rsvp-review-bg-flagged);
+      /* amber-soft serves as the primary accent subtle token for this scheme — see design token audit ticket for future cleanup. */
+      --display-nav-active-bg: var(--amber-soft);
       --display-nav-active-border: transparent;
     }
 
@@ -177,7 +178,8 @@
       --rose: #be123c;
       --rose-soft: rgba(190, 18, 60, 0.11);
       --shadow: 0 18px 44px rgba(15, 23, 42, 0.11);
-      --display-nav-active-bg: var(--rsvp-pending-bg);
+      /* amber-soft serves as the primary accent subtle token for this scheme — see design token audit ticket for future cleanup. */
+      --display-nav-active-bg: var(--amber-soft);
       --display-nav-active-border: transparent;
     }
 
