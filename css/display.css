@@ -1270,7 +1270,7 @@
       border-radius: 999px;
       transform: translate(-50%, -50%);
       opacity: 0;
-      animation: todoFallbackBurst 950ms cubic-bezier(0.2, 0.8, 0.28, 1) forwards;
+      animation: todo-fallback-burst 950ms cubic-bezier(0.2, 0.8, 0.28, 1) forwards;
       box-shadow: 0 0 10px rgba(48, 38, 29, 0.12);
     }
 
@@ -1282,7 +1282,7 @@
       border-radius: 999px;
       transform: translate(-50%, -50%) scale(0.18);
       opacity: 0;
-      animation: todoRippleRing 1200ms cubic-bezier(0.16, 0.84, 0.28, 1) forwards;
+      animation: todo-ripple-ring 1200ms cubic-bezier(0.16, 0.84, 0.28, 1) forwards;
     }
 
     .todo-thumbs-up {
@@ -1309,7 +1309,7 @@
       opacity: 0.7;
     }
 
-    @keyframes todoRippleRing {
+    @keyframes todo-ripple-ring {
       0% {
         opacity: 0;
         transform: translate(-50%, -50%) scale(0.18);
@@ -1323,7 +1323,7 @@
       }
     }
 
-    @keyframes todoFallbackBurst {
+    @keyframes todo-fallback-burst {
       0% {
         opacity: 0;
         transform: translate(-50%, -50%) scale(0.25);

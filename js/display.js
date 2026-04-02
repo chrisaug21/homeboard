@@ -568,6 +568,10 @@
       const start = Date.now();
       const duration = 7000;
       const frame = () => {
+        if (!layer || !instance || !layer.isConnected) {
+          return;
+        }
+
         if (Date.now() - start >= duration) {
           return;
         }
@@ -585,7 +589,9 @@
           colors
         });
 
-        window.setTimeout(frame, 380);
+        if (layer.isConnected) {
+          window.setTimeout(frame, 380);
+        }
       };
 
       frame();
