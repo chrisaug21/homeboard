@@ -566,7 +566,7 @@
       }
 
       const start = Date.now();
-      const duration = 5400;
+      const duration = 7000;
       const frame = () => {
         if (Date.now() - start >= duration) {
           return;
@@ -578,18 +578,18 @@
           spread: 40,
           startVelocity: 18,
           gravity: 0.7,
-          ticks: 460,
+          ticks: 580,
           scalar: 1.05,
           origin: { x: 0.15 + (Math.random() * 0.7), y: -0.08 },
           shapes: ["star"],
           colors
         });
 
-        window.setTimeout(frame, 340);
+        window.setTimeout(frame, 380);
       };
 
       frame();
-      return waitForCelebration(5800).finally(() => layer.remove());
+      return waitForCelebration(7600).finally(() => layer.remove());
     }
 
     function playCanvasFireworks() {
@@ -761,7 +761,7 @@
         return Promise.resolve();
       }
 
-      const colors = getCelebrationPalette();
+      const colors = getCelebrationPaletteNoWhite();
       const blobs = Array.from({ length: 7 }, (_, index) => {
         const blob = createGsapPiece("todo-gsap-piece todo-gsap-piece--ink");
         const angle = (-0.9 + ((Math.PI * 1.8 * index) / 7)) + ((Math.random() - 0.5) * 0.38);
