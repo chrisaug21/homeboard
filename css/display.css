@@ -37,17 +37,40 @@
     }
 
     .household-name {
+      display: inline-flex;
+      align-items: center;
+      min-width: 0;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .household-name__text {
       font-family: "Righteous", "Bricolage Grotesque", Manrope, sans-serif;
       font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0.13em;
       color: var(--amber);
       opacity: 0.52;
-      pointer-events: none;
-      user-select: none;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .household-logo {
+      display: block;
+      width: 120px;
+      height: auto;
+      max-width: 100%;
+      opacity: 0.9;
+      filter: brightness(0.97);
+    }
+
+    html[data-scheme="slate"] .household-logo {
+      filter: none;
+    }
+
+    html[data-scheme="dark"] .household-logo {
+      filter: sepia(1) hue-rotate(332deg) saturate(2.7) brightness(0.9);
     }
 
     .version-label {

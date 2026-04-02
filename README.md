@@ -107,9 +107,17 @@ js/
   admin.js          — admin mode logic
 manifest.json       — PWA manifest for display mode (landscape, start_url: /)
 manifest-admin.json — PWA manifest for admin mode (portrait, start_url: /admin)
+homeboard_logo.svg  — display footer logo asset used when `assistant_name` is unset
 sw.js               — service worker (cache key: homeboard-v{version})
 netlify.toml        — build config, env var injection, redirect rules
 ```
+
+## Display Footer Branding
+
+- The display footer uses the household's `assistant_name` as the brand label when one is saved, rendered exactly as stored in the Google Font `Righteous`
+- If `assistant_name` is null, missing, or blank, the display footer shows `homeboard_logo.svg` at about `120px` wide instead of text
+- The logo is rendered as an `<img>` and uses its `onerror` fallback to swap back to a text label reading `Homeboard` in the same Righteous styling if the SVG fails to load
+- Logo treatment is scheme-aware: Warm uses a subtle `brightness(0.97)`, Slate uses no filter, and Dark applies a warm gold-toned CSS filter so the mark sits comfortably on the dark footer
 
 ## Environment Variables
 
