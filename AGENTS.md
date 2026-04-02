@@ -111,7 +111,10 @@ netlify.toml        — build + env var injection via sed
 - Todo assignee pills in both admin and display must use a single shared member-color lookup helper sourced from `display_settings.members`; never duplicate the lookup logic, never hardcode per-person colors, and fall back to the neutral pill only when no configured color exists
 - The admin to-do loader must not fail just because household settings fail; load the todo data first, then re-render for member colors if `display_settings.members` arrives later
 - Active incomplete todos with `due_date < today` should use the overdue treatment in both display and admin: red left border, subtle red card tint, and red overdue date-pill text
-- Todo completion celebration animations are display-view only, must be implemented with plain CSS/JS only, and must clean up all temporary DOM/styles after each run
+- Todo completion celebration animations are display-view only and must clean up all temporary DOM/styles after each run
+- Display celebrations load `canvas-confetti@1.9.2` and `gsap@3.12.5` by CDN in `index.html`; confetti burst, star shower, and fireworks use Canvas Confetti, sparkle trail, bubble float, and thumbs up bounce use GSAP, and rainbow flash remains CSS/JS only
+- Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if a CDN script fails to load
+- Celebration particle colors should resolve the active scheme accent at runtime from `getComputedStyle(...).getPropertyValue('--amber')` and mix it with white, bright gold, and fresh green so effects stay scheme-aware without hardcoding one palette
 - The RSVP display guest-list empty state is a centered neutral waiting state with muted blue styling, not a small rose warning/error pill
 - The RSVP display confirmed-guest total should use the pending-blue tone at `0` and the rose tone only when the count is `1+`
 - The admin RSVP `Pending` pill should use the same pending-blue waiting-state treatment as the RSVP display, not amber warning styling

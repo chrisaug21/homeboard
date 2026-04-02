@@ -420,33 +420,352 @@
       return celebrationBag.pop();
     }
 
-    function buildCelebrationPieceMarkup(count) {
-      return Array.from({ length: count }, (_, index) => {
-        const hue = (index * 53 + Math.floor(Math.random() * 35)) % 360;
-        const angle = (360 / count) * index;
-        const distance = 48 + Math.random() * 82;
-        const radians = (angle * Math.PI) / 180;
-        const dx = Math.cos(radians) * distance;
-        const dy = Math.sin(radians) * distance;
-        const drift = -70 + Math.random() * 140;
-        const delay = Math.random() * 180;
-        const duration = 1100 + Math.random() * 650;
-        const size = 8 + Math.random() * 16;
-        const x = Math.random() * 100;
-        const style = [
-          `--piece-hue:${hue}`,
-          `--piece-distance:${distance}px`,
-          `--piece-dx:${dx}px`,
-          `--piece-dy:${dy}px`,
-          `--piece-drift:${drift}px`,
-          `--piece-delay:${delay}ms`,
-          `--piece-duration:${duration}ms`,
-          `--piece-size:${size}px`,
-          `--piece-x:${x}%`
-        ].join(";");
+    function getTodoCelebrationOrigin(cardEl) {
+      const trigger = cardEl?.querySelector(".todo-check-btn") || cardEl;
+      const rect = trigger?.getBoundingClientRect?.();
 
-        return `<span class="todo-celebration-piece" style="${style}"></span>`;
-      }).join("");
+      if (!rect) {
+        return {
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2
+        };
+      }
+
+      return {
+        x: rect.left + (rect.width / 2),
+        y: rect.top + (rect.height / 2)
+      };
+    }
+
+    function createCelebrationLayer(animationName, origin) {
+      const host = document.getElementById("display-app");
+      if (!host) {
+        return null;
+      }
+
+      const layer = document.createElement("div");
+      layer.className = `todo-celebration-layer todo-celebration-layer--${animationName}`;
+      layer.setAttribute("aria-hidden", "true");
+      layer.style.setProperty("--origin-x", `${origin.x}px`);
+      layer.style.setProperty("--origin-y", `${origin.y}px`);
+      host.appendChild(layer);
+      return layer;
+    }
+
+    function waitForCelebration(duration = 1800) {
+      return new Promise((resolve) => {
+        window.setTimeout(resolve, duration);
+      });
+    }
+
+    function getCelebrationPalette() {
+      const styles = getComputedStyle(document.documentElement);
+      const accent = String(styles.getPropertyValue("--amber") || "").trim() || "#b45309";
+      return [accent, "#ffffff", "#fbbf24", "#22c55e"];
+    }
+
+    function createConfettiInstance(layer) {
+      if (!layer || typeof confetti === "undefined") {
+        return null;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.className = "todo-celebration-canvas";
+      layer.appendChild(canvas);
+      return {
+        canvas,
+        fire: confetti.create(canvas, {
+          resize: true,
+          useWorker: true
+        })
+      };
+    }
+
+    function playFallbackParticleBurst(origin) {
+      const layer = createCelebrationLayer("fallback-burst", origin);
+      if (!layer) {
+        return Promise.resolve();
+      }
+
+      const colors = getCelebrationPalette();
+      const particles = Array.from({ length: 14 }, (_, index) => {
+        const particle = document.createElement("span");
+        const angle = (Math.PI * 2 * index) / 14;
+        const distance = 46 + Math.random() * 38;
+        const driftY = 28 + Math.random() * 52;
+        const size = 7 + Math.random() * 8;
+        particle.className = "todo-fallback-particle";
+        particle.style.left = `${origin.x}px`;
+        particle.style.top = `${origin.y}px`;
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        particle.style.background = colors[index % colors.length];
+        particle.style.setProperty("--burst-x", `${Math.cos(angle) * distance}px`);
+        particle.style.setProperty("--burst-y", `${Math.sin(angle) * distance + driftY}px`);
+        particle.style.setProperty("--burst-rotate", `${160 + Math.random() * 180}deg`);
+        layer.appendChild(particle);
+        return particle;
+      });
+
+      return waitForCelebration(1100).finally(() => {
+        particles.forEach((particle) => particle.remove());
+        layer.remove();
+      });
+    }
+
+    function playCanvasConfettiBurst() {
+      const layer = createCelebrationLayer("confetti-burst", {
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2
+      });
+      const instance = createConfettiInstance(layer);
+      const colors = getCelebrationPalette();
+
+      if (!instance) {
+        layer?.remove();
+        return playFallbackParticleBurst({
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2
+        });
+      }
+
+      instance.fire({
+        particleCount: 120,
+        spread: 80,
+        startVelocity: 42,
+        ticks: 220,
+        origin: { x: 0.5, y: 0.48 },
+        colors
+      });
+
+      return waitForCelebration().finally(() => layer.remove());
+    }
+
+    function playCanvasStarShower() {
+      const layer = createCelebrationLayer("star-shower", {
+        x: window.innerWidth / 2,
+        y: 0
+      });
+      const instance = createConfettiInstance(layer);
+      const colors = getCelebrationPalette();
+
+      if (!instance) {
+        layer?.remove();
+        return playFallbackParticleBurst({
+          x: window.innerWidth / 2,
+          y: Math.max(window.innerHeight * 0.22, 120)
+        });
+      }
+
+      const start = Date.now();
+      const duration = 1750;
+      const frame = () => {
+        if (Date.now() - start >= duration) {
+          return;
+        }
+
+        instance.fire({
+          particleCount: 10,
+          angle: 90,
+          spread: 40,
+          startVelocity: 18,
+          gravity: 0.7,
+          ticks: 260,
+          scalar: 1.05,
+          origin: { x: 0.15 + (Math.random() * 0.7), y: -0.08 },
+          shapes: ["star"],
+          colors
+        });
+
+        window.setTimeout(frame, 180);
+      };
+
+      frame();
+      return waitForCelebration(duration + 100).finally(() => layer.remove());
+    }
+
+    function playCanvasFireworks() {
+      const layer = createCelebrationLayer("fireworks", {
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2
+      });
+      const instance = createConfettiInstance(layer);
+      const colors = getCelebrationPalette();
+
+      if (!instance) {
+        layer?.remove();
+        return playFallbackParticleBurst({
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2
+        });
+      }
+
+      const bursts = [
+        { x: 0.16, y: 0.22, delay: 0 },
+        { x: 0.82, y: 0.2, delay: 280 },
+        { x: 0.7, y: 0.52, delay: 560 }
+      ];
+
+      bursts.forEach((burst) => {
+        window.setTimeout(() => {
+          instance.fire({
+            particleCount: 42,
+            spread: 62,
+            startVelocity: 34,
+            ticks: 240,
+            origin: { x: burst.x, y: burst.y },
+            colors
+          });
+        }, burst.delay);
+      });
+
+      return waitForCelebration(1800).finally(() => layer.remove());
+    }
+
+    function createGsapPiece(className, content = "") {
+      const element = document.createElement("span");
+      element.className = className;
+      if (content) {
+        element.textContent = content;
+      }
+      return element;
+    }
+
+    function playGsapSparkleTrail(origin) {
+      if (typeof gsap === "undefined") {
+        return playFallbackParticleBurst(origin);
+      }
+
+      const layer = createCelebrationLayer("sparkle-trail", origin);
+      if (!layer) {
+        return Promise.resolve();
+      }
+      const colors = getCelebrationPalette();
+
+      const pieces = Array.from({ length: 10 }, (_, index) => {
+        const piece = createGsapPiece("todo-gsap-piece todo-gsap-piece--sparkle", index % 2 === 0 ? "✦" : "•");
+        const angle = (Math.PI * 2 * index) / 10;
+        const distance = 54 + Math.random() * 26;
+        piece.style.left = `${origin.x}px`;
+        piece.style.top = `${origin.y}px`;
+        piece.style.color = colors[index % colors.length];
+        layer.appendChild(piece);
+        gsap.fromTo(piece,
+          { x: 0, y: 0, scale: 0.2, opacity: 0 },
+          {
+            x: Math.cos(angle) * distance,
+            y: Math.sin(angle) * distance,
+            scale: 1,
+            opacity: 1,
+            duration: 0.55,
+            ease: "back.out(1.9)"
+          }
+        );
+        gsap.to(piece, {
+          opacity: 0,
+          scale: 0.3,
+          duration: 0.7,
+          delay: 0.7,
+          ease: "power2.out"
+        });
+        return piece;
+      });
+
+      return waitForCelebration(1650).finally(() => {
+        gsap.killTweensOf(pieces);
+        layer.remove();
+      });
+    }
+
+    function playGsapBubbleFloat(origin) {
+      if (typeof gsap === "undefined") {
+        return playFallbackParticleBurst(origin);
+      }
+
+      const layer = createCelebrationLayer("bubble-float", origin);
+      if (!layer) {
+        return Promise.resolve();
+      }
+
+      const colors = getCelebrationPalette();
+      const pieces = Array.from({ length: 7 }, (_, index) => {
+        const piece = createGsapPiece("todo-gsap-piece todo-gsap-piece--bubble");
+        const size = 18 + Math.round(Math.random() * 12);
+        piece.style.left = `${origin.x}px`;
+        piece.style.top = `${origin.y}px`;
+        piece.style.width = `${size}px`;
+        piece.style.height = `${size}px`;
+        piece.style.background = colors[index % colors.length];
+        piece.style.opacity = "0";
+        layer.appendChild(piece);
+        gsap.fromTo(piece,
+          { x: (Math.random() * 18) - 9, y: 0, opacity: 0, scale: 0.55 },
+          {
+            x: (Math.random() * 120) - 60,
+            y: -120 - (Math.random() * 70),
+            opacity: 0.55,
+            scale: 1,
+            duration: 1.55,
+            ease: "power1.out"
+          }
+        );
+        gsap.to(piece, {
+          opacity: 0,
+          duration: 0.55,
+          delay: 1.05,
+          ease: "power1.out"
+        });
+        return piece;
+      });
+
+      return waitForCelebration(1750).finally(() => {
+        gsap.killTweensOf(pieces);
+        layer.remove();
+      });
+    }
+
+    function playGsapThumbsUp(origin) {
+      if (typeof gsap === "undefined") {
+        return playFallbackParticleBurst(origin);
+      }
+
+      const layer = createCelebrationLayer("thumbs-up-bounce", origin);
+      if (!layer) {
+        return Promise.resolve();
+      }
+
+      const thumb = createGsapPiece("todo-thumbs-up", "👍");
+      thumb.style.left = `${origin.x}px`;
+      thumb.style.top = `${origin.y}px`;
+      layer.appendChild(thumb);
+
+      const timeline = gsap.timeline();
+      timeline
+        .fromTo(thumb,
+          { scale: 0, opacity: 0, y: 18 },
+          { scale: 1, opacity: 1, y: -18, duration: 0.48, ease: "back.out(2.5)" }
+        )
+        .to(thumb, { duration: 0.45, y: -22 })
+        .to(thumb, { opacity: 0, y: -72, duration: 0.42, ease: "power2.out" });
+
+      return waitForCelebration(1650).finally(() => {
+        timeline.kill();
+        layer.remove();
+      });
+    }
+
+    function playRainbowFlash() {
+      const layer = createCelebrationLayer("rainbow-flash", {
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2
+      });
+
+      if (!layer) {
+        return Promise.resolve();
+      }
+
+      layer.innerHTML = '<div class="todo-rainbow-sweep"></div>';
+      return waitForCelebration(1500).finally(() => layer.remove());
     }
 
     function playTodoCelebration(cardEl) {
@@ -454,68 +773,27 @@
         return Promise.resolve();
       }
 
-      const host = document.getElementById("display-app");
-      if (!host) {
-        return Promise.resolve();
-      }
-
-      const rect = cardEl.getBoundingClientRect();
       const animationName = getDisplayCelebrationAnimationName();
-      const layer = document.createElement("div");
-      layer.className = `todo-celebration-layer todo-celebration-layer--${animationName}`;
-      layer.setAttribute("aria-hidden", "true");
-      layer.style.setProperty("--origin-x", `${rect.left + (rect.width / 2)}px`);
-      layer.style.setProperty("--origin-y", `${rect.top + (rect.height / 2)}px`);
+      const origin = getTodoCelebrationOrigin(cardEl);
 
       switch (animationName) {
         case "confetti-burst":
-          layer.innerHTML = `<div class="todo-celebration-origin">${buildCelebrationPieceMarkup(22)}</div>`;
-          break;
+          return playCanvasConfettiBurst();
         case "star-shower":
-          layer.innerHTML = buildCelebrationPieceMarkup(18);
-          break;
+          return playCanvasStarShower();
         case "fireworks":
-          layer.innerHTML = `
-            <div class="todo-firework todo-firework--one">${buildCelebrationPieceMarkup(10)}</div>
-            <div class="todo-firework todo-firework--two">${buildCelebrationPieceMarkup(10)}</div>
-            <div class="todo-firework todo-firework--three">${buildCelebrationPieceMarkup(10)}</div>
-          `;
-          break;
+          return playCanvasFireworks();
         case "bubble-float":
-          layer.innerHTML = `<div class="todo-celebration-origin">${buildCelebrationPieceMarkup(14)}</div>`;
-          break;
+          return playGsapBubbleFloat(origin);
         case "rainbow-flash":
-          layer.innerHTML = `<div class="todo-rainbow-sweep"></div>`;
-          break;
+          return playRainbowFlash();
         case "thumbs-up-bounce":
-          layer.innerHTML = `<div class="todo-thumbs-up">👍</div>`;
-          break;
+          return playGsapThumbsUp(origin);
         case "sparkle-trail":
-          layer.innerHTML = `<div class="todo-celebration-origin">${buildCelebrationPieceMarkup(16)}</div>`;
-          break;
+          return playGsapSparkleTrail(origin);
         default:
-          return Promise.resolve();
+          return playRainbowFlash();
       }
-
-      host.appendChild(layer);
-
-      return new Promise((resolve) => {
-        const cleanup = () => {
-          if (layer.parentNode) {
-            layer.remove();
-          }
-          resolve();
-        };
-
-        const maxDuration = 1900;
-        const cleanupId = window.setTimeout(cleanup, maxDuration);
-        layer.addEventListener("animationend", (event) => {
-          if (event.target === layer && layer.classList.contains("todo-celebration-layer--rainbow-flash")) {
-            window.clearTimeout(cleanupId);
-            cleanup();
-          }
-        });
-      });
     }
 
     function renderTodoItems(todoItems) {
