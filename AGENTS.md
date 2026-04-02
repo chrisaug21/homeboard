@@ -96,6 +96,10 @@ netlify.toml        — build + env var injection via sed
 - Toasts must clear the fixed admin nav so navigation stays tappable while a toast is visible
 - The display footer assistant label (`#household-name`) uses the Google Font `Righteous`; load it from Google Fonts in `index.html` and keep fallback fonts in CSS
 - The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not force title case or uppercase it in JS or CSS
+- The display footer screen nav uses small tappable rounded-square icon buttons instead of dash notches; inactive buttons stay muted/outline and the active screen button uses the primary accent fill
+- Display footer icon mapping: `todos` = `list-todo`, `meals` = `utensils-crossed`, `upcoming_calendar` = calendar icon with dynamic `display_settings.upcoming_days` overlay (default `7`), `monthly_calendar` = same calendar icon with `30` overlay, `countdowns` = `hourglass`, `rsvp` = `heart`, fallback = generic layout/grid icon
+- All countdown display screens share one footer hourglass button; tapping it always jumps to the first countdown in rotation order, and the hourglass stays active while any countdown screen is visible
+- Tapping a display footer nav button should pause/reset auto-rotation immediately and resume from that destination screen using its configured `display_settings.timer_intervals` value; never resume with a hardcoded duration
 - The display to-do screen must scroll vertically, not via CSS columns or any layout that conflicts with horizontal screen-swipe gestures
 - The Settings screen sync row should keep a little breathing room below its helper text; do not let the sync button/timestamp sit flush against the paragraph above
 - Admin loading states should use skeleton loaders that roughly match the final card/form layout instead of plain `Loading…` text

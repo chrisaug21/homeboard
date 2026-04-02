@@ -104,6 +104,10 @@ netlify.toml        — build config, env var injection via sed
 - The admin nav is a fixed bottom bar pinned flush to the bottom edge of the viewport; keep toast positioning above it so nav actions stay accessible
 - The display footer assistant label (`#household-name`) uses the Google Font `Righteous`, loaded from Google Fonts in `index.html`
 - The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not re-case it in JS or force uppercase in CSS
+- The display footer screen nav uses icon buttons, not dash/notch pagination. Use small rounded-square buttons with muted/outline inactive styling and the primary accent fill for the active screen
+- Display footer icon mapping: `todos` = `list-todo`, `meals` = `utensils-crossed`, `upcoming_calendar` = calendar icon with centered `display_settings.upcoming_days` overlay (default `7`), `monthly_calendar` = the same calendar icon with centered `30` overlay, `countdowns` = `hourglass`, `rsvp` = `heart`, fallback = generic layout/grid icon
+- All countdown screens collapse into one footer nav button. Tapping that hourglass always jumps to the first countdown in the current rotation order, and the button remains active across every countdown screen
+- When a display footer nav button is tapped, auto-rotation should reset immediately and resume using that destination screen's configured `display_settings.timer_intervals` value, never a hardcoded fallback unless the screen has no saved timer
 - The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
 - The Settings screen sync row should keep visible spacing below its helper copy so the sync button/timestamp do not crowd the paragraph above
 - Admin tabs should use skeleton loaders that approximate the final layout while data is loading, especially on the RSVP screen
