@@ -1097,7 +1097,7 @@
       border: 1px solid rgba(124, 96, 69, 0.12);
       border-left: 5px solid transparent;
       min-width: 0;
-      transition: opacity 0.25s, transform 0.2s;
+      transition: opacity 0.2s, transform 0.2s;
       break-inside: avoid;
     }
 
@@ -1281,7 +1281,7 @@
     }
 
     .todo-celebration-layer--rainbow-flash .todo-rainbow-sweep {
-      animation: todoRainbowSweep 2000ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      animation: todoRainbowSweep 3400ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
 
     .todo-rainbow-sweep {
@@ -1313,10 +1313,10 @@
         opacity: 0;
         transform: translateX(-120%);
       }
-      14% {
+      16% {
         opacity: 1;
       }
-      70% {
+      72% {
         opacity: 1;
       }
       100% {

@@ -27,6 +27,7 @@
     let weekOffset = 0;
     let lastWideFetch = 0; // ms timestamp of last 24-month fetch
     let initialLoadComplete = false;
+    const TODO_CELEBRATION_FADE_DELAY_MS = 450;
     const pendingScreens = new Set();
     const displayScreenRegistry = {
       upcoming_calendar: track.querySelector(".screen--calendar"),
@@ -507,7 +508,7 @@
         return particle;
       });
 
-      return waitForCelebration(1100).finally(() => {
+      return waitForCelebration(1500).finally(() => {
         particles.forEach((particle) => particle.remove());
         layer.remove();
       });
@@ -538,7 +539,7 @@
         colors
       });
 
-      return waitForCelebration(3400).finally(() => layer.remove());
+      return waitForCelebration(4400).finally(() => layer.remove());
     }
 
     function playCanvasStarShower() {
@@ -558,7 +559,7 @@
       }
 
       const start = Date.now();
-      const duration = 3200;
+      const duration = 4700;
       const frame = () => {
         if (Date.now() - start >= duration) {
           return;
@@ -577,11 +578,11 @@
           colors
         });
 
-        window.setTimeout(frame, 260);
+        window.setTimeout(frame, 340);
       };
 
       frame();
-      return waitForCelebration(duration + 350).finally(() => layer.remove());
+      return waitForCelebration(5000).finally(() => layer.remove());
     }
 
     function playCanvasFireworks() {
@@ -602,8 +603,8 @@
 
       const bursts = [
         { x: 0.16, y: 0.22, delay: 0 },
-        { x: 0.82, y: 0.2, delay: 500 },
-        { x: 0.7, y: 0.52, delay: 1000 }
+        { x: 0.82, y: 0.2, delay: 900 },
+        { x: 0.7, y: 0.52, delay: 1800 }
       ];
 
       bursts.forEach((burst) => {
@@ -619,7 +620,7 @@
         }, burst.delay);
       });
 
-      return waitForCelebration(3400).finally(() => layer.remove());
+      return waitForCelebration(4500).finally(() => layer.remove());
     }
 
     function createGsapPiece(className, content = "") {
@@ -657,21 +658,21 @@
             y: Math.sin(angle) * distance,
             scale: 1,
             opacity: 1,
-            duration: 0.75,
+            duration: 0.95,
             ease: "back.out(1.9)"
           }
         );
         gsap.to(piece, {
           opacity: 0,
           scale: 0.3,
-          duration: 1,
-          delay: 1.2,
+          duration: 1.35,
+          delay: 1.8,
           ease: "power2.out"
         });
         return piece;
       });
 
-      return waitForCelebration(2700).finally(() => {
+      return waitForCelebration(3400).finally(() => {
         gsap.killTweensOf(pieces);
         layer.remove();
       });
@@ -702,23 +703,23 @@
           { x: (Math.random() * 18) - 9, y: 0, opacity: 0, scale: 0.55 },
           {
             x: (Math.random() * 120) - 60,
-            y: -120 - (Math.random() * 70),
+            y: -Math.max(window.innerHeight * 0.72, 420) - (Math.random() * 70),
             opacity: 0.55,
             scale: 1,
-            duration: 2.35,
+            duration: 3.35,
             ease: "power1.out"
           }
         );
         gsap.to(piece, {
           opacity: 0,
-          duration: 0.7,
-          delay: 1.75,
+          duration: 0.9,
+          delay: 2.75,
           ease: "power1.out"
         });
         return piece;
       });
 
-      return waitForCelebration(2850).finally(() => {
+      return waitForCelebration(4400).finally(() => {
         gsap.killTweensOf(pieces);
         layer.remove();
       });
@@ -743,12 +744,15 @@
       timeline
         .fromTo(thumb,
           { scale: 0, opacity: 0, y: 18 },
-          { scale: 1, opacity: 1, y: -18, duration: 0.6, ease: "back.out(2.5)" }
+          { scale: 1, opacity: 1, y: -18, duration: 0.7, ease: "back.out(2.5)" }
         )
-        .to(thumb, { duration: 1.1, y: -22 })
-        .to(thumb, { opacity: 0, y: -72, duration: 0.6, ease: "power2.out" });
+        .to(thumb, { duration: 1.7, y: -22 })
+        .to(thumb, { duration: 0.42, rotation: -10, y: -26, ease: "power1.inOut" })
+        .to(thumb, { duration: 0.42, rotation: 10, y: -21, ease: "power1.inOut" })
+        .to(thumb, { duration: 0.36, rotation: 0, y: -24, ease: "power1.inOut" })
+        .to(thumb, { opacity: 0, y: -78, duration: 0.82, ease: "power2.out" });
 
-      return waitForCelebration(2800).finally(() => {
+      return waitForCelebration(4000).finally(() => {
         timeline.kill();
         layer.remove();
       });
@@ -765,7 +769,7 @@
       }
 
       layer.innerHTML = '<div class="todo-rainbow-sweep"></div>';
-      return waitForCelebration(2050).finally(() => layer.remove());
+      return waitForCelebration(3400).finally(() => layer.remove());
     }
 
     function playTodoCelebration(cardEl) {
@@ -863,7 +867,10 @@
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
+
       cardEl.classList.add("is-completing");
+      resetAutoRotate();
+
       const { error } = await client
         .from("todos")
         .update({ archived_at: new Date().toISOString() })
@@ -875,15 +882,23 @@
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
-      await playTodoCelebration(cardEl);
-      cardEl.classList.add("is-done");
-      cardEl.addEventListener("transitionend", () => {
-        cardEl.remove();
-        const list = document.getElementById("todo-list");
-        if (list && !list.querySelector("[data-todo-id]")) {
-          renderTodoItems([]);
+
+      playTodoCelebration(cardEl).catch(() => {});
+
+      window.setTimeout(() => {
+        if (!cardEl.isConnected) {
+          return;
         }
-      }, { once: true });
+
+        cardEl.classList.add("is-done");
+        cardEl.addEventListener("transitionend", () => {
+          cardEl.remove();
+          const list = document.getElementById("todo-list");
+          if (list && !list.querySelector("[data-todo-id]")) {
+            renderTodoItems([]);
+          }
+        }, { once: true });
+      }, TODO_CELEBRATION_FADE_DELAY_MS);
     }
 
     async function fetchTodos() {

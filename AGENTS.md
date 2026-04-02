@@ -87,7 +87,7 @@ netlify.toml        — build + env var injection via sed
 - Never show `meal_plan` rows where `user_id` is set in Display Mode
 - Never hardcode `SUPABASE_URL` or `SUPABASE_KEY` — injected by Netlify at build
 - sw.js cache prefix must be `homeboard-v##`
-- When pushing any change: bump `VERSION` in `js/shared.js` (patch for fixes, minor for features), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — document new tables, env vars, or screens as they are added
+- When pushing any change: always increment `VERSION` in `js/shared.js` by at least a patch bump (use a minor bump for features when appropriate), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — document new tables, env vars, or screens as they are added
 
 ## Styling Conventions
 - Shared corner radius tokens live in `:root` in `index.html`: use `--button-radius` for admin/display buttons and `--tag-radius` for pills, badges, and other tag-like labels
@@ -115,6 +115,8 @@ netlify.toml        — build + env var injection via sed
 - Display celebrations load `canvas-confetti@1.9.2` and `gsap@3.12.5` by CDN in `index.html`; confetti burst, star shower, and fireworks use Canvas Confetti, sparkle trail, bubble float, and thumbs up bounce use GSAP, and rainbow flash remains CSS/JS only
 - Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if a CDN script fails to load
 - Celebration particle colors should resolve the active scheme accent at runtime from `getComputedStyle(...).getPropertyValue('--amber')` and mix it with white, bright gold, and fresh green so effects stay scheme-aware without hardcoding one palette
+- Display todo completion timing should be: checkmark immediately, item fade/removal starts roughly 10-15% into the celebration with a quick ~200 ms opacity transition, and the celebration continues independently as a send-off
+- Checking off a display todo must reset the auto-rotation timer using the same `resetAutoRotate()` path as other display interactions so the screen does not rotate away mid-celebration
 - The RSVP display guest-list empty state is a centered neutral waiting state with muted blue styling, not a small rose warning/error pill
 - The RSVP display confirmed-guest total should use the pending-blue tone at `0` and the rose tone only when the count is `1+`
 - The admin RSVP `Pending` pill should use the same pending-blue waiting-state treatment as the RSVP display, not amber warning styling
