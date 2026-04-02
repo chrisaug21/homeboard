@@ -169,7 +169,7 @@
       --rose: #fb7185;
       --rose-soft: rgba(251, 113, 133, 0.14);
       --shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
-      --display-nav-active-bg: var(--color-accent-subtle);
+      --display-nav-active-bg: var(--color-accent);
       --display-nav-active-border: transparent;
     }
 
