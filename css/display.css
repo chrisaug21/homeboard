@@ -1958,7 +1958,7 @@
       min-width: var(--display-nav-button-width);
       height: var(--display-nav-button-height);
       padding: 0;
-      border-radius: var(--display-nav-button-radius);
+      border-radius: var(--button-radius);
       border: 1px solid rgba(124, 96, 69, 0.16);
       background: rgba(255, 253, 247, 0.82);
       color: var(--muted);
@@ -2024,7 +2024,7 @@
       font-weight: 800;
       line-height: 1;
       letter-spacing: -0.01em;
-      color: currentColor;
+      color: currentcolor;
     }
 
     .progress-bar > .display-nav > .display-nav-button .display-nav-icon--calendar .display-nav-badge {
