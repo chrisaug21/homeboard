@@ -1931,7 +1931,8 @@
     .display-nav {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      justify-self: center;
+      gap: var(--display-nav-button-gap);
       padding: 4px 8px;
       border-radius: 999px;
       background: rgba(255, 250, 243, 0.68);
@@ -1941,10 +1942,11 @@
     }
 
     .display-nav-button {
-      width: 28px;
-      height: 28px;
+      width: var(--display-nav-button-width);
+      min-width: var(--display-nav-button-width);
+      height: var(--display-nav-button-height);
       padding: 0;
-      border-radius: 8px;
+      border-radius: var(--display-nav-button-radius);
       border: 1px solid rgba(124, 96, 69, 0.16);
       background: rgba(255, 253, 247, 0.82);
       color: var(--muted);
@@ -1968,8 +1970,10 @@
     }
 
     .display-nav-button.is-active {
-      background: var(--amber);
-      border-color: var(--amber);
+      width: var(--display-nav-button-active-width);
+      min-width: var(--display-nav-button-active-width);
+      background: #ed6700;
+      border-color: #ed6700;
       color: #fff7ed;
       box-shadow: 0 6px 14px rgba(180, 83, 9, 0.22);
     }
