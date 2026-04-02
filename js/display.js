@@ -1883,7 +1883,7 @@
 
     function updateHouseholdName(config) {
       const customName = config && config.assistant_name && config.assistant_name.trim()
-        ? config.assistant_name.trim()
+        ? config.assistant_name
         : "";
 
       if (customName) {
