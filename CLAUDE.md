@@ -118,6 +118,8 @@ netlify.toml        — build config, env var injection via sed
 - Admin tabs should use skeleton loaders that approximate the final layout while data is loading, especially on the RSVP screen
 - Todo assignee pills in both admin and display should use one shared member-color lookup helper sourced from `display_settings.members`; never duplicate the lookup logic, never hardcode per-person colors, and use the neutral fallback only when no configured color exists
 - The admin to-do screen must not fail just because household settings fail; render the todo data first, then re-render for member colors if `display_settings.members` arrives afterward
+- Active incomplete todos with `due_date < today` should show the overdue treatment on both display and admin: red left border, subtle red card tint, and red overdue date-pill text
+- Todo completion celebration animations are display-view only, should use plain CSS/JS with no external libraries, and must fully clean up any temporary DOM they create
 - The RSVP display guest-list empty state is a centered neutral waiting state in the pending-blue tone, with a matching zero-count color for the confirmed guest total
 - The admin RSVP `Pending` pill should use the same pending-blue waiting-state styling as the RSVP display, not the amber warning tone
 - Hide pre-today Google Calendar events from the admin countdown source-event picker; do not delete or mutate saved countdown rows

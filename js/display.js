@@ -22,6 +22,7 @@
     let cachedSupabaseCountdowns = null;
     let cachedCalendarCountdowns = [];
     let cachedWeddingSnapshot = null;
+    let celebrationBag = [];
     let monthOffset = 0;
     let weekOffset = 0;
     let lastWideFetch = 0; // ms timestamp of last 24-month fetch
@@ -391,8 +392,130 @@
         id: todo.id,
         title: todo.title || "Untitled task",
         assignee: todo.assignee || "",
-        duePill: getTodoDuePill(todo.due_date)
+        duePill: getTodoDuePill(todo.due_date),
+        isOverdue: isTodoOverdue(todo.due_date)
       };
+    }
+
+    function getDisplayCelebrationAnimationName() {
+      if (!celebrationBag.length) {
+        celebrationBag = [
+          "confetti-burst",
+          "star-shower",
+          "fireworks",
+          "bubble-float",
+          "rainbow-flash",
+          "thumbs-up-bounce",
+          "sparkle-trail"
+        ];
+
+        for (let index = celebrationBag.length - 1; index > 0; index -= 1) {
+          const swapIndex = Math.floor(Math.random() * (index + 1));
+          const current = celebrationBag[index];
+          celebrationBag[index] = celebrationBag[swapIndex];
+          celebrationBag[swapIndex] = current;
+        }
+      }
+
+      return celebrationBag.pop();
+    }
+
+    function buildCelebrationPieceMarkup(count) {
+      return Array.from({ length: count }, (_, index) => {
+        const hue = (index * 53 + Math.floor(Math.random() * 35)) % 360;
+        const angle = (360 / count) * index;
+        const distance = 48 + Math.random() * 82;
+        const radians = (angle * Math.PI) / 180;
+        const dx = Math.cos(radians) * distance;
+        const dy = Math.sin(radians) * distance;
+        const drift = -70 + Math.random() * 140;
+        const delay = Math.random() * 180;
+        const duration = 1100 + Math.random() * 650;
+        const size = 8 + Math.random() * 16;
+        const x = Math.random() * 100;
+        const style = [
+          `--piece-hue:${hue}`,
+          `--piece-distance:${distance}px`,
+          `--piece-dx:${dx}px`,
+          `--piece-dy:${dy}px`,
+          `--piece-drift:${drift}px`,
+          `--piece-delay:${delay}ms`,
+          `--piece-duration:${duration}ms`,
+          `--piece-size:${size}px`,
+          `--piece-x:${x}%`
+        ].join(";");
+
+        return `<span class="todo-celebration-piece" style="${style}"></span>`;
+      }).join("");
+    }
+
+    function playTodoCelebration(cardEl) {
+      if (!cardEl || document.documentElement.getAttribute("data-mode") !== "display") {
+        return Promise.resolve();
+      }
+
+      const host = document.getElementById("display-app");
+      if (!host) {
+        return Promise.resolve();
+      }
+
+      const rect = cardEl.getBoundingClientRect();
+      const animationName = getDisplayCelebrationAnimationName();
+      const layer = document.createElement("div");
+      layer.className = `todo-celebration-layer todo-celebration-layer--${animationName}`;
+      layer.setAttribute("aria-hidden", "true");
+      layer.style.setProperty("--origin-x", `${rect.left + (rect.width / 2)}px`);
+      layer.style.setProperty("--origin-y", `${rect.top + (rect.height / 2)}px`);
+
+      switch (animationName) {
+        case "confetti-burst":
+          layer.innerHTML = `<div class="todo-celebration-origin">${buildCelebrationPieceMarkup(22)}</div>`;
+          break;
+        case "star-shower":
+          layer.innerHTML = buildCelebrationPieceMarkup(18);
+          break;
+        case "fireworks":
+          layer.innerHTML = `
+            <div class="todo-firework todo-firework--one">${buildCelebrationPieceMarkup(10)}</div>
+            <div class="todo-firework todo-firework--two">${buildCelebrationPieceMarkup(10)}</div>
+            <div class="todo-firework todo-firework--three">${buildCelebrationPieceMarkup(10)}</div>
+          `;
+          break;
+        case "bubble-float":
+          layer.innerHTML = `<div class="todo-celebration-origin">${buildCelebrationPieceMarkup(14)}</div>`;
+          break;
+        case "rainbow-flash":
+          layer.innerHTML = `<div class="todo-rainbow-sweep"></div>`;
+          break;
+        case "thumbs-up-bounce":
+          layer.innerHTML = `<div class="todo-thumbs-up">👍</div>`;
+          break;
+        case "sparkle-trail":
+          layer.innerHTML = `<div class="todo-celebration-origin">${buildCelebrationPieceMarkup(16)}</div>`;
+          break;
+        default:
+          return Promise.resolve();
+      }
+
+      host.appendChild(layer);
+
+      return new Promise((resolve) => {
+        const cleanup = () => {
+          if (layer.parentNode) {
+            layer.remove();
+          }
+          resolve();
+        };
+
+        const maxDuration = 1900;
+        const cleanupId = window.setTimeout(cleanup, maxDuration);
+        layer.addEventListener("animationend", (event) => {
+          if (event.target === layer && layer.classList.contains("todo-celebration-layer--rainbow-flash")) {
+            window.clearTimeout(cleanupId);
+            cleanup();
+          }
+        });
+      });
     }
 
     function renderTodoItems(todoItems) {
@@ -416,8 +539,9 @@
           ? `<span class="todo-due-pill ${escapeHtml(todo.duePill.cssClass)}">${escapeHtml(todo.duePill.label)}</span>`
           : "";
         const assignee = todo.assignee ? getAssigneeMarkup(todo.assignee) : "";
+        const overdueClass = todo.isOverdue ? " todo-card--overdue" : "";
         return `
-          <article class="todo-card" data-todo-id="${escapeHtml(todo.id)}">
+          <article class="todo-card${overdueClass}" data-todo-id="${escapeHtml(todo.id)}">
             <button class="todo-check-btn" type="button" aria-label="Complete ${escapeHtml(todo.title)}">
               <div class="todo-check">
                 <svg class="todo-check-icon" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -472,6 +596,7 @@
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
+      await playTodoCelebration(cardEl);
       cardEl.classList.add("is-done");
       cardEl.addEventListener("transitionend", () => {
         cardEl.remove();

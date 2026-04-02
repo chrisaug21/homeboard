@@ -285,6 +285,11 @@
       background: rgba(255, 255, 255, 0.06);
       border-color: var(--border);
     }
+    html[data-scheme="dark"] .todo-card--overdue {
+      background: rgba(251, 113, 133, 0.12);
+      border-left-color: #fb7185;
+      box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.08);
+    }
     html[data-scheme="dark"] .todo-assignee--other {
       background: rgba(255, 255, 255, 0.1);
       color: #e7ddd5;
@@ -1090,9 +1095,16 @@
       border-radius: var(--radius-md);
       background: rgba(255, 255, 255, 0.56);
       border: 1px solid rgba(124, 96, 69, 0.12);
+      border-left: 5px solid transparent;
       min-width: 0;
       transition: opacity 0.25s, transform 0.2s;
       break-inside: avoid;
+    }
+
+    .todo-card--overdue {
+      background: rgba(190, 18, 60, 0.08);
+      border-left-color: #be123c;
+      box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.06);
     }
 
     .todo-card.is-completing {
@@ -1221,6 +1233,259 @@
     .todo-due-pill--future {
       background: rgba(121, 106, 94, 0.1);
       color: var(--muted);
+    }
+
+    .todo-celebration-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      pointer-events: none;
+      overflow: hidden;
+      animation: todoCelebrationLayerFade 1850ms ease-out forwards;
+    }
+
+    .todo-celebration-origin {
+      position: absolute;
+      left: var(--origin-x);
+      top: var(--origin-y);
+      width: 0;
+      height: 0;
+    }
+
+    .todo-celebration-piece {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: var(--piece-size, 12px);
+      height: var(--piece-size, 12px);
+      background: hsl(var(--piece-hue, 32) 90% 60%);
+      opacity: 0;
+    }
+
+    .todo-celebration-layer--confetti-burst .todo-celebration-piece {
+      border-radius: 3px;
+      animation: todoConfettiBurst var(--piece-duration, 1400ms) cubic-bezier(0.18, 0.84, 0.28, 1) var(--piece-delay, 0ms) forwards;
+    }
+
+    .todo-celebration-layer--star-shower .todo-celebration-piece,
+    .todo-celebration-layer--sparkle-trail .todo-celebration-piece {
+      background: transparent;
+    }
+
+    .todo-celebration-layer--star-shower .todo-celebration-piece::before,
+    .todo-celebration-layer--sparkle-trail .todo-celebration-piece::before {
+      content: "✦";
+      display: block;
+      font-size: var(--piece-size, 14px);
+      line-height: 1;
+      color: hsl(var(--piece-hue, 45) 95% 72%);
+      text-shadow: 0 0 12px rgba(255, 223, 128, 0.38);
+    }
+
+    .todo-celebration-layer--star-shower .todo-celebration-piece {
+      left: var(--piece-x);
+      top: -8%;
+      animation: todoStarShower var(--piece-duration, 1600ms) linear var(--piece-delay, 0ms) forwards;
+    }
+
+    .todo-firework {
+      position: absolute;
+      width: 0;
+      height: 0;
+    }
+
+    .todo-firework--one {
+      left: 16%;
+      top: 18%;
+    }
+
+    .todo-firework--two {
+      right: 18%;
+      top: 16%;
+    }
+
+    .todo-firework--three {
+      right: 28%;
+      bottom: 24%;
+    }
+
+    .todo-celebration-layer--fireworks .todo-celebration-piece {
+      border-radius: 999px;
+      animation: todoFireworkBurst var(--piece-duration, 1200ms) ease-out var(--piece-delay, 0ms) forwards;
+      box-shadow: 0 0 10px hsla(var(--piece-hue, 24) 90% 65% / 0.5);
+    }
+
+    .todo-celebration-layer--bubble-float .todo-celebration-piece {
+      border-radius: 999px;
+      border: 2px solid hsla(var(--piece-hue, 200) 90% 70% / 0.6);
+      background: hsla(var(--piece-hue, 200) 90% 82% / 0.18);
+      box-shadow: inset -3px -3px 0 hsla(var(--piece-hue, 200) 90% 95% / 0.35);
+      animation: todoBubbleFloat var(--piece-duration, 1500ms) ease-out var(--piece-delay, 0ms) forwards;
+    }
+
+    .todo-celebration-layer--rainbow-flash {
+      animation: none;
+    }
+
+    .todo-rainbow-sweep {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(105deg,
+          transparent 0%,
+          rgba(255, 0, 85, 0.12) 18%,
+          rgba(255, 145, 0, 0.16) 30%,
+          rgba(255, 214, 10, 0.18) 42%,
+          rgba(61, 197, 91, 0.16) 54%,
+          rgba(14, 165, 233, 0.18) 66%,
+          rgba(124, 58, 237, 0.16) 78%,
+          transparent 100%);
+      transform: translateX(-120%);
+      opacity: 0;
+      animation: todoRainbowSweep 1400ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .todo-thumbs-up {
+      position: absolute;
+      left: var(--origin-x);
+      top: var(--origin-y);
+      font-size: clamp(54px, 8vw, 88px);
+      line-height: 1;
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(0 14px 28px rgba(48, 38, 29, 0.18));
+      animation: todoThumbsUpBounce 1500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .todo-celebration-layer--sparkle-trail .todo-celebration-piece {
+      animation: todoSparkleTrail var(--piece-duration, 1250ms) ease-out var(--piece-delay, 0ms) forwards;
+    }
+
+    @keyframes todoCelebrationLayerFade {
+      0%, 75% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    @keyframes todoConfettiBurst {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      12% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform:
+          translate(
+            calc(-50% + var(--piece-dx)),
+            calc(-50% + var(--piece-dy) + 90px)
+          )
+          rotate(260deg);
+      }
+    }
+
+    @keyframes todoStarShower {
+      0% {
+        opacity: 0;
+        transform: translate3d(0, -20px, 0) scale(0.7);
+      }
+      12% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate3d(var(--piece-drift), 110vh, 0) scale(1.08);
+      }
+    }
+
+    @keyframes todoFireworkBurst {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.2);
+      }
+      15% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform:
+          translate(
+            calc(-50% + var(--piece-dx)),
+            calc(-50% + var(--piece-dy))
+          )
+          scale(0.75);
+      }
+    }
+
+    @keyframes todoBubbleFloat {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.4);
+      }
+      14% {
+        opacity: 0.9;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--piece-drift)), calc(-50% - 170px)) scale(1.12);
+      }
+    }
+
+    @keyframes todoRainbowSweep {
+      0% {
+        opacity: 0;
+        transform: translateX(-120%);
+      }
+      14% {
+        opacity: 1;
+      }
+      70% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(120%);
+      }
+    }
+
+    @keyframes todoThumbsUpBounce {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.2);
+      }
+      20% {
+        opacity: 1;
+        transform: translate(-50%, calc(-50% - 22px)) scale(1.06);
+      }
+      36% {
+        transform: translate(-50%, calc(-50% - 6px)) scale(0.94);
+      }
+      58% {
+        transform: translate(-50%, calc(-50% - 18px)) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, calc(-50% - 74px)) scale(0.72);
+      }
+    }
+
+    @keyframes todoSparkleTrail {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.35);
+      }
+      16% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform:
+          translate(
+            calc(-50% + var(--piece-dx)),
+            calc(-50% + var(--piece-dy))
+          )
+          scale(1.1);
+      }
     }
 
     /* Kept for RSVP screen — do not remove */

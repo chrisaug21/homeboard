@@ -691,6 +691,9 @@
     function renderAdminTodoCard(todo, options) {
       const title = escapeHtml(todo.title || "Untitled task");
       const assignee = todo.assignee ? escapeHtml(todo.assignee) : "Unassigned";
+      const overdueClass = options.showComplete && isTodoOverdue(todo.due_date)
+        ? " admin-todo-card--overdue"
+        : "";
 
       // Active cards use the urgency-coded pill from display view; archived use plain date.
       let dueMarkup = "";
@@ -712,7 +715,7 @@
 
       if (options.showComplete) {
         return `
-          <article class="admin-todo-card admin-todo-card--active" data-todo-id="${escapeHtml(todo.id)}" role="button" tabindex="0" aria-label="Edit: ${title}">
+          <article class="admin-todo-card admin-todo-card--active${overdueClass}" data-todo-id="${escapeHtml(todo.id)}" role="button" tabindex="0" aria-label="Edit: ${title}">
             <button class="todo-check-btn" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Complete ${title}">
               <div class="todo-check">
                 <svg class="todo-check-icon" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

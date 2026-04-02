@@ -400,7 +400,14 @@
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.78);
       border: 1px solid rgba(124, 96, 69, 0.12);
+      border-left: 5px solid transparent;
       transition: opacity 0.25s, transform 0.2s;
+    }
+
+    .admin-todo-card--overdue {
+      background: rgba(190, 18, 60, 0.08);
+      border-left-color: #be123c;
+      box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.06);
     }
 
     /* Active cards: checkbox on the left, body on the right */
@@ -1923,6 +1930,12 @@
       background: rgba(255, 255, 255, 0.06);
       border-color: rgba(255, 240, 220, 0.11);
       color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-todo-card--overdue {
+      background: rgba(251, 113, 133, 0.12);
+      border-left-color: #fb7185;
+      box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.08);
     }
 
     html[data-scheme="dark"] .admin-rsvp-card,
