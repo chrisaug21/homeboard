@@ -406,7 +406,6 @@
           "star-shower",
           "fireworks",
           "bubble-float",
-          "rainbow-flash",
           "thumbs-up-bounce",
           "sparkle-trail",
           "ink-splash"
@@ -465,6 +464,12 @@
       const styles = getComputedStyle(document.documentElement);
       const accent = String(styles.getPropertyValue("--amber") || "").trim() || "#b45309";
       return [accent, "#ffffff", "#fbbf24", "#22c55e"];
+    }
+
+    function getCelebrationPaletteNoWhite() {
+      const styles = getComputedStyle(document.documentElement);
+      const accent = String(styles.getPropertyValue("--amber") || "").trim() || "#b45309";
+      return [accent, "#fbbf24", "#f97316", "#14b8a6", "#a855f7", "#22c55e"];
     }
 
     function createConfettiInstance(layer) {
@@ -561,7 +566,7 @@
       }
 
       const start = Date.now();
-      const duration = 4700;
+      const duration = 5400;
       const frame = () => {
         if (Date.now() - start >= duration) {
           return;
@@ -573,7 +578,7 @@
           spread: 40,
           startVelocity: 18,
           gravity: 0.7,
-          ticks: 340,
+          ticks: 460,
           scalar: 1.05,
           origin: { x: 0.15 + (Math.random() * 0.7), y: -0.08 },
           shapes: ["star"],
@@ -584,7 +589,7 @@
       };
 
       frame();
-      return waitForCelebration(5000).finally(() => layer.remove());
+      return waitForCelebration(5800).finally(() => layer.remove());
     }
 
     function playCanvasFireworks() {
@@ -593,7 +598,7 @@
         y: window.innerHeight / 2
       });
       const instance = createConfettiInstance(layer);
-      const colors = getCelebrationPalette();
+      const colors = getCelebrationPaletteNoWhite();
 
       if (!instance) {
         layer?.remove();
@@ -664,7 +669,7 @@
         return Promise.resolve();
       }
 
-      const colors = getCelebrationPalette();
+      const colors = getCelebrationPaletteNoWhite();
       const pieces = Array.from({ length: 7 }, (_, index) => {
         const piece = createGsapPiece("todo-gsap-piece todo-gsap-piece--bubble");
         const size = 18 + Math.round(Math.random() * 12);
@@ -742,36 +747,6 @@
 
       return waitForCelebration(4000).finally(() => {
         timeline.kill();
-        layer.remove();
-      });
-    }
-
-    function playScreenPopHeartbeat(cardEl) {
-      const layer = createCelebrationLayer("screen-pop-heartbeat", {
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2
-      });
-      if (!layer) {
-        return Promise.resolve();
-      }
-      const panel = cardEl?.closest(".panel");
-      const accent = String(getComputedStyle(document.documentElement).getPropertyValue("--amber") || "").trim() || "#b45309";
-      layer.innerHTML = Array.from({ length: 3 }, (_, index) => `
-        <div
-          class="todo-heartbeat-ring"
-          style="border-color:${escapeHtml(accent)};animation-delay:${180 + (index * 180)}ms">
-        </div>
-      `).join("");
-      if (panel) {
-        panel.classList.remove("todo-screen-pop");
-        void panel.offsetWidth;
-        panel.classList.add("todo-screen-pop");
-        window.setTimeout(() => panel.classList.remove("todo-screen-pop"), 450);
-      }
-      return waitForCelebration(2000).finally(() => {
-        if (panel) {
-          panel.classList.remove("todo-screen-pop");
-        }
         layer.remove();
       });
     }
@@ -864,8 +839,6 @@
           return playCanvasFireworks();
         case "bubble-float":
           return playGsapBubbleFloat(origin);
-        case "rainbow-flash":
-          return playScreenPopHeartbeat(cardEl);
         case "thumbs-up-bounce":
           return playGsapThumbsUp(origin);
         case "sparkle-trail":
@@ -873,7 +846,7 @@
         case "ink-splash":
           return playGsapInkSplash(origin);
         default:
-          return playScreenPopHeartbeat(cardEl);
+          return playRippleRings(origin);
       }
     }
 
