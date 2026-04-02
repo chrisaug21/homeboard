@@ -341,8 +341,10 @@
 
     /* Display nav */
     html[data-scheme="dark"] .progress-bar > .display-nav {
-      background: rgba(255, 255, 255, 0.07);
-      border-color: var(--border);
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
     }
     html[data-scheme="dark"] .progress-bar > .display-nav > .display-nav-button {
       background: rgba(255, 255, 255, 0.04);
@@ -350,8 +352,8 @@
       color: rgba(255, 255, 255, 0.78);
     }
     html[data-scheme="dark"] .progress-bar > .display-nav > .display-nav-button.is-active {
-      background: var(--amber);
-      border-color: var(--amber);
+      background: var(--display-nav-active-bg);
+      border-color: var(--display-nav-active-border);
       color: #fff7ed;
     }
     html[data-scheme="dark"] .progress-bar > .display-nav .display-nav-badge {
@@ -1936,12 +1938,12 @@
       align-self: center;
       justify-self: center;
       gap: var(--display-nav-button-gap);
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(255, 250, 243, 0.68);
-      border: 1px solid rgba(124, 96, 69, 0.12);
-      box-shadow: 0 8px 18px rgba(98, 73, 46, 0.08);
-      backdrop-filter: blur(12px);
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .progress-bar > .display-nav > .display-nav-button {
@@ -1977,24 +1979,24 @@
       flex-basis: var(--display-nav-button-active-width);
       width: var(--display-nav-button-active-width);
       min-width: var(--display-nav-button-active-width);
-      background: var(--amber);
-      border-color: var(--amber);
+      background: var(--display-nav-active-bg);
+      border-color: var(--display-nav-active-border);
       color: #fff7ed;
       box-shadow: 0 6px 14px rgba(180, 83, 9, 0.22);
     }
 
     .progress-bar > .display-nav > .display-nav-button .display-nav-icon {
       position: relative;
-      width: 20px;
-      height: 20px;
+      width: var(--display-nav-icon-size);
+      height: var(--display-nav-icon-size);
       display: inline-flex;
       align-items: center;
       justify-content: center;
     }
 
     .progress-bar > .display-nav > .display-nav-button .display-nav-icon svg {
-      width: 20px;
-      height: 20px;
+      width: var(--display-nav-icon-size);
+      height: var(--display-nav-icon-size);
       stroke-width: 2;
     }
 
