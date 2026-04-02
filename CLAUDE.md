@@ -21,6 +21,7 @@ js/
   admin.js          — all admin mode logic (screens, modals, event handling)
 manifest.json       — PWA manifest for display mode (landscape)
 manifest-admin.json — PWA manifest for admin mode (portrait)
+homeboard_logo.svg  — default display-footer logo asset
 sw.js               — service worker, cache key homeboard-v##
 netlify.toml        — build config, env var injection via sed
 ```
@@ -104,6 +105,8 @@ netlify.toml        — build config, env var injection via sed
 - The admin nav is a fixed bottom bar pinned flush to the bottom edge of the viewport; keep toast positioning above it so nav actions stay accessible
 - The display footer assistant label (`#household-name`) uses the Google Font `Righteous`, loaded from Google Fonts in `index.html`
 - The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not re-case it in JS or force uppercase in CSS
+- If `assistant_name` is null, missing, or blank, the display footer should render `homeboard_logo.svg` as an `<img>` at about `120px` wide instead of text; if that SVG fails to load, use the image `onerror` handler to fall back to the Righteous text label `Homeboard`
+- The footer logo should stay scheme-aware: Warm can use a subtle `brightness(0.97)`, Slate should use no filter, and Dark should use `saturate(0) brightness(0) invert(0.93) sepia(0.22) saturate(0.7) brightness(1.02)` so the mark reads as a warm off-white close to the dark scheme ink color instead of orange or gold
 - The display footer screen nav uses icon buttons, not dash/notch pagination. Use small rounded-square buttons with muted/outline inactive styling and the primary accent fill for the active screen
 - Display footer nav sizing should be controlled through the shared CSS custom properties `--display-nav-button-width`, `--display-nav-button-active-width`, `--display-nav-button-height`, `--display-nav-button-gap`, and `--display-nav-icon-size`; nav corner radius should use the shared global `--button-radius`
 - The display footer nav should not have an outer capsule/frame; the buttons sit directly in the footer with no shared background, border, or shadow wrapper

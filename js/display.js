@@ -1856,11 +1856,42 @@
       refreshIcons();
     }
 
+    function renderFooterBrandText(label) {
+      if (!householdNameEl) return;
+
+      const textEl = document.createElement("span");
+      textEl.className = "household-name__text";
+      textEl.textContent = label;
+      householdNameEl.replaceChildren(textEl);
+    }
+
+    function renderFooterBrandLogo() {
+      if (!householdNameEl) return;
+
+      const img = document.createElement("img");
+      img.className = "household-logo";
+      img.src = "homeboard_logo.svg";
+      img.alt = "Homeboard";
+      img.width = 120;
+      img.decoding = "async";
+      img.onerror = () => {
+        renderFooterBrandText("Homeboard");
+      };
+
+      householdNameEl.replaceChildren(img);
+    }
+
     function updateHouseholdName(config) {
-      const name = config && config.assistant_name && config.assistant_name.trim()
-        ? config.assistant_name.trim()
-        : "Homeboard";
-      if (householdNameEl) householdNameEl.textContent = name;
+      const customName = config && config.assistant_name && config.assistant_name.trim()
+        ? config.assistant_name
+        : "";
+
+      if (customName) {
+        renderFooterBrandText(customName);
+        return;
+      }
+
+      renderFooterBrandLogo();
     }
 
     function applyColorScheme(scheme) {
