@@ -39,8 +39,13 @@
       --ink: #30261d;
       --muted: #796a5e;
       --border: rgba(124, 96, 69, 0.18);
+      /* Legacy color tokens — being migrated to --color-accent and --color-accent-subtle. Do not use for new components. */
       --amber: #b45309;
       --amber-soft: #f7d9aa;
+      /* Semantic interaction tokens — use these for any new interactive/active states. See design token audit ticket for full migration plan. */
+      --color-accent: #b45309;
+      --color-accent-subtle: #f7d9aa;
+      --color-text-on-accent: #ffffff;
       --sage: #15803d;
       --sage-soft: #dcefdc;
       --rsvp-clear: #15803d;
@@ -65,8 +70,7 @@
       --display-nav-button-height: 38px;
       --display-nav-button-gap: 12px;
       --display-nav-icon-size: 24px;
-      /* amber-soft serves as the primary accent subtle token for this scheme — see design token audit ticket for future cleanup. */
-      --display-nav-active-bg: var(--amber);
+      --display-nav-active-bg: var(--color-accent);
       --display-nav-active-border: transparent;
       --header-height: 72px;
       --footer-height: 34px;
