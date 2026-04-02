@@ -13,6 +13,8 @@ css/admin.css       — admin mode styles only
 js/shared.js        — Supabase init, VERSION constant, utilities, shared config
 js/display.js       — display mode logic
 js/admin.js         — all admin mode logic (screens, modals, event handling)
+manifest.json       — PWA manifest for display mode (landscape)
+manifest-admin.json — PWA manifest for admin mode (portrait)
 sw.js               — service worker (cache key: homeboard-v##)
 netlify.toml        — build + env var injection via sed
 ```
@@ -32,7 +34,7 @@ netlify.toml        — build + env var injection via sed
 | `todos` | Soft delete only — set `archived_at`, never hard delete |
 | `meal_plan` | `user_id` null = shared (show on display). `user_id` set = personal (admin only) |
 | `meal_plan_notes` | One note per household per week. Keyed by `household_id` + `week_start` (Monday's date) |
-| `countdowns` | `icon` = Lucide icon name string |
+| `countdowns` | `icon` = Lucide icon name string; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` drive countdown photos and delayed visibility |
 | `rsvps` | Wedding table — **do not modify schema** |
 | `invited_parties` | Wedding invite list. `rsvp_id` null = pending; set = matched to an RSVP row |
 

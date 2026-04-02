@@ -21,9 +21,9 @@ Both modes are served from `index.html`. Netlify rewrites `/admin` to `index.htm
 
 ## Display Screens
 
-Screens rotate automatically every 30 seconds. Swipe left/right to navigate manually. Nav arrows hide on touch devices.
+Screens rotate automatically using per-screen timers from `display_settings.timer_intervals` with a 30-second fallback. Swipe left/right to navigate manually. Nav arrows hide on touch devices.
 
-1. **This Week** — Google Calendar events for the current 7-day window
+1. **This Week** — Google Calendar events for the configured upcoming window (`display_settings.upcoming_days`, currently 5 or 7 days)
 2. **This Month** — full month calendar grid with events
 3. **To-do List** — shared household tasks with open count and next-up summary
 4. **Dinner Plan** — this week's dinner entries (Mon–Sun)
@@ -40,13 +40,15 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 
 ### Meals
 - Week navigation — previous, current, and next week
-- Tap any day row to open an inline edit form
+- Tap any day row to open the shared bottom-sheet modal
 - Enter dinner name and type (cooking at home, ordering in, going out, leftovers)
-- Save writes directly to the week; cancel closes the inline form
+- Save writes directly to the week; cancel closes the modal
 
 ### Events
 - Tap a Google Calendar event to pre-fill the countdown form
 - Or enter name, date, and Lucide icon name manually
+- Optionally add or refresh an Unsplash background photo for a countdown
+- Optional visibility timing controls let countdowns appear only a set number of days before the event
 - Saved countdowns appear on the display's "Looking Forward" screen
 - Browse icons at [lucide.dev/icons](https://lucide.dev/icons)
 
@@ -72,8 +74,7 @@ Screens rotate automatically every 30 seconds. Swipe left/right to navigate manu
 | `todos` | Soft-delete only — never hard delete; archived via `archived_at` |
 | `meal_plan` | `user_id = null` = shared/household row shown on display |
 | `meal_plan_notes` | One note per household per week; keyed by `household_id` + `week_start` (Monday's date) |
-| `countdowns` (updated) | Added `unsplash_image_url` — stores JSON `{url, credit}` for Unsplash background photos |
-| `countdowns` | `icon` is a Lucide icon name string (e.g. `"plane"`) |
+| `countdowns` | `icon` is a Lucide icon name string; also stores optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` for countdown photos and visibility timing |
 | `rsvps` | Wedding RSVP table — do not modify schema |
 | `invited_parties` | Wedding invite source of truth. `rsvp_id = null` means pending; set means matched to an RSVP |
 

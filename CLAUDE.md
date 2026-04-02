@@ -43,7 +43,7 @@ netlify.toml        — build config, env var injection via sed
 - `todos` — soft delete via `archived_at`, never hard delete
 - `meal_plan` — `user_id` nullable: null = shared/household, uuid = personal
 - `meal_plan_notes` — one note per household per week, keyed by `household_id` + `week_start`
-- `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`
+- `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` support countdown photos and delayed visibility
 - `rsvps` — pre-existing wedding table, do not modify schema
 - `invited_parties` — wedding invite list with `name`, `invited_count`, nullable `rsvp_id`, and `created_at`; this is the source of truth for matched vs pending invite parties
 
@@ -88,6 +88,7 @@ netlify.toml        — build config, env var injection via sed
 - `display_settings.upcoming_days` drives the `UPCOMING_DAYS` variable in `display.js`. Update both together if changing upcoming-view logic.
 - Google Calendar currently reads a single calendar ID (`households.google_cal_id`). **Future enhancement**: support toggling multiple calendars from the Integrations settings.
 - **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.
+- Countdown admin supports optional Unsplash photos plus `days_before_visible` timing. Past calendar events are filtered out of the countdown source-event picker, but saved countdown rows are not mutated.
 
 ## Color Palette
 - Background: `#F5F0E8` (warm parchment)
