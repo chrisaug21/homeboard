@@ -100,6 +100,7 @@ netlify.toml        — build config, env var injection via sed
 - Muted text: `#78716C` (warm gray)
 
 ## Styling Conventions
+- Before writing any CSS or adding styled components, read `TOKENS.md` for the canonical token reference. Always use semantic tokens (`--color-accent`, `--color-accent-subtle`) for new interactive components. Never use `--amber` or `--amber-soft` in new code.
 - Shared corner-radius tokens live in `:root` in `index.html`: use `--button-radius` for interactive buttons and `--tag-radius` for pills, badges, date chips, and other tag-like UI
 - On admin mobile layouts up to `480px`, single primary actions should run full width and two-button action rows should split evenly across the row
 - The admin nav is a fixed bottom bar pinned flush to the bottom edge of the viewport; keep toast positioning above it so nav actions stay accessible
