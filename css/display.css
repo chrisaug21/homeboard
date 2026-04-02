@@ -70,7 +70,7 @@
     }
 
     html[data-scheme="dark"] .household-logo {
-      filter: sepia(1) hue-rotate(332deg) saturate(2.7) brightness(0.9);
+      filter: saturate(0) brightness(0) invert(0.93) sepia(0.22) saturate(0.7) brightness(1.02);
     }
 
     .version-label {

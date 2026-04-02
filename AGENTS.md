@@ -99,7 +99,7 @@ netlify.toml        — build + env var injection via sed
 - The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not force title case or uppercase it in JS or CSS
 - If `assistant_name` is null, missing, or blank, the display footer should show `homeboard_logo.svg` as an `<img>` around `120px` wide; if the SVG fails to load, use the image `onerror` event to replace it with the text `Homeboard` in the same Righteous styling
 - If `assistant_name` is set, the custom name fully replaces the logo in the display footer; do not show both together
-- Keep the footer logo scheme-aware: Warm may use a subtle `brightness(0.97)`, Slate should use no filter, and Dark should use a warm gold-toned CSS filter so the logo sits naturally on the dark background
+- Keep the footer logo scheme-aware: Warm may use a subtle `brightness(0.97)`, Slate should use no filter, and Dark should use `saturate(0) brightness(0) invert(0.93) sepia(0.22) saturate(0.7) brightness(1.02)` so the logo reads as a warm off-white near the dark scheme ink color instead of gold or orange
 - The display footer screen nav uses small tappable rounded-square icon buttons instead of dash notches; inactive buttons stay muted/outline and the active screen button uses the primary accent fill
 - Display footer nav sizing should be tuned via the shared CSS custom properties `--display-nav-button-width`, `--display-nav-button-active-width`, `--display-nav-button-height`, `--display-nav-button-gap`, and `--display-nav-icon-size`; nav corner radius should use the shared global `--button-radius`
 - The display footer nav has no outer capsule/frame; the buttons should sit directly in the footer without a shared background, border, or shadow wrapper
