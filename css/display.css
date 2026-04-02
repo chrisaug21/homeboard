@@ -141,6 +141,8 @@
       --rose: #fb7185;
       --rose-soft: rgba(251, 113, 133, 0.14);
       --shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+      --display-nav-active-bg: rgba(245, 158, 11, 0.28);
+      --display-nav-active-border: rgba(245, 158, 11, 0.36);
     }
 
     html[data-scheme="dark"] body {
@@ -175,6 +177,8 @@
       --rose: #be123c;
       --rose-soft: rgba(190, 18, 60, 0.11);
       --shadow: 0 18px 44px rgba(15, 23, 42, 0.11);
+      --display-nav-active-bg: var(--amber-soft);
+      --display-nav-active-border: var(--amber);
     }
 
     html[data-scheme="slate"] body {
