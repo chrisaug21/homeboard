@@ -21,7 +21,7 @@ Both modes are served from `index.html`. Netlify rewrites `/admin` to `index.htm
 
 ## Display Screens
 
-Screens rotate automatically using per-screen timers from `display_settings.timer_intervals` with a 30-second fallback. Swipe left/right to navigate manually. Nav arrows hide on touch devices.
+Screens rotate automatically using per-screen timers from `display_settings.timer_intervals` with a 30-second fallback. Swipe left/right to navigate manually, or tap the footer icon buttons to jump directly to a screen. Countdown screens share one footer hourglass button, and the upcoming/month calendar buttons show centered number overlays (`upcoming_days` or `30`). Nav arrows hide on touch devices.
 
 1. **This Week** — Google Calendar events for the configured upcoming window (`display_settings.upcoming_days`, currently 5 or 7 days)
 2. **This Month** — full month calendar grid with events

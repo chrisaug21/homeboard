@@ -60,6 +60,15 @@
       --radius-sm: 16px;
       --button-radius: 8px;
       --tag-radius: 12px;
+      --display-nav-button-width: 60px;
+      --display-nav-button-active-width: 72px;
+      --display-nav-button-height: 38px;
+      --display-nav-button-gap: 12px;
+      --display-nav-button-radius: 8px;
+      --display-nav-icon-size: 24px;
+      /* amber-soft serves as the primary accent subtle token for this scheme — see design token audit ticket for future cleanup. */
+      --display-nav-active-bg: var(--amber);
+      --display-nav-active-border: transparent;
       --header-height: 72px;
       --footer-height: 34px;
       --screen-gap: 28px;
@@ -210,9 +219,9 @@
       </div>
     </main>
 
-    <footer class="progress-bar" aria-label="Screen progress">
+    <footer class="progress-bar" aria-label="Screen navigation">
       <span id="household-name" class="household-name" aria-hidden="true">Homeboard</span>
-      <div class="progress-dots" id="progress-dots"></div>
+      <nav class="display-nav" id="display-nav" aria-label="Screen navigation"></nav>
       <div class="footer-right">
         <span id="display-last-synced" class="last-synced-label" aria-hidden="true"></span>
         <button class="sync-btn" id="display-sync-btn" type="button" aria-label="Sync now">

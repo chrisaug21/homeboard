@@ -1,6 +1,6 @@
     const track = document.getElementById("screen-track");
     const viewport = document.getElementById("viewport");
-    const progressDots = document.getElementById("progress-dots");
+    const displayNav = document.getElementById("display-nav");
     const navLeft = document.getElementById("nav-left");
     const navRight = document.getElementById("nav-right");
     const householdNameEl = document.getElementById("household-name");
@@ -275,6 +275,101 @@
         !screen.classList.contains("screen--disabled")
         && !screen.classList.contains("screen--empty-hidden")
       );
+    }
+
+    function getScreenKeyForElement(screen) {
+      if (!screen) return "generic";
+      if (screen.classList.contains("screen--calendar")) return "upcoming_calendar";
+      if (screen.classList.contains("screen--month")) return "monthly_calendar";
+      if (screen.classList.contains("screen--todos")) return "todos";
+      if (screen.classList.contains("screen--meals")) return "meals";
+      if (screen.classList.contains("countdown-screen")) return "countdowns";
+      if (screen.classList.contains("rsvp-screen")) return "rsvp";
+      return "generic";
+    }
+
+    function getUpcomingNavDays() {
+      const configuredDays = Number(cachedHouseholdConfig?.display_settings?.upcoming_days);
+      return configuredDays === 5 || configuredDays === 7 ? configuredDays : 7;
+    }
+
+    function getDisplayNavIconConfig(screenKey) {
+      switch (screenKey) {
+        case "todos":
+          return { icon: "list-todo", label: "To-do list" };
+        case "meals":
+          return { icon: "utensils-crossed", label: "Dinner plan" };
+        case "upcoming_calendar":
+          return { icon: "calendar-days", label: "Upcoming calendar", badge: String(getUpcomingNavDays()) };
+        case "monthly_calendar":
+          return { icon: "calendar-days", label: "Monthly calendar", badge: "30" };
+        case "countdowns":
+          return { icon: "hourglass", label: "Countdowns" };
+        case "rsvp":
+          return { icon: "heart", label: "Wedding RSVP" };
+        default:
+          return { icon: "layout-grid", label: "Screen" };
+      }
+    }
+
+    function getDisplayNavItems() {
+      const visibleScreens = getVisibleScreens();
+      const items = [];
+      const seen = new Set();
+
+      visibleScreens.forEach((screen, index) => {
+        const screenKey = getScreenKeyForElement(screen);
+        if (screenKey === "countdowns" && seen.has("countdowns")) {
+          return;
+        }
+        if (screenKey !== "generic" && seen.has(screenKey)) {
+          return;
+        }
+
+        items.push({
+          key: screenKey,
+          targetIndex: index
+        });
+
+        if (screenKey !== "generic") {
+          seen.add(screenKey);
+        }
+      });
+
+      return items;
+    }
+
+    function buildDisplayNavButtonMarkup(item, isActive) {
+      const iconConfig = getDisplayNavIconConfig(item.key);
+      const badgeMarkup = iconConfig.badge
+        ? `<span class="display-nav-badge" aria-hidden="true">${escapeHtml(iconConfig.badge)}</span>`
+        : "";
+      const calendarClass = iconConfig.badge ? " display-nav-icon--calendar" : "";
+      const iconMarkup = iconConfig.badge
+        ? `
+          <svg class="display-nav-calendar-svg" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="2.25" y="3.75" width="15.5" height="14" rx="3" stroke="currentColor" stroke-width="1.75"/>
+            <path d="M2.75 7.25H17.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            <path d="M6.25 2.5V5.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            <path d="M13.75 2.5V5.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          </svg>
+        `
+        : `<i data-lucide="${escapeHtml(iconConfig.icon)}"></i>`;
+      const activeClass = isActive ? " is-active" : "";
+      const ariaCurrent = isActive ? ' aria-current="page"' : "";
+
+      return `
+        <button
+          class="display-nav-button${activeClass}"
+          type="button"
+          data-display-nav-target="${item.targetIndex}"
+          aria-label="${escapeHtml(iconConfig.label)}"${ariaCurrent}>
+          <span class="display-nav-icon${calendarClass}" aria-hidden="true">
+            ${iconMarkup}
+            ${badgeMarkup}
+          </span>
+        </button>
+      `;
     }
 
     function getAssigneeMarkup(assignee) {
@@ -1280,11 +1375,11 @@
 
     function renderProgress() {
       const visibleScreens = getVisibleScreens();
-      progressDots.innerHTML = Array.from({ length: visibleScreens.length }, (_, index) => {
-        const isRsvpScreen = visibleScreens[index] && visibleScreens[index].classList.contains("rsvp-screen");
-        const activeClass = index === currentIndex ? " active" + (isRsvpScreen ? " rsvp-active" : "") : "";
-        return `<span class="dot${activeClass}" aria-hidden="true"></span>`;
-      }).join("");
+      const activeScreenKey = getScreenKeyForElement(visibleScreens[currentIndex]);
+      displayNav.innerHTML = getDisplayNavItems().map((item) =>
+        buildDisplayNavButtonMarkup(item, item.key === activeScreenKey)
+      ).join("");
+      refreshIcons();
     }
 
     function updateHouseholdName(config) {
@@ -1490,6 +1585,11 @@
       renderProgress();
     }
 
+    function navigateToScreenIndex(index) {
+      goToScreen(index);
+      resetAutoRotate();
+    }
+
     function getTimerForCurrentScreen() {
       const screen = getVisibleScreens()[currentIndex];
       if (!screen) return (screenTimers.default || 30) * 1000;
@@ -1521,12 +1621,10 @@
 
     function manualNavigate(direction) {
       if (direction === "next") {
-        nextScreen();
+        navigateToScreenIndex(currentIndex + 1);
       } else {
-        previousScreen();
+        navigateToScreenIndex(currentIndex - 1);
       }
-
-      resetAutoRotate();
     }
 
     function handlePointerDown(event) {
@@ -1733,6 +1831,13 @@
 
       navLeft.addEventListener("pointerup", () => manualNavigate("previous"));
       navRight.addEventListener("pointerup", () => manualNavigate("next"));
+      displayNav.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-display-nav-target]");
+        if (!button) return;
+        const targetIndex = Number(button.getAttribute("data-display-nav-target"));
+        if (Number.isNaN(targetIndex)) return;
+        navigateToScreenIndex(targetIndex);
+      });
       window.addEventListener("keydown", handleKeydown);
 
       // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed
