@@ -408,7 +408,8 @@
           "bubble-float",
           "rainbow-flash",
           "thumbs-up-bounce",
-          "sparkle-trail"
+          "sparkle-trail",
+          "ink-splash"
         ];
 
         for (let index = celebrationBag.length - 1; index > 0; index -= 1) {
@@ -671,7 +672,7 @@
         const amplitude = 18 + Math.random() * 28;
         const frequency = 1.3 + Math.random() * 1.4;
         const phase = Math.random() * Math.PI * 2;
-        const duration = 4.1 + Math.random() * 0.6;
+        const duration = 4.75 + Math.random() * 0.22;
         const delay = index * (0.1 + Math.random() * 0.1);
         const riseDistance = Math.max(window.innerHeight * 0.74, 460) + (Math.random() * 60);
         piece.style.left = `${origin.x}px`;
@@ -689,12 +690,12 @@
           onUpdate() {
             const progress = this.progress();
             const sway = Math.sin((progress * Math.PI * 2 * frequency) + phase) * amplitude;
-            const grow = progress < 0.6
-              ? 0.52 + (progress * 0.9)
-              : 1.06 + ((progress - 0.6) * 0.18);
-            const opacity = progress > 0.82
-              ? Math.max(0, 0.6 * (1 - ((progress - 0.82) / 0.18)))
-              : 0.6;
+            const grow = progress < 0.72
+              ? 0.52 + (progress * 0.72)
+              : 1.04 + ((progress - 0.72) * 0.12);
+            const opacity = progress > 0.9
+              ? Math.max(0, 0.64 * (1 - ((progress - 0.9) / 0.1)))
+              : 0.64;
 
             gsap.set(piece, {
               x: baseX + sway,
@@ -745,8 +746,8 @@
       });
     }
 
-    function playScreenPopShimmer(cardEl) {
-      const layer = createCelebrationLayer("screen-pop-shimmer", {
+    function playScreenPopHeartbeat(cardEl) {
+      const layer = createCelebrationLayer("screen-pop-heartbeat", {
         x: window.innerWidth / 2,
         y: window.innerHeight / 2
       });
@@ -754,17 +755,93 @@
         return Promise.resolve();
       }
       const panel = cardEl?.closest(".panel");
-      layer.innerHTML = '<div class="todo-golden-shimmer"></div>';
+      const accent = String(getComputedStyle(document.documentElement).getPropertyValue("--amber") || "").trim() || "#b45309";
+      layer.innerHTML = Array.from({ length: 3 }, (_, index) => `
+        <div
+          class="todo-heartbeat-ring"
+          style="border-color:${escapeHtml(accent)};animation-delay:${180 + (index * 180)}ms">
+        </div>
+      `).join("");
       if (panel) {
         panel.classList.remove("todo-screen-pop");
         void panel.offsetWidth;
         panel.classList.add("todo-screen-pop");
         window.setTimeout(() => panel.classList.remove("todo-screen-pop"), 450);
       }
-      return waitForCelebration(1600).finally(() => {
+      return waitForCelebration(2000).finally(() => {
         if (panel) {
           panel.classList.remove("todo-screen-pop");
         }
+        layer.remove();
+      });
+    }
+
+    function playGsapInkSplash(origin) {
+      if (typeof gsap === "undefined") {
+        return playFallbackParticleBurst(origin);
+      }
+
+      const layer = createCelebrationLayer("ink-splash", origin);
+      if (!layer) {
+        return Promise.resolve();
+      }
+
+      const colors = getCelebrationPalette();
+      const blobs = Array.from({ length: 7 }, (_, index) => {
+        const blob = createGsapPiece("todo-gsap-piece todo-gsap-piece--ink");
+        const angle = (-0.9 + ((Math.PI * 1.8 * index) / 7)) + ((Math.random() - 0.5) * 0.38);
+        const distance = 48 + Math.random() * 72;
+        const size = 30 + Math.random() * 50;
+        const delay = index * (0.04 + Math.random() * 0.02);
+
+        blob.style.left = `${origin.x}px`;
+        blob.style.top = `${origin.y}px`;
+        blob.style.width = `${size}px`;
+        blob.style.height = `${size * (0.82 + Math.random() * 0.36)}px`;
+        blob.style.background = colors[index % colors.length];
+        blob.style.borderRadius = `${48 + Math.random() * 30}% ${52 + Math.random() * 26}% ${46 + Math.random() * 28}% ${54 + Math.random() * 24}%`;
+        blob.style.opacity = "0.9";
+        layer.appendChild(blob);
+
+        const timeline = gsap.timeline({ delay });
+        timeline
+          .fromTo(blob,
+            { x: 0, y: 0, scale: 0, opacity: 0.9, rotation: -18 + (Math.random() * 36) },
+            {
+              x: Math.cos(angle) * distance,
+              y: Math.sin(angle) * distance,
+              scale: 1,
+              duration: 0.55,
+              ease: "back.out(1.7)"
+            }
+          )
+          .to(blob, {
+            scale: 1.15,
+            duration: 0.2,
+            ease: "power1.out"
+          })
+          .to(blob, {
+            scale: 0,
+            opacity: 0,
+            duration: 0.45,
+            ease: "power2.in"
+          });
+        return blob;
+      });
+
+      const ring = document.createElement("span");
+      ring.className = "todo-ink-ring";
+      ring.style.left = `${origin.x}px`;
+      ring.style.top = `${origin.y}px`;
+      ring.style.borderColor = colors[0];
+      layer.appendChild(ring);
+      gsap.fromTo(ring,
+        { scale: 0.18, opacity: 0.75 },
+        { scale: 8.5, opacity: 0, duration: 0.8, ease: "power2.out" }
+      );
+
+      return waitForCelebration(2800).finally(() => {
+        gsap.killTweensOf([...blobs, ring]);
         layer.remove();
       });
     }
@@ -788,13 +865,15 @@
         case "bubble-float":
           return playGsapBubbleFloat(origin);
         case "rainbow-flash":
-          return playScreenPopShimmer(cardEl);
+          return playScreenPopHeartbeat(cardEl);
         case "thumbs-up-bounce":
           return playGsapThumbsUp(origin);
         case "sparkle-trail":
           return playRippleRings(origin);
+        case "ink-splash":
+          return playGsapInkSplash(origin);
         default:
-          return playScreenPopShimmer(cardEl);
+          return playScreenPopHeartbeat(cardEl);
       }
     }
 

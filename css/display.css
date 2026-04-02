@@ -1290,21 +1290,17 @@
       transform-origin: center center;
     }
 
-    .todo-golden-shimmer {
+    .todo-heartbeat-ring {
       position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(135deg,
-          transparent 0%,
-          transparent 38%,
-          rgba(255, 255, 255, 0.08) 46%,
-          rgba(251, 191, 36, 0.22) 50%,
-          rgba(255, 255, 255, 0.12) 54%,
-          transparent 62%,
-          transparent 100%);
-      transform: translate(-120%, 120%) rotate(-10deg);
+      left: 50%;
+      top: 50%;
+      width: 26px;
+      height: 26px;
+      border: 2.5px solid var(--amber);
+      border-radius: 999px;
+      transform: translate(-50%, -50%) scale(0.18);
       opacity: 0;
-      animation: todoGoldenShimmer 1200ms cubic-bezier(0.2, 0.82, 0.24, 1) forwards;
+      animation: todoHeartbeatRing 1400ms cubic-bezier(0.18, 0.84, 0.24, 1) forwards;
     }
 
     .todo-thumbs-up {
@@ -1313,6 +1309,22 @@
       line-height: 1;
       transform: translate(-50%, -50%);
       filter: drop-shadow(0 14px 28px rgba(48, 38, 29, 0.18));
+    }
+
+    .todo-gsap-piece--ink {
+      box-shadow: 0 14px 24px rgba(48, 38, 29, 0.14);
+      transform: translate(-50%, -50%);
+      will-change: transform, opacity;
+    }
+
+    .todo-ink-ring {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--amber);
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      opacity: 0.7;
     }
 
     @keyframes todoRippleRing {
@@ -1341,17 +1353,17 @@
       }
     }
 
-    @keyframes todoGoldenShimmer {
+    @keyframes todoHeartbeatRing {
       0% {
         opacity: 0;
-        transform: translate(-120%, 120%) rotate(-10deg);
+        transform: translate(-50%, -50%) scale(0.18);
       }
-      16% {
-        opacity: 1;
+      10% {
+        opacity: 0.6;
       }
       100% {
         opacity: 0;
-        transform: translate(120%, -120%) rotate(-10deg);
+        transform: translate(-50%, -50%) scale(14);
       }
     }
 

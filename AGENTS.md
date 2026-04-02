@@ -112,15 +112,16 @@ netlify.toml        — build + env var injection via sed
 - The admin to-do loader must not fail just because household settings fail; load the todo data first, then re-render for member colors if `display_settings.members` arrives later
 - Active incomplete todos with `due_date < today` should use the overdue treatment in both display and admin: red left border, subtle red card tint, and red overdue date-pill text
 - Todo completion celebration animations are display-view only and must clean up all temporary DOM/styles after each run
-- Display celebrations load `canvas-confetti@1.9.2` and `gsap@3.12.5` by CDN in `index.html`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float and thumbs up bounce use GSAP, and ripple rings plus screen pop/golden shimmer stay CSS/JS only
+- Display celebrations load `canvas-confetti@1.9.2` and `gsap@3.12.5` by CDN in `index.html`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings plus screen pop/heartbeat rings stay CSS/JS only
 - Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if a CDN script fails to load
 - Celebration particle colors should resolve the active scheme accent at runtime from `getComputedStyle(...).getPropertyValue('--amber')` and mix it with white, bright gold, and fresh green so effects stay scheme-aware without hardcoding one palette
 - Display todo completion timing should be: checkmark immediately, item fade/removal starts roughly 10-15% into the celebration with a quick ~200 ms opacity transition, and the celebration continues independently as a send-off
 - Checking off a display todo must reset the auto-rotation timer using the same `resetAutoRotate()` path as other display interactions so the screen does not rotate away mid-celebration
 - Rotation reset root cause: a previously scheduled auto-rotate callback can already be queued when the todo completion happens, so `clearTimeout()` alone is not sufficient; guard auto-rotate with a token/generation check so stale queued callbacks no-op instead of rotating the screen
 - GSAP bubble-float motion should use per-bubble sinusoidal horizontal drift while rising, with randomized amplitude/frequency/phase and slight stagger, so bubbles float organically instead of traveling straight up
+- The celebration pool includes 8 animations total, adding `ink splash` as a GSAP effect with 6-8 accent/gold/green blobs that burst from the checkbox, pulse slightly larger, then contract away alongside one fast expanding ring
 - The old sparkle-trail celebration is replaced by ripple rings: three concentric accent-color outline rings expand from the checkbox position, staggered by about 120 ms, and fade as they grow to roughly 200-300 px diameter
-- The old rainbow flash is replaced by a screen pop plus golden shimmer: the active display panel briefly scales up and back while a diagonal white/gold shine streak sweeps across the screen over roughly 1.2 seconds
+- The old rainbow flash is replaced by a screen pop plus heartbeat pulse rings: the active display panel briefly scales up and back, then three large accent-color rings expand from screen center as an aftershock, staggered by about 180 ms
 - The RSVP display guest-list empty state is a centered neutral waiting state with muted blue styling, not a small rose warning/error pill
 - The RSVP display confirmed-guest total should use the pending-blue tone at `0` and the rose tone only when the count is `1+`
 - The admin RSVP `Pending` pill should use the same pending-blue waiting-state treatment as the RSVP display, not amber warning styling
