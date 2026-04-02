@@ -285,6 +285,11 @@
       background: rgba(255, 255, 255, 0.06);
       border-color: var(--border);
     }
+    html[data-scheme="dark"] .todo-card--overdue {
+      background: rgba(251, 113, 133, 0.12);
+      border-left-color: #fb7185;
+      box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.08);
+    }
     html[data-scheme="dark"] .todo-assignee--other {
       background: rgba(255, 255, 255, 0.1);
       color: #e7ddd5;
@@ -1090,9 +1095,16 @@
       border-radius: var(--radius-md);
       background: rgba(255, 255, 255, 0.56);
       border: 1px solid rgba(124, 96, 69, 0.12);
+      border-left: 5px solid transparent;
       min-width: 0;
-      transition: opacity 0.25s, transform 0.2s;
+      transition: opacity 0.2s, transform 0.2s;
       break-inside: avoid;
+    }
+
+    .todo-card--overdue {
+      background: rgba(190, 18, 60, 0.08);
+      border-left-color: #be123c;
+      box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.06);
     }
 
     .todo-card.is-completing {
@@ -1221,6 +1233,114 @@
     .todo-due-pill--future {
       background: rgba(121, 106, 94, 0.1);
       color: var(--muted);
+    }
+
+    .todo-celebration-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .todo-celebration-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .todo-gsap-piece {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform: translate(-50%, -50%);
+      will-change: transform, opacity;
+    }
+
+    .todo-gsap-piece--bubble {
+      border-radius: 999px;
+      box-shadow:
+        inset -4px -4px 0 rgba(255, 255, 255, 0.25),
+        0 10px 18px rgba(48, 38, 29, 0.12);
+    }
+
+    .todo-fallback-particle {
+      position: absolute;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      animation: todo-fallback-burst 950ms cubic-bezier(0.2, 0.8, 0.28, 1) forwards;
+      box-shadow: 0 0 10px rgba(48, 38, 29, 0.12);
+    }
+
+    .todo-ripple-ring {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border: 3px solid var(--amber);
+      border-radius: 999px;
+      transform: translate(-50%, -50%) scale(0.18);
+      opacity: 0;
+      animation: todo-ripple-ring 1200ms cubic-bezier(0.16, 0.84, 0.28, 1) forwards;
+    }
+
+    .todo-thumbs-up {
+      position: absolute;
+      font-size: clamp(54px, 8vw, 88px);
+      line-height: 1;
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(0 14px 28px rgba(48, 38, 29, 0.18));
+    }
+
+    .todo-gsap-piece--ink {
+      box-shadow: 0 14px 24px rgba(48, 38, 29, 0.14);
+      transform: translate(-50%, -50%);
+      will-change: transform, opacity;
+    }
+
+    .todo-ink-ring {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--amber);
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      opacity: 0.7;
+    }
+
+    @keyframes todo-ripple-ring {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.18);
+      }
+      8% {
+        opacity: 0.7;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(15);
+      }
+    }
+
+    @keyframes todo-fallback-burst {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.25);
+      }
+      18% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform:
+          translate(
+            calc(-50% + var(--burst-x)),
+            calc(-50% + var(--burst-y))
+          )
+          rotate(var(--burst-rotate))
+          scale(0.85);
+      }
     }
 
     /* Kept for RSVP screen — do not remove */
@@ -1958,7 +2078,7 @@
       min-width: var(--display-nav-button-width);
       height: var(--display-nav-button-height);
       padding: 0;
-      border-radius: var(--display-nav-button-radius);
+      border-radius: var(--button-radius);
       border: 1px solid rgba(124, 96, 69, 0.16);
       background: rgba(255, 253, 247, 0.82);
       color: var(--muted);
@@ -2024,7 +2144,7 @@
       font-weight: 800;
       line-height: 1;
       letter-spacing: -0.01em;
-      color: currentColor;
+      color: currentcolor;
     }
 
     .progress-bar > .display-nav > .display-nav-button .display-nav-icon--calendar .display-nav-badge {

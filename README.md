@@ -26,6 +26,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 1. **This Week** — Google Calendar events for the configured upcoming window (`display_settings.upcoming_days`, currently 5 or 7 days)
 2. **This Month** — full month calendar grid with events
 3. **To-do List** — shared household tasks with open count and next-up summary
+   Display-only completions trigger one of seven built-in celebration animations before the card clears. `canvas-confetti` powers Confetti Burst, Star Shower, and Fireworks; GSAP powers Bubble Float, Thumbs Up Bounce, and Ink Splash; Ripple Rings stays CSS/JS only
 4. **Dinner Plan** — this week's dinner entries (Mon–Sun)
 5. **Looking Forward** — countdown cards to upcoming events with Lucide icons and days-remaining
 6. **Wedding Pulse** — live RSVP tracker (Chris & Bailey only, hidden starting Oct 11, 2026)
@@ -35,6 +36,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 
 ### To-do
 - Add tasks with title, optional assignee, optional due date
+- Active incomplete tasks with `due_date < today` are highlighted as overdue with a red-accent card treatment
 - Mark tasks complete (archives them) or restore archived tasks
 - Archived tasks live in a collapsible drawer
 

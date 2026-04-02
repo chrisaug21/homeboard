@@ -105,7 +105,7 @@ netlify.toml        — build config, env var injection via sed
 - The display footer assistant label (`#household-name`) uses the Google Font `Righteous`, loaded from Google Fonts in `index.html`
 - The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not re-case it in JS or force uppercase in CSS
 - The display footer screen nav uses icon buttons, not dash/notch pagination. Use small rounded-square buttons with muted/outline inactive styling and the primary accent fill for the active screen
-- Display footer nav sizing should be controlled through the shared CSS custom properties `--display-nav-button-width`, `--display-nav-button-active-width`, `--display-nav-button-height`, `--display-nav-button-gap`, `--display-nav-button-radius`, and `--display-nav-icon-size`
+- Display footer nav sizing should be controlled through the shared CSS custom properties `--display-nav-button-width`, `--display-nav-button-active-width`, `--display-nav-button-height`, `--display-nav-button-gap`, and `--display-nav-icon-size`; nav corner radius should use the shared global `--button-radius`
 - The display footer nav should not have an outer capsule/frame; the buttons sit directly in the footer with no shared background, border, or shadow wrapper
 - The display footer nav active colors should be controlled per scheme via `--display-nav-active-bg` and `--display-nav-active-border`: Warm uses `--amber-soft` for the warm terracotta treatment, Slate uses `--rsvp-pending-bg` for a scheme-native blue fill instead of any amber alias, and Dark uses `--rsvp-review-bg-flagged` for a softer gold tint; active nav buttons should not show a border
 - `--amber-soft` currently acts as the primary accent subtle token in every scheme and is the correct token for interactive active/selected background states throughout the app. This is a non-ideal and confusing naming situation, and it should be normalized in the upcoming design token audit instead of becoming the long-term semantic API
@@ -118,6 +118,18 @@ netlify.toml        — build config, env var injection via sed
 - Admin tabs should use skeleton loaders that approximate the final layout while data is loading, especially on the RSVP screen
 - Todo assignee pills in both admin and display should use one shared member-color lookup helper sourced from `display_settings.members`; never duplicate the lookup logic, never hardcode per-person colors, and use the neutral fallback only when no configured color exists
 - The admin to-do screen must not fail just because household settings fail; render the todo data first, then re-render for member colors if `display_settings.members` arrives afterward
+- Active incomplete todos with `due_date < today` should show the overdue treatment on both display and admin: red left border, subtle red card tint, and red overdue date-pill text
+- Todo completion celebration animations are display-view only and must fully clean up any temporary DOM they create
+- Display celebrations load `canvas-confetti@1.9.2` and `gsap@3.12.5` by CDN in `index.html`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
+- Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if a CDN script fails to load
+- Celebration particle colors should resolve the active scheme accent at runtime from `getComputedStyle(...).getPropertyValue('--amber')` and mix it with white, bright gold, and fresh green so effects stay scheme-aware without hardcoding one palette
+- Display todo completion timing should be: checkmark immediately, item fade/removal starts roughly 10-15% into the celebration with a quick ~200 ms opacity transition, and the celebration continues independently as a send-off
+- Checking off a display todo must reset the auto-rotation timer using the same `resetAutoRotate()` path as other display interactions so the screen does not rotate away mid-celebration
+- Rotation reset root cause: a previously scheduled auto-rotate callback can already be queued when the todo completion happens, so `clearTimeout()` alone is not sufficient; guard auto-rotate with a token/generation check so stale queued callbacks no-op instead of rotating the screen
+- GSAP bubble-float motion should use per-bubble sinusoidal horizontal drift while rising, with randomized amplitude/frequency/phase and slight stagger, so bubbles float organically instead of traveling straight up
+- The celebration pool includes 7 animations total; `ink splash` is a GSAP effect with 6-8 accent/gold/green blobs that burst from the checkbox, pulse slightly larger, then contract away alongside one fast expanding ring
+- The old sparkle-trail celebration is replaced by ripple rings: three concentric accent-color outline rings expand from the checkbox position, staggered by about 120 ms, and fade as they grow to roughly 200-300 px diameter
+- Bubble float and ink splash should not use white in their color mix; use the runtime accent plus visible celebration tones like gold, coral, teal, purple, and green so particles stay readable on light and dark schemes
 - The RSVP display guest-list empty state is a centered neutral waiting state in the pending-blue tone, with a matching zero-count color for the confirmed guest total
 - The admin RSVP `Pending` pill should use the same pending-blue waiting-state styling as the RSVP display, not the amber warning tone
 - Hide pre-today Google Calendar events from the admin countdown source-event picker; do not delete or mutate saved countdown rows
@@ -140,7 +152,7 @@ Use `netlify dev --no-watch` if Mac permissions error occurs.
 - Never hard-delete todos — always set `archived_at`
 - `meal_plan` rows with `user_id = null` are shared/household; never show personal rows (`user_id` set) on the display
 - sw.js cache prefix: `homeboard-v##`
-- When pushing any change: update `VERSION` in `js/shared.js` (patch bump for fixes, minor bump for features), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — add new tables, env vars, or screens as they are introduced
+- When pushing any change: always increment `VERSION` in `js/shared.js` by at least a patch bump (use a minor bump for features when appropriate), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — add new tables, env vars, or screens as they are introduced
 
 ## Planned future work
 - **Household members → users table**: `display_settings.members` currently stores the member list. Migrate to the `users` table when multi-user auth is implemented.

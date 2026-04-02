@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.1.8";
+    const VERSION = "1.3.8";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -794,6 +794,23 @@
       return refreshed || snapshot;
     }
 
+    function isTodoOverdue(dueDate) {
+      if (!dueDate) {
+        return false;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const parsed = new Date(dueDate + "T00:00:00");
+
+      if (Number.isNaN(parsed.getTime())) {
+        return false;
+      }
+
+      parsed.setHours(0, 0, 0, 0);
+      return parsed < today;
+    }
+
     // Returns { cssClass, label } for a due date urgency pill, or null if no due date.
     // Used on both the display and admin views.
     function getTodoDuePill(dueDate) {
@@ -801,10 +818,15 @@
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const parsed = new Date(dueDate + "T00:00:00");
+
+      if (Number.isNaN(parsed.getTime())) {
+        return null;
+      }
+
       parsed.setHours(0, 0, 0, 0);
       const diff = Math.round((parsed - today) / 86400000);
 
-      if (diff < 0) {
+      if (isTodoOverdue(dueDate)) {
         return { cssClass: "todo-due-pill--overdue", label: "Overdue" };
       }
       if (diff === 0) {
