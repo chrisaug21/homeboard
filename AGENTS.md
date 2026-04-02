@@ -91,6 +91,7 @@ netlify.toml        — build + env var injection via sed
 - When pushing any change: always increment `VERSION` in `js/shared.js` by at least a patch bump (use a minor bump for features when appropriate), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — document new tables, env vars, or screens as they are added
 
 ## Styling Conventions
+- Before writing any CSS or adding styled components, read `TOKENS.md` for the canonical token reference. Always use semantic tokens (`--color-accent`, `--color-accent-subtle`) for new interactive components. Never use `--amber` or `--amber-soft` in new code.
 - Shared corner radius tokens live in `:root` in `index.html`: use `--button-radius` for admin/display buttons and `--tag-radius` for pills, badges, and other tag-like labels
 - Keep admin action-button sizing responsive: on screens up to 480 px, a lone primary action should fill the row and two-button action rows should split into equal widths
 - The admin nav is a fixed bottom bar pinned flush to the viewport edge; do not reintroduce floating gaps, translucent glass treatment, or drop shadows there
