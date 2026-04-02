@@ -8,6 +8,7 @@
 
     let currentIndex = 0;
     let autoRotateId = null;
+    let autoRotateToken = 0;
     let pointerStartX = null;
     let pointerDeltaX = 0;
     let rsvpScrollId = null;
@@ -642,35 +643,51 @@
         return Promise.resolve();
       }
       const colors = getCelebrationPalette();
+      const pieces = [];
+      const buildWave = (count, delayMs, distanceBase, sizeBase) => {
+        Array.from({ length: count }, (_, index) => {
+          const piece = createGsapPiece(
+            "todo-gsap-piece todo-gsap-piece--sparkle",
+            index % 2 === 0 ? "✦" : "•"
+          );
+          const angle = (Math.PI * 2 * index) / count + (Math.random() * 0.35);
+          const distance = distanceBase + Math.random() * 26;
+          piece.style.left = `${origin.x}px`;
+          piece.style.top = `${origin.y}px`;
+          piece.style.color = colors[(index + delayMs) % colors.length];
+          piece.style.fontSize = `${sizeBase + Math.round(Math.random() * 6)}px`;
+          layer.appendChild(piece);
+          pieces.push(piece);
 
-      const pieces = Array.from({ length: 10 }, (_, index) => {
-        const piece = createGsapPiece("todo-gsap-piece todo-gsap-piece--sparkle", index % 2 === 0 ? "✦" : "•");
-        const angle = (Math.PI * 2 * index) / 10;
-        const distance = 54 + Math.random() * 26;
-        piece.style.left = `${origin.x}px`;
-        piece.style.top = `${origin.y}px`;
-        piece.style.color = colors[index % colors.length];
-        layer.appendChild(piece);
-        gsap.fromTo(piece,
-          { x: 0, y: 0, scale: 0.2, opacity: 0 },
-          {
-            x: Math.cos(angle) * distance,
-            y: Math.sin(angle) * distance,
-            scale: 1,
-            opacity: 1,
-            duration: 0.95,
-            ease: "back.out(1.9)"
-          }
-        );
-        gsap.to(piece, {
-          opacity: 0,
-          scale: 0.3,
-          duration: 1.35,
-          delay: 1.8,
-          ease: "power2.out"
+          const timeline = gsap.timeline({ delay: delayMs / 1000 });
+          timeline
+            .fromTo(piece,
+              { x: 0, y: 0, scale: 0.2, opacity: 0.95 },
+              {
+                x: Math.cos(angle) * distance,
+                y: Math.sin(angle) * distance,
+                scale: 0.9,
+                opacity: 1,
+                duration: 0.38,
+                ease: "power3.out"
+              }
+            )
+            .to(piece, {
+              scale: 1.22,
+              duration: 0.12,
+              ease: "power2.out"
+            })
+            .to(piece, {
+              scale: 0,
+              opacity: 0,
+              duration: 0.18,
+              ease: "power2.in"
+            });
         });
-        return piece;
-      });
+      };
+
+      buildWave(7, 0, 72, 20);
+      buildWave(5, 150, 46, 14);
 
       return waitForCelebration(3400).finally(() => {
         gsap.killTweensOf(pieces);
@@ -692,34 +709,46 @@
       const pieces = Array.from({ length: 7 }, (_, index) => {
         const piece = createGsapPiece("todo-gsap-piece todo-gsap-piece--bubble");
         const size = 18 + Math.round(Math.random() * 12);
+        const baseX = (Math.random() * 24) - 12;
+        const amplitude = 18 + Math.random() * 28;
+        const frequency = 1.3 + Math.random() * 1.4;
+        const phase = Math.random() * Math.PI * 2;
+        const duration = 4.1 + Math.random() * 0.6;
+        const delay = index * (0.1 + Math.random() * 0.1);
+        const riseDistance = Math.max(window.innerHeight * 0.74, 460) + (Math.random() * 60);
         piece.style.left = `${origin.x}px`;
         piece.style.top = `${origin.y}px`;
         piece.style.width = `${size}px`;
         piece.style.height = `${size}px`;
         piece.style.background = colors[index % colors.length];
-        piece.style.opacity = "0";
+        piece.style.opacity = "0.12";
         layer.appendChild(piece);
-        gsap.fromTo(piece,
-          { x: (Math.random() * 18) - 9, y: 0, opacity: 0, scale: 0.55 },
-          {
-            x: (Math.random() * 120) - 60,
-            y: -Math.max(window.innerHeight * 0.72, 420) - (Math.random() * 70),
-            opacity: 0.55,
-            scale: 1,
-            duration: 3.35,
-            ease: "power1.out"
-          }
-        );
         gsap.to(piece, {
-          opacity: 0,
-          duration: 0.9,
-          delay: 2.75,
-          ease: "power1.out"
+          y: -riseDistance,
+          duration,
+          delay,
+          ease: "none",
+          onUpdate() {
+            const progress = this.progress();
+            const sway = Math.sin((progress * Math.PI * 2 * frequency) + phase) * amplitude;
+            const grow = progress < 0.6
+              ? 0.52 + (progress * 0.9)
+              : 1.06 + ((progress - 0.6) * 0.18);
+            const opacity = progress > 0.82
+              ? Math.max(0, 0.6 * (1 - ((progress - 0.82) / 0.18)))
+              : 0.6;
+
+            gsap.set(piece, {
+              x: baseX + sway,
+              scale: grow,
+              opacity
+            });
+          }
         });
         return piece;
       });
 
-      return waitForCelebration(4400).finally(() => {
+      return waitForCelebration(5000).finally(() => {
         gsap.killTweensOf(pieces);
         layer.remove();
       });
@@ -869,7 +898,8 @@
       }
 
       cardEl.classList.add("is-completing");
-      resetAutoRotate();
+      console.log("[todo-complete] completion reached reset path");
+      resetAutoRotate("todo-complete");
 
       const { error } = await client
         .from("todos")
@@ -2020,14 +2050,24 @@
       return (screenTimers.default || 30) * 1000;
     }
 
-    function resetAutoRotate() {
+    function resetAutoRotate(reason = "unknown") {
       window.clearTimeout(autoRotateId);
-      autoRotateId = window.setTimeout(autoAdvanceAndSchedule, getTimerForCurrentScreen());
+      autoRotateToken += 1;
+      const token = autoRotateToken;
+      const delay = getTimerForCurrentScreen();
+      console.log(`[rotation] reset via ${reason}; token=${token}; delayMs=${delay}`);
+      autoRotateId = window.setTimeout(() => autoAdvanceAndSchedule(token), delay);
     }
 
-    function autoAdvanceAndSchedule() {
+    function autoAdvanceAndSchedule(token) {
+      if (token !== autoRotateToken) {
+        console.log(`[rotation] skipped stale auto-rotate callback; token=${token}; current=${autoRotateToken}`);
+        return;
+      }
+
       nextScreen();
-      autoRotateId = window.setTimeout(autoAdvanceAndSchedule, getTimerForCurrentScreen());
+      const nextDelay = getTimerForCurrentScreen();
+      autoRotateId = window.setTimeout(() => autoAdvanceAndSchedule(token), nextDelay);
     }
 
     function nextScreen() {
@@ -2122,13 +2162,13 @@
 
       bodyEl.innerHTML = html;
       document.getElementById("event-detail-modal").hidden = false;
-      resetAutoRotate();
+      resetAutoRotate("event-detail-open");
       refreshIcons();
     }
 
     function closeEventDetailModal() {
       document.getElementById("event-detail-modal").hidden = true;
-      resetAutoRotate();
+      resetAutoRotate("event-detail-close");
     }
 
     function openDayDetailModal(dateKey) {
@@ -2156,12 +2196,12 @@
       }
 
       document.getElementById("day-detail-modal").hidden = false;
-      resetAutoRotate();
+      resetAutoRotate("day-detail-open");
     }
 
     function closeDayDetailModal() {
       document.getElementById("day-detail-modal").hidden = true;
-      resetAutoRotate();
+      resetAutoRotate("day-detail-close");
     }
 
     function openRsvpDetailModal(title, names) {
@@ -2180,12 +2220,12 @@
         `;
       }
       document.getElementById("rsvp-detail-modal").hidden = false;
-      resetAutoRotate();
+      resetAutoRotate("rsvp-detail-open");
     }
 
     function closeRsvpDetailModal() {
       document.getElementById("rsvp-detail-modal").hidden = true;
-      resetAutoRotate();
+      resetAutoRotate("rsvp-detail-close");
     }
 
     function getDisplayReviewResponseLabel(rsvp) {
@@ -2220,12 +2260,12 @@
         </div>
       `;
       document.getElementById("rsvp-review-modal").hidden = false;
-      resetAutoRotate();
+      resetAutoRotate("rsvp-review-open");
     }
 
     function closeRsvpReviewModal() {
       document.getElementById("rsvp-review-modal").hidden = true;
-      resetAutoRotate();
+      resetAutoRotate("rsvp-review-close");
     }
 
     function initDisplayMode() {
