@@ -350,6 +350,8 @@
       color: rgba(255, 255, 255, 0.78);
     }
     html[data-scheme="dark"] .progress-bar > .display-nav > .display-nav-button.is-active {
+      background: var(--amber);
+      border-color: var(--amber);
       color: #fff7ed;
     }
     html[data-scheme="dark"] .progress-bar > .display-nav .display-nav-badge {
@@ -1931,6 +1933,7 @@
     .progress-bar > .display-nav {
       display: inline-flex;
       align-items: center;
+      align-self: center;
       justify-self: center;
       gap: var(--display-nav-button-gap);
       padding: 4px 8px;
@@ -1982,21 +1985,25 @@
 
     .progress-bar > .display-nav > .display-nav-button .display-nav-icon {
       position: relative;
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
     }
 
     .progress-bar > .display-nav > .display-nav-button .display-nav-icon svg {
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
       stroke-width: 2;
     }
 
     .progress-bar > .display-nav > .display-nav-button .display-nav-icon--calendar svg {
       opacity: 0.9;
+    }
+
+    .progress-bar > .display-nav > .display-nav-button .display-nav-calendar-svg {
+      overflow: visible;
     }
 
     .progress-bar > .display-nav > .display-nav-button .display-nav-badge {
@@ -2010,6 +2017,11 @@
       line-height: 1;
       letter-spacing: -0.01em;
       color: currentColor;
+    }
+
+    .progress-bar > .display-nav > .display-nav-button .display-nav-icon--calendar .display-nav-badge {
+      inset: 5px 0 0;
+      font-size: 0.56rem;
     }
 
     /* ── Skeleton loader ── */

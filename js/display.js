@@ -345,6 +345,16 @@
         ? `<span class="display-nav-badge" aria-hidden="true">${escapeHtml(iconConfig.badge)}</span>`
         : "";
       const calendarClass = iconConfig.badge ? " display-nav-icon--calendar" : "";
+      const iconMarkup = iconConfig.badge
+        ? `
+          <svg class="display-nav-calendar-svg" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="2.25" y="3.75" width="15.5" height="14" rx="3" stroke="currentColor" stroke-width="1.75"/>
+            <path d="M2.75 7.25H17.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            <path d="M6.25 2.5V5.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            <path d="M13.75 2.5V5.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          </svg>
+        `
+        : `<i data-lucide="${escapeHtml(iconConfig.icon)}"></i>`;
       const activeClass = isActive ? " is-active" : "";
       const ariaCurrent = isActive ? ' aria-current="page"' : "";
 
@@ -355,7 +365,7 @@
           data-display-nav-target="${item.targetIndex}"
           aria-label="${escapeHtml(iconConfig.label)}"${ariaCurrent}>
           <span class="display-nav-icon${calendarClass}" aria-hidden="true">
-            <i data-lucide="${escapeHtml(iconConfig.icon)}"></i>
+            ${iconMarkup}
             ${badgeMarkup}
           </span>
         </button>
