@@ -1258,12 +1258,6 @@
       will-change: transform, opacity;
     }
 
-    .todo-gsap-piece--sparkle {
-      font-size: 22px;
-      line-height: 1;
-      text-shadow: 0 0 12px rgba(237, 103, 0, 0.24);
-    }
-
     .todo-gsap-piece--bubble {
       border-radius: 999px;
       box-shadow:
@@ -1280,24 +1274,37 @@
       box-shadow: 0 0 10px rgba(48, 38, 29, 0.12);
     }
 
-    .todo-celebration-layer--rainbow-flash .todo-rainbow-sweep {
-      animation: todoRainbowSweep 3400ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    .todo-ripple-ring {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border: 3px solid var(--amber);
+      border-radius: 999px;
+      transform: translate(-50%, -50%) scale(0.18);
+      opacity: 0;
+      animation: todoRippleRing 1200ms cubic-bezier(0.16, 0.84, 0.28, 1) forwards;
     }
 
-    .todo-rainbow-sweep {
+    .todo-screen-pop {
+      animation: todoScreenPop 420ms cubic-bezier(0.18, 0.9, 0.24, 1.18);
+      transform-origin: center center;
+    }
+
+    .todo-golden-shimmer {
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(105deg,
+        linear-gradient(135deg,
           transparent 0%,
-          rgba(107, 143, 184, 0.12) 18%,
-          rgba(237, 103, 0, 0.18) 32%,
-          rgba(247, 217, 170, 0.18) 46%,
-          rgba(21, 128, 61, 0.14) 60%,
-          rgba(107, 143, 184, 0.18) 74%,
+          transparent 38%,
+          rgba(255, 255, 255, 0.08) 46%,
+          rgba(251, 191, 36, 0.22) 50%,
+          rgba(255, 255, 255, 0.12) 54%,
+          transparent 62%,
           transparent 100%);
-      transform: translateX(-120%);
+      transform: translate(-120%, 120%) rotate(-10deg);
       opacity: 0;
+      animation: todoGoldenShimmer 1200ms cubic-bezier(0.2, 0.82, 0.24, 1) forwards;
     }
 
     .todo-thumbs-up {
@@ -1308,20 +1315,43 @@
       filter: drop-shadow(0 14px 28px rgba(48, 38, 29, 0.18));
     }
 
-    @keyframes todoRainbowSweep {
+    @keyframes todoRippleRing {
       0% {
         opacity: 0;
-        transform: translateX(-120%);
+        transform: translate(-50%, -50%) scale(0.18);
+      }
+      8% {
+        opacity: 0.7;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(15);
+      }
+    }
+
+    @keyframes todoScreenPop {
+      0% {
+        transform: scale(1);
+      }
+      55% {
+        transform: scale(1.025);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes todoGoldenShimmer {
+      0% {
+        opacity: 0;
+        transform: translate(-120%, 120%) rotate(-10deg);
       }
       16% {
         opacity: 1;
       }
-      72% {
-        opacity: 1;
-      }
       100% {
         opacity: 0;
-        transform: translateX(120%);
+        transform: translate(120%, -120%) rotate(-10deg);
       }
     }
 

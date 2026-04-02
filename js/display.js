@@ -633,66 +633,24 @@
       return element;
     }
 
-    function playGsapSparkleTrail(origin) {
-      if (typeof gsap === "undefined") {
-        return playFallbackParticleBurst(origin);
-      }
-
-      const layer = createCelebrationLayer("sparkle-trail", origin);
+    function playRippleRings(origin) {
+      const layer = createCelebrationLayer("ripple-rings", origin);
       if (!layer) {
         return Promise.resolve();
       }
-      const colors = getCelebrationPalette();
-      const pieces = [];
-      const buildWave = (count, delayMs, distanceBase, sizeBase) => {
-        Array.from({ length: count }, (_, index) => {
-          const piece = createGsapPiece(
-            "todo-gsap-piece todo-gsap-piece--sparkle",
-            index % 2 === 0 ? "✦" : "•"
-          );
-          const angle = (Math.PI * 2 * index) / count + (Math.random() * 0.35);
-          const distance = distanceBase + Math.random() * 26;
-          piece.style.left = `${origin.x}px`;
-          piece.style.top = `${origin.y}px`;
-          piece.style.color = colors[(index + delayMs) % colors.length];
-          piece.style.fontSize = `${sizeBase + Math.round(Math.random() * 6)}px`;
-          layer.appendChild(piece);
-          pieces.push(piece);
-
-          const timeline = gsap.timeline({ delay: delayMs / 1000 });
-          timeline
-            .fromTo(piece,
-              { x: 0, y: 0, scale: 0.2, opacity: 0.95 },
-              {
-                x: Math.cos(angle) * distance,
-                y: Math.sin(angle) * distance,
-                scale: 0.9,
-                opacity: 1,
-                duration: 0.38,
-                ease: "power3.out"
-              }
-            )
-            .to(piece, {
-              scale: 1.22,
-              duration: 0.12,
-              ease: "power2.out"
-            })
-            .to(piece, {
-              scale: 0,
-              opacity: 0,
-              duration: 0.18,
-              ease: "power2.in"
-            });
-        });
-      };
-
-      buildWave(7, 0, 72, 20);
-      buildWave(5, 150, 46, 14);
-
-      return waitForCelebration(3400).finally(() => {
-        gsap.killTweensOf(pieces);
-        layer.remove();
+      const accent = String(getComputedStyle(document.documentElement).getPropertyValue("--amber") || "").trim() || "#b45309";
+      Array.from({ length: 3 }, (_, index) => {
+        const ring = document.createElement("span");
+        ring.className = "todo-ripple-ring";
+        ring.style.left = `${origin.x}px`;
+        ring.style.top = `${origin.y}px`;
+        ring.style.borderColor = accent;
+        ring.style.animationDelay = `${index * 120}ms`;
+        layer.appendChild(ring);
+        return ring;
       });
+
+      return waitForCelebration(1600).finally(() => layer.remove());
     }
 
     function playGsapBubbleFloat(origin) {
@@ -787,18 +745,28 @@
       });
     }
 
-    function playRainbowFlash() {
-      const layer = createCelebrationLayer("rainbow-flash", {
+    function playScreenPopShimmer(cardEl) {
+      const layer = createCelebrationLayer("screen-pop-shimmer", {
         x: window.innerWidth / 2,
         y: window.innerHeight / 2
       });
-
       if (!layer) {
         return Promise.resolve();
       }
-
-      layer.innerHTML = '<div class="todo-rainbow-sweep"></div>';
-      return waitForCelebration(3400).finally(() => layer.remove());
+      const panel = cardEl?.closest(".panel");
+      layer.innerHTML = '<div class="todo-golden-shimmer"></div>';
+      if (panel) {
+        panel.classList.remove("todo-screen-pop");
+        void panel.offsetWidth;
+        panel.classList.add("todo-screen-pop");
+        window.setTimeout(() => panel.classList.remove("todo-screen-pop"), 450);
+      }
+      return waitForCelebration(1600).finally(() => {
+        if (panel) {
+          panel.classList.remove("todo-screen-pop");
+        }
+        layer.remove();
+      });
     }
 
     function playTodoCelebration(cardEl) {
@@ -820,13 +788,13 @@
         case "bubble-float":
           return playGsapBubbleFloat(origin);
         case "rainbow-flash":
-          return playRainbowFlash();
+          return playScreenPopShimmer(cardEl);
         case "thumbs-up-bounce":
           return playGsapThumbsUp(origin);
         case "sparkle-trail":
-          return playGsapSparkleTrail(origin);
+          return playRippleRings(origin);
         default:
-          return playRainbowFlash();
+          return playScreenPopShimmer(cardEl);
       }
     }
 
@@ -900,6 +868,7 @@
       cardEl.classList.add("is-completing");
       console.log("[todo-complete] completion reached reset path");
       resetAutoRotate("todo-complete");
+      playTodoCelebration(cardEl).catch(() => {});
 
       const { error } = await client
         .from("todos")
@@ -912,8 +881,6 @@
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
-
-      playTodoCelebration(cardEl).catch(() => {});
 
       window.setTimeout(() => {
         if (!cardEl.isConnected) {
