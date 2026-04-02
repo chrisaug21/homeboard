@@ -533,12 +533,12 @@
         particleCount: 120,
         spread: 80,
         startVelocity: 42,
-        ticks: 220,
+        ticks: 360,
         origin: { x: 0.5, y: 0.48 },
         colors
       });
 
-      return waitForCelebration().finally(() => layer.remove());
+      return waitForCelebration(3400).finally(() => layer.remove());
     }
 
     function playCanvasStarShower() {
@@ -558,7 +558,7 @@
       }
 
       const start = Date.now();
-      const duration = 1750;
+      const duration = 3200;
       const frame = () => {
         if (Date.now() - start >= duration) {
           return;
@@ -570,18 +570,18 @@
           spread: 40,
           startVelocity: 18,
           gravity: 0.7,
-          ticks: 260,
+          ticks: 340,
           scalar: 1.05,
           origin: { x: 0.15 + (Math.random() * 0.7), y: -0.08 },
           shapes: ["star"],
           colors
         });
 
-        window.setTimeout(frame, 180);
+        window.setTimeout(frame, 260);
       };
 
       frame();
-      return waitForCelebration(duration + 100).finally(() => layer.remove());
+      return waitForCelebration(duration + 350).finally(() => layer.remove());
     }
 
     function playCanvasFireworks() {
@@ -602,8 +602,8 @@
 
       const bursts = [
         { x: 0.16, y: 0.22, delay: 0 },
-        { x: 0.82, y: 0.2, delay: 280 },
-        { x: 0.7, y: 0.52, delay: 560 }
+        { x: 0.82, y: 0.2, delay: 500 },
+        { x: 0.7, y: 0.52, delay: 1000 }
       ];
 
       bursts.forEach((burst) => {
@@ -612,14 +612,14 @@
             particleCount: 42,
             spread: 62,
             startVelocity: 34,
-            ticks: 240,
+            ticks: 320,
             origin: { x: burst.x, y: burst.y },
             colors
           });
         }, burst.delay);
       });
 
-      return waitForCelebration(1800).finally(() => layer.remove());
+      return waitForCelebration(3400).finally(() => layer.remove());
     }
 
     function createGsapPiece(className, content = "") {
@@ -657,21 +657,21 @@
             y: Math.sin(angle) * distance,
             scale: 1,
             opacity: 1,
-            duration: 0.55,
+            duration: 0.75,
             ease: "back.out(1.9)"
           }
         );
         gsap.to(piece, {
           opacity: 0,
           scale: 0.3,
-          duration: 0.7,
-          delay: 0.7,
+          duration: 1,
+          delay: 1.2,
           ease: "power2.out"
         });
         return piece;
       });
 
-      return waitForCelebration(1650).finally(() => {
+      return waitForCelebration(2700).finally(() => {
         gsap.killTweensOf(pieces);
         layer.remove();
       });
@@ -705,20 +705,20 @@
             y: -120 - (Math.random() * 70),
             opacity: 0.55,
             scale: 1,
-            duration: 1.55,
+            duration: 2.35,
             ease: "power1.out"
           }
         );
         gsap.to(piece, {
           opacity: 0,
-          duration: 0.55,
-          delay: 1.05,
+          duration: 0.7,
+          delay: 1.75,
           ease: "power1.out"
         });
         return piece;
       });
 
-      return waitForCelebration(1750).finally(() => {
+      return waitForCelebration(2850).finally(() => {
         gsap.killTweensOf(pieces);
         layer.remove();
       });
@@ -743,12 +743,12 @@
       timeline
         .fromTo(thumb,
           { scale: 0, opacity: 0, y: 18 },
-          { scale: 1, opacity: 1, y: -18, duration: 0.48, ease: "back.out(2.5)" }
+          { scale: 1, opacity: 1, y: -18, duration: 0.6, ease: "back.out(2.5)" }
         )
-        .to(thumb, { duration: 0.45, y: -22 })
-        .to(thumb, { opacity: 0, y: -72, duration: 0.42, ease: "power2.out" });
+        .to(thumb, { duration: 1.1, y: -22 })
+        .to(thumb, { opacity: 0, y: -72, duration: 0.6, ease: "power2.out" });
 
-      return waitForCelebration(1650).finally(() => {
+      return waitForCelebration(2800).finally(() => {
         timeline.kill();
         layer.remove();
       });
@@ -765,7 +765,7 @@
       }
 
       layer.innerHTML = '<div class="todo-rainbow-sweep"></div>';
-      return waitForCelebration(1500).finally(() => layer.remove());
+      return waitForCelebration(2050).finally(() => layer.remove());
     }
 
     function playTodoCelebration(cardEl) {
@@ -775,6 +775,7 @@
 
       const animationName = getDisplayCelebrationAnimationName();
       const origin = getTodoCelebrationOrigin(cardEl);
+      console.log(`Celebration: ${animationName} | confetti loaded: ${typeof confetti !== "undefined"} | gsap loaded: ${typeof gsap !== "undefined"}`);
 
       switch (animationName) {
         case "confetti-burst":
