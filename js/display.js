@@ -23,6 +23,9 @@
     let cachedSupabaseCountdowns = null;
     let cachedCalendarCountdowns = [];
     let cachedWeddingSnapshot = null;
+    let cachedScorecards = [];
+    let cachedScorecardSessionsById = new Map();
+    let scorecardSelectionById = new Map();
     let celebrationBag = [];
     let monthOffset = 0;
     let weekOffset = 0;
@@ -40,6 +43,9 @@
     function getRegisteredScreens(screenName) {
       if (screenName === "countdowns") {
         return Array.from(track.querySelectorAll(".countdown-screen"));
+      }
+      if (screenName === "scorecards") {
+        return Array.from(track.querySelectorAll(".scorecard-screen"));
       }
 
       const screen = displayScreenRegistry[screenName];
@@ -287,6 +293,7 @@
       if (screen.classList.contains("screen--todos")) return "todos";
       if (screen.classList.contains("screen--meals")) return "meals";
       if (screen.classList.contains("countdown-screen")) return "countdowns";
+      if (screen.classList.contains("scorecard-screen")) return "scorecards";
       if (screen.classList.contains("rsvp-screen")) return "rsvp";
       return "generic";
     }
@@ -308,6 +315,8 @@
           return { icon: "calendar-days", label: "Monthly calendar", badge: "30" };
         case "countdowns":
           return { icon: "hourglass", label: "Countdowns" };
+        case "scorecards":
+          return { icon: "trophy", label: "Scorecards" };
         case "rsvp":
           return { icon: "heart", label: "Wedding RSVP" };
         default:
@@ -323,6 +332,9 @@
       visibleScreens.forEach((screen, index) => {
         const screenKey = getScreenKeyForElement(screen);
         if (screenKey === "countdowns" && seen.has("countdowns")) {
+          return;
+        }
+        if (screenKey === "scorecards" && seen.has("scorecards")) {
           return;
         }
         if (screenKey !== "generic" && seen.has(screenKey)) {
@@ -1077,6 +1089,144 @@
       });
     }
 
+    async function fetchDisplayScorecards() {
+      const client = getSupabaseClient();
+      if (!client) {
+        return null;
+      }
+
+      const { data, error } = await client
+        .from("scorecards")
+        .select("id, household_id, name, increments, players, show_history, allow_negative, created_at, archived_at")
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .is("archived_at", null)
+        .order("created_at", { ascending: true });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      return data.map(mapScorecardRow);
+    }
+
+    async function fetchDisplayScorecardSessions(scorecards) {
+      const client = getSupabaseClient();
+      const ids = (Array.isArray(scorecards) ? scorecards : []).map((scorecard) => scorecard.id).filter(Boolean);
+      const sessionsById = new Map(ids.map((id) => [id, []]));
+
+      if (!client) {
+        return null;
+      }
+
+      if (!ids.length) {
+        return sessionsById;
+      }
+
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .in("scorecard_id", ids)
+        .order("started_at", { ascending: false });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      data.forEach((row) => {
+        const scorecard = scorecards.find((item) => item.id === row.scorecard_id);
+        if (!scorecard) {
+          return;
+        }
+        const list = sessionsById.get(scorecard.id) || [];
+        list.push(mapScorecardSessionRow(row, scorecard));
+        sessionsById.set(scorecard.id, list);
+      });
+
+      return sessionsById;
+    }
+
+    async function createDisplayScorecardSession(scorecard) {
+      const client = getSupabaseClient();
+      if (!client || !scorecard) {
+        return null;
+      }
+
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .insert({
+          scorecard_id: scorecard.id,
+          household_id: DISPLAY_HOUSEHOLD_ID,
+          started_at: new Date().toISOString(),
+          scores: createScorecardZeroScores(scorecard.players),
+          is_final_jeopardy: false
+        })
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return mapScorecardSessionRow(data, scorecard);
+    }
+
+    async function ensureDisplayScorecardSessions(scorecards, sessionsById) {
+      const nextMap = sessionsById instanceof Map ? new Map(sessionsById) : new Map();
+
+      for (const scorecard of (Array.isArray(scorecards) ? scorecards : [])) {
+        const sessions = (nextMap.get(scorecard.id) || []).slice();
+        const hasActiveSession = sessions.some((session) => !session.endedAt);
+        if (!hasActiveSession) {
+          const freshSession = await createDisplayScorecardSession(scorecard);
+          if (freshSession) {
+            sessions.unshift(freshSession);
+          }
+        }
+        nextMap.set(scorecard.id, sessions);
+      }
+
+      return nextMap;
+    }
+
+    function getScorecardSessions(scorecardId) {
+      return (cachedScorecardSessionsById.get(scorecardId) || []).slice().sort((a, b) =>
+        new Date(b.startedAt || b.createdAt || 0) - new Date(a.startedAt || a.createdAt || 0)
+      );
+    }
+
+    function getActiveScorecardSession(scorecardId) {
+      return getScorecardSessions(scorecardId).find((session) => !session.endedAt) || null;
+    }
+
+    function getScorecardOrder(screenOrder, scorecards) {
+      const order = Array.isArray(screenOrder) ? screenOrder : [];
+      const seen = new Set();
+      const ordered = [];
+
+      order.forEach((key) => {
+        const scorecardId = getScorecardIdFromScreenKey(key);
+        if (!scorecardId || seen.has(scorecardId)) {
+          return;
+        }
+        const scorecard = scorecards.find((item) => item.id === scorecardId);
+        if (!scorecard) {
+          return;
+        }
+        ordered.push(scorecard);
+        seen.add(scorecardId);
+      });
+
+      scorecards.forEach((scorecard) => {
+        if (!seen.has(scorecard.id)) {
+          ordered.push(scorecard);
+          seen.add(scorecard.id);
+        }
+      });
+
+      return ordered;
+    }
+
     async function fetchWeddingSnapshotWithAutoMatch() {
       const snapshot = await fetchWeddingRsvpSnapshot();
       if (!snapshot) {
@@ -1535,6 +1685,174 @@
       resolveScreen("meals");
     }
 
+    function getScorecardSelection(scorecard) {
+      const selected = scorecardSelectionById.get(scorecard.id);
+      if (selected && scorecard.players.some((player) => player.name === selected)) {
+        return selected;
+      }
+      const fallback = scorecard.players[0]?.name || "";
+      if (fallback) {
+        scorecardSelectionById.set(scorecard.id, fallback);
+      }
+      return fallback;
+    }
+
+    function buildScorecardHistoryMarkup(scorecard) {
+      const sessions = getScorecardSessions(scorecard.id).filter((session) => session.endedAt).slice(0, 5);
+      if (!scorecard.showHistory || !sessions.length) {
+        return "";
+      }
+
+      return `
+        <details class="scorecard-history">
+          <summary>Past games</summary>
+          <div class="scorecard-history-list">
+            ${sessions.map((session) => `
+              <article class="scorecard-history-item">
+                <div class="scorecard-history-head">
+                  <strong>${escapeHtml(formatScorecardSessionDate(session.endedAt || session.startedAt))}</strong>
+                  <span>${escapeHtml(session.winner || "Tie")}</span>
+                </div>
+                <div class="scorecard-history-scores">
+                  ${scorecard.players.map((player) => `
+                    <span class="scorecard-history-pill" style="background:${escapeHtml(hexToRgba(player.color, 0.14))};color:${escapeHtml(player.color)}">${escapeHtml(player.name)} ${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</span>
+                  `).join("")}
+                </div>
+              </article>
+            `).join("")}
+          </div>
+        </details>
+      `;
+    }
+
+    function buildScorecardColumnLayout(scorecard, session) {
+      const topScore = Math.max(...scorecard.players.map((player) => Number(session.scores[player.name]) || 0));
+      return `
+        <div class="scorecard-columns">
+          ${scorecard.players.map((player) => {
+            const score = Number(session.scores[player.name]) || 0;
+            const isLeader = score === topScore && score > 0;
+            return `
+              <article class="scorecard-player-card${isLeader ? " is-leading" : ""}" data-scorecard-player-card="${escapeHtml(player.name)}">
+                <div class="scorecard-player-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</div>
+                <div class="scorecard-player-score" data-scorecard-score="${escapeHtml(scorecard.id)}:${escapeHtml(player.name)}">${escapeHtml(formatScorecardScore(score))}</div>
+                <div class="scorecard-button-grid">
+                  ${scorecard.increments.map((increment) => `
+                    <button class="scorecard-action-btn" type="button" data-action="scorecard-display-adjust" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}" data-increment="${escapeHtml(increment)}">
+                      ${increment > 0 ? "+" : ""}${escapeHtml(increment)}
+                    </button>
+                  `).join("")}
+                </div>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function buildScorecardRowLayout(scorecard, session) {
+      const selectedPlayer = getScorecardSelection(scorecard);
+      return `
+        <div class="scorecard-rows">
+          <div class="scorecard-player-row-list">
+            ${scorecard.players.map((player) => {
+              const isSelected = player.name === selectedPlayer;
+              return `
+                <button class="scorecard-player-row${isSelected ? " is-selected" : ""}" type="button" data-action="scorecard-select-player" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}">
+                  <span class="scorecard-player-row-name">
+                    <span class="scorecard-player-dot" style="background:${escapeHtml(player.color)}"></span>
+                    ${escapeHtml(player.name)}
+                  </span>
+                  <strong data-scorecard-score="${escapeHtml(scorecard.id)}:${escapeHtml(player.name)}">${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</strong>
+                </button>
+              `;
+            }).join("")}
+          </div>
+          <div class="scorecard-shared-buttons">
+            ${scorecard.increments.map((increment) => `
+              <button class="scorecard-action-btn" type="button" data-action="scorecard-display-adjust-selected" data-scorecard-id="${escapeHtml(scorecard.id)}" data-increment="${escapeHtml(increment)}">
+                ${increment > 0 ? "+" : ""}${escapeHtml(increment)}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function buildScorecardScreenMarkup(scorecard) {
+      const session = getActiveScorecardSession(scorecard.id);
+      if (!session) {
+        return "";
+      }
+
+      const label = scorecard.name.toUpperCase();
+      const layoutMarkup = scorecard.players.length <= 4
+        ? buildScorecardColumnLayout(scorecard, session)
+        : buildScorecardRowLayout(scorecard, session);
+
+      return `
+        <div class="panel">
+          <div class="screen-title-row">
+            <div class="eyebrow"><i data-lucide="trophy"></i> ${escapeHtml(label)}</div>
+            <button class="scorecard-new-game-btn" type="button" data-action="scorecard-display-new-game" data-scorecard-id="${escapeHtml(scorecard.id)}">New game</button>
+          </div>
+          <div class="scorecard-layout">
+            ${layoutMarkup}
+            ${buildScorecardHistoryMarkup(scorecard)}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderScorecards(scorecards) {
+      let existingScreens = Array.from(track.querySelectorAll(".scorecard-screen"));
+      existingScreens.forEach((screen) => screen.remove());
+      const displaySettings = normalizeDisplaySettings(cachedHouseholdConfig?.display_settings);
+
+      const orderedScorecards = getScorecardOrder(displaySettings.screen_order, scorecards);
+      if (!orderedScorecards.length) {
+        reconcileRotationState();
+        return;
+      }
+
+      const anchor = track.querySelector(".rsvp-screen");
+      orderedScorecards.forEach((scorecard) => {
+        const section = document.createElement("section");
+        section.className = "screen scorecard-screen";
+        section.dataset.scorecardId = scorecard.id;
+        section.dataset.screenKey = buildScorecardScreenKey(scorecard.id);
+        section.innerHTML = buildScorecardScreenMarkup(scorecard);
+        track.insertBefore(section, anchor || null);
+      });
+
+      applyActiveScreens(displaySettings.active_screens || DISPLAY_SCREEN_KEYS);
+      applyScreenOrder(displaySettings.screen_order || DISPLAY_SCREEN_KEYS);
+      reconcileRotationState();
+      refreshIcons();
+    }
+
+    async function renderScorecardsWithData() {
+      markPending("scorecards");
+      const scorecards = await fetchDisplayScorecards();
+
+      if (scorecards === null) {
+        resolveScreen("scorecards");
+        return;
+      }
+
+      let sessionsById = await fetchDisplayScorecardSessions(scorecards);
+      if (sessionsById === null) {
+        resolveScreen("scorecards");
+        return;
+      }
+
+      sessionsById = await ensureDisplayScorecardSessions(scorecards, sessionsById);
+      cachedScorecards = scorecards;
+      cachedScorecardSessionsById = sessionsById;
+      renderScorecards(scorecards);
+      resolveScreen("scorecards");
+    }
+
     function renderCountdowns(countdownItems) {
       let existingCountdownScreens = Array.from(track.querySelectorAll(".countdown-screen"));
       existingCountdownScreens.forEach((screen, index) => {
@@ -1907,7 +2225,10 @@
     function applyActiveScreens(activeScreens) {
       DISPLAY_SCREEN_KEYS.forEach((name) => {
         getRegisteredScreens(name).forEach((screen) => {
-          if (activeScreens.includes(name)) {
+          const isEnabled = name === "scorecards"
+            ? activeScreens.includes("scorecards")
+            : activeScreens.includes(name);
+          if (isEnabled) {
             screen.classList.remove("screen--disabled");
             if (!screen.classList.contains("screen--empty-hidden")) {
               screen.removeAttribute("aria-hidden");
@@ -1926,6 +2247,13 @@
       const rsvpScreen = track.querySelector(".rsvp-screen");
       const anchor = rsvpScreen || null;
       for (const screenName of screenOrder) {
+        if (isScorecardScreenKey(screenName)) {
+          const scorecardScreen = track.querySelector(`.scorecard-screen[data-screen-key="${screenName}"]`);
+          if (scorecardScreen && scorecardScreen.parentElement === track) {
+            track.insertBefore(scorecardScreen, anchor);
+          }
+          continue;
+        }
         getRegisteredScreens(screenName).forEach((screen) => {
           if (screen.parentElement === track) {
             track.insertBefore(screen, anchor);
@@ -1951,6 +2279,7 @@
         todos: 45,
         meals: 30,
         countdowns: 15,
+        scorecards: 30,
         default: 30
       };
       if (ds.timer_intervals && typeof ds.timer_intervals === "object") {
@@ -1975,6 +2304,95 @@
         ? ds.screen_order
         : defaultScreens;
       applyScreenOrder(screenOrder);
+    }
+
+    function animateScorecardScore(scorecardId, playerName, increment) {
+      const scoreEl = Array.from(document.querySelectorAll("[data-scorecard-score]")).find((element) =>
+        element.getAttribute("data-scorecard-score") === `${scorecardId}:${playerName}`
+      );
+      if (!scoreEl) {
+        return;
+      }
+
+      scoreEl.classList.remove("is-score-updating", "is-score-positive", "is-score-negative");
+      void scoreEl.offsetWidth;
+      scoreEl.classList.add("is-score-updating");
+      scoreEl.classList.add(increment >= 0 ? "is-score-positive" : "is-score-negative");
+      window.setTimeout(() => {
+        scoreEl.classList.remove("is-score-updating", "is-score-positive", "is-score-negative");
+      }, 420);
+    }
+
+    async function adjustDisplayScorecardScore(scorecardId, playerName, increment) {
+      const client = getSupabaseClient();
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const session = getActiveScorecardSession(scorecardId);
+      if (!client || !scorecard || !session) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      const nextScores = {
+        ...session.scores,
+        [playerName]: applyScorecardIncrement(session.scores[playerName] || 0, Number(increment), scorecard.allowNegative)
+      };
+
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .update({ scores: nextScores })
+        .eq("id", session.id)
+        .eq("scorecard_id", scorecardId)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .single();
+
+      if (error || !data) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      cachedScorecardSessionsById.set(scorecardId, getScorecardSessions(scorecardId).map((item) =>
+        item.id === session.id ? mapScorecardSessionRow(data, scorecard) : item
+      ));
+      renderScorecards(cachedScorecards);
+      animateScorecardScore(scorecardId, playerName, Number(increment));
+      resetAutoRotate("scorecard-adjust");
+    }
+
+    async function startDisplayScorecardNewGame(scorecardId) {
+      const client = getSupabaseClient();
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const session = getActiveScorecardSession(scorecardId);
+      if (!client || !scorecard || !session) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      const endedAt = new Date().toISOString();
+      const winner = getScorecardWinner(session.scores);
+      const updateResponse = await client
+        .from("scorecard_sessions")
+        .update({
+          ended_at: endedAt,
+          winner,
+          scores: session.scores,
+          wagers: null,
+          wager_results: null,
+          is_final_jeopardy: false
+        })
+        .eq("id", session.id)
+        .eq("scorecard_id", scorecardId)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .single();
+
+      const nextSession = !updateResponse.error ? await createDisplayScorecardSession(scorecard) : null;
+
+      if (updateResponse.error || !updateResponse.data || !nextSession) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      await renderScorecardsWithData();
+      resetAutoRotate("scorecard-new-game");
     }
 
     function updateLastSyncedLabel() {
@@ -2003,9 +2421,10 @@
         if (remoteMeals !== null) renderMeals(remoteMeals, weeklyNote || "");
 
         // Re-fetch calendar (wide fetch refreshes countdowns too)
-        const [newConfig, newSupabaseCountdowns] = await Promise.all([
+        const [newConfig, newSupabaseCountdowns, newScorecards] = await Promise.all([
           fetchHouseholdConfig(),
-          fetchCountdowns()
+          fetchCountdowns(),
+          fetchDisplayScorecards()
         ]);
 
         if (newConfig) {
@@ -2019,6 +2438,16 @@
 
         if (newSupabaseCountdowns !== null) {
           cachedSupabaseCountdowns = newSupabaseCountdowns;
+        }
+
+        if (newScorecards !== null) {
+          let scorecardSessions = await fetchDisplayScorecardSessions(newScorecards);
+          if (scorecardSessions !== null) {
+            scorecardSessions = await ensureDisplayScorecardSessions(newScorecards, scorecardSessions);
+            cachedScorecards = newScorecards;
+            cachedScorecardSessionsById = scorecardSessions;
+            renderScorecards(newScorecards);
+          }
         }
 
         await refreshCalendarData(true);
@@ -2103,6 +2532,7 @@
       if (screen.classList.contains("screen--todos")) return (screenTimers.todos || 45) * 1000;
       if (screen.classList.contains("screen--meals")) return (screenTimers.meals || 30) * 1000;
       if (screen.classList.contains("countdown-screen")) return (screenTimers.countdowns || 15) * 1000;
+      if (screen.classList.contains("scorecard-screen")) return (screenTimers.scorecards || 30) * 1000;
       return (screenTimers.default || 30) * 1000;
     }
 
@@ -2336,6 +2766,7 @@
       renderCalendarAndCountdowns();
       renderTodos();
       renderMealsWithData();
+      renderScorecardsWithData();
       renderRsvpBoardWithData();
       renderProgress();
 
@@ -2353,12 +2784,49 @@
         if (Number.isNaN(targetIndex)) return;
         navigateToScreenIndex(targetIndex);
       });
+      track.addEventListener("click", (event) => {
+        const selectBtn = event.target.closest("[data-action='scorecard-select-player']");
+        if (selectBtn) {
+          scorecardSelectionById.set(selectBtn.getAttribute("data-scorecard-id"), selectBtn.getAttribute("data-player-name"));
+          renderScorecards(cachedScorecards);
+          resetAutoRotate("scorecard-select");
+          return;
+        }
+
+        const adjustBtn = event.target.closest("[data-action='scorecard-display-adjust']");
+        if (adjustBtn) {
+          adjustDisplayScorecardScore(
+            adjustBtn.getAttribute("data-scorecard-id"),
+            adjustBtn.getAttribute("data-player-name"),
+            Number(adjustBtn.getAttribute("data-increment"))
+          );
+          return;
+        }
+
+        const sharedAdjustBtn = event.target.closest("[data-action='scorecard-display-adjust-selected']");
+        if (sharedAdjustBtn) {
+          const scorecardId = sharedAdjustBtn.getAttribute("data-scorecard-id");
+          const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+          const selectedPlayer = scorecard ? getScorecardSelection(scorecard) : "";
+          if (!selectedPlayer) {
+            return;
+          }
+          adjustDisplayScorecardScore(scorecardId, selectedPlayer, Number(sharedAdjustBtn.getAttribute("data-increment")));
+          return;
+        }
+
+        const newGameBtn = event.target.closest("[data-action='scorecard-display-new-game']");
+        if (newGameBtn) {
+          startDisplayScorecardNewGame(newGameBtn.getAttribute("data-scorecard-id"));
+        }
+      });
       window.addEventListener("keydown", handleKeydown);
 
       // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed
       window.setInterval(() => {
         const needsWide = (Date.now() - lastWideFetch) >= 24 * 60 * 60 * 1000;
         refreshCalendarData(needsWide);
+        renderScorecardsWithData();
         if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
           renderRsvpBoardWithData();
         }

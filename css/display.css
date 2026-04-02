@@ -2123,7 +2123,7 @@
     .progress-bar > .display-nav > .display-nav-button:hover,
     .progress-bar > .display-nav > .display-nav-button:focus-visible {
       transform: translateY(-1px);
-      border-color: rgba(180, 83, 9, 0.24);
+      border-color: var(--color-accent);
       color: var(--ink);
     }
 
@@ -2138,7 +2138,7 @@
       min-width: var(--display-nav-button-active-width);
       background: var(--display-nav-active-bg);
       border-color: var(--display-nav-active-border);
-      color: #fff7ed;
+      color: var(--color-text-on-accent);
       box-shadow: 0 6px 14px rgba(180, 83, 9, 0.22);
     }
 
@@ -2295,4 +2295,178 @@
         grid-template-columns: 1fr;
       }
 
+    }
+
+    .scorecard-layout,
+    .scorecard-columns,
+    .scorecard-rows,
+    .scorecard-player-row-list,
+    .scorecard-history-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .scorecard-columns {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      align-items: stretch;
+    }
+
+    .scorecard-player-card,
+    .scorecard-player-row,
+    .scorecard-history-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.44);
+      color: var(--ink);
+    }
+
+    .scorecard-player-card {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .scorecard-player-card.is-leading,
+    .scorecard-player-row.is-selected {
+      background: var(--color-accent-subtle);
+      border-color: var(--color-accent);
+    }
+
+    .scorecard-player-name,
+    .scorecard-player-row-name {
+      font-size: 1rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .scorecard-player-score {
+      font-size: clamp(2rem, 3vw, 3rem);
+      font-weight: 800;
+      line-height: 1;
+      transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), background-color 240ms ease;
+      border-radius: 14px;
+      padding: 6px 0;
+    }
+
+    .scorecard-player-score.is-score-updating {
+      transform: scale(1.2);
+    }
+
+    .scorecard-player-score.is-score-positive {
+      background: var(--sage-soft);
+    }
+
+    .scorecard-player-score.is-score-negative {
+      background: var(--rose-soft);
+    }
+
+    .scorecard-button-grid,
+    .scorecard-shared-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .scorecard-action-btn,
+    .scorecard-new-game-btn,
+    .scorecard-player-row {
+      font: inherit;
+      cursor: pointer;
+      transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+    }
+
+    .scorecard-action-btn,
+    .scorecard-new-game-btn {
+      border-radius: var(--button-radius);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      background: var(--panel-strong);
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .scorecard-new-game-btn {
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      color: var(--color-text-on-accent);
+    }
+
+    .scorecard-action-btn:hover,
+    .scorecard-action-btn:focus-visible,
+    .scorecard-new-game-btn:hover,
+    .scorecard-new-game-btn:focus-visible,
+    .scorecard-player-row:hover,
+    .scorecard-player-row:focus-visible {
+      transform: translateY(-1px);
+    }
+
+    .scorecard-action-btn:hover,
+    .scorecard-action-btn:focus-visible {
+      background: var(--color-accent-subtle);
+      border-color: var(--color-accent);
+    }
+
+    .scorecard-player-row {
+      width: 100%;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      text-align: left;
+    }
+
+    .scorecard-player-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .scorecard-history {
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .scorecard-history summary {
+      cursor: pointer;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .scorecard-history-list {
+      margin-top: 12px;
+    }
+
+    .scorecard-history-item {
+      padding: 12px 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .scorecard-history-head,
+    .scorecard-history-scores {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .scorecard-history-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+      border-radius: var(--tag-radius);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1120px) {
+      .scorecard-columns {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }

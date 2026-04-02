@@ -28,12 +28,12 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.3.13";
+    const VERSION = "1.4.0";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
     const LAST_SYNCED_KEY = "homeboard_last_synced";
-    const DISPLAY_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"];
+    const DISPLAY_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards"];
 
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
@@ -250,6 +250,23 @@
       return key;
     }
 
+    function buildScorecardScreenKey(scorecardId) {
+      const safeId = String(scorecardId || "").trim();
+      return safeId ? `scorecard_${safeId}` : "";
+    }
+
+    function isScorecardScreenKey(key) {
+      return /^scorecard_[a-z0-9-]+$/i.test(String(key || "").trim());
+    }
+
+    function getScorecardIdFromScreenKey(key) {
+      if (!isScorecardScreenKey(key)) {
+        return "";
+      }
+
+      return String(key).trim().slice("scorecard_".length);
+    }
+
     function expandLegacyCalendarScreen(screenKey) {
       if (screenKey === "calendar") {
         return ["upcoming_calendar", "monthly_calendar"];
@@ -258,13 +275,19 @@
       return [screenKey];
     }
 
-    function normalizeDisplayScreenList(screenList, fallback = DISPLAY_SCREEN_KEYS) {
+    function normalizeDisplayScreenList(screenList, fallback = DISPLAY_SCREEN_KEYS, options = {}) {
+      const allowScorecardScreens = options.allowScorecardScreens === true;
       if (!Array.isArray(screenList) || screenList.length === 0) {
         return [...fallback];
       }
 
       const normalized = [];
       screenList.forEach((key) => {
+        if (allowScorecardScreens && isScorecardScreenKey(key) && !normalized.includes(key)) {
+          normalized.push(String(key).trim());
+          return;
+        }
+
         expandLegacyCalendarScreen(normalizeDisplayScreenKey(key)).forEach((expandedKey) => {
           if (DISPLAY_SCREEN_KEYS.includes(expandedKey) && !normalized.includes(expandedKey)) {
             normalized.push(expandedKey);
@@ -305,11 +328,166 @@
         : {};
 
       settings.active_screens = normalizeDisplayScreenList(settings.active_screens);
-      settings.screen_order = normalizeDisplayScreenList(settings.screen_order);
+      settings.screen_order = normalizeDisplayScreenList(settings.screen_order, DISPLAY_SCREEN_KEYS, {
+        allowScorecardScreens: true
+      });
       settings.timer_intervals = normalizeTimerIntervals(settings.timer_intervals);
       delete settings.calendar_view;
 
       return settings;
+    }
+
+    function normalizeScorecardPlayers(players) {
+      if (!Array.isArray(players)) {
+        return [];
+      }
+
+      return players
+        .map((player) => ({
+          name: String(player?.name || "").trim(),
+          color: String(player?.color || "").trim()
+        }))
+        .filter((player) => player.name);
+    }
+
+    function normalizeScorecardIncrements(increments) {
+      if (!Array.isArray(increments)) {
+        return [];
+      }
+
+      return increments
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value !== 0);
+    }
+
+    function createScorecardZeroScores(players) {
+      return Object.fromEntries(
+        normalizeScorecardPlayers(players).map((player) => [player.name, 0])
+      );
+    }
+
+    function normalizeScorecardScores(scores, players) {
+      const playerList = normalizeScorecardPlayers(players);
+      const source = scores && typeof scores === "object" ? scores : {};
+      const normalized = {};
+
+      playerList.forEach((player) => {
+        const rawValue = Number(source[player.name]);
+        normalized[player.name] = Number.isFinite(rawValue) ? rawValue : 0;
+      });
+
+      return normalized;
+    }
+
+    function applyScorecardIncrement(currentScore, increment, allowNegative) {
+      const nextScore = (Number(currentScore) || 0) + (Number(increment) || 0);
+      if (allowNegative) {
+        return nextScore;
+      }
+
+      return Math.max(0, nextScore);
+    }
+
+    function getScorecardWinner(scores) {
+      const entries = Object.entries(scores && typeof scores === "object" ? scores : {});
+      if (!entries.length) {
+        return null;
+      }
+
+      const sorted = entries
+        .map(([name, score]) => ({
+          name,
+          score: Number.isFinite(Number(score)) ? Number(score) : 0
+        }))
+        .sort((a, b) => {
+          if (b.score !== a.score) {
+            return b.score - a.score;
+          }
+          return a.name.localeCompare(b.name);
+        });
+
+      if (!sorted.length) {
+        return null;
+      }
+
+      const leaders = sorted.filter((entry) => entry.score === sorted[0].score);
+      return leaders.length === 1 ? leaders[0].name : leaders.map((entry) => entry.name).join(", ");
+    }
+
+    function mapScorecardRow(row) {
+      const players = normalizeScorecardPlayers(row?.players);
+      return {
+        id: row?.id || "",
+        householdId: row?.household_id || "",
+        name: String(row?.name || "").trim() || "Scorecard",
+        increments: normalizeScorecardIncrements(row?.increments),
+        players,
+        showHistory: row?.show_history !== false,
+        allowNegative: row?.allow_negative === true,
+        createdAt: row?.created_at || null,
+        archivedAt: row?.archived_at || null
+      };
+    }
+
+    function mapScorecardSessionRow(row, scorecard) {
+      const players = scorecard?.players || [];
+      const scores = normalizeScorecardScores(row?.scores, players);
+      return {
+        id: row?.id || "",
+        scorecardId: row?.scorecard_id || "",
+        householdId: row?.household_id || "",
+        startedAt: row?.started_at || null,
+        endedAt: row?.ended_at || null,
+        scores,
+        wagers: row?.wagers && typeof row.wagers === "object" ? row.wagers : null,
+        wagerResults: row?.wager_results && typeof row.wager_results === "object" ? row.wager_results : null,
+        winner: String(row?.winner || "").trim() || getScorecardWinner(scores),
+        isFinalJeopardy: row?.is_final_jeopardy === true,
+        createdAt: row?.created_at || null
+      };
+    }
+
+    function formatScorecardScore(value) {
+      const safeValue = Number(value) || 0;
+      return new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 0
+      }).format(safeValue);
+    }
+
+    function formatScorecardSessionDate(value) {
+      if (!value) {
+        return "Unknown date";
+      }
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return "Unknown date";
+      }
+
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+      }).format(date);
+    }
+
+    function formatScorecardSessionDuration(startedAt, endedAt) {
+      const start = startedAt ? new Date(startedAt) : null;
+      const end = endedAt ? new Date(endedAt) : null;
+
+      if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return "Duration unknown";
+      }
+
+      const totalMinutes = Math.max(0, Math.round((end - start) / 60000));
+      if (totalMinutes < 60) {
+        return `${totalMinutes}m`;
+      }
+
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
     }
 
     function formatRelativeTimestamp(value, emptyLabel = "") {

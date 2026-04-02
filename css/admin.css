@@ -629,7 +629,7 @@
       bottom: 0;
       z-index: 10;
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 8px;
       padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
       background: rgb(255, 250, 243);
@@ -676,8 +676,8 @@
     }
 
     .admin-nav-button.is-active {
-      background: rgba(180, 83, 9, 0.14);
-      color: var(--amber);
+      background: var(--color-accent-subtle);
+      color: var(--color-accent);
     }
 
     .admin-nav-button svg {
@@ -1999,4 +1999,195 @@
     html[data-scheme="dark"] .admin-rsvp-under-count-pill {
       background: rgba(245, 158, 11, 0.18);
       color: var(--ink);
+    }
+
+    .admin-settings-toggle--block {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .admin-scorecard-card {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      display: grid;
+      gap: 12px;
+      transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+      font: inherit;
+    }
+
+    .admin-scorecard-card:hover,
+    .admin-scorecard-card:focus-visible {
+      transform: translateY(-1px);
+      border-color: var(--color-accent);
+      background: var(--color-accent-subtle);
+    }
+
+    .admin-scorecard-card:focus-visible {
+      outline: 3px solid var(--color-accent);
+      outline-offset: 3px;
+    }
+
+    .admin-scorecard-card-head,
+    .admin-scorecard-section-head,
+    .admin-scorecard-form-header,
+    .admin-scorecard-history-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .admin-scorecard-card-title,
+    .admin-scorecard-adjust-player,
+    .admin-scorecard-section-head h3 {
+      font-size: 1.02rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .admin-scorecard-card-meta,
+    .admin-scorecard-summary-empty,
+    .admin-scorecard-history-winner {
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .admin-scorecard-player-pill-row,
+    .admin-scorecard-summary-row,
+    .admin-scorecard-history-scores,
+    .admin-scorecard-filter-row,
+    .admin-scorecard-inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .admin-scorecard-player-pill,
+    .admin-scorecard-score-pill,
+    .admin-scorecard-history-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: var(--tag-radius);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .admin-scorecard-modal-stack,
+    .admin-scorecard-modal-section,
+    .admin-scorecard-session-list,
+    .admin-scorecard-history-list,
+    .admin-scorecard-adjust-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .admin-scorecard-adjust-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .admin-scorecard-adjust-card,
+    .admin-scorecard-history-card,
+    .admin-scorecard-modal-section {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.64);
+      border: 1px solid var(--border);
+    }
+
+    .admin-scorecard-session-row,
+    .admin-scorecard-final-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .admin-scorecard-session-player {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .admin-scorecard-player-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .admin-scorecard-adjust-buttons,
+    .admin-scorecard-toggle-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .admin-scorecard-player-row,
+    .admin-scorecard-increment-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .admin-scorecard-color-input {
+      width: 48px;
+      height: 48px;
+      padding: 4px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+    }
+
+    .admin-scorecard-toggle-pill {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .admin-scorecard-toggle-pill input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+    }
+
+    .admin-scorecard-toggle-pill span {
+      padding: 8px 12px;
+      border-radius: var(--tag-radius);
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--border);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .admin-scorecard-toggle-pill input:checked + span {
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      color: var(--color-text-on-accent);
+    }
+
+    .admin-scorecard-final-row .admin-input {
+      max-width: 110px;
+    }
+
+    @media (max-width: 480px) {
+      .admin-scorecard-player-row,
+      .admin-scorecard-increment-row,
+      .admin-scorecard-final-row {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-scorecard-final-row {
+        align-items: stretch;
+      }
     }

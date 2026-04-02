@@ -45,6 +45,8 @@ netlify.toml        — build config, env var injection via sed
 - `meal_plan` — `user_id` nullable: null = shared/household, uuid = personal
 - `meal_plan_notes` — one note per household per week, keyed by `household_id` + `week_start`
 - `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` support countdown photos and delayed visibility
+- `scorecards` — scorecard definitions with `name`, `increments` (JSONB number array), `players` (JSONB `{name,color}` array), `show_history`, `allow_negative`, and soft delete via `archived_at`
+- `scorecard_sessions` — per-game scorecard sessions with `started_at`, `ended_at`, `scores` JSONB, optional `wagers`, optional `wager_results`, optional `winner`, and `is_final_jeopardy`
 - `rsvps` — pre-existing wedding table, do not modify schema
 - `invited_parties` — wedding invite list with `name`, `invited_count`, nullable `rsvp_id`, and `created_at`; this is the source of truth for matched vs pending invite parties
 
@@ -77,15 +79,16 @@ netlify.toml        — build config, env var injection via sed
 ```json
 {
   "members":        [{"name": "Chris", "color": "#2563eb"}, ...],
-  "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
-  "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
-  "timer_intervals": { "upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15 },
+  "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards"],
+  "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecard_<id>"],
+  "timer_intervals": { "upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15, "scorecards": 30 },
   "upcoming_days":  5
 }
 ```
 - `display_settings.members` drives the todo assignee picker and is managed via the Settings screen. **Planned migration**: move to `users` table when multi-user auth is implemented.
 - `upcoming_calendar` and `monthly_calendar` are separate screens across display rotation and admin settings. Never write the legacy `calendar` key back to Supabase.
 - The "Default calendar view" setting has been removed. Whichever calendar screen appears first in `screen_order` renders first.
+- Scorecards are toggled by the shared `scorecards` active-screen key, but each saved scorecard gets its own `screen_order` entry using `scorecard_[id]`.
 - `display_settings.upcoming_days` drives the `UPCOMING_DAYS` variable in `display.js`. Update both together if changing upcoming-view logic.
 - Google Calendar currently reads a single calendar ID (`households.google_cal_id`). **Future enhancement**: support toggling multiple calendars from the Integrations settings.
 - **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.
@@ -113,10 +116,14 @@ netlify.toml        — build config, env var injection via sed
 - The display footer nav should not have an outer capsule/frame; the buttons sit directly in the footer with no shared background, border, or shadow wrapper
 - The display footer nav active colors should be controlled per scheme via `--display-nav-active-bg` and `--display-nav-active-border`; light schemes should use `--color-accent` for the active nav background, while the dark scheme should use `--color-accent-subtle`
 - Semantic interaction tokens are `--color-accent`, `--color-accent-subtle`, and `--color-text-on-accent`; use them for any new interactive, selected, highlighted, or accent-fill UI
+- Scorecard components should follow `TOKENS.md`: use `--color-accent` and `--color-accent-subtle` for interactive/active states, and use `--sage-soft` / `--rose-soft` only for positive or negative score feedback
 - `--amber` and `--amber-soft` are legacy color tokens being deprecated; keep them only for older component references during migration and do not use them directly in new components
 - The display footer upcoming/month nav buttons should use a custom inline SVG calendar outline with an empty body area so the centered `upcoming_days` / `30` overlay remains readable; do not use a Lucide calendar glyph there
-- Display footer icon mapping: `todos` = `list-todo`, `meals` = `utensils-crossed`, `upcoming_calendar` = calendar icon with centered `display_settings.upcoming_days` overlay (default `7`), `monthly_calendar` = the same calendar icon with centered `30` overlay, `countdowns` = `hourglass`, `rsvp` = `heart`, fallback = generic layout/grid icon
+- Display footer icon mapping: `todos` = `list-todo`, `meals` = `utensils-crossed`, `upcoming_calendar` = calendar icon with centered `display_settings.upcoming_days` overlay (default `7`), `monthly_calendar` = the same calendar icon with centered `30` overlay, `countdowns` = `hourglass`, `scorecards` = `trophy`, `rsvp` = `heart`, fallback = generic layout/grid icon
 - All countdown screens collapse into one footer nav button. Tapping that hourglass always jumps to the first countdown in the current rotation order, and the button remains active across every countdown screen
+- All scorecard screens collapse into one footer trophy button. Tapping it jumps to the first scorecard in the current rotation order, and swipe navigation moves between individual scorecard screens.
+- Scorecard display layout auto-switches by player count: 2-4 players render as per-player columns, 5-6 players render as selectable rows plus shared increment buttons.
+- Final Jeopardy is an admin-only 3-step flow: wager entry, correct/incorrect result entry, then automatic session end plus a fresh zeroed session. Each wager must be between `0` and that player's current score.
 - When a display footer nav button is tapped, auto-rotation should reset immediately and resume using that destination screen's configured `display_settings.timer_intervals` value, never a hardcoded fallback unless the screen has no saved timer
 - The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
 - The Settings screen sync row should keep visible spacing below its helper copy so the sync button/timestamp do not crowd the paragraph above

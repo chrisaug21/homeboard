@@ -430,6 +430,10 @@
                   <input type="checkbox" name="screen_countdowns" value="countdowns">
                   <span>Countdowns</span>
                 </label>
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="screen_scorecards" value="scorecards">
+                  <span>Scorecards</span>
+                </label>
               </div>
             </div>
 
@@ -531,6 +535,17 @@
           <div class="admin-list" id="admin-rsvp-guest-list"></div>
         </section>
       </section>
+
+      <section class="admin-screen" id="admin-screen-scorecards" data-admin-screen="scorecards" hidden>
+        <section class="admin-panel" aria-labelledby="admin-scorecards-title">
+          <div class="admin-panel-header-row">
+            <h2 class="admin-panel-title" id="admin-scorecards-title">Scorecards</h2>
+            <button class="admin-button admin-button--primary admin-add-button" type="button" id="admin-scorecard-add-button">+ Add</button>
+          </div>
+          <p class="admin-panel-note" id="admin-scorecards-note">Loading scorecards…</p>
+          <div class="admin-list" id="admin-scorecard-list"></div>
+        </section>
+      </section>
     </div>
 
     <nav class="admin-nav" aria-label="Admin navigation">
@@ -549,6 +564,10 @@
       <button class="admin-nav-button" type="button" data-admin-nav="rsvp">
         <i data-lucide="heart"></i>
         <span>RSVP</span>
+      </button>
+      <button class="admin-nav-button" type="button" data-admin-nav="scorecards">
+        <i data-lucide="trophy"></i>
+        <span>Scorecard</span>
       </button>
       <button class="admin-nav-button" type="button" data-admin-nav="settings">
         <i data-lucide="settings-2"></i>

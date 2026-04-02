@@ -21,11 +21,17 @@
     const adminRsvpUnmatchedNote = document.getElementById("admin-rsvp-unmatched-note");
     const adminRsvpGuestList = document.getElementById("admin-rsvp-guest-list");
     const adminRsvpGuestListNote = document.getElementById("admin-rsvp-guest-list-note");
+    const adminScorecardList = document.getElementById("admin-scorecard-list");
+    const adminScorecardsNote = document.getElementById("admin-scorecards-note");
+    const adminScorecardAddButton = document.getElementById("admin-scorecard-add-button");
 
     // Person color palette — distinct from status colors (amber, sage, rose)
     const PERSON_COLOR_PALETTE = [
       "#2563eb", "#9333ea", "#0891b2", "#be123c",
       "#c2410c", "#0f766e", "#6d28d9", "#16a34a"
+    ];
+    const SCORECARD_PLAYER_COLOR_PALETTE = [
+      "#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c", "#0891b2"
     ];
 
     // Screen definitions for settings UI
@@ -35,7 +41,8 @@
       monthly_calendar: "Monthly Calendar",
       todos: "To-Do List",
       meals: "Meal Plan",
-      countdowns: "Countdowns"
+      countdowns: "Countdowns",
+      scorecards: "Scorecards"
     };
     const TIMER_SCREEN_KEYS = [...DISPLAY_SCREEN_KEYS];
     const TIMER_LABELS = {
@@ -43,9 +50,10 @@
       monthly_calendar: "Monthly Calendar",
       todos: "To-Do List",
       meals: "Meal Plan",
-      countdowns: "Countdowns"
+      countdowns: "Countdowns",
+      scorecards: "Scorecards"
     };
-    const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15 };
+    const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15, scorecards: 30 };
 
     // Loaded from Supabase at admin init; falls back to defaults so todo form always works
     let adminHouseholdSettings = {
@@ -87,6 +95,9 @@
     let adminSavedCountdowns = [];
     let adminWeddingSnapshot = null;
     let adminRsvpWritePending = false;
+    let adminScorecardWritePending = false;
+    let adminScorecards = [];
+    let adminScorecardSessionsById = new Map();
     let adminTodoLoadRequestId = 0;
     const refreshingCountdowns = new Set();
     let adminCalMonthDate = (() => {
@@ -383,7 +394,7 @@
       }
 
       if (orderList) {
-        orderList.innerHTML = Array.from({ length: 5 }, () => `
+        orderList.innerHTML = Array.from({ length: DISPLAY_SCREEN_KEYS.length }, () => `
           <li class="admin-settings-order-item admin-skeleton-card" aria-hidden="true">
             <span class="sk" style="width:150px;height:16px;"></span>
             <div class="admin-settings-order-arrows">
@@ -395,7 +406,7 @@
       }
 
       if (timerList) {
-        timerList.innerHTML = Array.from({ length: 5 }, () => `
+        timerList.innerHTML = Array.from({ length: DISPLAY_SCREEN_KEYS.length }, () => `
           <div class="admin-settings-timer-row admin-skeleton-card" aria-hidden="true">
             <span class="sk" style="width:132px;height:16px;"></span>
             <span class="sk" style="width:68px;height:36px;border-radius:8px;"></span>
@@ -595,6 +606,91 @@
           hidden.value = "1";
           form.appendChild(hidden);
         }
+        return;
+      }
+      const addPlayerBtn = event.target.closest("[data-action='add-scorecard-player']");
+      if (addPlayerBtn) {
+        const list = document.querySelector(".admin-scorecard-player-list");
+        if (!list || list.children.length >= 6) return;
+        list.insertAdjacentHTML("beforeend", buildScorecardPlayerRowHTML({
+          name: "",
+          color: SCORECARD_PLAYER_COLOR_PALETTE[list.children.length % SCORECARD_PLAYER_COLOR_PALETTE.length]
+        }, list.children.length));
+        return;
+      }
+      const removePlayerBtn = event.target.closest("[data-action='remove-scorecard-player']");
+      if (removePlayerBtn) {
+        const list = removePlayerBtn.closest(".admin-scorecard-player-list");
+        if (!list || list.children.length <= 2) {
+          showToast("Scorecards need at least 2 players.");
+          return;
+        }
+        removePlayerBtn.closest(".admin-scorecard-player-row")?.remove();
+        return;
+      }
+      const addIncrementBtn = event.target.closest("[data-action='add-scorecard-increment']");
+      if (addIncrementBtn) {
+        const list = document.querySelector(".admin-scorecard-increment-list");
+        if (!list) return;
+        list.insertAdjacentHTML("beforeend", buildScorecardIncrementRowHTML("", list.children.length));
+        return;
+      }
+      const removeIncrementBtn = event.target.closest("[data-action='remove-scorecard-increment']");
+      if (removeIncrementBtn) {
+        const list = removeIncrementBtn.closest(".admin-scorecard-increment-list");
+        if (!list || list.children.length <= 1) {
+          showToast("Add at least one increment value.");
+          return;
+        }
+        removeIncrementBtn.closest(".admin-scorecard-increment-row")?.remove();
+        return;
+      }
+      const editScorecardBtn = event.target.closest("[data-action='edit-scorecard-config']");
+      if (editScorecardBtn) {
+        openScorecardEditModal(editScorecardBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
+      const deleteScorecardBtn = event.target.closest("[data-action='delete-scorecard']");
+      if (deleteScorecardBtn) {
+        deleteScorecard(deleteScorecardBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
+      const adjustScoreBtn = event.target.closest("[data-action='scorecard-adjust-score']");
+      if (adjustScoreBtn) {
+        adjustScorecardScore(
+          adjustScoreBtn.getAttribute("data-scorecard-id"),
+          adjustScoreBtn.getAttribute("data-player-name"),
+          Number(adjustScoreBtn.getAttribute("data-increment"))
+        );
+        return;
+      }
+      const resetScoresBtn = event.target.closest("[data-action='scorecard-reset-scores']");
+      if (resetScoresBtn) {
+        resetScorecardScores(resetScoresBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
+      const newGameBtn = event.target.closest("[data-action='scorecard-new-game']");
+      if (newGameBtn) {
+        startNewScorecardGame(newGameBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
+      const historyFilterBtn = event.target.closest("[data-action='scorecard-history-filter']");
+      if (historyFilterBtn) {
+        adminModalContext = {
+          scorecardId: historyFilterBtn.getAttribute("data-scorecard-id"),
+          filter: historyFilterBtn.getAttribute("data-filter")
+        };
+        rerenderScorecardManageModal();
+        return;
+      }
+      const finalJeopardyBtn = event.target.closest("[data-action='scorecard-final-jeopardy']");
+      if (finalJeopardyBtn) {
+        openFinalJeopardyWagerModal(finalJeopardyBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
+      const backToScorecardBtn = event.target.closest("[data-action='back-to-scorecard']");
+      if (backToScorecardBtn) {
+        openScorecardManageModal(backToScorecardBtn.getAttribute("data-scorecard-id"), adminModalContext?.filter || "month");
       }
     }
 
@@ -660,6 +756,30 @@
       } else if (formType === "review-merge-duplicate") {
         if (adminRsvpWritePending) return;
         mergeDuplicateReview(formData);
+      } else if (formType === "scorecard-save") {
+        saveScorecardFromForm(form);
+      } else if (formType === "scorecard-final-jeopardy-wagers") {
+        const scorecardId = String(formData.get("scorecard_id") || "").trim();
+        const scorecard = getAdminScorecardById(scorecardId);
+        const session = getAdminActiveScorecardSession(scorecardId);
+        if (!scorecard || !session) return;
+        const wagers = {};
+        scorecard.players.forEach((player) => {
+          const maxWager = Math.max(0, Number(session.scores[player.name]) || 0);
+          const rawValue = Number(formData.get(`wager_${player.name}`));
+          wagers[player.name] = Math.min(maxWager, Math.max(0, Number.isFinite(rawValue) ? rawValue : 0));
+        });
+        openFinalJeopardyResultModal(scorecardId, wagers);
+      } else if (formType === "scorecard-final-jeopardy-results") {
+        const scorecardId = String(formData.get("scorecard_id") || "").trim();
+        const scorecard = getAdminScorecardById(scorecardId);
+        const wagers = adminModalContext?.wagers || {};
+        if (!scorecard) return;
+        const wagerResults = {};
+        scorecard.players.forEach((player) => {
+          wagerResults[player.name] = String(formData.get(`result_${player.name}`) || "incorrect");
+        });
+        startNewScorecardGame(scorecardId, { wagers, wagerResults });
       }
     }
 
@@ -1452,6 +1572,7 @@
 
       if (target === "settings") {
         renderAdminSettingsSkeleton();
+        loadAdminScorecards();
         ensureAdminHouseholdConfigLoaded()
           .then(() => loadAdminSettings())
           .catch(() => showToast(friendlyLoadMessage()));
@@ -1459,6 +1580,10 @@
 
       if (target === "rsvp") {
         loadAdminRsvpScreen();
+      }
+
+      if (target === "scorecards") {
+        loadAdminScorecards();
       }
     }
 
@@ -1978,6 +2103,829 @@
       }
 
       await loadAdminCountdowns();
+    }
+
+    // ── Scorecards ───────────────────────────────────────────────────────────
+
+    function buildScorecardPlayerRowHTML(player = {}, index = 0) {
+      return `
+        <div class="admin-scorecard-player-row" data-scorecard-player-row="${index}">
+          <input class="admin-input" type="text" name="scorecard_player_name" maxlength="40" placeholder="Player name" value="${escapeHtml(player.name || "")}">
+          <input class="admin-scorecard-color-input" type="color" name="scorecard_player_color" value="${escapeHtml(player.color || SCORECARD_PLAYER_COLOR_PALETTE[index % SCORECARD_PLAYER_COLOR_PALETTE.length])}" aria-label="Player color">
+          <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="remove-scorecard-player" aria-label="Remove player">Remove</button>
+        </div>
+      `;
+    }
+
+    function buildScorecardIncrementRowHTML(value = "", index = 0) {
+      return `
+        <div class="admin-scorecard-increment-row" data-scorecard-increment-row="${index}">
+          <input class="admin-input" type="number" step="1" name="scorecard_increment" placeholder="200" value="${escapeHtml(value)}" inputmode="numeric">
+          <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="remove-scorecard-increment" aria-label="Remove increment">Remove</button>
+        </div>
+      `;
+    }
+
+    function getScorecardScreenOrderEntries(scorecards) {
+      return (Array.isArray(scorecards) ? scorecards : []).map((scorecard) => buildScorecardScreenKey(scorecard.id)).filter(Boolean);
+    }
+
+    function getScorecardOrderLabel(key) {
+      const scorecardId = getScorecardIdFromScreenKey(key);
+      if (!scorecardId) {
+        return "";
+      }
+
+      const scorecard = adminScorecards.find((item) => item.id === scorecardId);
+      return scorecard ? `Scorecard: ${scorecard.name}` : "Scorecard";
+    }
+
+    function normalizeAdminScreenOrder(order) {
+      const configured = Array.isArray(order) ? order : [...CONFIGURABLE_SCREENS];
+      const scorecardEntries = getScorecardScreenOrderEntries(adminScorecards);
+      const normalized = [];
+
+      configured.forEach((key) => {
+        if (CONFIGURABLE_SCREENS.includes(key) || isScorecardScreenKey(key)) {
+          if (!normalized.includes(key)) {
+            normalized.push(key);
+          }
+        }
+      });
+
+      CONFIGURABLE_SCREENS.forEach((key) => {
+        if (!normalized.includes(key)) {
+          normalized.push(key);
+        }
+      });
+
+      scorecardEntries.forEach((key) => {
+        if (!normalized.includes(key)) {
+          normalized.push(key);
+        }
+      });
+
+      return normalized;
+    }
+
+    function getAdminScorecardById(scorecardId) {
+      return adminScorecards.find((scorecard) => scorecard.id === scorecardId) || null;
+    }
+
+    function getAdminScorecardSessions(scorecardId) {
+      return (adminScorecardSessionsById.get(scorecardId) || []).slice().sort((a, b) =>
+        new Date(b.startedAt || b.createdAt || 0) - new Date(a.startedAt || a.createdAt || 0)
+      );
+    }
+
+    function getAdminActiveScorecardSession(scorecardId) {
+      return getAdminScorecardSessions(scorecardId).find((session) => !session.endedAt) || null;
+    }
+
+    async function fetchAdminScorecards() {
+      const client = getSupabaseClient();
+      if (!client) {
+        return null;
+      }
+
+      const { data, error } = await client
+        .from("scorecards")
+        .select("id, household_id, name, increments, players, show_history, allow_negative, created_at, archived_at")
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .is("archived_at", null)
+        .order("created_at", { ascending: true });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      return data.map(mapScorecardRow);
+    }
+
+    async function fetchAdminScorecardSessions(scorecards) {
+      const client = getSupabaseClient();
+      const ids = (Array.isArray(scorecards) ? scorecards : []).map((scorecard) => scorecard.id).filter(Boolean);
+      const sessionsById = new Map(ids.map((id) => [id, []]));
+
+      if (!client) {
+        return null;
+      }
+
+      if (!ids.length) {
+        return sessionsById;
+      }
+
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .in("scorecard_id", ids)
+        .order("started_at", { ascending: false });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      data.forEach((row) => {
+        const scorecard = scorecards.find((item) => item.id === row.scorecard_id);
+        if (!scorecard) {
+          return;
+        }
+
+        const list = sessionsById.get(scorecard.id) || [];
+        list.push(mapScorecardSessionRow(row, scorecard));
+        sessionsById.set(scorecard.id, list);
+      });
+
+      return sessionsById;
+    }
+
+    async function createFreshScorecardSession(scorecard) {
+      const client = getSupabaseClient();
+      if (!client || !scorecard) {
+        return null;
+      }
+
+      const payload = {
+        scorecard_id: scorecard.id,
+        household_id: DISPLAY_HOUSEHOLD_ID,
+        started_at: new Date().toISOString(),
+        scores: createScorecardZeroScores(scorecard.players),
+        is_final_jeopardy: false
+      };
+
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .insert(payload)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return mapScorecardSessionRow(data, scorecard);
+    }
+
+    async function ensureAdminScorecardSessions(scorecards, sessionsById) {
+      const nextMap = sessionsById instanceof Map ? new Map(sessionsById) : new Map();
+
+      for (const scorecard of (Array.isArray(scorecards) ? scorecards : [])) {
+        const sessions = (nextMap.get(scorecard.id) || []).slice();
+        const hasActiveSession = sessions.some((session) => !session.endedAt);
+        if (hasActiveSession) {
+          nextMap.set(scorecard.id, sessions);
+          continue;
+        }
+
+        const freshSession = await createFreshScorecardSession(scorecard);
+        if (freshSession) {
+          sessions.unshift(freshSession);
+        }
+        nextMap.set(scorecard.id, sessions);
+      }
+
+      return nextMap;
+    }
+
+    function buildAdminScoreSummary(scorecard, session) {
+      if (!session) {
+        return '<span class="admin-scorecard-summary-empty">No game yet</span>';
+      }
+
+      return scorecard.players.map((player) => `
+        <span class="admin-scorecard-score-pill" style="background:${escapeHtml(hexToRgba(player.color, 0.14))};color:${escapeHtml(player.color)}">
+          ${escapeHtml(player.name)} ${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}
+        </span>
+      `).join("");
+    }
+
+    function renderAdminScorecardList() {
+      if (!adminScorecardList || !adminScorecardsNote) {
+        return;
+      }
+
+      adminScorecardsNote.textContent = adminScorecards.length
+        ? `${adminScorecards.length} active ${adminScorecards.length === 1 ? "scorecard" : "scorecards"}`
+        : "No scorecards yet. Add one to start keeping score.";
+
+      if (!adminScorecards.length) {
+        adminScorecardList.innerHTML = '<div class="admin-empty">No scorecards yet.</div>';
+        return;
+      }
+
+      adminScorecardList.innerHTML = adminScorecards.map((scorecard) => {
+        const activeSession = getAdminActiveScorecardSession(scorecard.id);
+        return `
+          <button class="admin-scorecard-card" type="button" data-scorecard-id="${escapeHtml(scorecard.id)}">
+            <div class="admin-scorecard-card-head">
+              <div>
+                <div class="admin-scorecard-card-title">${escapeHtml(scorecard.name)}</div>
+                <div class="admin-scorecard-card-meta">${escapeHtml(scorecard.players.length)} players • ${escapeHtml(scorecard.increments.join(", "))}</div>
+              </div>
+              <i data-lucide="chevron-right"></i>
+            </div>
+            <div class="admin-scorecard-player-pill-row">
+              ${scorecard.players.map((player) => `
+                <span class="admin-scorecard-player-pill" style="background:${escapeHtml(hexToRgba(player.color, 0.14))};color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</span>
+              `).join("")}
+            </div>
+            <div class="admin-scorecard-summary-row">${buildAdminScoreSummary(scorecard, activeSession)}</div>
+          </button>
+        `;
+      }).join("");
+
+      refreshIcons();
+    }
+
+    function getScorecardHistoryFilterStart(filter) {
+      const now = new Date();
+      if (filter === "week") {
+        return getMonday(now);
+      }
+      if (filter === "month") {
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+      return null;
+    }
+
+    function getFilteredScorecardHistory(scorecardId, filter) {
+      const start = getScorecardHistoryFilterStart(filter);
+      return getAdminScorecardSessions(scorecardId)
+        .filter((session) => session.endedAt)
+        .filter((session) => {
+          if (!start) {
+            return true;
+          }
+          const startedAt = new Date(session.startedAt || session.createdAt || 0);
+          return startedAt >= start;
+        });
+    }
+
+    function buildScorecardConfigFormHTML(scorecard) {
+      const players = scorecard?.players?.length ? scorecard.players : SCORECARD_PLAYER_COLOR_PALETTE.slice(0, 2).map((color, index) => ({
+        name: "",
+        color
+      }));
+      const increments = scorecard?.increments?.length ? scorecard.increments : [100, 200, 400];
+
+      return `
+        <form data-modal-form="scorecard-save" novalidate>
+          ${scorecard ? `<input type="hidden" name="scorecard_id" value="${escapeHtml(scorecard.id)}">` : ""}
+          <div class="admin-field">
+            <label for="scorecard-name">Name</label>
+            <input id="scorecard-name" name="scorecard_name" type="text" maxlength="60" value="${escapeHtml(scorecard?.name || "")}" placeholder="Jeopardy">
+          </div>
+          <div class="admin-scorecard-form-section">
+            <div class="admin-scorecard-form-header">
+              <div class="admin-settings-subsection-label">Players</div>
+              <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="add-scorecard-player">Add player</button>
+            </div>
+            <div class="admin-scorecard-player-list">
+              ${players.map((player, index) => buildScorecardPlayerRowHTML(player, index)).join("")}
+            </div>
+          </div>
+          <div class="admin-scorecard-form-section">
+            <div class="admin-scorecard-form-header">
+              <div class="admin-settings-subsection-label">Increment buttons</div>
+              <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="add-scorecard-increment">Add value</button>
+            </div>
+            <div class="admin-scorecard-increment-list">
+              ${increments.map((value, index) => buildScorecardIncrementRowHTML(value, index)).join("")}
+            </div>
+          </div>
+          <label class="admin-settings-toggle admin-settings-toggle--block">
+            <input type="checkbox" name="scorecard_allow_negative"${scorecard?.allowNegative ? " checked" : ""}>
+            <span>Allow negative scores</span>
+          </label>
+          <label class="admin-settings-toggle admin-settings-toggle--block">
+            <input type="checkbox" name="scorecard_show_history"${scorecard?.showHistory !== false ? " checked" : ""}>
+            <span>Show history on display</span>
+          </label>
+          <div class="admin-actions">
+            ${scorecard ? `<button class="admin-button admin-button--danger" type="button" data-action="delete-scorecard" data-scorecard-id="${escapeHtml(scorecard.id)}">Delete</button>` : `<button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>`}
+            <button class="admin-button admin-button--primary" type="submit">${scorecard ? "Save" : "Create"}</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function buildScorecardSessionRowsHTML(scorecard, session) {
+      return scorecard.players.map((player) => `
+        <div class="admin-scorecard-session-row">
+          <div class="admin-scorecard-session-player">
+            <span class="admin-scorecard-player-dot" style="background:${escapeHtml(player.color)}"></span>
+            <span>${escapeHtml(player.name)}</span>
+          </div>
+          <strong>${escapeHtml(formatScorecardScore(session?.scores[player.name] || 0))}</strong>
+        </div>
+      `).join("");
+    }
+
+    function buildScorecardAdjustButtonsHTML(scorecard, playerName) {
+      return `
+        <div class="admin-scorecard-adjust-buttons">
+          ${scorecard.increments.map((increment) => `
+            <button class="admin-button admin-button--secondary admin-button--small" type="button"
+              data-action="scorecard-adjust-score"
+              data-scorecard-id="${escapeHtml(scorecard.id)}"
+              data-player-name="${escapeHtml(playerName)}"
+              data-increment="${escapeHtml(increment)}">
+              ${increment > 0 ? "+" : ""}${escapeHtml(increment)}
+            </button>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function buildScorecardHistoryEntryHTML(scorecard, session) {
+      return `
+        <article class="admin-scorecard-history-card">
+          <div class="admin-scorecard-history-head">
+            <strong>${escapeHtml(formatScorecardSessionDate(session.endedAt || session.startedAt))}</strong>
+            <span>${escapeHtml(formatScorecardSessionDuration(session.startedAt, session.endedAt))}</span>
+          </div>
+          <div class="admin-scorecard-history-scores">
+            ${scorecard.players.map((player) => `
+              <span class="admin-scorecard-history-pill" style="background:${escapeHtml(hexToRgba(player.color, 0.14))};color:${escapeHtml(player.color)}">${escapeHtml(player.name)} ${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</span>
+            `).join("")}
+          </div>
+          <div class="admin-scorecard-history-winner">Winner: ${escapeHtml(session.winner || "Tie")}</div>
+        </article>
+      `;
+    }
+
+    function buildScorecardManageHTML(scorecard, filter = "month") {
+      const activeSession = getAdminActiveScorecardSession(scorecard.id);
+      const history = getFilteredScorecardHistory(scorecard.id, filter);
+      return `
+        <div class="admin-scorecard-modal-stack">
+          <section class="admin-scorecard-modal-section">
+            <div class="admin-scorecard-section-head">
+              <h3>Scorecard</h3>
+              <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="edit-scorecard-config" data-scorecard-id="${escapeHtml(scorecard.id)}">Edit</button>
+            </div>
+            <p class="admin-panel-note">${escapeHtml(scorecard.players.length)} players • ${escapeHtml(scorecard.increments.join(", "))}</p>
+          </section>
+          <section class="admin-scorecard-modal-section">
+            <div class="admin-scorecard-section-head">
+              <h3>Current game</h3>
+              <div class="admin-scorecard-inline-actions">
+                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-reset-scores" data-scorecard-id="${escapeHtml(scorecard.id)}">Reset scores</button>
+                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-final-jeopardy" data-scorecard-id="${escapeHtml(scorecard.id)}">Final Jeopardy</button>
+                <button class="admin-button admin-button--primary admin-button--small" type="button" data-action="scorecard-new-game" data-scorecard-id="${escapeHtml(scorecard.id)}">New game</button>
+              </div>
+            </div>
+            <div class="admin-scorecard-session-list">
+              ${activeSession ? buildScorecardSessionRowsHTML(scorecard, activeSession) : '<div class="admin-empty">No active game.</div>'}
+            </div>
+            <div class="admin-scorecard-adjust-grid">
+              ${scorecard.players.map((player) => `
+                <div class="admin-scorecard-adjust-card">
+                  <div class="admin-scorecard-adjust-player" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</div>
+                  ${buildScorecardAdjustButtonsHTML(scorecard, player.name)}
+                </div>
+              `).join("")}
+            </div>
+          </section>
+          <section class="admin-scorecard-modal-section">
+            <div class="admin-scorecard-section-head">
+              <h3>Past games</h3>
+              <div class="admin-scorecard-filter-row">
+                ${[
+                  ["week", "This week"],
+                  ["month", "This month"],
+                  ["all", "All time"]
+                ].map(([key, label]) => `
+                  <button class="admin-button admin-button--small ${filter === key ? "admin-button--primary" : "admin-button--secondary"}" type="button" data-action="scorecard-history-filter" data-scorecard-id="${escapeHtml(scorecard.id)}" data-filter="${escapeHtml(key)}">${escapeHtml(label)}</button>
+                `).join("")}
+              </div>
+            </div>
+            <div class="admin-scorecard-history-list">
+              ${history.length ? history.map((session) => buildScorecardHistoryEntryHTML(scorecard, session)).join("") : '<div class="admin-empty">No past games in this range.</div>'}
+            </div>
+          </section>
+        </div>
+      `;
+    }
+
+    function openScorecardCreateModal() {
+      adminModalType = "scorecard-create";
+      adminModalContext = null;
+      openAdminModal("Add Scorecard", buildScorecardConfigFormHTML(null));
+    }
+
+    function openScorecardManageModal(scorecardId, filter = "month") {
+      const scorecard = getAdminScorecardById(scorecardId);
+      if (!scorecard) {
+        return;
+      }
+
+      adminModalType = "scorecard-manage";
+      adminModalContext = { scorecardId, filter };
+      openAdminModal(scorecard.name, buildScorecardManageHTML(scorecard, filter));
+    }
+
+    function openScorecardEditModal(scorecardId) {
+      const scorecard = getAdminScorecardById(scorecardId);
+      if (!scorecard) {
+        return;
+      }
+
+      adminModalType = "scorecard-edit";
+      adminModalContext = { scorecardId };
+      openAdminModal(`Edit ${scorecard.name}`, buildScorecardConfigFormHTML(scorecard));
+    }
+
+    function rerenderScorecardManageModal() {
+      if (adminModalType !== "scorecard-manage" || !adminModalContext?.scorecardId) {
+        return;
+      }
+
+      const scorecard = getAdminScorecardById(adminModalContext.scorecardId);
+      const modalTitle = document.getElementById("admin-modal-title");
+      const modalBody = document.getElementById("admin-modal-body");
+      if (!scorecard || !modalTitle || !modalBody) {
+        return;
+      }
+
+      modalTitle.textContent = scorecard.name;
+      modalBody.innerHTML = buildScorecardManageHTML(scorecard, adminModalContext.filter || "month");
+      refreshIcons();
+    }
+
+    function collectScorecardFormValues(form) {
+      const name = String(form.querySelector("[name='scorecard_name']")?.value || "").trim();
+      const players = Array.from(form.querySelectorAll(".admin-scorecard-player-row")).map((row) => ({
+        name: String(row.querySelector("[name='scorecard_player_name']")?.value || "").trim(),
+        color: String(row.querySelector("[name='scorecard_player_color']")?.value || "").trim()
+      })).filter((player) => player.name);
+      const increments = Array.from(form.querySelectorAll("[name='scorecard_increment']")).map((input) =>
+        Number(String(input.value || "").trim())
+      ).filter((value) => Number.isFinite(value) && value !== 0);
+
+      return {
+        name,
+        players,
+        increments,
+        allowNegative: form.querySelector("[name='scorecard_allow_negative']")?.checked === true,
+        showHistory: form.querySelector("[name='scorecard_show_history']")?.checked !== false
+      };
+    }
+
+    function validateScorecardForm(form, values) {
+      const nameInput = form.querySelector("[name='scorecard_name']");
+      if (!values.name) {
+        setFieldError(nameInput, "Add a scorecard name.");
+        nameInput?.focus();
+        return false;
+      }
+      clearFieldError(nameInput);
+
+      if (values.players.length < 2 || values.players.length > 6) {
+        showToast("Scorecards need 2 to 6 players.");
+        return false;
+      }
+
+      if (values.increments.length === 0) {
+        showToast("Add at least one increment value.");
+        return false;
+      }
+
+      return true;
+    }
+
+    async function loadAdminScorecards() {
+      if (!adminScorecardList || !adminScorecardsNote) {
+        return;
+      }
+
+      adminScorecardsNote.textContent = "Loading scorecards…";
+      adminScorecardList.innerHTML = buildAdminCountdownSkeletonHTML();
+
+      const scorecards = await fetchAdminScorecards();
+      if (scorecards === null) {
+        adminScorecardsNote.textContent = "Couldn't load scorecards.";
+        adminScorecardList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+        return;
+      }
+
+      let sessionsById = await fetchAdminScorecardSessions(scorecards);
+      if (sessionsById === null) {
+        adminScorecardsNote.textContent = "Couldn't load scorecards.";
+        adminScorecardList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+        return;
+      }
+
+      sessionsById = await ensureAdminScorecardSessions(scorecards, sessionsById);
+      adminScorecards = scorecards;
+      adminScorecardSessionsById = sessionsById;
+      adminHouseholdSettings.display_settings.screen_order = normalizeAdminScreenOrder(adminHouseholdSettings.display_settings.screen_order);
+      renderAdminScorecardList();
+
+      if (adminScreen === "settings") {
+        loadAdminSettings();
+      }
+
+      if (adminModalType === "scorecard-manage") {
+        rerenderScorecardManageModal();
+      }
+    }
+
+    async function saveScorecardFromForm(form) {
+      const client = getSupabaseClient();
+      if (!client || adminScorecardWritePending) {
+        return;
+      }
+
+      const scorecardId = String(form.querySelector("[name='scorecard_id']")?.value || "").trim();
+      const values = collectScorecardFormValues(form);
+      if (!validateScorecardForm(form, values)) {
+        return;
+      }
+
+      adminScorecardWritePending = true;
+      setModalSaving(true, scorecardId ? "Save" : "Create");
+
+      const payload = {
+        household_id: DISPLAY_HOUSEHOLD_ID,
+        name: values.name,
+        players: values.players,
+        increments: values.increments,
+        allow_negative: values.allowNegative,
+        show_history: values.showHistory
+      };
+
+      let savedRow = null;
+      let error = null;
+
+      if (scorecardId) {
+        const response = await client
+          .from("scorecards")
+          .update(payload)
+          .eq("id", scorecardId)
+          .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+          .select("id, household_id, name, increments, players, show_history, allow_negative, created_at, archived_at")
+          .single();
+        savedRow = response.data;
+        error = response.error;
+      } else {
+        const response = await client
+          .from("scorecards")
+          .insert(payload)
+          .select("id, household_id, name, increments, players, show_history, allow_negative, created_at, archived_at")
+          .single();
+        savedRow = response.data;
+        error = response.error;
+      }
+
+      adminScorecardWritePending = false;
+      setModalSaving(false, scorecardId ? "Save" : "Create");
+
+      if (error || !savedRow) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+
+      if (!scorecardId) {
+        const scorecard = mapScorecardRow(savedRow);
+        const session = await createFreshScorecardSession(scorecard);
+        if (session) {
+          adminScorecardSessionsById.set(scorecard.id, [session]);
+        }
+      }
+
+      closeAdminModal();
+      await loadAdminScorecards();
+      showToast(scorecardId ? "Scorecard saved." : "Scorecard created.");
+    }
+
+    async function deleteScorecard(scorecardId) {
+      const client = getSupabaseClient();
+      if (!client || adminScorecardWritePending) {
+        return;
+      }
+
+      adminScorecardWritePending = true;
+      const { error } = await client
+        .from("scorecards")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", scorecardId)
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .is("archived_at", null);
+      adminScorecardWritePending = false;
+
+      if (error) {
+        showToast(friendlyDeleteMessage());
+        return;
+      }
+
+      closeAdminModal();
+      await loadAdminScorecards();
+      showToast("Scorecard deleted.");
+    }
+
+    async function adjustScorecardScore(scorecardId, playerName, increment) {
+      const client = getSupabaseClient();
+      const scorecard = getAdminScorecardById(scorecardId);
+      const session = getAdminActiveScorecardSession(scorecardId);
+      if (!client || !scorecard || !session || adminScorecardWritePending) {
+        return;
+      }
+
+      const nextScores = {
+        ...session.scores,
+        [playerName]: applyScorecardIncrement(session.scores[playerName] || 0, Number(increment), scorecard.allowNegative)
+      };
+
+      adminScorecardWritePending = true;
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .update({ scores: nextScores })
+        .eq("id", session.id)
+        .eq("scorecard_id", scorecardId)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .single();
+      adminScorecardWritePending = false;
+
+      if (error || !data) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+
+      const sessions = getAdminScorecardSessions(scorecardId).map((item) =>
+        item.id === session.id ? mapScorecardSessionRow(data, scorecard) : item
+      );
+      adminScorecardSessionsById.set(scorecardId, sessions);
+      renderAdminScorecardList();
+      rerenderScorecardManageModal();
+    }
+
+    async function resetScorecardScores(scorecardId) {
+      const client = getSupabaseClient();
+      const scorecard = getAdminScorecardById(scorecardId);
+      const session = getAdminActiveScorecardSession(scorecardId);
+      if (!client || !scorecard || !session || adminScorecardWritePending) {
+        return;
+      }
+
+      adminScorecardWritePending = true;
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .update({ scores: createScorecardZeroScores(scorecard.players), wagers: null, wager_results: null, is_final_jeopardy: false, winner: null })
+        .eq("id", session.id)
+        .eq("scorecard_id", scorecardId)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .single();
+      adminScorecardWritePending = false;
+
+      if (error || !data) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+
+      adminScorecardSessionsById.set(scorecardId, [mapScorecardSessionRow(data, scorecard), ...getFilteredScorecardHistory(scorecardId, "all")]);
+      await loadAdminScorecards();
+      showToast("Scores reset.");
+    }
+
+    async function startNewScorecardGame(scorecardId, finalJeopardyPayload = null) {
+      const client = getSupabaseClient();
+      const scorecard = getAdminScorecardById(scorecardId);
+      const session = getAdminActiveScorecardSession(scorecardId);
+      if (!client || !scorecard || !session || adminScorecardWritePending) {
+        return;
+      }
+
+      let finalScores = { ...session.scores };
+      let wagers = null;
+      let wagerResults = null;
+      let isFinalJeopardy = false;
+
+      if (finalJeopardyPayload) {
+        wagers = finalJeopardyPayload.wagers;
+        wagerResults = finalJeopardyPayload.wagerResults;
+        isFinalJeopardy = true;
+        finalScores = { ...session.scores };
+        scorecard.players.forEach((player) => {
+          const wager = Math.max(0, Number(wagers[player.name]) || 0);
+          const wasCorrect = wagerResults[player.name] === "correct";
+          finalScores[player.name] = applyScorecardIncrement(
+            session.scores[player.name] || 0,
+            wasCorrect ? wager : -wager,
+            scorecard.allowNegative
+          );
+        });
+      }
+
+      adminScorecardWritePending = true;
+      const endedAt = new Date().toISOString();
+      const winner = getScorecardWinner(finalScores);
+
+      const updateResponse = await client
+        .from("scorecard_sessions")
+        .update({
+          ended_at: endedAt,
+          scores: finalScores,
+          wagers,
+          wager_results: wagerResults,
+          winner,
+          is_final_jeopardy: isFinalJeopardy
+        })
+        .eq("id", session.id)
+        .eq("scorecard_id", scorecardId)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .single();
+
+      const freshSession = !updateResponse.error ? await createFreshScorecardSession(scorecard) : null;
+      adminScorecardWritePending = false;
+
+      if (updateResponse.error || !updateResponse.data || !freshSession) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+
+      await loadAdminScorecards();
+      showToast(isFinalJeopardy ? "Final Jeopardy saved." : "New game started.");
+    }
+
+    function openFinalJeopardyWagerModal(scorecardId) {
+      const scorecard = getAdminScorecardById(scorecardId);
+      const session = getAdminActiveScorecardSession(scorecardId);
+      if (!scorecard || !session) {
+        return;
+      }
+
+      adminModalType = "scorecard-final-jeopardy-wagers";
+      adminModalContext = { scorecardId };
+      openAdminModal("Final Jeopardy", `
+        <form data-modal-form="scorecard-final-jeopardy-wagers" novalidate>
+          <input type="hidden" name="scorecard_id" value="${escapeHtml(scorecardId)}">
+          <div class="admin-scorecard-modal-stack">
+            ${scorecard.players.map((player) => `
+              <div class="admin-scorecard-final-row">
+                <div>
+                  <strong>${escapeHtml(player.name)}</strong>
+                  <div class="admin-panel-note">Current score: ${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</div>
+                </div>
+                <input class="admin-input" type="number" min="0" max="${escapeHtml(Math.max(0, session.scores[player.name] || 0))}" name="wager_${escapeHtml(player.name)}" value="0" inputmode="numeric">
+              </div>
+            `).join("")}
+            <div class="admin-actions">
+              <button class="admin-button admin-button--secondary" type="button" data-action="back-to-scorecard" data-scorecard-id="${escapeHtml(scorecardId)}">Cancel</button>
+              <button class="admin-button admin-button--primary" type="submit">Continue</button>
+            </div>
+          </div>
+        </form>
+      `);
+    }
+
+    function openFinalJeopardyResultModal(scorecardId, wagers) {
+      const scorecard = getAdminScorecardById(scorecardId);
+      if (!scorecard) {
+        return;
+      }
+
+      adminModalType = "scorecard-final-jeopardy-results";
+      adminModalContext = { scorecardId, wagers };
+      openAdminModal("Final Jeopardy Results", `
+        <form data-modal-form="scorecard-final-jeopardy-results" novalidate>
+          <input type="hidden" name="scorecard_id" value="${escapeHtml(scorecardId)}">
+          <div class="admin-scorecard-modal-stack">
+            ${scorecard.players.map((player) => `
+              <div class="admin-scorecard-final-row">
+                <div>
+                  <strong>${escapeHtml(player.name)}</strong>
+                  <div class="admin-panel-note">Wager: ${escapeHtml(formatScorecardScore(wagers[player.name] || 0))}</div>
+                </div>
+                <div class="admin-scorecard-toggle-row">
+                  <label class="admin-scorecard-toggle-pill">
+                    <input type="radio" name="result_${escapeHtml(player.name)}" value="correct" checked>
+                    <span>Correct</span>
+                  </label>
+                  <label class="admin-scorecard-toggle-pill">
+                    <input type="radio" name="result_${escapeHtml(player.name)}" value="incorrect">
+                    <span>Incorrect</span>
+                  </label>
+                </div>
+              </div>
+            `).join("")}
+            <div class="admin-actions">
+              <button class="admin-button admin-button--secondary" type="button" data-action="scorecard-final-jeopardy" data-scorecard-id="${escapeHtml(scorecardId)}">Back</button>
+              <button class="admin-button admin-button--primary" type="submit">Finish game</button>
+            </div>
+          </div>
+        </form>
+      `);
+    }
+
+    function handleAdminScorecardListClick(event) {
+      const card = event.target.closest("[data-scorecard-id]");
+      if (!card) {
+        return;
+      }
+
+      openScorecardManageModal(card.getAttribute("data-scorecard-id"));
     }
 
     // ── RSVP ─────────────────────────────────────────────────────────────────
@@ -2910,17 +3858,20 @@
 
       const ds = adminHouseholdSettings.display_settings || {};
       const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : CONFIGURABLE_SCREENS;
+      const normalizedOrder = normalizeAdminScreenOrder(screenOrder);
 
-      list.innerHTML = screenOrder.map((name, i) => {
-        const isActive = activeScreens.includes(name);
+      list.innerHTML = normalizedOrder.map((name, i) => {
+        const isActive = isScorecardScreenKey(name)
+          ? activeScreens.includes("scorecards")
+          : activeScreens.includes(name);
         return `
           <li class="admin-settings-order-item${isActive ? "" : " is-inactive"}" data-screen-name="${escapeHtml(name)}">
-            <span class="admin-settings-order-item-name">${escapeHtml(SCREEN_LABELS[name] || name)}</span>
+            <span class="admin-settings-order-item-name">${escapeHtml(SCREEN_LABELS[name] || getScorecardOrderLabel(name) || name)}</span>
             <div class="admin-settings-order-arrows">
               <button type="button" class="admin-settings-order-btn" data-order-dir="up" data-order-index="${i}" aria-label="Move up"${i === 0 ? " disabled" : ""}>
                 <i data-lucide="chevron-up"></i>
               </button>
-              <button type="button" class="admin-settings-order-btn" data-order-dir="down" data-order-index="${i}" aria-label="Move down"${i === screenOrder.length - 1 ? " disabled" : ""}>
+              <button type="button" class="admin-settings-order-btn" data-order-dir="down" data-order-index="${i}" aria-label="Move down"${i === normalizedOrder.length - 1 ? " disabled" : ""}>
                 <i data-lucide="chevron-down"></i>
               </button>
             </div>
@@ -2953,7 +3904,7 @@
     function loadAdminSettings() {
       const ds = adminHouseholdSettings.display_settings || {};
       const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : CONFIGURABLE_SCREENS;
-      const screenOrder = Array.isArray(ds.screen_order) ? ds.screen_order : CONFIGURABLE_SCREENS;
+      const screenOrder = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? ds.screen_order : CONFIGURABLE_SCREENS);
       const timerIntervals = ds.timer_intervals || {};
       const upcomingDays = ds.upcoming_days || 5;
       const members = Array.isArray(ds.members) ? ds.members : [];
@@ -3013,6 +3964,7 @@
         loadAdminMealPlan(),
         loadAdminCalendarMonth(),
         loadAdminCountdowns({ preserveScroll: true }),
+        loadAdminScorecards(),
         loadAdminRsvpScreen(),
         ensureAdminHouseholdConfigLoaded(true).then(() => loadAdminSettings())
       ]);
@@ -3118,7 +4070,7 @@
 
         // Screen order — read from rendered list
         const orderItems = document.querySelectorAll(".admin-settings-order-item");
-        const screenOrder = Array.from(orderItems).map((el) => el.getAttribute("data-screen-name")).filter(Boolean);
+        const screenOrder = normalizeAdminScreenOrder(Array.from(orderItems).map((el) => el.getAttribute("data-screen-name")).filter(Boolean));
 
         // Timers
         const timerIntervals = {};
@@ -3293,7 +4245,7 @@
       const dir = btn.getAttribute("data-order-dir");
       const idx = parseInt(btn.getAttribute("data-order-index"), 10);
       const ds = adminHouseholdSettings.display_settings;
-      const order = Array.isArray(ds.screen_order) ? [...ds.screen_order] : [...CONFIGURABLE_SCREENS];
+      const order = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? [...ds.screen_order] : [...CONFIGURABLE_SCREENS]);
 
       const swapIdx = dir === "up" ? idx - 1 : idx + 1;
       if (swapIdx < 0 || swapIdx >= order.length) return;
@@ -3319,7 +4271,7 @@
         const cb = document.querySelector(`[name="screen_${name}"]`);
         return cb && cb.checked;
       });
-      const order = Array.isArray(ds.screen_order) ? ds.screen_order : [...CONFIGURABLE_SCREENS];
+      const order = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? ds.screen_order : [...CONFIGURABLE_SCREENS]);
       renderSettingsScreenOrder(order);
       enforceMinOneActiveScreen();
     }
@@ -3373,6 +4325,7 @@
         adminRsvpUnmatchedList.addEventListener("input", handleAdminRsvpUnmatchedInput);
       }
       if (adminRsvpGuestList) adminRsvpGuestList.addEventListener("click", handleAdminRsvpListClick);
+      if (adminScorecardList) adminScorecardList.addEventListener("click", handleAdminScorecardListClick);
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
       adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);
@@ -3385,6 +4338,7 @@
       if (archiveMonthPrev) archiveMonthPrev.addEventListener("click", handleArchiveMonthPrev);
       if (archiveMonthNext) archiveMonthNext.addEventListener("click", handleArchiveMonthNext);
       if (adminCountdownAddButton) adminCountdownAddButton.addEventListener("click", () => openAddCountdownModal());
+      if (adminScorecardAddButton) adminScorecardAddButton.addEventListener("click", openScorecardCreateModal);
       const adminModal = document.getElementById("admin-modal");
       if (adminModal) {
         adminModal.addEventListener("click", handleAdminModalClick);

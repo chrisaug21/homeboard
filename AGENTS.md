@@ -36,6 +36,8 @@ netlify.toml        — build + env var injection via sed
 | `meal_plan` | `user_id` null = shared (show on display). `user_id` set = personal (admin only) |
 | `meal_plan_notes` | One note per household per week. Keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` = Lucide icon name string; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` drive countdown photos and delayed visibility |
+| `scorecards` | Scoreboard definitions. Columns: `id`, `household_id`, `name`, `increments` (JSONB number array), `players` (JSONB `{name,color}` array), `show_history`, `allow_negative`, `created_at`, `archived_at` |
+| `scorecard_sessions` | Scorecard game sessions. Columns: `id`, `scorecard_id`, `household_id`, `started_at`, `ended_at`, `scores` (JSONB `{player_name: score}`), nullable `wagers`, nullable `wager_results`, nullable `winner`, `is_final_jeopardy`, `created_at` |
 | `rsvps` | Wedding table — **do not modify schema** |
 | `invited_parties` | Wedding invite list. `rsvp_id` null = pending; set = matched to an RSVP row |
 
@@ -68,15 +70,16 @@ netlify.toml        — build + env var injection via sed
 ```json
 {
   "members":        [{"name": "Chris", "color": "#2563eb"}],
-  "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
-  "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
-  "timer_intervals": {"upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15},
+  "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards"],
+  "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecard_<id>"],
+  "timer_intervals": {"upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15, "scorecards": 30},
   "upcoming_days":  5
 }
 ```
 - `members` → todo assignee picker. **Future**: migrate to `users` table when multi-user auth is implemented.
 - `upcoming_calendar` and `monthly_calendar` are separate display screens everywhere in code and settings. Do not collapse them back into a single `calendar` key.
 - The old "Default calendar view" setting has been removed. Rotation order now comes only from `screen_order`.
+- Scorecards are toggleable via the shared `scorecards` active-screen key, but each saved scorecard gets its own `screen_order` entry using `scorecard_[id]`, the same grouping pattern countdowns use for rendering/nav.
 - `upcoming_days` → drives the `UPCOMING_DAYS` variable in `display.js`. Update both together.
 - RSVP screen is **hardcoded to this household** and excluded from `active_screens` and `screen_order`. It is hidden starting Oct 11, 2026 — remove via code change after that date.
 - Google Calendar: single calendar ID in `households.google_cal_id`. **Future**: support toggling multiple calendars.
@@ -134,6 +137,9 @@ netlify.toml        — build + env var injection via sed
 - The countdown admin calendar-event picker should hide events dated before today; this filtering applies to selectable source events, not saved countdown rows
 - User-facing error messages must never mention Supabase, backend services, table names, or internal config details; use plain language like `Something went wrong loading your data. Please try refreshing.` or `Something went wrong saving your changes. Please try again.`
 - User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
+- Scorecard display layout auto-switches by player count: 2-4 players = per-player columns, 5-6 players = selectable player rows plus shared increment buttons
+- Final Jeopardy is a 3-step admin flow: enter wagers, mark correct/incorrect, then auto-end the session and start a fresh one. Wagers must be between `0` and that player's current score.
+- New scorecard UI should use `--color-accent` and `--color-accent-subtle` for active/interactive states per `TOKENS.md`; do not use `--amber` / `--amber-soft` in new scorecard components
 
 ## Local Dev
 `netlify dev` is the only correct local workflow. `file://` and `npx serve .` do not work.
