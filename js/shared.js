@@ -396,6 +396,7 @@
     };
     const SCORECARD_BONUS_META_KEY = "__phase";
     const scorecardActionHistoryBySessionId = new Map();
+    const scorecardPendingWinnerSessionByScorecardId = new Map();
 
     function normalizeScorecardBonusPhase(value) {
       const normalized = String(value || "").trim().toLowerCase();
@@ -518,6 +519,30 @@
       }
 
       scorecardActionHistoryBySessionId.delete(sessionId);
+    }
+
+    function markScorecardPendingWinner(scorecardId, sessionId) {
+      const safeScorecardId = String(scorecardId || "").trim();
+      const safeSessionId = String(sessionId || "").trim();
+      if (!safeScorecardId || !safeSessionId) {
+        return;
+      }
+
+      scorecardPendingWinnerSessionByScorecardId.set(safeScorecardId, safeSessionId);
+    }
+
+    function getScorecardPendingWinnerSessionId(scorecardId) {
+      const safeScorecardId = String(scorecardId || "").trim();
+      return safeScorecardId ? (scorecardPendingWinnerSessionByScorecardId.get(safeScorecardId) || "") : "";
+    }
+
+    function clearScorecardPendingWinner(scorecardId) {
+      const safeScorecardId = String(scorecardId || "").trim();
+      if (!safeScorecardId) {
+        return;
+      }
+
+      scorecardPendingWinnerSessionByScorecardId.delete(safeScorecardId);
     }
 
     function getScorecardWinner(scores) {

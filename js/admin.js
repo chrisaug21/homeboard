@@ -2206,18 +2206,13 @@
       return getAdminScorecardSessions(scorecardId).find((session) => !session.endedAt) || null;
     }
 
-    function getAdminLatestScorecardSession(scorecardId) {
-      return getAdminScorecardSessions(scorecardId)[0] || null;
-    }
-
     function getAdminPendingWinnerSession(scorecardId) {
-      const activeSession = getAdminActiveScorecardSession(scorecardId);
-      if (activeSession) {
+      const pendingSessionId = getScorecardPendingWinnerSessionId(scorecardId);
+      if (!pendingSessionId || getAdminActiveScorecardSession(scorecardId)) {
         return null;
       }
 
-      const latestSession = getAdminLatestScorecardSession(scorecardId);
-      return latestSession?.endedAt ? latestSession : null;
+      return getAdminScorecardSessions(scorecardId).find((session) => session.id === pendingSessionId && session.endedAt) || null;
     }
 
     async function fetchAdminScorecards() {
@@ -2370,7 +2365,7 @@
 
       adminScorecardList.innerHTML = adminScorecards.map((scorecard) => {
         const activeSession = getAdminActiveScorecardSession(scorecard.id);
-        const latestSession = activeSession || getAdminLatestScorecardSession(scorecard.id);
+        const latestSession = activeSession || getAdminScorecardSessions(scorecard.id)[0] || null;
         const metaLabel = activeSession
           ? `${scorecard.players.length} players`
           : latestSession?.endedAt
@@ -3219,6 +3214,7 @@
       ));
       renderAdminScorecardList();
       clearScorecardActionHistory(session.id);
+      markScorecardPendingWinner(scorecardId, data.id);
       openScorecardWinnerModal(scorecardId);
     }
 
@@ -3236,6 +3232,7 @@
       }
 
       clearScorecardActionHistory(freshSession.id);
+      clearScorecardPendingWinner(scorecardId);
       adminScorecardSessionsById.set(scorecardId, [freshSession, ...getAdminScorecardSessions(scorecardId)]);
       renderAdminScorecardList();
       const nextFilter = adminModalContext?.filter || "month";

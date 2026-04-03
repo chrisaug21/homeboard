@@ -1201,18 +1201,13 @@
       return getScorecardSessions(scorecardId).find((session) => !session.endedAt) || null;
     }
 
-    function getLatestScorecardSession(scorecardId) {
-      return getScorecardSessions(scorecardId)[0] || null;
-    }
-
     function getPendingWinnerScorecardSession(scorecardId) {
-      const activeSession = getActiveScorecardSession(scorecardId);
-      if (activeSession) {
+      const pendingSessionId = getScorecardPendingWinnerSessionId(scorecardId);
+      if (!pendingSessionId || getActiveScorecardSession(scorecardId)) {
         return null;
       }
 
-      const latestSession = getLatestScorecardSession(scorecardId);
-      return latestSession?.endedAt ? latestSession : null;
+      return getScorecardSessions(scorecardId).find((session) => session.id === pendingSessionId && session.endedAt) || null;
     }
 
     function getScorecardOrder(screenOrder, scorecards) {
@@ -2730,6 +2725,7 @@
         item.id === session.id ? mapScorecardSessionRow(data, scorecard) : item
       ));
       clearScorecardActionHistory(session.id);
+      markScorecardPendingWinner(scorecardId, data.id);
       renderScorecards(cachedScorecards);
       syncScorecardCelebrationOverlay();
       resetAutoRotate("scorecard-end-game");
@@ -2748,6 +2744,7 @@
       }
 
       clearScorecardActionHistory(nextSession.id);
+      clearScorecardPendingWinner(scorecardId);
       cachedScorecardSessionsById.set(scorecardId, [nextSession, ...getScorecardSessions(scorecardId)]);
       renderScorecards(cachedScorecards);
       syncScorecardCelebrationOverlay();
