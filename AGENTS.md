@@ -122,7 +122,7 @@ netlify.toml        — build + env var injection via sed
 - The admin to-do loader must not fail just because household settings fail; load the todo data first, then re-render for member colors if `display_settings.members` arrives later
 - Active incomplete todos with `due_date < today` should use the overdue treatment in both display and admin: red left border, subtle red card tint, and red overdue date-pill text
 - Todo completion celebration animations are display-view only and must clean up all temporary DOM/styles after each run
-- Display celebrations load `canvas-confetti@1.9.2` and `gsap@3.12.5` by CDN in `index.html`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
+- Display celebrations load locally bundled `canvas-confetti@1.9.2` from `js/vendor/` plus `gsap@3.12.5`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
 - Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if a CDN script fails to load
 - Celebration particle colors should resolve the active scheme accent at runtime from `getComputedStyle(...).getPropertyValue('--amber')` and mix it with white, bright gold, and fresh green so effects stay scheme-aware without hardcoding one palette
 - Display todo completion timing should be: checkmark immediately, item fade/removal starts roughly 10-15% into the celebration with a quick ~200 ms opacity transition, and the celebration continues independently as a send-off
@@ -140,7 +140,9 @@ netlify.toml        — build + env var injection via sed
 - User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
 - Scorecard display layout auto-switches by player count: 2-4 players = per-player columns, 5-6 players = selectable player rows plus shared increment buttons
 - End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view; both paths write to the same shared scorecard session state
-- Bonus Round uses the same 3-step flow on both admin and display: enter wagers, mark correct/incorrect, then auto-end the session and start a fresh one. Wagers must be between `0` and that player's current score.
+- Scorecard undo is an in-memory action stack scoped to the active session only; it does not persist through reloads and it resets on score reset or when a new game starts
+- End Game closes the current scorecard session immediately, shows the winner state, and waits for an explicit `New game` action before creating the next session
+- Bonus Round is separate from End Game. It switches the scorecard into a wager flow: masked wager entry on display, simultaneous reveal, admin correct/incorrect result application, then return to normal play without ending the session. Wagers must be between `0` and that player's current score.
 - New scorecard UI should use `--color-accent` and `--color-accent-subtle` for active/interactive states per `TOKENS.md`; do not use `--amber` / `--amber-soft` in new scorecard components
 
 ## Local Dev

@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.4.4";
+    const VERSION = "1.5.0";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -386,6 +386,138 @@
       }
 
       return Math.max(0, nextScore);
+    }
+
+    const SCORECARD_BONUS_PHASES = {
+      entry: "entry",
+      reveal: "reveal",
+      results: "results",
+      complete: "complete"
+    };
+    const SCORECARD_BONUS_META_KEY = "__phase";
+    const scorecardActionHistoryBySessionId = new Map();
+
+    function normalizeScorecardBonusPhase(value) {
+      const normalized = String(value || "").trim().toLowerCase();
+      return Object.values(SCORECARD_BONUS_PHASES).includes(normalized) ? normalized : "";
+    }
+
+    function getScorecardBonusValues(source, players) {
+      const safeSource = source && typeof source === "object" ? source : {};
+      const normalized = {};
+      normalizeScorecardPlayers(players).forEach((player) => {
+        const rawValue = Number(safeSource[player.name]);
+        if (Number.isFinite(rawValue)) {
+          normalized[player.name] = Math.max(0, rawValue);
+        }
+      });
+      return normalized;
+    }
+
+    function getScorecardBonusResultValues(source, players) {
+      const safeSource = source && typeof source === "object" ? source : {};
+      const normalized = {};
+      normalizeScorecardPlayers(players).forEach((player) => {
+        const value = String(safeSource[player.name] || "").trim().toLowerCase();
+        if (value === "correct" || value === "incorrect") {
+          normalized[player.name] = value;
+        }
+      });
+      return normalized;
+    }
+
+    function buildScorecardBonusWagers(players, wagers = {}, phase = SCORECARD_BONUS_PHASES.entry) {
+      return {
+        [SCORECARD_BONUS_META_KEY]: normalizeScorecardBonusPhase(phase) || SCORECARD_BONUS_PHASES.entry,
+        ...getScorecardBonusValues(wagers, players)
+      };
+    }
+
+    function buildScorecardBonusResults(players, results = {}, phase = SCORECARD_BONUS_PHASES.results) {
+      return {
+        [SCORECARD_BONUS_META_KEY]: normalizeScorecardBonusPhase(phase) || SCORECARD_BONUS_PHASES.results,
+        ...getScorecardBonusResultValues(results, players)
+      };
+    }
+
+    function getScorecardBonusPhase(session) {
+      const resultPhase = normalizeScorecardBonusPhase(session?.wagerResults?.[SCORECARD_BONUS_META_KEY]);
+      if (resultPhase === SCORECARD_BONUS_PHASES.results || resultPhase === SCORECARD_BONUS_PHASES.complete) {
+        return resultPhase;
+      }
+
+      const wagerPhase = normalizeScorecardBonusPhase(session?.wagers?.[SCORECARD_BONUS_META_KEY]);
+      return wagerPhase || "";
+    }
+
+    function isScorecardBonusRoundActive(session) {
+      const phase = getScorecardBonusPhase(session);
+      return phase === SCORECARD_BONUS_PHASES.entry
+        || phase === SCORECARD_BONUS_PHASES.reveal
+        || phase === SCORECARD_BONUS_PHASES.results;
+    }
+
+    function getScorecardBonusWagers(session, players) {
+      return getScorecardBonusValues(session?.wagers, players);
+    }
+
+    function getScorecardBonusResults(session, players) {
+      return getScorecardBonusResultValues(session?.wagerResults, players);
+    }
+
+    function countScorecardLockedWagers(session, players) {
+      return Object.keys(getScorecardBonusWagers(session, players)).length;
+    }
+
+    function getScorecardActionHistory(sessionId) {
+      if (!sessionId) {
+        return [];
+      }
+
+      return scorecardActionHistoryBySessionId.get(sessionId) || [];
+    }
+
+    function pushScorecardActionHistory(sessionId, action) {
+      if (!sessionId || !action || !Array.isArray(action.changes) || !action.changes.length) {
+        return;
+      }
+
+      const existing = getScorecardActionHistory(sessionId).slice();
+      existing.push({
+        type: String(action.type || "score").trim() || "score",
+        changes: action.changes
+          .map((change) => ({
+            playerName: String(change?.playerName || "").trim(),
+            previousScore: Number(change?.previousScore) || 0,
+            nextScore: Number(change?.nextScore) || 0,
+            increment: Number(change?.increment) || 0
+          }))
+          .filter((change) => change.playerName)
+      });
+      scorecardActionHistoryBySessionId.set(sessionId, existing);
+    }
+
+    function popScorecardActionHistory(sessionId) {
+      if (!sessionId) {
+        return null;
+      }
+
+      const existing = getScorecardActionHistory(sessionId).slice();
+      const action = existing.pop() || null;
+      if (existing.length) {
+        scorecardActionHistoryBySessionId.set(sessionId, existing);
+      } else {
+        scorecardActionHistoryBySessionId.delete(sessionId);
+      }
+      return action;
+    }
+
+    function clearScorecardActionHistory(sessionId) {
+      if (!sessionId) {
+        return;
+      }
+
+      scorecardActionHistoryBySessionId.delete(sessionId);
     }
 
     function getScorecardWinner(scores) {

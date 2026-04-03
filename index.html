@@ -288,6 +288,17 @@
         <div class="display-modal-body" id="scorecard-bonus-body"></div>
       </div>
     </div>
+
+    <div class="scorecard-celebration-overlay" id="scorecard-celebration-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="scorecard-celebration-title">
+      <div class="scorecard-celebration-stage" id="scorecard-celebration-stage"></div>
+      <div class="scorecard-celebration-card">
+        <div class="scorecard-celebration-kicker">Winner</div>
+        <h2 class="scorecard-celebration-title" id="scorecard-celebration-title"></h2>
+        <div class="scorecard-celebration-subtitle" id="scorecard-celebration-subtitle"></div>
+        <div class="scorecard-celebration-scores" id="scorecard-celebration-scores"></div>
+        <button class="scorecard-celebration-button" type="button" id="scorecard-celebration-new-game">New game</button>
+      </div>
+    </div>
   </div>
 
   <div class="admin-shell" id="admin-app" hidden>
@@ -613,7 +624,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer crossorigin="anonymous"></script>
+  <script src="js/vendor/canvas-confetti.browser.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer crossorigin="anonymous"></script>
   <script src="js/shared.js" defer></script>
   <script src="js/display.js" defer></script>

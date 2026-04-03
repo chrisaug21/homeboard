@@ -75,8 +75,10 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 ### Scorecard
 - Trophy tab in the admin bottom nav
 - Create/edit scorecards with 2-6 players, independent player colors, configurable increment buttons, `allow_negative`, and `show_history`
-- Active session management with score adjustments, Reset scores, End game, and Bonus round on both admin and display
-- Bonus Round uses the same 3-step flow on both admin and display: wager entry, correct/incorrect result entry, then automatic session end plus a fresh zeroed session; each wager is capped to that player's current score and floored at `0`
+- Active session management with score adjustments, an in-memory undo stack per active session, Reset scores, End Game, and Bonus Round on both admin and display
+- End Game and Bonus Round are separate mechanics: End Game closes the session and shows the winner until `New game` is tapped; Bonus Round is a wager mechanic that applies score changes but does not end the session
+- Bonus Round uses a shared session state: players lock masked wagers on the display, wagers are revealed together, admin applies correct/incorrect results, and the game resumes; each wager is capped to that player's current score and floored at `0`
+- Winner celebrations use the locally bundled Canvas Confetti file at `js/vendor/canvas-confetti.browser.min.js`
 - Session history filter: This week / This month / All time
 
 ## Supabase Tables

@@ -172,6 +172,10 @@
       gap: 10px;
     }
 
+    .admin-actions--split > * {
+      flex: 1 1 0;
+    }
+
     .admin-button {
       border: 0;
       border-radius: var(--button-radius);
@@ -2110,7 +2114,7 @@
     }
 
     .admin-scorecard-inline-actions {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       width: 100%;
     }
 
@@ -2341,6 +2345,43 @@
       gap: 8px;
     }
 
+    .admin-scorecard-bonus-panel,
+    .admin-scorecard-bonus-status,
+    .admin-scorecard-winner-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .admin-scorecard-bonus-status span {
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .admin-scorecard-lock-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 84px;
+      padding: 6px 10px;
+      border-radius: var(--tag-radius);
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .admin-scorecard-lock-pill.is-locked {
+      background: var(--color-accent-subtle);
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+
+    .admin-scorecard-winner-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+    }
+
     .admin-scorecard-player-list,
     .admin-scorecard-increment-list {
       display: grid;
@@ -2393,7 +2434,8 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .admin-scorecard-inline-actions .admin-button:last-child:nth-child(3) {
+      .admin-scorecard-inline-actions .admin-button:last-child:nth-child(3),
+      .admin-scorecard-inline-actions .admin-button:last-child:nth-child(4) {
         grid-column: 1 / -1;
       }
 
@@ -2420,5 +2462,9 @@
       .admin-scorecard-history-head {
         flex-direction: column;
         align-items: stretch;
+      }
+
+      .admin-actions--split {
+        flex-direction: column;
       }
     }
