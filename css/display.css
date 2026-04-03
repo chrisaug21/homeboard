@@ -2591,6 +2591,10 @@
       backdrop-filter: blur(8px);
     }
 
+    .scorecard-celebration-overlay[hidden] {
+      display: none !important;
+    }
+
     .scorecard-celebration-stage {
       position: absolute;
       inset: 0;
