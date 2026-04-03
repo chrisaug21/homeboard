@@ -1,4 +1,4 @@
-const CACHE_NAME = "homeboard-v1.5.1";
+const CACHE_NAME = "homeboard-v1.5.2";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -29,34 +29,77 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") {
     return;
   }
 
+  const requestUrl = new URL(event.request.url);
+  const isLocalAppShellRequest =
+    requestUrl.origin === self.location.origin &&
+    (
+      event.request.mode === "navigate" ||
+      event.request.destination === "script" ||
+      event.request.destination === "style" ||
+      event.request.destination === "document" ||
+      requestUrl.pathname === "/" ||
+      requestUrl.pathname.endsWith(".html") ||
+      requestUrl.pathname.endsWith(".json")
+    );
+
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+    isLocalAppShellRequest
+      ? fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse.ok && networkResponse.type === "basic") {
+              const responseClone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseClone);
+              });
+            }
 
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse.ok && networkResponse.type === "basic") {
-          const responseClone = networkResponse.clone();
+            return networkResponse;
+          })
+          .catch(async () => {
+            const cachedResponse = await caches.match(event.request);
+            if (cachedResponse) {
+              return cachedResponse;
+            }
 
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
+            if (event.request.mode === "navigate") {
+              return caches.match("./index.html");
+            }
+
+            throw new Error("Network request failed");
+          })
+      : caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          return fetch(event.request).then((networkResponse) => {
+            if (networkResponse.ok && networkResponse.type === "basic") {
+              const responseClone = networkResponse.clone();
+
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseClone);
+              });
+            }
+
+            return networkResponse;
+          }).catch(() => {
+            if (event.request.mode === "navigate") {
+              return caches.match("./index.html");
+            }
+
+            throw new Error("Network request failed");
           });
-        }
-
-        return networkResponse;
-      }).catch(() => {
-        if (event.request.mode === "navigate") {
-          return caches.match("./index.html");
-        }
-
-        throw new Error("Network request failed");
-      });
-    })
+        })
   );
 });
