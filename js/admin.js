@@ -617,6 +617,7 @@
           name: "",
           color: SCORECARD_PLAYER_COLOR_PALETTE[list.children.length % SCORECARD_PLAYER_COLOR_PALETTE.length]
         }, list.children.length));
+        refreshIcons();
         return;
       }
       const removePlayerBtn = event.target.closest("[data-action='remove-scorecard-player']");
@@ -634,6 +635,7 @@
         const list = document.querySelector(".admin-scorecard-increment-list");
         if (!list) return;
         list.insertAdjacentHTML("beforeend", buildScorecardIncrementRowHTML("", list.children.length));
+        refreshIcons();
         return;
       }
       const removeIncrementBtn = event.target.closest("[data-action='remove-scorecard-increment']");
@@ -2319,6 +2321,22 @@
       `).join("");
     }
 
+    function buildAdminScorecardCardRowsHTML(scorecard, session) {
+      if (!session) {
+        return '<div class="admin-scorecard-summary-empty">No game yet</div>';
+      }
+
+      return scorecard.players.map((player) => `
+        <div class="admin-scorecard-session-row">
+          <div class="admin-scorecard-session-player">
+            <span class="admin-scorecard-player-dot" style="background:${escapeHtml(player.color)}"></span>
+            <span>${escapeHtml(player.name)}</span>
+          </div>
+          <strong class="admin-scorecard-session-score">${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</strong>
+        </div>
+      `).join("");
+    }
+
     function renderAdminScorecardList() {
       if (!adminScorecardList || !adminScorecardsNote) {
         return;
@@ -2344,12 +2362,7 @@
               </div>
               <i data-lucide="chevron-right"></i>
             </div>
-            <div class="admin-scorecard-player-pill-row">
-              ${scorecard.players.map((player) => `
-                <span class="admin-scorecard-player-pill" style="background:${escapeHtml(hexToRgba(player.color, 0.14))};color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</span>
-              `).join("")}
-            </div>
-            <div class="admin-scorecard-summary-row">${buildAdminScoreSummary(scorecard, activeSession)}</div>
+            <div class="admin-scorecard-session-list">${buildAdminScorecardCardRowsHTML(scorecard, activeSession)}</div>
           </button>
         `;
       }).join("");

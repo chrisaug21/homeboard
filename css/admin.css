@@ -8,7 +8,7 @@
     }
 
     .admin-header-row {
-      min-height: 44px;
+      min-height: 52px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -33,7 +33,8 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 12px;
+      min-height: 44px;
+      padding: 8px 12px;
       border-radius: var(--tag-radius);
       background: rgba(180, 83, 9, 0.10);
       color: var(--amber);
@@ -77,12 +78,6 @@
     .admin-header-icon-button svg {
       width: 18px;
       height: 18px;
-    }
-
-    .admin-mode-pill svg {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
     }
 
     .admin-panel {
@@ -1881,7 +1876,7 @@
 
     html[data-scheme="dark"] .admin-mode-pill {
       background: rgba(245, 158, 11, 0.14);
-      color: #fbbf24;
+      color: var(--color-accent);
     }
 
     html[data-scheme="dark"] .admin-panel,
@@ -2100,8 +2095,6 @@
       font-size: 0.86rem;
     }
 
-    .admin-scorecard-player-pill-row,
-    .admin-scorecard-summary-row,
     .admin-scorecard-history-scores,
     .admin-scorecard-filter-row,
     .admin-scorecard-inline-actions {
@@ -2110,8 +2103,6 @@
       gap: 8px;
     }
 
-    .admin-scorecard-player-pill,
-    .admin-scorecard-score-pill,
     .admin-scorecard-history-pill {
       display: inline-flex;
       align-items: center;
