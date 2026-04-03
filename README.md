@@ -75,8 +75,8 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 ### Scorecard
 - Trophy tab in the admin bottom nav
 - Create/edit scorecards with 2-6 players, independent player colors, configurable increment buttons, `allow_negative`, and `show_history`
-- Active session management with score adjustments, Reset scores, End game, and admin-only Bonus round
-- Final Jeopardy is a 3-step flow: wager entry, correct/incorrect result entry, then automatic session end plus a fresh zeroed session; each wager is capped to that player's current score and floored at `0`
+- Active session management with score adjustments, Reset scores, End game, and Bonus round on both admin and display
+- Bonus Round uses the same 3-step flow on both admin and display: wager entry, correct/incorrect result entry, then automatic session end plus a fresh zeroed session; each wager is capped to that player's current score and floored at `0`
 - Session history filter: This week / This month / All time
 
 ## Supabase Tables

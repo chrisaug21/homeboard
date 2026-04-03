@@ -2301,7 +2301,9 @@
     .scorecard-columns,
     .scorecard-rows,
     .scorecard-player-row-list,
-    .scorecard-history-list {
+    .scorecard-history-list,
+    .scorecard-increment-stack,
+    .scorecard-bonus-stack {
       display: grid;
       gap: 14px;
     }
@@ -2364,13 +2366,12 @@
 
     .scorecard-button-grid,
     .scorecard-shared-buttons {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
       gap: 10px;
     }
 
     .scorecard-action-btn,
-    .scorecard-new-game-btn,
+    .scorecard-secondary-btn,
     .scorecard-player-row {
       font: inherit;
       cursor: pointer;
@@ -2378,25 +2379,20 @@
     }
 
     .scorecard-action-btn,
-    .scorecard-new-game-btn {
+    .scorecard-secondary-btn {
       border-radius: var(--button-radius);
       border: 1px solid var(--border);
       padding: 10px 14px;
       background: var(--panel-strong);
       color: var(--ink);
       font-weight: 800;
-    }
-
-    .scorecard-new-game-btn {
-      background: var(--color-accent);
-      border-color: var(--color-accent);
-      color: var(--color-text-on-accent);
+      white-space: nowrap;
     }
 
     .scorecard-action-btn:hover,
     .scorecard-action-btn:focus-visible,
-    .scorecard-new-game-btn:hover,
-    .scorecard-new-game-btn:focus-visible,
+    .scorecard-secondary-btn:hover,
+    .scorecard-secondary-btn:focus-visible,
     .scorecard-player-row:hover,
     .scorecard-player-row:focus-visible {
       transform: translateY(-1px);
@@ -2406,6 +2402,41 @@
     .scorecard-action-btn:focus-visible {
       background: var(--color-accent-subtle);
       border-color: var(--color-accent);
+    }
+
+    .scorecard-increment-row,
+    .scorecard-increment-scroll,
+    .scorecard-secondary-actions,
+    .scorecard-bonus-toggle-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .scorecard-increment-row,
+    .scorecard-secondary-actions {
+      justify-content: center;
+    }
+
+    .scorecard-increment-scroll {
+      overflow-x: auto;
+      padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .scorecard-action-btn {
+      min-width: 96px;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .scorecard-secondary-actions {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .scorecard-secondary-btn {
+      min-width: 120px;
     }
 
     .scorecard-player-row {
@@ -2465,8 +2496,77 @@
       font-weight: 700;
     }
 
+    .scorecard-bonus-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .scorecard-bonus-note {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .scorecard-bonus-input {
+      width: 110px;
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--button-radius);
+      padding: 10px 12px;
+      background: var(--panel-strong);
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .scorecard-bonus-input:focus-visible {
+      outline: 3px solid var(--color-accent);
+      outline-offset: 2px;
+      border-color: var(--color-accent);
+    }
+
+    .scorecard-bonus-toggle-pill {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .scorecard-bonus-toggle-pill input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+    }
+
+    .scorecard-bonus-toggle-pill span {
+      padding: 8px 12px;
+      border-radius: var(--tag-radius);
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .scorecard-bonus-toggle-pill input:checked + span {
+      background: var(--color-accent-subtle);
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+
     @media (max-width: 1120px) {
       .scorecard-columns {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .scorecard-bonus-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .scorecard-bonus-input {
+        width: 100%;
       }
     }

@@ -1697,6 +1697,34 @@
       return fallback;
     }
 
+    function chunkScorecardIncrements(increments, size = 5) {
+      const rows = [];
+      for (let index = 0; index < increments.length; index += size) {
+        rows.push(increments.slice(index, index + size));
+      }
+      return rows;
+    }
+
+    function buildDisplayScorecardIncrementControls(scorecard, actionBuilder) {
+      if (scorecard.increments.length > 10) {
+        return `
+          <div class="scorecard-increment-scroll" tabindex="0" aria-label="Score adjustments">
+            ${scorecard.increments.map(actionBuilder).join("")}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="scorecard-increment-stack">
+          ${chunkScorecardIncrements(scorecard.increments).map((row) => `
+            <div class="scorecard-increment-row">
+              ${row.map(actionBuilder).join("")}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
     function buildScorecardHistoryMarkup(scorecard) {
       const sessions = getScorecardSessions(scorecard.id).filter((session) => session.endedAt).slice(0, 5);
       if (!scorecard.showHistory || !sessions.length) {
@@ -1737,11 +1765,11 @@
                 <div class="scorecard-player-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</div>
                 <div class="scorecard-player-score" data-scorecard-score="${escapeHtml(scorecard.id)}:${escapeHtml(player.name)}">${escapeHtml(formatScorecardScore(score))}</div>
                 <div class="scorecard-button-grid">
-                  ${scorecard.increments.map((increment) => `
+                  ${buildDisplayScorecardIncrementControls(scorecard, (increment) => `
                     <button class="scorecard-action-btn" type="button" data-action="scorecard-display-adjust" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}" data-increment="${escapeHtml(increment)}">
-                      ${increment > 0 ? "+" : ""}${escapeHtml(increment)}
+                      ${increment > 0 ? "+" : ""}${escapeHtml(formatScorecardScore(increment))}
                     </button>
-                  `).join("")}
+                  `)}
                 </div>
               </article>
             `;
@@ -1769,11 +1797,11 @@
             }).join("")}
           </div>
           <div class="scorecard-shared-buttons">
-            ${scorecard.increments.map((increment) => `
+            ${buildDisplayScorecardIncrementControls(scorecard, (increment) => `
               <button class="scorecard-action-btn" type="button" data-action="scorecard-display-adjust-selected" data-scorecard-id="${escapeHtml(scorecard.id)}" data-increment="${escapeHtml(increment)}">
-                ${increment > 0 ? "+" : ""}${escapeHtml(increment)}
+                ${increment > 0 ? "+" : ""}${escapeHtml(formatScorecardScore(increment))}
               </button>
-            `).join("")}
+            `)}
           </div>
         </div>
       `;
@@ -1794,10 +1822,13 @@
         <div class="panel">
           <div class="screen-title-row">
             <div class="eyebrow"><i data-lucide="trophy"></i> ${escapeHtml(label)}</div>
-            <button class="scorecard-new-game-btn" type="button" data-action="scorecard-display-new-game" data-scorecard-id="${escapeHtml(scorecard.id)}">New game</button>
           </div>
           <div class="scorecard-layout">
             ${layoutMarkup}
+            <div class="scorecard-secondary-actions">
+              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-end-game" data-scorecard-id="${escapeHtml(scorecard.id)}">End game</button>
+              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-bonus-round" data-scorecard-id="${escapeHtml(scorecard.id)}">Bonus round</button>
+            </div>
             ${buildScorecardHistoryMarkup(scorecard)}
           </div>
         </div>
@@ -2358,7 +2389,7 @@
       resetAutoRotate("scorecard-adjust");
     }
 
-    async function startDisplayScorecardNewGame(scorecardId) {
+    async function finishDisplayScorecardGame(scorecardId, finalJeopardyPayload = null) {
       const client = getSupabaseClient();
       const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
       const session = getActiveScorecardSession(scorecardId);
@@ -2367,17 +2398,37 @@
         return;
       }
 
+      let finalScores = { ...session.scores };
+      let wagers = null;
+      let wagerResults = null;
+      let isFinalJeopardy = false;
+
+      if (finalJeopardyPayload) {
+        wagers = finalJeopardyPayload.wagers;
+        wagerResults = finalJeopardyPayload.wagerResults;
+        isFinalJeopardy = true;
+        scorecard.players.forEach((player) => {
+          const wager = Math.max(0, Number(wagers[player.name]) || 0);
+          const wasCorrect = wagerResults[player.name] === "correct";
+          finalScores[player.name] = applyScorecardIncrement(
+            session.scores[player.name] || 0,
+            wasCorrect ? wager : -wager,
+            scorecard.allowNegative
+          );
+        });
+      }
+
       const endedAt = new Date().toISOString();
-      const winner = getScorecardWinner(session.scores);
+      const winner = getScorecardWinner(finalScores);
       const updateResponse = await client
         .from("scorecard_sessions")
         .update({
           ended_at: endedAt,
           winner,
-          scores: session.scores,
-          wagers: null,
-          wager_results: null,
-          is_final_jeopardy: false
+          scores: finalScores,
+          wagers,
+          wager_results: wagerResults,
+          is_final_jeopardy: isFinalJeopardy
         })
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
@@ -2392,7 +2443,144 @@
       }
 
       await renderScorecardsWithData();
-      resetAutoRotate("scorecard-new-game");
+      closeScorecardBonusModal();
+      resetAutoRotate(isFinalJeopardy ? "scorecard-bonus-round" : "scorecard-end-game");
+    }
+
+    function openDisplayBonusRoundModal(scorecardId) {
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const session = getActiveScorecardSession(scorecardId);
+      const titleEl = document.getElementById("scorecard-bonus-title");
+      const bodyEl = document.getElementById("scorecard-bonus-body");
+      const modalEl = document.getElementById("scorecard-bonus-modal");
+      if (!scorecard || !session || !titleEl || !bodyEl || !modalEl) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      titleEl.textContent = `${scorecard.name} Bonus Round`;
+      bodyEl.innerHTML = `
+        <form data-display-scorecard-form="bonus-wagers" data-scorecard-id="${escapeHtml(scorecardId)}" novalidate>
+          <div class="scorecard-bonus-stack">
+            ${scorecard.players.map((player) => `
+              <div class="scorecard-bonus-row">
+                <div>
+                  <strong>${escapeHtml(player.name)}</strong>
+                  <div class="scorecard-bonus-note">Current score: ${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</div>
+                </div>
+                <input class="scorecard-bonus-input" type="number" min="0" max="${escapeHtml(Math.max(0, session.scores[player.name] || 0))}" name="wager_${escapeHtml(player.name)}" value="0" inputmode="numeric">
+              </div>
+            `).join("")}
+            <div class="scorecard-secondary-actions">
+              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-cancel">Cancel</button>
+              <button class="scorecard-secondary-btn" type="submit">Continue</button>
+            </div>
+          </div>
+        </form>
+      `;
+      modalEl.hidden = false;
+      refreshIcons();
+      resetAutoRotate("scorecard-bonus-open");
+    }
+
+    function openDisplayBonusRoundResultsModal(scorecardId, wagers) {
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const titleEl = document.getElementById("scorecard-bonus-title");
+      const bodyEl = document.getElementById("scorecard-bonus-body");
+      const modalEl = document.getElementById("scorecard-bonus-modal");
+      if (!scorecard || !titleEl || !bodyEl || !modalEl) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      titleEl.textContent = `${scorecard.name} Bonus Round`;
+      bodyEl.innerHTML = `
+        <form data-display-scorecard-form="bonus-results" data-scorecard-id="${escapeHtml(scorecardId)}" novalidate>
+          <div class="scorecard-bonus-stack">
+            ${scorecard.players.map((player) => `
+              <div class="scorecard-bonus-row">
+                <div>
+                  <strong>${escapeHtml(player.name)}</strong>
+                  <div class="scorecard-bonus-note">Wager: ${escapeHtml(formatScorecardScore(wagers[player.name] || 0))}</div>
+                </div>
+                <div class="scorecard-bonus-toggle-row">
+                  <label class="scorecard-bonus-toggle-pill">
+                    <input type="radio" name="result_${escapeHtml(player.name)}" value="correct" checked>
+                    <span>Correct</span>
+                  </label>
+                  <label class="scorecard-bonus-toggle-pill">
+                    <input type="radio" name="result_${escapeHtml(player.name)}" value="incorrect">
+                    <span>Incorrect</span>
+                  </label>
+                </div>
+              </div>
+            `).join("")}
+            <div class="scorecard-secondary-actions">
+              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-back" data-scorecard-id="${escapeHtml(scorecardId)}">Back</button>
+              <button class="scorecard-secondary-btn" type="submit">Finish round</button>
+            </div>
+          </div>
+        </form>
+      `;
+      modalEl.hidden = false;
+      bodyEl.dataset.scorecardBonusWagers = JSON.stringify(wagers);
+      refreshIcons();
+      resetAutoRotate("scorecard-bonus-results");
+    }
+
+    function closeScorecardBonusModal() {
+      const modalEl = document.getElementById("scorecard-bonus-modal");
+      const bodyEl = document.getElementById("scorecard-bonus-body");
+      if (!modalEl || modalEl.hidden) {
+        return;
+      }
+      modalEl.hidden = true;
+      if (bodyEl) {
+        bodyEl.innerHTML = "";
+        delete bodyEl.dataset.scorecardBonusWagers;
+      }
+      resetAutoRotate("scorecard-bonus-close");
+    }
+
+    function handleDisplayScorecardBonusSubmit(form) {
+      const scorecardId = String(form.getAttribute("data-scorecard-id") || "").trim();
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const session = getActiveScorecardSession(scorecardId);
+      if (!scorecard || !session) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      const formType = form.getAttribute("data-display-scorecard-form");
+      if (formType === "bonus-wagers") {
+        const formData = new FormData(form);
+        const wagers = {};
+        scorecard.players.forEach((player) => {
+          const maxWager = Math.max(0, Number(session.scores[player.name]) || 0);
+          const rawValue = Number(formData.get(`wager_${player.name}`));
+          wagers[player.name] = Math.min(maxWager, Math.max(0, Number.isFinite(rawValue) ? rawValue : 0));
+        });
+        openDisplayBonusRoundResultsModal(scorecardId, wagers);
+        return;
+      }
+
+      if (formType === "bonus-results") {
+        const formData = new FormData(form);
+        const bodyEl = document.getElementById("scorecard-bonus-body");
+        let wagers = {};
+        if (bodyEl?.dataset.scorecardBonusWagers) {
+          try {
+            wagers = JSON.parse(bodyEl.dataset.scorecardBonusWagers);
+          } catch {
+            wagers = {};
+          }
+        }
+        const wagerResults = {};
+        scorecard.players.forEach((player) => {
+          wagerResults[player.name] = String(formData.get(`result_${player.name}`) || "incorrect");
+        });
+        finishDisplayScorecardGame(scorecardId, { wagers, wagerResults });
+      }
     }
 
     function updateLastSyncedLabel() {
@@ -2603,6 +2791,10 @@
     }
 
     function handleKeydown(event) {
+      if (event.key === "Escape") {
+        closeScorecardBonusModal();
+      }
+
       if (event.key === "ArrowRight") {
         manualNavigate("next");
       }
@@ -2817,7 +3009,31 @@
 
         const newGameBtn = event.target.closest("[data-action='scorecard-display-new-game']");
         if (newGameBtn) {
-          startDisplayScorecardNewGame(newGameBtn.getAttribute("data-scorecard-id"));
+          finishDisplayScorecardGame(newGameBtn.getAttribute("data-scorecard-id"));
+          return;
+        }
+
+        const endGameBtn = event.target.closest("[data-action='scorecard-display-end-game']");
+        if (endGameBtn) {
+          finishDisplayScorecardGame(endGameBtn.getAttribute("data-scorecard-id"));
+          return;
+        }
+
+        const bonusRoundBtn = event.target.closest("[data-action='scorecard-display-bonus-round']");
+        if (bonusRoundBtn) {
+          openDisplayBonusRoundModal(bonusRoundBtn.getAttribute("data-scorecard-id"));
+          return;
+        }
+
+        const bonusCancelBtn = event.target.closest("[data-action='scorecard-bonus-cancel']");
+        if (bonusCancelBtn) {
+          closeScorecardBonusModal();
+          return;
+        }
+
+        const bonusBackBtn = event.target.closest("[data-action='scorecard-bonus-back']");
+        if (bonusBackBtn) {
+          openDisplayBonusRoundModal(bonusBackBtn.getAttribute("data-scorecard-id"));
         }
       });
       window.addEventListener("keydown", handleKeydown);
@@ -2916,6 +3132,26 @@
       document.getElementById("rsvp-detail-backdrop").addEventListener("click", closeRsvpDetailModal);
       document.getElementById("rsvp-review-close").addEventListener("click", closeRsvpReviewModal);
       document.getElementById("rsvp-review-backdrop").addEventListener("click", closeRsvpReviewModal);
+      document.getElementById("scorecard-bonus-close").addEventListener("click", closeScorecardBonusModal);
+      document.getElementById("scorecard-bonus-backdrop").addEventListener("click", closeScorecardBonusModal);
+      document.getElementById("scorecard-bonus-body").addEventListener("click", (event) => {
+        const cancelBtn = event.target.closest("[data-action='scorecard-bonus-cancel']");
+        if (cancelBtn) {
+          closeScorecardBonusModal();
+          return;
+        }
+
+        const backBtn = event.target.closest("[data-action='scorecard-bonus-back']");
+        if (backBtn) {
+          openDisplayBonusRoundModal(backBtn.getAttribute("data-scorecard-id"));
+        }
+      });
+      document.getElementById("scorecard-bonus-body").addEventListener("submit", (event) => {
+        const form = event.target.closest("form[data-display-scorecard-form]");
+        if (!form) return;
+        event.preventDefault();
+        handleDisplayScorecardBonusSubmit(form);
+      });
 
       const declinedTrigger = document.getElementById("rsvp-declined-trigger");
       const pendingTrigger = document.getElementById("rsvp-pending-trigger");

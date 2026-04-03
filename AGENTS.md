@@ -139,7 +139,8 @@ netlify.toml        — build + env var injection via sed
 - User-facing error messages must never mention Supabase, backend services, table names, or internal config details; use plain language like `Something went wrong loading your data. Please try refreshing.` or `Something went wrong saving your changes. Please try again.`
 - User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
 - Scorecard display layout auto-switches by player count: 2-4 players = per-player columns, 5-6 players = selectable player rows plus shared increment buttons
-- Final Jeopardy is a 3-step admin flow: enter wagers, mark correct/incorrect, then auto-end the session and start a fresh one. Wagers must be between `0` and that player's current score.
+- End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view; both paths write to the same shared scorecard session state
+- Bonus Round uses the same 3-step flow on both admin and display: enter wagers, mark correct/incorrect, then auto-end the session and start a fresh one. Wagers must be between `0` and that player's current score.
 - New scorecard UI should use `--color-accent` and `--color-accent-subtle` for active/interactive states per `TOKENS.md`; do not use `--amber` / `--amber-soft` in new scorecard components
 
 ## Local Dev

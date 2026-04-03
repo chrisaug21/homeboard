@@ -277,15 +277,27 @@
         <div class="display-modal-body" id="rsvp-review-body"></div>
       </div>
     </div>
+
+    <div class="display-modal" id="scorecard-bonus-modal" hidden role="dialog" aria-modal="true" aria-labelledby="scorecard-bonus-title">
+      <div class="display-modal-backdrop" id="scorecard-bonus-backdrop"></div>
+      <div class="display-modal-sheet">
+        <div class="display-modal-header">
+          <h2 class="display-modal-title" id="scorecard-bonus-title">Bonus Round</h2>
+          <button class="display-modal-close" type="button" id="scorecard-bonus-close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="display-modal-body" id="scorecard-bonus-body"></div>
+      </div>
+    </div>
   </div>
 
   <div class="admin-shell" id="admin-app" hidden>
-    <div class="admin-header-row">
-      <div class="admin-mode-pill">
+    <div class="admin-header-bar">
+      <div class="admin-header-brand">
+        <i data-lucide="sliders-horizontal"></i>
         <span>Admin Mode</span>
         <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
       </div>
-      <button class="admin-header-icon-button" type="button" id="admin-settings-button" aria-label="Open settings">
+      <button class="admin-header-settings" type="button" id="admin-settings-button" aria-label="Open settings">
         <i data-lucide="settings"></i>
       </button>
     </div>

@@ -2471,17 +2471,39 @@
       `).join("");
     }
 
+    function chunkScorecardIncrements(increments, size = 5) {
+      const rows = [];
+      for (let index = 0; index < increments.length; index += size) {
+        rows.push(increments.slice(index, index + size));
+      }
+      return rows;
+    }
+
     function buildScorecardAdjustButtonsHTML(scorecard, playerName) {
+      const buildButton = (increment) => `
+        <button class="admin-button admin-button--secondary admin-button--small admin-scorecard-increment-btn" type="button"
+          data-action="scorecard-adjust-score"
+          data-scorecard-id="${escapeHtml(scorecard.id)}"
+          data-player-name="${escapeHtml(playerName)}"
+          data-increment="${escapeHtml(increment)}">
+          ${increment > 0 ? "+" : ""}${escapeHtml(formatScorecardScore(increment))}
+        </button>
+      `;
+
+      if (scorecard.increments.length > 10) {
+        return `
+          <div class="admin-scorecard-adjust-scroll" tabindex="0" aria-label="Score adjustments">
+            ${scorecard.increments.map(buildButton).join("")}
+          </div>
+        `;
+      }
+
       return `
-        <div class="admin-scorecard-adjust-buttons">
-          ${scorecard.increments.map((increment) => `
-            <button class="admin-button admin-button--secondary admin-button--small" type="button"
-              data-action="scorecard-adjust-score"
-              data-scorecard-id="${escapeHtml(scorecard.id)}"
-              data-player-name="${escapeHtml(playerName)}"
-              data-increment="${escapeHtml(increment)}">
-              ${increment > 0 ? "+" : ""}${escapeHtml(increment)}
-            </button>
+        <div class="admin-scorecard-adjust-stack">
+          ${chunkScorecardIncrements(scorecard.increments).map((row) => `
+            <div class="admin-scorecard-adjust-row">
+              ${row.map(buildButton).join("")}
+            </div>
           `).join("")}
         </div>
       `;
@@ -2532,7 +2554,7 @@
               <div class="admin-scorecard-inline-actions">
                 <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-reset-scores" data-scorecard-id="${escapeHtml(scorecard.id)}">Reset scores</button>
                 <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-new-game" data-scorecard-id="${escapeHtml(scorecard.id)}">End game</button>
-                <button class="admin-button admin-button--primary admin-button--small" type="button" data-action="scorecard-final-jeopardy" data-scorecard-id="${escapeHtml(scorecard.id)}">Bonus round</button>
+                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-final-jeopardy" data-scorecard-id="${escapeHtml(scorecard.id)}">Bonus round</button>
               </div>
             </div>
             <div class="admin-scorecard-session-list">

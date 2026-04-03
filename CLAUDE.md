@@ -124,7 +124,8 @@ netlify.toml        — build config, env var injection via sed
 - All countdown screens collapse into one footer nav button. Tapping that hourglass always jumps to the first countdown in the current rotation order, and the button remains active across every countdown screen
 - All scorecard screens collapse into one footer trophy button. Tapping it jumps to the first scorecard in the current rotation order, and swipe navigation moves between individual scorecard screens.
 - Scorecard display layout auto-switches by player count: 2-4 players render as per-player columns, 5-6 players render as selectable rows plus shared increment buttons.
-- Final Jeopardy is an admin-only 3-step flow: wager entry, correct/incorrect result entry, then automatic session end plus a fresh zeroed session. Each wager must be between `0` and that player's current score.
+- End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view; both paths write to the same shared scorecard session state.
+- Bonus Round uses the same 3-step flow on both admin and display: wager entry, correct/incorrect result entry, then automatic session end plus a fresh zeroed session. Each wager must be between `0` and that player's current score.
 - When a display footer nav button is tapped, auto-rotation should reset immediately and resume using that destination screen's configured `display_settings.timer_intervals` value, never a hardcoded fallback unless the screen has no saved timer
 - The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
 - The Settings screen sync row should keep visible spacing below its helper copy so the sync button/timestamp do not crowd the paragraph above
