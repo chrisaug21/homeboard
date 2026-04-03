@@ -280,9 +280,14 @@
   </div>
 
   <div class="admin-shell" id="admin-app" hidden>
-    <div class="admin-mode-pill">
-      <i data-lucide="settings-2"></i> Admin Mode
-      <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
+    <div class="admin-header-row">
+      <div class="admin-mode-pill">
+        <i data-lucide="settings-2"></i> Admin Mode
+        <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
+      </div>
+      <button class="admin-header-icon-button" type="button" id="admin-settings-button" aria-label="Open settings">
+        <i data-lucide="settings"></i>
+      </button>
     </div>
 
     <div class="admin-content">
@@ -568,10 +573,6 @@
       <button class="admin-nav-button" type="button" data-admin-nav="scorecards">
         <i data-lucide="trophy"></i>
         <span>Scorecard</span>
-      </button>
-      <button class="admin-nav-button" type="button" data-admin-nav="settings">
-        <i data-lucide="settings-2"></i>
-        <span>Settings</span>
       </button>
     </nav>
   </div>

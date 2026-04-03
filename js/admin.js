@@ -4,6 +4,7 @@
     const adminArchivedSummary = document.getElementById("admin-archived-summary");
     const adminScreens = Array.from(document.querySelectorAll("[data-admin-screen]"));
     const adminNavButtons = Array.from(document.querySelectorAll("[data-admin-nav]"));
+    const adminSettingsButton = document.getElementById("admin-settings-button");
     const adminMealList = document.getElementById("admin-meal-list");
     const adminMealNoteWrap = document.getElementById("admin-meal-note-wrap");
     const adminMealWeekLabel = document.getElementById("admin-meal-week-label");
@@ -1554,6 +1555,25 @@
           button.removeAttribute("aria-current");
         }
       });
+
+      if (adminSettingsButton) {
+        const isSettings = nextScreen === "settings";
+        adminSettingsButton.classList.toggle("is-active", isSettings);
+        if (isSettings) {
+          adminSettingsButton.setAttribute("aria-current", "page");
+        } else {
+          adminSettingsButton.removeAttribute("aria-current");
+        }
+      }
+    }
+
+    function openAdminSettings() {
+      setAdminScreen("settings");
+      renderAdminSettingsSkeleton();
+      loadAdminScorecards();
+      ensureAdminHouseholdConfigLoaded()
+        .then(() => loadAdminSettings())
+        .catch(() => showToast(friendlyLoadMessage()));
     }
 
     function handleAdminNavClick(event) {
@@ -1568,14 +1588,6 @@
 
       if (target === "countdowns") {
         loadAdminCountdowns();
-      }
-
-      if (target === "settings") {
-        renderAdminSettingsSkeleton();
-        loadAdminScorecards();
-        ensureAdminHouseholdConfigLoaded()
-          .then(() => loadAdminSettings())
-          .catch(() => showToast(friendlyLoadMessage()));
       }
 
       if (target === "rsvp") {
@@ -2108,11 +2120,14 @@
     // ── Scorecards ───────────────────────────────────────────────────────────
 
     function buildScorecardPlayerRowHTML(player = {}, index = 0) {
+      const color = player.color || SCORECARD_PLAYER_COLOR_PALETTE[index % SCORECARD_PLAYER_COLOR_PALETTE.length];
       return `
         <div class="admin-scorecard-player-row" data-scorecard-player-row="${index}">
+          <input class="admin-scorecard-color-input" type="color" name="scorecard_player_color" value="${escapeHtml(color)}" aria-label="Player color">
           <input class="admin-input" type="text" name="scorecard_player_name" maxlength="40" placeholder="Player name" value="${escapeHtml(player.name || "")}">
-          <input class="admin-scorecard-color-input" type="color" name="scorecard_player_color" value="${escapeHtml(player.color || SCORECARD_PLAYER_COLOR_PALETTE[index % SCORECARD_PLAYER_COLOR_PALETTE.length])}" aria-label="Player color">
-          <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="remove-scorecard-player" aria-label="Remove player">Remove</button>
+          <button class="admin-scorecard-remove-btn" type="button" data-action="remove-scorecard-player" aria-label="Remove player">
+            <i data-lucide="x"></i>
+          </button>
         </div>
       `;
     }
@@ -2120,36 +2135,26 @@
     function buildScorecardIncrementRowHTML(value = "", index = 0) {
       return `
         <div class="admin-scorecard-increment-row" data-scorecard-increment-row="${index}">
-          <input class="admin-input" type="number" step="1" name="scorecard_increment" placeholder="200" value="${escapeHtml(value)}" inputmode="numeric">
-          <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="remove-scorecard-increment" aria-label="Remove increment">Remove</button>
+          <input class="admin-input" type="text" name="scorecard_increment" placeholder="200 or -200" value="${escapeHtml(value)}" inputmode="decimal" pattern="-?[0-9]*">
+          <button class="admin-scorecard-remove-btn" type="button" data-action="remove-scorecard-increment" aria-label="Remove increment">
+            <i data-lucide="x"></i>
+          </button>
         </div>
       `;
     }
 
-    function getScorecardScreenOrderEntries(scorecards) {
+    function getPersistedScorecardScreenOrderEntries(scorecards) {
       return (Array.isArray(scorecards) ? scorecards : []).map((scorecard) => buildScorecardScreenKey(scorecard.id)).filter(Boolean);
-    }
-
-    function getScorecardOrderLabel(key) {
-      const scorecardId = getScorecardIdFromScreenKey(key);
-      if (!scorecardId) {
-        return "";
-      }
-
-      const scorecard = adminScorecards.find((item) => item.id === scorecardId);
-      return scorecard ? `Scorecard: ${scorecard.name}` : "Scorecard";
     }
 
     function normalizeAdminScreenOrder(order) {
       const configured = Array.isArray(order) ? order : [...CONFIGURABLE_SCREENS];
-      const scorecardEntries = getScorecardScreenOrderEntries(adminScorecards);
       const normalized = [];
 
       configured.forEach((key) => {
-        if (CONFIGURABLE_SCREENS.includes(key) || isScorecardScreenKey(key)) {
-          if (!normalized.includes(key)) {
-            normalized.push(key);
-          }
+        const normalizedKey = isScorecardScreenKey(key) ? "scorecards" : key;
+        if (CONFIGURABLE_SCREENS.includes(normalizedKey) && !normalized.includes(normalizedKey)) {
+          normalized.push(normalizedKey);
         }
       });
 
@@ -2159,13 +2164,27 @@
         }
       });
 
-      scorecardEntries.forEach((key) => {
-        if (!normalized.includes(key)) {
-          normalized.push(key);
+      return normalized;
+    }
+
+    function buildPersistedScreenOrder(order) {
+      const normalized = normalizeAdminScreenOrder(order);
+      const persisted = [];
+      normalized.forEach((key) => {
+        if (key === "scorecards") {
+          getPersistedScorecardScreenOrderEntries(adminScorecards).forEach((scorecardKey) => {
+            if (!persisted.includes(scorecardKey)) {
+              persisted.push(scorecardKey);
+            }
+          });
+          return;
+        }
+
+        if (!persisted.includes(key)) {
+          persisted.push(key);
         }
       });
-
-      return normalized;
+      return persisted;
     }
 
     function getAdminScorecardById(scorecardId) {
@@ -2362,11 +2381,28 @@
         });
     }
 
-    function buildScorecardConfigFormHTML(scorecard) {
-      const players = scorecard?.players?.length ? scorecard.players : SCORECARD_PLAYER_COLOR_PALETTE.slice(0, 2).map((color, index) => ({
+    function getDefaultScorecardPlayers() {
+      const members = Array.isArray(adminHouseholdSettings?.display_settings?.members)
+        ? adminHouseholdSettings.display_settings.members.filter((member) => member && member.name)
+        : [];
+      if (members.length) {
+        return Array.from({ length: 2 }, (_, index) => {
+          const member = members[index];
+          return {
+            name: member?.name || "",
+            color: member?.color || SCORECARD_PLAYER_COLOR_PALETTE[index % SCORECARD_PLAYER_COLOR_PALETTE.length]
+          };
+        });
+      }
+
+      return SCORECARD_PLAYER_COLOR_PALETTE.slice(0, 2).map((color) => ({
         name: "",
         color
       }));
+    }
+
+    function buildScorecardConfigFormHTML(scorecard) {
+      const players = scorecard?.players?.length ? scorecard.players : getDefaultScorecardPlayers();
       const increments = scorecard?.increments?.length ? scorecard.increments : [100, 200, 400];
 
       return `
@@ -2417,7 +2453,7 @@
             <span class="admin-scorecard-player-dot" style="background:${escapeHtml(player.color)}"></span>
             <span>${escapeHtml(player.name)}</span>
           </div>
-          <strong>${escapeHtml(formatScorecardScore(session?.scores[player.name] || 0))}</strong>
+          <strong class="admin-scorecard-session-score">${escapeHtml(formatScorecardScore(session?.scores[player.name] || 0))}</strong>
         </div>
       `).join("");
     }
@@ -2439,18 +2475,28 @@
     }
 
     function buildScorecardHistoryEntryHTML(scorecard, session) {
+      const winnerLabel = session.winner || "Tie";
       return `
         <article class="admin-scorecard-history-card">
           <div class="admin-scorecard-history-head">
-            <strong>${escapeHtml(formatScorecardSessionDate(session.endedAt || session.startedAt))}</strong>
-            <span>${escapeHtml(formatScorecardSessionDuration(session.startedAt, session.endedAt))}</span>
+            <div class="admin-scorecard-history-meta">
+              <strong>${escapeHtml(formatScorecardSessionDate(session.endedAt || session.startedAt))}</strong>
+              <span>${escapeHtml(formatScorecardSessionDuration(session.startedAt, session.endedAt))}</span>
+            </div>
+            <span class="admin-scorecard-history-winner-badge">
+              <i data-lucide="trophy"></i>
+              ${escapeHtml(winnerLabel)}
+            </span>
           </div>
           <div class="admin-scorecard-history-scores">
             ${scorecard.players.map((player) => `
-              <span class="admin-scorecard-history-pill" style="background:${escapeHtml(hexToRgba(player.color, 0.14))};color:${escapeHtml(player.color)}">${escapeHtml(player.name)} ${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</span>
+              <span class="admin-scorecard-history-pill${winnerLabel === player.name ? " is-winner" : ""}">
+                ${winnerLabel === player.name ? '<i data-lucide="trophy"></i>' : ""}
+                <span>${escapeHtml(player.name)}</span>
+                <strong>${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</strong>
+              </span>
             `).join("")}
           </div>
-          <div class="admin-scorecard-history-winner">Winner: ${escapeHtml(session.winner || "Tie")}</div>
         </article>
       `;
     }
@@ -2472,8 +2518,8 @@
               <h3>Current game</h3>
               <div class="admin-scorecard-inline-actions">
                 <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-reset-scores" data-scorecard-id="${escapeHtml(scorecard.id)}">Reset scores</button>
-                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-final-jeopardy" data-scorecard-id="${escapeHtml(scorecard.id)}">Final Jeopardy</button>
-                <button class="admin-button admin-button--primary admin-button--small" type="button" data-action="scorecard-new-game" data-scorecard-id="${escapeHtml(scorecard.id)}">New game</button>
+                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-new-game" data-scorecard-id="${escapeHtml(scorecard.id)}">End game</button>
+                <button class="admin-button admin-button--primary admin-button--small" type="button" data-action="scorecard-final-jeopardy" data-scorecard-id="${escapeHtml(scorecard.id)}">Bonus round</button>
               </div>
             </div>
             <div class="admin-scorecard-session-list">
@@ -2482,7 +2528,10 @@
             <div class="admin-scorecard-adjust-grid">
               ${scorecard.players.map((player) => `
                 <div class="admin-scorecard-adjust-card">
-                  <div class="admin-scorecard-adjust-player" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</div>
+                  <div class="admin-scorecard-adjust-player">
+                    <span class="admin-scorecard-player-dot" style="background:${escapeHtml(player.color)}"></span>
+                    <span>${escapeHtml(player.name)}</span>
+                  </div>
                   ${buildScorecardAdjustButtonsHTML(scorecard, player.name)}
                 </div>
               `).join("")}
@@ -3861,12 +3910,10 @@
       const normalizedOrder = normalizeAdminScreenOrder(screenOrder);
 
       list.innerHTML = normalizedOrder.map((name, i) => {
-        const isActive = isScorecardScreenKey(name)
-          ? activeScreens.includes("scorecards")
-          : activeScreens.includes(name);
+        const isActive = activeScreens.includes(name);
         return `
           <li class="admin-settings-order-item${isActive ? "" : " is-inactive"}" data-screen-name="${escapeHtml(name)}">
-            <span class="admin-settings-order-item-name">${escapeHtml(SCREEN_LABELS[name] || getScorecardOrderLabel(name) || name)}</span>
+            <span class="admin-settings-order-item-name">${escapeHtml(SCREEN_LABELS[name] || name)}</span>
             <div class="admin-settings-order-arrows">
               <button type="button" class="admin-settings-order-btn" data-order-dir="up" data-order-index="${i}" aria-label="Move up"${i === 0 ? " disabled" : ""}>
                 <i data-lucide="chevron-up"></i>
@@ -4070,7 +4117,7 @@
 
         // Screen order — read from rendered list
         const orderItems = document.querySelectorAll(".admin-settings-order-item");
-        const screenOrder = normalizeAdminScreenOrder(Array.from(orderItems).map((el) => el.getAttribute("data-screen-name")).filter(Boolean));
+        const screenOrder = buildPersistedScreenOrder(Array.from(orderItems).map((el) => el.getAttribute("data-screen-name")).filter(Boolean));
 
         // Timers
         const timerIntervals = {};
@@ -4326,6 +4373,7 @@
       }
       if (adminRsvpGuestList) adminRsvpGuestList.addEventListener("click", handleAdminRsvpListClick);
       if (adminScorecardList) adminScorecardList.addEventListener("click", handleAdminScorecardListClick);
+      if (adminSettingsButton) adminSettingsButton.addEventListener("click", openAdminSettings);
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);
       adminWeekPrevBtn.addEventListener("click", handleAdminWeekPrev);
       adminWeekNextBtn.addEventListener("click", handleAdminWeekNext);

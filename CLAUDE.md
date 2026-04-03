@@ -29,6 +29,7 @@ netlify.toml        — build config, env var injection via sed
 ## Two Modes
 - **Display Mode** — landscape tablet, auto-rotates screens (per-screen timers), manual swipe. Mobile screens (≤ 768 px) are redirected to Admin mode automatically.
 - **Admin Mode** — portrait phone, at `/admin`
+- Admin Settings is opened from the gear icon in the admin header, not a bottom-nav tab.
 
 ## Display Screens (in order)
 1. Upcoming Calendar (Google Cal read-only) — controlled independently by `display_settings.active_screens` and `screen_order`
@@ -88,7 +89,7 @@ netlify.toml        — build config, env var injection via sed
 - `display_settings.members` drives the todo assignee picker and is managed via the Settings screen. **Planned migration**: move to `users` table when multi-user auth is implemented.
 - `upcoming_calendar` and `monthly_calendar` are separate screens across display rotation and admin settings. Never write the legacy `calendar` key back to Supabase.
 - The "Default calendar view" setting has been removed. Whichever calendar screen appears first in `screen_order` renders first.
-- Scorecards are toggled by the shared `scorecards` active-screen key, but each saved scorecard gets its own `screen_order` entry using `scorecard_[id]`.
+- Scorecards are toggled by the shared `scorecards` active-screen key. In the Settings UI, Scorecards appears as one screen-order row; saving expands that slot into the underlying `scorecard_[id]` entries used by display rotation.
 - `display_settings.upcoming_days` drives the `UPCOMING_DAYS` variable in `display.js`. Update both together if changing upcoming-view logic.
 - Google Calendar currently reads a single calendar ID (`households.google_cal_id`). **Future enhancement**: support toggling multiple calendars from the Integrations settings.
 - **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.

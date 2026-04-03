@@ -26,6 +26,7 @@ netlify.toml        — build + env var injection via sed
 - No frameworks, no bundlers. Plain vanilla JS.
 - Two modes: Display Mode (landscape) and Admin Mode (`/admin`, portrait).
 - Admin add/edit forms use a shared bottom-sheet modal (`#admin-modal`) — inject form HTML via `openAdminModal()`, dismiss via `closeAdminModal()`. Do not add new always-visible form panels.
+- Admin Settings is still its own screen, but it is opened from the gear icon in the admin header instead of a bottom-nav tab.
 
 ## Supabase Tables
 | Table | Key notes |
@@ -79,7 +80,7 @@ netlify.toml        — build + env var injection via sed
 - `members` → todo assignee picker. **Future**: migrate to `users` table when multi-user auth is implemented.
 - `upcoming_calendar` and `monthly_calendar` are separate display screens everywhere in code and settings. Do not collapse them back into a single `calendar` key.
 - The old "Default calendar view" setting has been removed. Rotation order now comes only from `screen_order`.
-- Scorecards are toggleable via the shared `scorecards` active-screen key, but each saved scorecard gets its own `screen_order` entry using `scorecard_[id]`, the same grouping pattern countdowns use for rendering/nav.
+- Scorecards are toggleable via the shared `scorecards` active-screen key. In the Settings UI, Scorecards appears as one screen-order row; saving expands that slot into the underlying `scorecard_[id]` entries used by display rotation and nav grouping.
 - `upcoming_days` → drives the `UPCOMING_DAYS` variable in `display.js`. Update both together.
 - RSVP screen is **hardcoded to this household** and excluded from `active_screens` and `screen_order`. It is hidden starting Oct 11, 2026 — remove via code change after that date.
 - Google Calendar: single calendar ID in `households.google_cal_id`. **Future**: support toggling multiple calendars.
