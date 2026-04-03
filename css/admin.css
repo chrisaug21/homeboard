@@ -69,8 +69,8 @@
     }
 
     .admin-header-settings svg {
-      width: 18px;
-      height: 18px;
+      width: 22px;
+      height: 22px;
     }
 
     .admin-content {
@@ -2118,6 +2118,15 @@
       width: 100%;
     }
 
+    .admin-scorecard-filter-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+    }
+
+    .admin-scorecard-filter-row .admin-button {
+      width: 100%;
+    }
+
     .admin-scorecard-history-pill {
       display: inline-flex;
       align-items: center;
@@ -2194,7 +2203,8 @@
     }
 
     .admin-scorecard-adjust-row {
-      justify-content: center;
+      justify-content: flex-start;
+      flex-wrap: wrap;
     }
 
     .admin-scorecard-adjust-scroll {
@@ -2388,6 +2398,14 @@
       }
 
       .admin-scorecard-inline-actions .admin-button:last-child:nth-child(3) {
+        grid-column: 1 / -1;
+      }
+
+      .admin-scorecard-filter-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .admin-scorecard-filter-row .admin-button:last-child:nth-child(3) {
         grid-column: 1 / -1;
       }
 

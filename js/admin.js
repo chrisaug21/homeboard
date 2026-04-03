@@ -2358,7 +2358,7 @@
             <div class="admin-scorecard-card-head">
               <div>
                 <div class="admin-scorecard-card-title">${escapeHtml(scorecard.name)}</div>
-                <div class="admin-scorecard-card-meta">${escapeHtml(scorecard.players.length)} players • ${escapeHtml(scorecard.increments.join(", "))}</div>
+                <div class="admin-scorecard-card-meta">${escapeHtml(scorecard.players.length)} players</div>
               </div>
               <i data-lucide="chevron-right"></i>
             </div>
@@ -2546,7 +2546,7 @@
               <h3>Scorecard</h3>
               <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="edit-scorecard-config" data-scorecard-id="${escapeHtml(scorecard.id)}">Edit</button>
             </div>
-            <p class="admin-panel-note">${escapeHtml(scorecard.players.length)} players • ${escapeHtml(scorecard.increments.join(", "))}</p>
+            <p class="admin-panel-note">${escapeHtml(scorecard.players.length)} players</p>
           </section>
           <section class="admin-scorecard-modal-section">
             <div class="admin-scorecard-section-head">

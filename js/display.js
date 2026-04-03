@@ -1826,8 +1826,8 @@
           <div class="scorecard-layout">
             ${layoutMarkup}
             <div class="scorecard-secondary-actions">
-              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-end-game" data-scorecard-id="${escapeHtml(scorecard.id)}">End game</button>
               <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-bonus-round" data-scorecard-id="${escapeHtml(scorecard.id)}">Bonus round</button>
+              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-end-game" data-scorecard-id="${escapeHtml(scorecard.id)}">End game</button>
             </div>
             ${buildScorecardHistoryMarkup(scorecard)}
           </div>
