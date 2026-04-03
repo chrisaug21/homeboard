@@ -2191,30 +2191,26 @@
       gap: 8px;
     }
 
-    .admin-scorecard-adjust-stack {
+    .admin-scorecard-adjust-grid-buttons,
+    .admin-scorecard-adjust-scroll {
       display: grid;
       gap: 8px;
     }
 
-    .admin-scorecard-adjust-row,
+    .admin-scorecard-adjust-grid-buttons {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
     .admin-scorecard-adjust-scroll {
       display: flex;
-      gap: 8px;
-    }
-
-    .admin-scorecard-adjust-row {
-      justify-content: flex-start;
-      flex-wrap: wrap;
-    }
-
-    .admin-scorecard-adjust-scroll {
       overflow-x: auto;
       padding-bottom: 2px;
       -webkit-overflow-scrolling: touch;
     }
 
     .admin-scorecard-increment-btn {
-      min-width: 96px;
+      min-width: 0;
+      width: 100%;
       justify-content: center;
       text-align: center;
       white-space: nowrap;
@@ -2411,6 +2407,10 @@
 
       .admin-scorecard-increment-row {
         grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .admin-scorecard-adjust-grid-buttons {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
       .admin-scorecard-final-row {

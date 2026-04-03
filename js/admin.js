@@ -2471,14 +2471,6 @@
       `).join("");
     }
 
-    function chunkScorecardIncrements(increments, size = 5) {
-      const rows = [];
-      for (let index = 0; index < increments.length; index += size) {
-        rows.push(increments.slice(index, index + size));
-      }
-      return rows;
-    }
-
     function buildScorecardAdjustButtonsHTML(scorecard, playerName) {
       const buildButton = (increment) => `
         <button class="admin-button admin-button--secondary admin-button--small admin-scorecard-increment-btn" type="button"
@@ -2499,12 +2491,8 @@
       }
 
       return `
-        <div class="admin-scorecard-adjust-stack">
-          ${chunkScorecardIncrements(scorecard.increments).map((row) => `
-            <div class="admin-scorecard-adjust-row">
-              ${row.map(buildButton).join("")}
-            </div>
-          `).join("")}
+        <div class="admin-scorecard-adjust-grid-buttons">
+          ${scorecard.increments.map(buildButton).join("")}
         </div>
       `;
     }
