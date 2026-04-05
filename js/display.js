@@ -25,8 +25,14 @@
     let cachedWeddingSnapshot = null;
     let cachedScorecards = [];
     let cachedScorecardSessionsById = new Map();
+    let displayScorecardBonusStateById = new Map();
+    const displayScorecardBonusPeekTimerByKey = new Map();
+    const displayScorecardBonusAdvanceTimerById = new Map();
     let scorecardSelectionById = new Map();
     let celebrationBag = [];
+    let scorecardCelebrationRunId = 0;
+    let scorecardCelebrationTimers = [];
+    let displayScorecardArchiveConfirmId = "";
     let monthOffset = 0;
     let weekOffset = 0;
     let lastWideFetch = 0; // ms timestamp of last 24-month fetch
@@ -326,18 +332,38 @@
 
     function getDisplayNavItems() {
       const visibleScreens = getVisibleScreens();
+      const visibleIndexByKey = new Map();
+      visibleScreens.forEach((screen, index) => {
+        const screenKey = getScreenKeyForElement(screen);
+        if (!visibleIndexByKey.has(screenKey)) {
+          visibleIndexByKey.set(screenKey, index);
+        }
+      });
+
+      const configuredOrder = normalizeDisplaySettings(cachedHouseholdConfig?.display_settings).screen_order;
       const items = [];
       const seen = new Set();
 
+      configuredOrder.forEach((screenKey) => {
+        const normalizedKey = isScorecardScreenKey(screenKey) ? "scorecards" : screenKey;
+        const targetIndex = visibleIndexByKey.get(normalizedKey);
+        if (targetIndex === undefined || seen.has(normalizedKey)) {
+          return;
+        }
+
+        items.push({
+          key: normalizedKey,
+          targetIndex
+        });
+
+        if (normalizedKey !== "generic") {
+          seen.add(normalizedKey);
+        }
+      });
+
       visibleScreens.forEach((screen, index) => {
         const screenKey = getScreenKeyForElement(screen);
-        if (screenKey === "countdowns" && seen.has("countdowns")) {
-          return;
-        }
-        if (screenKey === "scorecards" && seen.has("scorecards")) {
-          return;
-        }
-        if (screenKey !== "generic" && seen.has(screenKey)) {
+        if (seen.has(screenKey)) {
           return;
         }
 
@@ -1124,7 +1150,7 @@
 
       const { data, error } = await client
         .from("scorecard_sessions")
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .in("scorecard_id", ids)
         .order("started_at", { ascending: false });
@@ -1159,9 +1185,10 @@
           household_id: DISPLAY_HOUSEHOLD_ID,
           started_at: new Date().toISOString(),
           scores: createScorecardZeroScores(scorecard.players),
+          score_events: [],
           is_final_jeopardy: false
         })
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
 
       if (error || !data) {
@@ -1177,7 +1204,7 @@
       for (const scorecard of (Array.isArray(scorecards) ? scorecards : [])) {
         const sessions = (nextMap.get(scorecard.id) || []).slice();
         const hasActiveSession = sessions.some((session) => !session.endedAt);
-        if (!hasActiveSession) {
+        if (!hasActiveSession && !sessions.length) {
           const freshSession = await createDisplayScorecardSession(scorecard);
           if (freshSession) {
             sessions.unshift(freshSession);
@@ -1197,6 +1224,149 @@
 
     function getActiveScorecardSession(scorecardId) {
       return getScorecardSessions(scorecardId).find((session) => !session.endedAt) || null;
+    }
+
+    function getPendingWinnerScorecardSession(scorecardId) {
+      if (getActiveScorecardSession(scorecardId)) {
+        return null;
+      }
+
+      const sessions = getScorecardSessions(scorecardId);
+      const pendingSessionId = getScorecardPendingWinnerSessionId(scorecardId);
+      if (pendingSessionId) {
+        const pendingSession = sessions.find((session) => session.id === pendingSessionId && session.endedAt);
+        if (pendingSession) {
+          return pendingSession;
+        }
+      }
+
+      return sessions.find((session) => session.endedAt) || null;
+    }
+
+    function clearDisplayScorecardArchiveConfirm() {
+      displayScorecardArchiveConfirmId = "";
+    }
+
+    function getScorecardWinnerSummary(scorecard, session) {
+      const leaders = getScorecardLeaders(session?.scores);
+      const isTie = leaders.length > 1;
+      const accentPlayer = scorecard?.players?.find((player) => player.name === leaders[0]) || scorecard?.players?.[0] || null;
+      return {
+        leaders,
+        isTie,
+        heroLabel: isTie ? "It's a tie! 🤝" : `${leaders[0] || session?.winner || "Winner"} wins!`,
+        accentColor: accentPlayer?.color || "var(--color-accent)"
+      };
+    }
+
+    function getDisplayLocalBonusState(scorecardId) {
+      const state = displayScorecardBonusStateById.get(scorecardId);
+      if (!state) {
+        return null;
+      }
+
+      const activeSession = getActiveScorecardSession(scorecardId);
+      if (!activeSession || activeSession.id !== state.sessionId) {
+        displayScorecardBonusStateById.delete(scorecardId);
+        return null;
+      }
+
+      return state;
+    }
+
+    function setDisplayLocalBonusState(scorecardId, nextState) {
+      if (!scorecardId) {
+        return;
+      }
+
+      const existingAdvanceTimer = displayScorecardBonusAdvanceTimerById.get(scorecardId);
+      if (existingAdvanceTimer && (!nextState || nextState.phase !== "entry")) {
+        window.clearTimeout(existingAdvanceTimer);
+        displayScorecardBonusAdvanceTimerById.delete(scorecardId);
+      }
+
+      if (!nextState) {
+        displayScorecardBonusStateById.delete(scorecardId);
+        return;
+      }
+
+      displayScorecardBonusStateById.set(scorecardId, nextState);
+    }
+
+    function createDisplayLocalBonusState(sessionId, players) {
+      const playerNames = normalizeScorecardPlayers(players).map((player) => player.name);
+      return {
+        sessionId,
+        phase: "entry",
+        draftWagers: {},
+        wagers: {},
+        wagerErrors: {},
+        results: {},
+        playerNames
+      };
+    }
+
+    function allDisplayLocalBonusWagersLocked(state) {
+      return !!state && Array.isArray(state.playerNames) && state.playerNames.length > 0
+        && state.playerNames.every((playerName) => Number.isFinite(Number(state.wagers[playerName])));
+    }
+
+    function allDisplayLocalBonusResultsSelected(state) {
+      return !!state && Array.isArray(state.playerNames) && state.playerNames.length > 0
+        && state.playerNames.every((playerName) => {
+          const result = String(state.results[playerName] || "").trim().toLowerCase();
+          return result === "correct" || result === "incorrect";
+        });
+    }
+
+    function sanitizeDisplayBonusWagerInputValue(rawValue) {
+      return String(rawValue || "").replace(/\D+/g, "");
+    }
+
+    function getDisplayBonusPeekKey(scorecardId, playerName) {
+      return `${scorecardId}:${playerName}`;
+    }
+
+    function setDisplayBonusPeekState(scorecardId, playerName, isVisible) {
+      const key = getDisplayBonusPeekKey(scorecardId, playerName);
+      const input = Array.from(track.querySelectorAll("[data-scorecard-bonus-input]")).find((element) =>
+        element.getAttribute("data-scorecard-bonus-input") === key
+      );
+      const button = Array.from(track.querySelectorAll("[data-action='scorecard-bonus-peek']")).find((element) =>
+        element.getAttribute("data-scorecard-bonus-peek-target") === key
+      );
+      if (input) {
+        input.type = isVisible ? "text" : "password";
+      }
+      if (button) {
+        button.innerHTML = `<i data-lucide="${isVisible ? "eye-off" : "eye"}"></i>`;
+      }
+      refreshIcons();
+    }
+
+    function triggerDisplayBonusPeek(scorecardId, playerName) {
+      const key = getDisplayBonusPeekKey(scorecardId, playerName);
+      const input = Array.from(track.querySelectorAll("[data-scorecard-bonus-input]")).find((element) =>
+        element.getAttribute("data-scorecard-bonus-input") === key
+      );
+      resetAutoRotate("scorecard-bonus-peek");
+      const existingTimer = displayScorecardBonusPeekTimerByKey.get(key);
+      if (existingTimer) {
+        window.clearTimeout(existingTimer);
+        displayScorecardBonusPeekTimerByKey.delete(key);
+      }
+
+      if (input?.type === "text") {
+        setDisplayBonusPeekState(scorecardId, playerName, false);
+        return;
+      }
+
+      setDisplayBonusPeekState(scorecardId, playerName, true);
+      const timerId = window.setTimeout(() => {
+        displayScorecardBonusPeekTimerByKey.delete(key);
+        setDisplayBonusPeekState(scorecardId, playerName, false);
+      }, 2000);
+      displayScorecardBonusPeekTimerByKey.set(key, timerId);
     }
 
     function getScorecardOrder(screenOrder, scorecards) {
@@ -1624,6 +1794,12 @@
       refreshIcons();
     }
 
+    function findFirstNonScorecardScreenIndex() {
+      const visibleScreens = getVisibleScreens();
+      const targetIndex = visibleScreens.findIndex((screen) => !screen.classList.contains("scorecard-screen"));
+      return targetIndex >= 0 ? targetIndex : 0;
+    }
+
     function renderMeals(mealItems, weeklyNote) {
       const mealGrid = document.getElementById("meal-grid");
       const monday = getMonday(new Date());
@@ -1807,16 +1983,123 @@
       `;
     }
 
+    function buildDisplayBonusRoundMarkup(scorecard, session, bonusState) {
+      const lockedCount = Object.keys(bonusState?.wagers || {}).length;
+
+      if (bonusState?.phase === "entry") {
+        return `
+          <div class="scorecard-bonus-screen">
+            <div class="scorecard-bonus-status">
+              <strong>${escapeHtml(lockedCount)} of ${escapeHtml(scorecard.players.length)} locked</strong>
+              <span>Each player enters and locks their own wager.</span>
+            </div>
+            <div class="scorecard-bonus-stack">
+              ${scorecard.players.map((player) => {
+                const currentScore = Math.max(0, Number(session.scores[player.name]) || 0);
+                const lockedWager = bonusState?.wagers?.[player.name];
+                const draftWager = bonusState?.draftWagers?.[player.name];
+                const wagerError = String(bonusState?.wagerErrors?.[player.name] || "").trim();
+                const isLocked = Number.isFinite(Number(lockedWager));
+                const inputKey = `${scorecard.id}:${player.name}`;
+                return `
+                  <div class="scorecard-bonus-row${isLocked ? " is-locked" : ""}">
+                    <div>
+                      <strong>${escapeHtml(player.name)}</strong>
+                      <div class="scorecard-bonus-note">Current score: ${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</div>
+                    </div>
+                    <div class="scorecard-bonus-entry-side">
+                      <div class="scorecard-bonus-entry-controls">
+                        <div class="scorecard-bonus-input-wrap${isLocked ? " is-locked" : ""}">
+                          <input class="scorecard-bonus-input${isLocked ? " is-locked" : ""}" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]*" min="0" max="${escapeHtml(currentScore)}" value="${escapeHtml(isLocked ? String(lockedWager) : String(draftWager || ""))}" data-scorecard-bonus-input="${escapeHtml(inputKey)}" data-scorecard-bonus-max="${escapeHtml(currentScore)}"${isLocked ? " disabled" : ""}>
+                          ${isLocked ? "" : `<button class="scorecard-bonus-peek-btn" type="button" data-action="scorecard-bonus-peek" data-scorecard-bonus-peek-target="${escapeHtml(inputKey)}"${draftWager ? "" : " disabled"} aria-label="Toggle wager visibility"><i data-lucide="eye"></i></button>`}
+                        </div>
+                        <button class="scorecard-secondary-btn scorecard-bonus-lock-btn${isLocked ? " is-locked" : ""}" type="button" data-action="scorecard-bonus-lock" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}"${isLocked ? " disabled" : ""}>${isLocked ? '<i data-lucide="lock"></i><span>Locked</span>' : "Lock in"}</button>
+                      </div>
+                      <div class="scorecard-bonus-error"${wagerError ? "" : ' hidden'} data-scorecard-bonus-error="${escapeHtml(inputKey)}">${escapeHtml(wagerError)}</div>
+                    </div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+            <div class="scorecard-secondary-actions">
+              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Cancel bonus round</button>
+            </div>
+          </div>
+        `;
+      }
+
+      const buildRevealCards = () => `
+        <div class="scorecard-bonus-reveal-grid">
+          ${scorecard.players.map((player) => {
+            const beforeScore = Number(session.scores[player.name]) || 0;
+            const wager = Math.max(0, Number(bonusState?.wagers?.[player.name]) || 0);
+            const result = String(bonusState?.results?.[player.name] || "").trim().toLowerCase();
+            const isCorrect = result === "correct";
+            const impact = isCorrect ? wager : -wager;
+            const impactLabel = `${impact >= 0 ? "+" : "-"}${formatScorecardScore(Math.abs(impact))}`;
+            return `
+              <article class="scorecard-bonus-reveal-card ${isCorrect ? "is-correct" : "is-incorrect"}">
+                <div class="scorecard-bonus-player-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</div>
+                <div class="scorecard-bonus-reveal-value">${escapeHtml(impactLabel)}</div>
+                <div class="scorecard-bonus-before">Before: ${escapeHtml(formatScorecardScore(beforeScore))}</div>
+                <div class="scorecard-bonus-result-label ${isCorrect ? "is-correct" : "is-incorrect"}">${escapeHtml(isCorrect ? "Correct" : "Incorrect")}</div>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      return `
+        <div class="scorecard-bonus-screen scorecard-bonus-screen--revealed">
+          <div class="scorecard-bonus-status">
+            <strong>${bonusState?.revealed ? "Wagers revealed" : "Set results"}</strong>
+            <span>${bonusState?.revealed ? "Review the revealed wagers, then apply the round." : "Mark each player correct or incorrect before revealing wagers."}</span>
+          </div>
+          ${bonusState?.revealed ? buildRevealCards() : ""}
+          <form class="scorecard-bonus-results-form" data-scorecard-bonus-results="${escapeHtml(scorecard.id)}"${bonusState?.revealed ? "" : ' data-scorecard-bonus-editable="true"'}>
+            ${bonusState?.revealed ? "" : scorecard.players.map((player) => `
+              <div class="scorecard-bonus-result-row">
+                <strong>${escapeHtml(player.name)}</strong>
+                <div class="scorecard-bonus-toggle-row">
+                  <label class="scorecard-bonus-toggle-pill is-correct">
+                    <input type="radio" name="result_${escapeHtml(player.name)}" value="correct"${bonusState?.results?.[player.name] === "correct" ? " checked" : ""}>
+                    <span>Correct</span>
+                  </label>
+                  <label class="scorecard-bonus-toggle-pill is-incorrect">
+                    <input type="radio" name="result_${escapeHtml(player.name)}" value="incorrect"${bonusState?.results?.[player.name] === "incorrect" ? " checked" : ""}>
+                    <span>Incorrect</span>
+                  </label>
+                </div>
+              </div>
+            `).join("")}
+            <div class="scorecard-secondary-actions">
+              <button class="scorecard-secondary-btn" type="button" data-action="${bonusState?.revealed ? "scorecard-bonus-back" : "scorecard-bonus-cancel"}" data-scorecard-id="${escapeHtml(scorecard.id)}">${bonusState?.revealed ? "Back" : "Cancel bonus round"}</button>
+              ${bonusState?.revealed
+                ? '<button class="scorecard-secondary-btn scorecard-secondary-btn--accent" type="submit">Apply results</button>'
+                : `<button class="scorecard-secondary-btn scorecard-secondary-btn--accent" type="button" data-action="scorecard-bonus-reveal" data-scorecard-id="${escapeHtml(scorecard.id)}"${allDisplayLocalBonusResultsSelected(bonusState) ? "" : " disabled"}>Reveal wagers</button>`}
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
     function buildScorecardScreenMarkup(scorecard) {
-      const session = getActiveScorecardSession(scorecard.id);
+      const activeSession = getActiveScorecardSession(scorecard.id);
+      const pendingWinnerSession = getPendingWinnerScorecardSession(scorecard.id);
+      const session = activeSession || pendingWinnerSession;
       if (!session) {
         return "";
       }
 
       const label = scorecard.name.toUpperCase();
-      const layoutMarkup = scorecard.players.length <= 4
-        ? buildScorecardColumnLayout(scorecard, session)
-        : buildScorecardRowLayout(scorecard, session);
+      const localBonusState = getDisplayLocalBonusState(scorecard.id);
+      const isBonusActive = !!localBonusState;
+      const layoutMarkup = isBonusActive
+        ? buildDisplayBonusRoundMarkup(scorecard, activeSession, localBonusState)
+        : scorecard.players.length <= 4
+          ? buildScorecardColumnLayout(scorecard, session)
+          : buildScorecardRowLayout(scorecard, session);
+      const hasUndo = activeSession && getScorecardActionHistory(activeSession.id).length > 0;
 
       return `
         <div class="panel">
@@ -1825,10 +2108,13 @@
           </div>
           <div class="scorecard-layout">
             ${layoutMarkup}
-            <div class="scorecard-secondary-actions">
-              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-bonus-round" data-scorecard-id="${escapeHtml(scorecard.id)}">Bonus round</button>
-              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-end-game" data-scorecard-id="${escapeHtml(scorecard.id)}">End game</button>
-            </div>
+            ${isBonusActive ? "" : activeSession ? `
+              <div class="scorecard-secondary-actions">
+                <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-undo" data-scorecard-id="${escapeHtml(scorecard.id)}"${hasUndo ? "" : " disabled"}>Undo</button>
+                <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-bonus-round" data-scorecard-id="${escapeHtml(scorecard.id)}">Bonus round</button>
+                <button class="scorecard-secondary-btn" type="button" data-action="scorecard-display-end-game" data-scorecard-id="${escapeHtml(scorecard.id)}">End game</button>
+              </div>
+            ` : ""}
             ${buildScorecardHistoryMarkup(scorecard)}
           </div>
         </div>
@@ -1842,6 +2128,7 @@
 
       const orderedScorecards = getScorecardOrder(displaySettings.screen_order, scorecards);
       if (!orderedScorecards.length) {
+        syncScorecardCelebrationOverlay();
         reconcileRotationState();
         return;
       }
@@ -1859,6 +2146,102 @@
       applyActiveScreens(displaySettings.active_screens || DISPLAY_SCREEN_KEYS);
       applyScreenOrder(displaySettings.screen_order || DISPLAY_SCREEN_KEYS);
       reconcileRotationState();
+      syncScorecardCelebrationOverlay();
+      refreshIcons();
+    }
+
+    function stopScorecardCelebrationEffects() {
+      scorecardCelebrationRunId += 1;
+      scorecardCelebrationTimers.forEach((timerId) => window.clearTimeout(timerId));
+      scorecardCelebrationTimers = [];
+      document.querySelectorAll(".todo-celebration-layer").forEach((layer) => layer.remove());
+    }
+
+    function startScorecardCelebrationEffects() {
+      stopScorecardCelebrationEffects();
+      if (typeof confetti === "undefined") {
+        return;
+      }
+
+      const animations = ["confetti-burst", "star-shower", "fireworks"]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, Math.random() > 0.5 ? 3 : 2);
+      const runId = scorecardCelebrationRunId;
+      const runners = {
+        "confetti-burst": playCanvasConfettiBurst,
+        "star-shower": playCanvasStarShower,
+        "fireworks": playCanvasFireworks
+      };
+
+      animations.forEach((animationName, index) => {
+        const timerId = window.setTimeout(() => {
+          if (runId !== scorecardCelebrationRunId) {
+            return;
+          }
+          runners[animationName]?.();
+        }, index * 3200);
+        scorecardCelebrationTimers.push(timerId);
+      });
+    }
+
+    function syncScorecardCelebrationOverlay() {
+      const overlay = document.getElementById("scorecard-celebration-overlay");
+      const titleEl = document.getElementById("scorecard-celebration-title");
+      const iconEl = document.getElementById("scorecard-celebration-icon");
+      const scoresEl = document.getElementById("scorecard-celebration-scores");
+      const buttonEl = document.getElementById("scorecard-celebration-new-game");
+      const archiveButtonEl = document.getElementById("scorecard-celebration-archive");
+      if (!overlay || !titleEl || !iconEl || !scoresEl || !buttonEl || !archiveButtonEl) {
+        return;
+      }
+
+      const pending = cachedScorecards
+        .map((scorecard) => ({
+          scorecard,
+          session: getPendingWinnerScorecardSession(scorecard.id)
+        }))
+        .find((entry) => entry.session);
+
+      if (!pending) {
+        overlay.hidden = true;
+        delete overlay.dataset.scorecardId;
+        delete overlay.dataset.sessionId;
+        clearDisplayScorecardArchiveConfirm();
+        stopScorecardCelebrationEffects();
+        resetAutoRotate("scorecard-celebration-close");
+        return;
+      }
+
+      const { scorecard, session } = pending;
+      const winnerSummary = getScorecardWinnerSummary(scorecard, session);
+      const highlightedLeaders = new Set(winnerSummary.leaders);
+      const shouldCelebrate = getScorecardPendingWinnerSessionId(scorecard.id) === session.id;
+      overlay.hidden = false;
+      window.clearTimeout(autoRotateId);
+      autoRotateId = null;
+      autoRotateToken += 1;
+      overlay.dataset.scorecardId = scorecard.id;
+      overlay.style.setProperty("--scorecard-celebration-accent", winnerSummary.accentColor);
+      titleEl.textContent = winnerSummary.heroLabel;
+      iconEl.innerHTML = '<i data-lucide="trophy"></i>';
+      archiveButtonEl.textContent = displayScorecardArchiveConfirmId === scorecard.id ? "Confirm archive" : "Archive scorecard";
+      scoresEl.innerHTML = scorecard.players.map((player) => `
+        <div class="scorecard-celebration-score-row${highlightedLeaders.has(player.name) ? " is-winner" : ""}">
+          <span class="scorecard-celebration-score-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</span>
+          <strong>${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</strong>
+        </div>
+      `).join("");
+
+      if (overlay.dataset.sessionId !== session.id) {
+        overlay.dataset.sessionId = session.id;
+        clearDisplayScorecardArchiveConfirm();
+        if (shouldCelebrate) {
+          startScorecardCelebrationEffects();
+        } else {
+          stopScorecardCelebrationEffects();
+        }
+      }
+
       refreshIcons();
     }
 
@@ -1880,6 +2263,9 @@
       sessionsById = await ensureDisplayScorecardSessions(scorecards, sessionsById);
       cachedScorecards = scorecards;
       cachedScorecardSessionsById = sessionsById;
+      Array.from(displayScorecardBonusStateById.keys()).forEach((scorecardId) => {
+        getDisplayLocalBonusState(scorecardId);
+      });
       renderScorecards(scorecards);
       resolveScreen("scorecards");
     }
@@ -2367,13 +2753,334 @@
         ...session.scores,
         [playerName]: applyScorecardIncrement(session.scores[playerName] || 0, Number(increment), scorecard.allowNegative)
       };
+      const previousScore = Number(session.scores[playerName]) || 0;
+      const nextScore = Number(nextScores[playerName]) || 0;
+      if (previousScore === nextScore) {
+        return;
+      }
+
+      const scoreEvents = appendScoreEvents(session.scoreEvents, [
+        buildScoreEvent(playerName, Number(increment), SCORE_EVENT_TYPES.increment)
+      ], scorecard.players);
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .update({
+          scores: nextScores,
+          score_events: scoreEvents
+        })
+        .eq("id", session.id)
+        .eq("scorecard_id", scorecardId)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
+        .single();
+
+      if (error || !data) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      pushScorecardActionHistory(session.id, {
+        type: "increment",
+        changes: [{
+          playerName,
+          previousScore,
+          nextScore,
+          increment: Number(increment)
+        }]
+      });
+
+      cachedScorecardSessionsById.set(scorecardId, getScorecardSessions(scorecardId).map((item) =>
+        item.id === session.id ? mapScorecardSessionRow(data, scorecard) : item
+      ));
+      renderScorecards(cachedScorecards);
+      animateScorecardScore(scorecardId, playerName, Number(increment));
+      resetAutoRotate("scorecard-adjust");
+    }
+
+    async function updateDisplayActiveScorecardSession(scorecardId, payload) {
+      const client = getSupabaseClient();
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const session = getActiveScorecardSession(scorecardId);
+      if (!client || !scorecard || !session) {
+        return null;
+      }
 
       const { data, error } = await client
         .from("scorecard_sessions")
-        .update({ scores: nextScores })
+        .update(payload)
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      const nextSession = mapScorecardSessionRow(data, scorecard);
+      cachedScorecardSessionsById.set(scorecardId, getScorecardSessions(scorecardId).map((item) =>
+        item.id === session.id ? nextSession : item
+      ));
+      renderScorecards(cachedScorecards);
+      syncScorecardCelebrationOverlay();
+      return nextSession;
+    }
+
+    async function beginDisplayBonusRound(scorecardId) {
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const session = getActiveScorecardSession(scorecardId);
+      if (!scorecard || !session) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      setDisplayLocalBonusState(scorecardId, createDisplayLocalBonusState(session.id, scorecard.players));
+      renderScorecards(cachedScorecards);
+      resetAutoRotate("scorecard-bonus-start");
+    }
+
+    async function cancelDisplayScorecardBonusRound(scorecardId) {
+      setDisplayLocalBonusState(scorecardId, null);
+      renderScorecards(cachedScorecards);
+      resetAutoRotate("scorecard-bonus-cancel");
+    }
+
+    function lockDisplayScorecardBonusWager(scorecardId, playerName, rawValue) {
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const session = getActiveScorecardSession(scorecardId);
+      const localBonusState = getDisplayLocalBonusState(scorecardId);
+      if (!scorecard || !session || !localBonusState || localBonusState.phase !== "entry") {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      const currentScore = Math.max(0, Number(session.scores[playerName]) || 0);
+      const sanitized = sanitizeDisplayBonusWagerInputValue(rawValue);
+      if (sanitized === "") {
+        showDisplayToast("Enter a wager before locking it in.");
+        return;
+      }
+
+      const parsedValue = Math.max(0, Number(sanitized));
+      if (parsedValue > currentScore) {
+        setDisplayLocalBonusState(scorecardId, {
+          ...localBonusState,
+          wagerErrors: {
+            ...localBonusState.wagerErrors,
+            [playerName]: `Max wager: ${formatScorecardScore(currentScore)}`
+          }
+        });
+        renderScorecards(cachedScorecards);
+        return;
+      }
+
+      const nextState = {
+        ...localBonusState,
+        draftWagers: {
+          ...localBonusState.draftWagers,
+          [playerName]: ""
+        },
+        wagerErrors: {
+          ...localBonusState.wagerErrors,
+          [playerName]: ""
+        },
+        wagers: {
+          ...localBonusState.wagers,
+          [playerName]: parsedValue
+        }
+      };
+      setDisplayLocalBonusState(scorecardId, nextState);
+      renderScorecards(cachedScorecards);
+      if (allDisplayLocalBonusWagersLocked(nextState)) {
+        const existingAdvanceTimer = displayScorecardBonusAdvanceTimerById.get(scorecardId);
+        if (existingAdvanceTimer) {
+          window.clearTimeout(existingAdvanceTimer);
+        }
+
+        const timerId = window.setTimeout(() => {
+          displayScorecardBonusAdvanceTimerById.delete(scorecardId);
+          const currentBonusState = getDisplayLocalBonusState(scorecardId);
+          if (!currentBonusState || currentBonusState.phase !== "entry" || !allDisplayLocalBonusWagersLocked(currentBonusState)) {
+            return;
+          }
+
+          setDisplayLocalBonusState(scorecardId, {
+            ...currentBonusState,
+            phase: "results"
+          });
+          renderScorecards(cachedScorecards);
+        }, 350);
+        displayScorecardBonusAdvanceTimerById.set(scorecardId, timerId);
+      }
+      resetAutoRotate("scorecard-bonus-lock");
+    }
+
+    function revealDisplayScorecardBonusWagers(scorecardId) {
+      const localBonusState = getDisplayLocalBonusState(scorecardId);
+      if (!localBonusState) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      if (!allDisplayLocalBonusWagersLocked(localBonusState) || !allDisplayLocalBonusResultsSelected(localBonusState)) {
+        showDisplayToast("Set every result before revealing wagers.");
+        return;
+      }
+
+      setDisplayLocalBonusState(scorecardId, {
+        ...localBonusState,
+        phase: "reveal",
+        revealed: true
+      });
+      renderScorecards(cachedScorecards);
+
+      const screen = track.querySelector(`.scorecard-screen[data-scorecard-id="${scorecardId}"]`);
+      screen?.querySelectorAll(".scorecard-bonus-reveal-card").forEach((card) => {
+        card.classList.remove("is-revealed");
+        void card.offsetWidth;
+        card.classList.add("is-revealed");
+      });
+      resetAutoRotate("scorecard-bonus-reveal");
+    }
+
+    function backOutOfDisplayBonusReveal(scorecardId) {
+      const localBonusState = getDisplayLocalBonusState(scorecardId);
+      if (!localBonusState) {
+        return;
+      }
+
+      setDisplayLocalBonusState(scorecardId, {
+        ...localBonusState,
+        phase: "results",
+        revealed: false
+      });
+      renderScorecards(cachedScorecards);
+      resetAutoRotate("scorecard-bonus-back");
+    }
+
+    async function applyDisplayScorecardBonusResults(scorecardId, wagerResults) {
+      const client = getSupabaseClient();
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const session = getActiveScorecardSession(scorecardId);
+      const localBonusState = getDisplayLocalBonusState(scorecardId);
+      if (!client || !scorecard || !session || !localBonusState) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      const nextScores = { ...session.scores };
+      const historyChanges = [];
+      scorecard.players.forEach((player) => {
+        const previousScore = Number(session.scores[player.name]) || 0;
+        const wager = Math.max(0, Number(localBonusState.wagers[player.name]) || 0);
+        const wasCorrect = wagerResults[player.name] === "correct";
+        const nextScore = applyScorecardIncrement(previousScore, wasCorrect ? wager : -wager, scorecard.allowNegative);
+        nextScores[player.name] = nextScore;
+        historyChanges.push({
+          playerName: player.name,
+          previousScore,
+          nextScore,
+          increment: nextScore - previousScore
+        });
+      });
+
+      const scoreEvents = appendScoreEvents(
+        session.scoreEvents,
+        historyChanges.map((change) => buildScoreEvent(
+          change.playerName,
+          change.increment,
+          SCORE_EVENT_TYPES.bonusRound
+        )),
+        scorecard.players
+      );
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .update({
+          scores: nextScores,
+          score_events: scoreEvents
+        })
+        .eq("id", session.id)
+        .eq("scorecard_id", scorecardId)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
+        .single();
+
+      if (error || !data) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      pushScorecardActionHistory(session.id, {
+        type: "bonus-round",
+        changes: historyChanges
+      });
+
+      cachedScorecardSessionsById.set(scorecardId, getScorecardSessions(scorecardId).map((item) =>
+        item.id === session.id ? mapScorecardSessionRow(data, scorecard) : item
+      ));
+      setDisplayLocalBonusState(scorecardId, null);
+      renderScorecards(cachedScorecards);
+      historyChanges.forEach((change) => {
+        animateScorecardScore(scorecardId, change.playerName, change.increment);
+      });
+      resetAutoRotate("scorecard-bonus-apply");
+    }
+
+    async function undoDisplayScorecardAction(scorecardId) {
+      const session = getActiveScorecardSession(scorecardId);
+      if (!session) {
+        return;
+      }
+
+      const action = popScorecardActionHistory(session.id);
+      if (!action) {
+        return;
+      }
+
+      const nextScores = { ...session.scores };
+      action.changes.forEach((change) => {
+        nextScores[change.playerName] = change.previousScore;
+      });
+
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const nextSession = await updateDisplayActiveScorecardSession(scorecardId, {
+        scores: nextScores,
+        score_events: appendScoreEvents(
+          session.scoreEvents,
+          action.changes.map((change) => buildScoreEvent(
+            change.playerName,
+            change.previousScore - change.nextScore,
+            SCORE_EVENT_TYPES.undo
+          )),
+          scorecard?.players || []
+        )
+      });
+      if (!nextSession) {
+        pushScorecardActionHistory(session.id, action);
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      resetAutoRotate("scorecard-undo");
+    }
+
+    async function endDisplayScorecardGame(scorecardId) {
+      const client = getSupabaseClient();
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const session = getActiveScorecardSession(scorecardId);
+      if (!client || !scorecard || !session) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      setDisplayLocalBonusState(scorecardId, null);
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .update({
+          ended_at: new Date().toISOString(),
+          winner: getScorecardWinner(session.scores)
+        })
+        .eq("id", session.id)
+        .eq("scorecard_id", scorecardId)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
 
       if (error || !data) {
@@ -2384,203 +3091,62 @@
       cachedScorecardSessionsById.set(scorecardId, getScorecardSessions(scorecardId).map((item) =>
         item.id === session.id ? mapScorecardSessionRow(data, scorecard) : item
       ));
+      clearScorecardActionHistory(session.id);
+      markScorecardPendingWinner(scorecardId, data.id);
       renderScorecards(cachedScorecards);
-      animateScorecardScore(scorecardId, playerName, Number(increment));
-      resetAutoRotate("scorecard-adjust");
+      syncScorecardCelebrationOverlay();
+      resetAutoRotate("scorecard-end-game");
     }
 
-    async function finishDisplayScorecardGame(scorecardId, finalJeopardyPayload = null) {
+    async function archiveDisplayScorecard(scorecardId) {
       const client = getSupabaseClient();
-      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
-      const session = getActiveScorecardSession(scorecardId);
-      if (!client || !scorecard || !session) {
+      if (!client || !scorecardId) {
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
 
-      let finalScores = { ...session.scores };
-      let wagers = null;
-      let wagerResults = null;
-      let isFinalJeopardy = false;
+      const { error } = await client
+        .from("scorecards")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", scorecardId)
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .is("archived_at", null);
 
-      if (finalJeopardyPayload) {
-        wagers = finalJeopardyPayload.wagers;
-        wagerResults = finalJeopardyPayload.wagerResults;
-        isFinalJeopardy = true;
-        scorecard.players.forEach((player) => {
-          const wager = Math.max(0, Number(wagers[player.name]) || 0);
-          const wasCorrect = wagerResults[player.name] === "correct";
-          finalScores[player.name] = applyScorecardIncrement(
-            session.scores[player.name] || 0,
-            wasCorrect ? wager : -wager,
-            scorecard.allowNegative
-          );
-        });
-      }
-
-      const endedAt = new Date().toISOString();
-      const winner = getScorecardWinner(finalScores);
-      const updateResponse = await client
-        .from("scorecard_sessions")
-        .update({
-          ended_at: endedAt,
-          winner,
-          scores: finalScores,
-          wagers,
-          wager_results: wagerResults,
-          is_final_jeopardy: isFinalJeopardy
-        })
-        .eq("id", session.id)
-        .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
-        .single();
-
-      const nextSession = !updateResponse.error ? await createDisplayScorecardSession(scorecard) : null;
-
-      if (updateResponse.error || !updateResponse.data || !nextSession) {
+      if (error) {
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
 
-      await renderScorecardsWithData();
-      closeScorecardBonusModal();
-      resetAutoRotate(isFinalJeopardy ? "scorecard-bonus-round" : "scorecard-end-game");
+      clearDisplayScorecardArchiveConfirm();
+      clearScorecardPendingWinner(scorecardId);
+      setDisplayLocalBonusState(scorecardId, null);
+      cachedScorecardSessionsById.delete(scorecardId);
+      cachedScorecards = cachedScorecards.filter((item) => item.id !== scorecardId);
+      renderScorecards(cachedScorecards);
+      navigateToScreenIndex(findFirstNonScorecardScreenIndex());
+      showDisplayToast("Scorecard archived.");
     }
 
-    function openDisplayBonusRoundModal(scorecardId) {
+    async function startNextDisplayScorecardGame(scorecardId) {
       const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
-      const session = getActiveScorecardSession(scorecardId);
-      const titleEl = document.getElementById("scorecard-bonus-title");
-      const bodyEl = document.getElementById("scorecard-bonus-body");
-      const modalEl = document.getElementById("scorecard-bonus-modal");
-      if (!scorecard || !session || !titleEl || !bodyEl || !modalEl) {
+      if (!scorecard || getActiveScorecardSession(scorecardId)) {
+        return;
+      }
+
+      const nextSession = await createDisplayScorecardSession(scorecard);
+      if (!nextSession) {
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
 
-      titleEl.textContent = `${scorecard.name} Bonus Round`;
-      bodyEl.innerHTML = `
-        <form data-display-scorecard-form="bonus-wagers" data-scorecard-id="${escapeHtml(scorecardId)}" novalidate>
-          <div class="scorecard-bonus-stack">
-            ${scorecard.players.map((player) => `
-              <div class="scorecard-bonus-row">
-                <div>
-                  <strong>${escapeHtml(player.name)}</strong>
-                  <div class="scorecard-bonus-note">Current score: ${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</div>
-                </div>
-                <input class="scorecard-bonus-input" type="number" min="0" max="${escapeHtml(Math.max(0, session.scores[player.name] || 0))}" name="wager_${escapeHtml(player.name)}" value="0" inputmode="numeric">
-              </div>
-            `).join("")}
-            <div class="scorecard-secondary-actions">
-              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-cancel">Cancel</button>
-              <button class="scorecard-secondary-btn" type="submit">Continue</button>
-            </div>
-          </div>
-        </form>
-      `;
-      modalEl.hidden = false;
-      refreshIcons();
-      resetAutoRotate("scorecard-bonus-open");
-    }
-
-    function openDisplayBonusRoundResultsModal(scorecardId, wagers) {
-      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
-      const titleEl = document.getElementById("scorecard-bonus-title");
-      const bodyEl = document.getElementById("scorecard-bonus-body");
-      const modalEl = document.getElementById("scorecard-bonus-modal");
-      if (!scorecard || !titleEl || !bodyEl || !modalEl) {
-        showDisplayToast("Something went wrong saving your changes. Please try again.");
-        return;
-      }
-
-      titleEl.textContent = `${scorecard.name} Bonus Round`;
-      bodyEl.innerHTML = `
-        <form data-display-scorecard-form="bonus-results" data-scorecard-id="${escapeHtml(scorecardId)}" novalidate>
-          <div class="scorecard-bonus-stack">
-            ${scorecard.players.map((player) => `
-              <div class="scorecard-bonus-row">
-                <div>
-                  <strong>${escapeHtml(player.name)}</strong>
-                  <div class="scorecard-bonus-note">Wager: ${escapeHtml(formatScorecardScore(wagers[player.name] || 0))}</div>
-                </div>
-                <div class="scorecard-bonus-toggle-row">
-                  <label class="scorecard-bonus-toggle-pill">
-                    <input type="radio" name="result_${escapeHtml(player.name)}" value="correct" checked>
-                    <span>Correct</span>
-                  </label>
-                  <label class="scorecard-bonus-toggle-pill">
-                    <input type="radio" name="result_${escapeHtml(player.name)}" value="incorrect">
-                    <span>Incorrect</span>
-                  </label>
-                </div>
-              </div>
-            `).join("")}
-            <div class="scorecard-secondary-actions">
-              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-back" data-scorecard-id="${escapeHtml(scorecardId)}">Back</button>
-              <button class="scorecard-secondary-btn" type="submit">Finish round</button>
-            </div>
-          </div>
-        </form>
-      `;
-      modalEl.hidden = false;
-      bodyEl.dataset.scorecardBonusWagers = JSON.stringify(wagers);
-      refreshIcons();
-      resetAutoRotate("scorecard-bonus-results");
-    }
-
-    function closeScorecardBonusModal() {
-      const modalEl = document.getElementById("scorecard-bonus-modal");
-      const bodyEl = document.getElementById("scorecard-bonus-body");
-      if (!modalEl || modalEl.hidden) {
-        return;
-      }
-      modalEl.hidden = true;
-      if (bodyEl) {
-        bodyEl.innerHTML = "";
-        delete bodyEl.dataset.scorecardBonusWagers;
-      }
-      resetAutoRotate("scorecard-bonus-close");
-    }
-
-    function handleDisplayScorecardBonusSubmit(form) {
-      const scorecardId = String(form.getAttribute("data-scorecard-id") || "").trim();
-      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
-      const session = getActiveScorecardSession(scorecardId);
-      if (!scorecard || !session) {
-        showDisplayToast("Something went wrong saving your changes. Please try again.");
-        return;
-      }
-
-      const formType = form.getAttribute("data-display-scorecard-form");
-      if (formType === "bonus-wagers") {
-        const formData = new FormData(form);
-        const wagers = {};
-        scorecard.players.forEach((player) => {
-          const maxWager = Math.max(0, Number(session.scores[player.name]) || 0);
-          const rawValue = Number(formData.get(`wager_${player.name}`));
-          wagers[player.name] = Math.min(maxWager, Math.max(0, Number.isFinite(rawValue) ? rawValue : 0));
-        });
-        openDisplayBonusRoundResultsModal(scorecardId, wagers);
-        return;
-      }
-
-      if (formType === "bonus-results") {
-        const formData = new FormData(form);
-        const bodyEl = document.getElementById("scorecard-bonus-body");
-        let wagers = {};
-        if (bodyEl?.dataset.scorecardBonusWagers) {
-          try {
-            wagers = JSON.parse(bodyEl.dataset.scorecardBonusWagers);
-          } catch {
-            wagers = {};
-          }
-        }
-        const wagerResults = {};
-        scorecard.players.forEach((player) => {
-          wagerResults[player.name] = String(formData.get(`result_${player.name}`) || "incorrect");
-        });
-        finishDisplayScorecardGame(scorecardId, { wagers, wagerResults });
-      }
+      clearScorecardActionHistory(nextSession.id);
+      clearScorecardPendingWinner(scorecardId);
+      clearDisplayScorecardArchiveConfirm();
+      setDisplayLocalBonusState(scorecardId, null);
+      cachedScorecardSessionsById.set(scorecardId, [nextSession, ...getScorecardSessions(scorecardId)]);
+      renderScorecards(cachedScorecards);
+      syncScorecardCelebrationOverlay();
+      resetAutoRotate("scorecard-new-game");
     }
 
     function updateLastSyncedLabel() {
@@ -2791,10 +3357,6 @@
     }
 
     function handleKeydown(event) {
-      if (event.key === "Escape") {
-        closeScorecardBonusModal();
-      }
-
       if (event.key === "ArrowRight") {
         manualNavigate("next");
       }
@@ -3007,34 +3569,169 @@
           return;
         }
 
-        const newGameBtn = event.target.closest("[data-action='scorecard-display-new-game']");
-        if (newGameBtn) {
-          finishDisplayScorecardGame(newGameBtn.getAttribute("data-scorecard-id"));
+        const endGameBtn = event.target.closest("[data-action='scorecard-display-end-game']");
+        if (endGameBtn) {
+          endDisplayScorecardGame(endGameBtn.getAttribute("data-scorecard-id"));
           return;
         }
 
-        const endGameBtn = event.target.closest("[data-action='scorecard-display-end-game']");
-        if (endGameBtn) {
-          finishDisplayScorecardGame(endGameBtn.getAttribute("data-scorecard-id"));
+        const undoBtn = event.target.closest("[data-action='scorecard-display-undo']");
+        if (undoBtn) {
+          undoDisplayScorecardAction(undoBtn.getAttribute("data-scorecard-id"));
           return;
         }
 
         const bonusRoundBtn = event.target.closest("[data-action='scorecard-display-bonus-round']");
         if (bonusRoundBtn) {
-          openDisplayBonusRoundModal(bonusRoundBtn.getAttribute("data-scorecard-id"));
+          beginDisplayBonusRound(bonusRoundBtn.getAttribute("data-scorecard-id"));
           return;
         }
 
-        const bonusCancelBtn = event.target.closest("[data-action='scorecard-bonus-cancel']");
-        if (bonusCancelBtn) {
-          closeScorecardBonusModal();
+      const bonusLockBtn = event.target.closest("[data-action='scorecard-bonus-lock']");
+      if (bonusLockBtn) {
+        const scorecardId = bonusLockBtn.getAttribute("data-scorecard-id");
+        const playerName = bonusLockBtn.getAttribute("data-player-name");
+          const input = Array.from(track.querySelectorAll("[data-scorecard-bonus-input]")).find((element) =>
+            element.getAttribute("data-scorecard-bonus-input") === `${scorecardId}:${playerName}`
+          );
+        lockDisplayScorecardBonusWager(scorecardId, playerName, input?.value);
+        return;
+      }
+
+      const bonusPeekBtn = event.target.closest("[data-action='scorecard-bonus-peek']");
+      if (bonusPeekBtn) {
+        const target = String(bonusPeekBtn.getAttribute("data-scorecard-bonus-peek-target") || "");
+        const [scorecardId, ...playerParts] = target.split(":");
+        const playerName = playerParts.join(":");
+        if (scorecardId && playerName) {
+          triggerDisplayBonusPeek(scorecardId, playerName);
+        }
+        return;
+      }
+
+      const cancelBonusBtn = event.target.closest("[data-action='scorecard-bonus-cancel']");
+      if (cancelBonusBtn) {
+        cancelDisplayScorecardBonusRound(cancelBonusBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
+
+      const backRevealBtn = event.target.closest("[data-action='scorecard-bonus-back']");
+      if (backRevealBtn) {
+        backOutOfDisplayBonusReveal(backRevealBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
+
+        const revealBtn = event.target.closest("[data-action='scorecard-bonus-reveal']");
+        if (revealBtn) {
+          revealDisplayScorecardBonusWagers(revealBtn.getAttribute("data-scorecard-id"));
+          return;
+        }
+      });
+      track.addEventListener("input", (event) => {
+        const bonusInput = event.target.closest("[data-scorecard-bonus-input]");
+        if (bonusInput) {
+          resetAutoRotate("scorecard-bonus-input");
+          const sanitized = sanitizeDisplayBonusWagerInputValue(bonusInput.value);
+          if (bonusInput.value !== sanitized) {
+            bonusInput.value = sanitized;
+          }
+          const target = String(bonusInput.getAttribute("data-scorecard-bonus-input") || "");
+          const [scorecardId, ...playerParts] = target.split(":");
+          const playerName = playerParts.join(":");
+          const localBonusState = getDisplayLocalBonusState(scorecardId);
+          if (localBonusState && playerName && !Number.isFinite(Number(localBonusState.wagers[playerName]))) {
+            const maxValue = Number(bonusInput.getAttribute("data-scorecard-bonus-max")) || 0;
+            const nextError = sanitized !== "" && Number(sanitized) > maxValue
+              ? `Max wager: ${formatScorecardScore(maxValue)}`
+              : "";
+            setDisplayLocalBonusState(scorecardId, {
+              ...localBonusState,
+              draftWagers: {
+                ...localBonusState.draftWagers,
+                [playerName]: sanitized
+              },
+              wagerErrors: {
+                ...localBonusState.wagerErrors,
+                [playerName]: nextError
+              }
+            });
+            const peekButton = Array.from(track.querySelectorAll("[data-action='scorecard-bonus-peek']")).find((element) =>
+              element.getAttribute("data-scorecard-bonus-peek-target") === target
+            );
+            if (peekButton) {
+              peekButton.disabled = sanitized === "";
+            }
+            const errorEl = Array.from(track.querySelectorAll("[data-scorecard-bonus-error]")).find((element) =>
+              element.getAttribute("data-scorecard-bonus-error") === target
+            );
+            if (errorEl) {
+              errorEl.textContent = nextError;
+              errorEl.hidden = nextError === "";
+            }
+          }
           return;
         }
 
-        const bonusBackBtn = event.target.closest("[data-action='scorecard-bonus-back']");
-        if (bonusBackBtn) {
-          openDisplayBonusRoundModal(bonusBackBtn.getAttribute("data-scorecard-id"));
+        const bonusResultInput = event.target.closest("input[name^='result_']");
+        if (!bonusResultInput) {
+          return;
         }
+
+        resetAutoRotate("scorecard-bonus-result");
+
+        const form = bonusResultInput.closest("form[data-scorecard-bonus-results]");
+        if (!form?.hasAttribute("data-scorecard-bonus-editable")) {
+          return;
+        }
+        const scorecardId = String(form?.getAttribute("data-scorecard-bonus-results") || "").trim();
+        const localBonusState = getDisplayLocalBonusState(scorecardId);
+        if (!localBonusState) {
+          return;
+        }
+
+        const playerName = String(bonusResultInput.name || "").replace(/^result_/, "");
+        if (!playerName) {
+          return;
+        }
+
+        setDisplayLocalBonusState(scorecardId, {
+          ...localBonusState,
+          phase: "results",
+          results: {
+            ...localBonusState.results,
+            [playerName]: bonusResultInput.value
+          }
+        });
+        renderScorecards(cachedScorecards);
+      });
+      track.addEventListener("focusin", (event) => {
+        if (
+          event.target.closest("[data-scorecard-bonus-input]")
+          || event.target.closest("input[name^='result_']")
+        ) {
+          resetAutoRotate("scorecard-bonus-focus");
+        }
+      });
+      track.addEventListener("submit", (event) => {
+        const form = event.target.closest("form[data-scorecard-bonus-results]");
+        if (!form) {
+          return;
+        }
+
+        event.preventDefault();
+        const scorecardId = String(form.getAttribute("data-scorecard-bonus-results") || "").trim();
+        const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+        const localBonusState = getDisplayLocalBonusState(scorecardId);
+        if (!scorecard || !localBonusState || !localBonusState.revealed) {
+          return;
+        }
+
+        const formData = new FormData(form);
+        const wagerResults = {};
+        scorecard.players.forEach((player) => {
+          wagerResults[player.name] = String(formData.get(`result_${player.name}`) || localBonusState.results[player.name] || "incorrect");
+        });
+        applyDisplayScorecardBonusResults(scorecardId, wagerResults);
       });
       window.addEventListener("keydown", handleKeydown);
 
@@ -3132,25 +3829,37 @@
       document.getElementById("rsvp-detail-backdrop").addEventListener("click", closeRsvpDetailModal);
       document.getElementById("rsvp-review-close").addEventListener("click", closeRsvpReviewModal);
       document.getElementById("rsvp-review-backdrop").addEventListener("click", closeRsvpReviewModal);
-      document.getElementById("scorecard-bonus-close").addEventListener("click", closeScorecardBonusModal);
-      document.getElementById("scorecard-bonus-backdrop").addEventListener("click", closeScorecardBonusModal);
-      document.getElementById("scorecard-bonus-body").addEventListener("click", (event) => {
-        const cancelBtn = event.target.closest("[data-action='scorecard-bonus-cancel']");
-        if (cancelBtn) {
-          closeScorecardBonusModal();
+      document.getElementById("scorecard-celebration-overlay").addEventListener("click", (event) => {
+        const overlay = document.getElementById("scorecard-celebration-overlay");
+        const scorecardId = overlay?.dataset.scorecardId || "";
+        if (!scorecardId) {
           return;
         }
 
-        const backBtn = event.target.closest("[data-action='scorecard-bonus-back']");
-        if (backBtn) {
-          openDisplayBonusRoundModal(backBtn.getAttribute("data-scorecard-id"));
+        const archiveBtn = event.target.closest("[data-action='scorecard-celebration-archive']");
+        const newGameBtn = event.target.closest("#scorecard-celebration-new-game");
+        if (displayScorecardArchiveConfirmId === scorecardId && !archiveBtn) {
+          clearDisplayScorecardArchiveConfirm();
+          syncScorecardCelebrationOverlay();
+          return;
         }
-      });
-      document.getElementById("scorecard-bonus-body").addEventListener("submit", (event) => {
-        const form = event.target.closest("form[data-display-scorecard-form]");
-        if (!form) return;
-        event.preventDefault();
-        handleDisplayScorecardBonusSubmit(form);
+
+        if (newGameBtn) {
+          startNextDisplayScorecardGame(scorecardId);
+          return;
+        }
+
+        if (!archiveBtn) {
+          return;
+        }
+
+        if (displayScorecardArchiveConfirmId === scorecardId) {
+          archiveDisplayScorecard(scorecardId);
+          return;
+        }
+
+        displayScorecardArchiveConfirmId = scorecardId;
+        syncScorecardCelebrationOverlay();
       });
 
       const declinedTrigger = document.getElementById("rsvp-declined-trigger");

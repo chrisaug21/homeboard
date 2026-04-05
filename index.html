@@ -112,8 +112,8 @@
       display: none !important;
     }
   </style>
-  <link rel="stylesheet" href="css/display.css">
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/display.css?v=1.6.11">
+  <link rel="stylesheet" href="css/admin.css?v=1.6.11">
 </head>
 <body>
   <div class="app-shell" id="display-app">
@@ -286,6 +286,26 @@
           <button class="display-modal-close" type="button" id="scorecard-bonus-close" aria-label="Close"><i data-lucide="x"></i></button>
         </div>
         <div class="display-modal-body" id="scorecard-bonus-body"></div>
+      </div>
+    </div>
+
+    <div class="scorecard-celebration-overlay" id="scorecard-celebration-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="scorecard-celebration-title">
+      <div class="scorecard-celebration-stage" id="scorecard-celebration-stage"></div>
+      <div class="scorecard-celebration-card">
+        <div class="scorecard-celebration-layout">
+          <section class="scorecard-celebration-hero">
+            <div class="scorecard-celebration-icon" id="scorecard-celebration-icon" aria-hidden="true"><i data-lucide="trophy"></i></div>
+            <h2 class="scorecard-celebration-title" id="scorecard-celebration-title"></h2>
+          </section>
+          <section class="scorecard-celebration-scoreboard">
+            <div class="scorecard-celebration-kicker">Final scores</div>
+            <div class="scorecard-celebration-scores" id="scorecard-celebration-scores"></div>
+          </section>
+        </div>
+        <div class="scorecard-celebration-actions">
+          <button class="scorecard-celebration-button" type="button" id="scorecard-celebration-new-game">New game</button>
+          <button class="scorecard-celebration-button scorecard-celebration-button--secondary" type="button" id="scorecard-celebration-archive" data-action="scorecard-celebration-archive">Archive scorecard</button>
+        </div>
       </div>
     </div>
   </div>
@@ -613,10 +633,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer crossorigin="anonymous"></script>
+  <script src="js/vendor/canvas-confetti.browser.min.js?v=1.6.11" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer crossorigin="anonymous"></script>
-  <script src="js/shared.js" defer></script>
-  <script src="js/display.js" defer></script>
-  <script src="js/admin.js" defer></script>
+  <script src="js/shared.js?v=1.6.11" defer></script>
+  <script src="js/display.js?v=1.6.11" defer></script>
+  <script src="js/admin.js?v=1.6.11" defer></script>
 </body>
 </html>

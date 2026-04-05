@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.4.4";
+    const VERSION = "1.6.11";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -388,6 +388,209 @@
       return Math.max(0, nextScore);
     }
 
+    const SCORECARD_BONUS_PHASES = {
+      entry: "entry",
+      reveal: "reveal",
+      results: "results",
+      complete: "complete"
+    };
+    const SCORECARD_BONUS_META_KEY = "__phase";
+    const scorecardActionHistoryBySessionId = new Map();
+    const scorecardPendingWinnerSessionByScorecardId = new Map();
+    const SCORE_EVENT_TYPES = {
+      increment: "increment",
+      undo: "undo",
+      bonusRound: "bonus_round"
+    };
+
+    function normalizeScorecardBonusPhase(value) {
+      const normalized = String(value || "").trim().toLowerCase();
+      return Object.values(SCORECARD_BONUS_PHASES).includes(normalized) ? normalized : "";
+    }
+
+    function getScorecardBonusValues(source, players) {
+      const safeSource = source && typeof source === "object" ? source : {};
+      const normalized = {};
+      normalizeScorecardPlayers(players).forEach((player) => {
+        const rawValue = Number(safeSource[player.name]);
+        if (Number.isFinite(rawValue)) {
+          normalized[player.name] = Math.max(0, rawValue);
+        }
+      });
+      return normalized;
+    }
+
+    function getScorecardBonusResultValues(source, players) {
+      const safeSource = source && typeof source === "object" ? source : {};
+      const normalized = {};
+      normalizeScorecardPlayers(players).forEach((player) => {
+        const value = String(safeSource[player.name] || "").trim().toLowerCase();
+        if (value === "correct" || value === "incorrect") {
+          normalized[player.name] = value;
+        }
+      });
+      return normalized;
+    }
+
+    function normalizeScoreEventType(value) {
+      const normalized = String(value || "").trim().toLowerCase();
+      return Object.values(SCORE_EVENT_TYPES).includes(normalized) ? normalized : SCORE_EVENT_TYPES.increment;
+    }
+
+    function normalizeScoreEvents(events, players) {
+      const validPlayers = new Set(normalizeScorecardPlayers(players).map((player) => player.name));
+      return Array.isArray(events) ? events
+        .map((event) => {
+          const player = String(event?.player || "").trim();
+          if (!player || (validPlayers.size && !validPlayers.has(player))) {
+            return null;
+          }
+
+          const amount = Number(event?.amount);
+          return {
+            player,
+            amount: Number.isFinite(amount) ? amount : 0,
+            type: normalizeScoreEventType(event?.type),
+            timestamp: String(event?.timestamp || "").trim() || new Date().toISOString()
+          };
+        })
+        .filter(Boolean) : [];
+    }
+
+    function buildScoreEvent(player, amount, type, timestamp = new Date().toISOString()) {
+      return {
+        player: String(player || "").trim(),
+        amount: Number(amount) || 0,
+        type: normalizeScoreEventType(type),
+        timestamp: String(timestamp || "").trim() || new Date().toISOString()
+      };
+    }
+
+    function appendScoreEvents(existingEvents, nextEvents, players) {
+      return [
+        ...normalizeScoreEvents(existingEvents, players),
+        ...normalizeScoreEvents(nextEvents, players)
+      ];
+    }
+
+    function buildScorecardBonusWagers(players, wagers = {}, phase = SCORECARD_BONUS_PHASES.entry) {
+      return {
+        [SCORECARD_BONUS_META_KEY]: normalizeScorecardBonusPhase(phase) || SCORECARD_BONUS_PHASES.entry,
+        ...getScorecardBonusValues(wagers, players)
+      };
+    }
+
+    function buildScorecardBonusResults(players, results = {}, phase = SCORECARD_BONUS_PHASES.results) {
+      return {
+        [SCORECARD_BONUS_META_KEY]: normalizeScorecardBonusPhase(phase) || SCORECARD_BONUS_PHASES.results,
+        ...getScorecardBonusResultValues(results, players)
+      };
+    }
+
+    function getScorecardBonusPhase(session) {
+      const resultPhase = normalizeScorecardBonusPhase(session?.wagerResults?.[SCORECARD_BONUS_META_KEY]);
+      if (resultPhase === SCORECARD_BONUS_PHASES.results || resultPhase === SCORECARD_BONUS_PHASES.complete) {
+        return resultPhase;
+      }
+
+      const wagerPhase = normalizeScorecardBonusPhase(session?.wagers?.[SCORECARD_BONUS_META_KEY]);
+      return wagerPhase || "";
+    }
+
+    function isScorecardBonusRoundActive(session) {
+      const phase = getScorecardBonusPhase(session);
+      return phase === SCORECARD_BONUS_PHASES.entry
+        || phase === SCORECARD_BONUS_PHASES.reveal
+        || phase === SCORECARD_BONUS_PHASES.results;
+    }
+
+    function getScorecardBonusWagers(session, players) {
+      return getScorecardBonusValues(session?.wagers, players);
+    }
+
+    function getScorecardBonusResults(session, players) {
+      return getScorecardBonusResultValues(session?.wagerResults, players);
+    }
+
+    function countScorecardLockedWagers(session, players) {
+      return Object.keys(getScorecardBonusWagers(session, players)).length;
+    }
+
+    function getScorecardActionHistory(sessionId) {
+      if (!sessionId) {
+        return [];
+      }
+
+      return scorecardActionHistoryBySessionId.get(sessionId) || [];
+    }
+
+    function pushScorecardActionHistory(sessionId, action) {
+      if (!sessionId || !action || !Array.isArray(action.changes) || !action.changes.length) {
+        return;
+      }
+
+      const existing = getScorecardActionHistory(sessionId).slice();
+      existing.push({
+        type: String(action.type || "score").trim() || "score",
+        changes: action.changes
+          .map((change) => ({
+            playerName: String(change?.playerName || "").trim(),
+            previousScore: Number(change?.previousScore) || 0,
+            nextScore: Number(change?.nextScore) || 0,
+            increment: Number(change?.increment) || 0
+          }))
+          .filter((change) => change.playerName)
+      });
+      scorecardActionHistoryBySessionId.set(sessionId, existing);
+    }
+
+    function popScorecardActionHistory(sessionId) {
+      if (!sessionId) {
+        return null;
+      }
+
+      const existing = getScorecardActionHistory(sessionId).slice();
+      const action = existing.pop() || null;
+      if (existing.length) {
+        scorecardActionHistoryBySessionId.set(sessionId, existing);
+      } else {
+        scorecardActionHistoryBySessionId.delete(sessionId);
+      }
+      return action;
+    }
+
+    function clearScorecardActionHistory(sessionId) {
+      if (!sessionId) {
+        return;
+      }
+
+      scorecardActionHistoryBySessionId.delete(sessionId);
+    }
+
+    function markScorecardPendingWinner(scorecardId, sessionId) {
+      const safeScorecardId = String(scorecardId || "").trim();
+      const safeSessionId = String(sessionId || "").trim();
+      if (!safeScorecardId || !safeSessionId) {
+        return;
+      }
+
+      scorecardPendingWinnerSessionByScorecardId.set(safeScorecardId, safeSessionId);
+    }
+
+    function getScorecardPendingWinnerSessionId(scorecardId) {
+      const safeScorecardId = String(scorecardId || "").trim();
+      return safeScorecardId ? (scorecardPendingWinnerSessionByScorecardId.get(safeScorecardId) || "") : "";
+    }
+
+    function clearScorecardPendingWinner(scorecardId) {
+      const safeScorecardId = String(scorecardId || "").trim();
+      if (!safeScorecardId) {
+        return;
+      }
+
+      scorecardPendingWinnerSessionByScorecardId.delete(safeScorecardId);
+    }
+
     function getScorecardWinner(scores) {
       const entries = Object.entries(scores && typeof scores === "object" ? scores : {});
       if (!entries.length) {
@@ -412,6 +615,24 @@
 
       const leaders = sorted.filter((entry) => entry.score === sorted[0].score);
       return leaders.length === 1 ? leaders[0].name : leaders.map((entry) => entry.name).join(", ");
+    }
+
+    function getScorecardLeaders(scores) {
+      const entries = Object.entries(scores && typeof scores === "object" ? scores : {})
+        .map(([name, score]) => ({
+          name: String(name || "").trim(),
+          score: Number.isFinite(Number(score)) ? Number(score) : 0
+        }))
+        .filter((entry) => entry.name);
+      if (!entries.length) {
+        return [];
+      }
+
+      const topScore = Math.max(...entries.map((entry) => entry.score));
+      return entries
+        .filter((entry) => entry.score === topScore)
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((entry) => entry.name);
     }
 
     function mapScorecardRow(row) {
@@ -441,6 +662,7 @@
         scores,
         wagers: row?.wagers && typeof row.wagers === "object" ? row.wagers : null,
         wagerResults: row?.wager_results && typeof row.wager_results === "object" ? row.wager_results : null,
+        scoreEvents: normalizeScoreEvents(row?.score_events, players),
         winner: String(row?.winner || "").trim() || getScorecardWinner(scores),
         isFinalJeopardy: row?.is_final_jeopardy === true,
         createdAt: row?.created_at || null
@@ -470,6 +692,29 @@
         hour: "numeric",
         minute: "2-digit"
       }).format(date);
+    }
+
+    function formatScoreEventTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return "Unknown time";
+      }
+
+      return new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        minute: "2-digit"
+      }).format(date);
+    }
+
+    function formatScoreEventTypeLabel(value) {
+      switch (normalizeScoreEventType(value)) {
+        case SCORE_EVENT_TYPES.undo:
+          return "Undo";
+        case SCORE_EVENT_TYPES.bonusRound:
+          return "Bonus round";
+        default:
+          return "Increment";
+      }
     }
 
     function formatScorecardSessionDuration(startedAt, endedAt) {

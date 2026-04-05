@@ -38,7 +38,7 @@ netlify.toml        — build + env var injection via sed
 | `meal_plan_notes` | One note per household per week. Keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` = Lucide icon name string; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` drive countdown photos and delayed visibility |
 | `scorecards` | Scoreboard definitions. Columns: `id`, `household_id`, `name`, `increments` (JSONB number array), `players` (JSONB `{name,color}` array), `show_history`, `allow_negative`, `created_at`, `archived_at` |
-| `scorecard_sessions` | Scorecard game sessions. Columns: `id`, `scorecard_id`, `household_id`, `started_at`, `ended_at`, `scores` (JSONB `{player_name: score}`), nullable `wagers`, nullable `wager_results`, nullable `winner`, `is_final_jeopardy`, `created_at` |
+| `scorecard_sessions` | Scorecard game sessions. Columns: `id`, `scorecard_id`, `household_id`, `started_at`, `ended_at`, `scores` (JSONB `{player_name: score}`), nullable `wagers`, nullable `wager_results`, `score_events` (JSONB audit log array), nullable `winner`, `is_final_jeopardy`, `created_at` |
 | `rsvps` | Wedding table — **do not modify schema** |
 | `invited_parties` | Wedding invite list. `rsvp_id` null = pending; set = matched to an RSVP row |
 
@@ -122,7 +122,7 @@ netlify.toml        — build + env var injection via sed
 - The admin to-do loader must not fail just because household settings fail; load the todo data first, then re-render for member colors if `display_settings.members` arrives later
 - Active incomplete todos with `due_date < today` should use the overdue treatment in both display and admin: red left border, subtle red card tint, and red overdue date-pill text
 - Todo completion celebration animations are display-view only and must clean up all temporary DOM/styles after each run
-- Display celebrations load `canvas-confetti@1.9.2` and `gsap@3.12.5` by CDN in `index.html`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
+- Display celebrations load locally bundled `canvas-confetti@1.9.2` from `js/vendor/` plus `gsap@3.12.5`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
 - Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if a CDN script fails to load
 - Celebration particle colors should resolve the active scheme accent at runtime from `getComputedStyle(...).getPropertyValue('--amber')` and mix it with white, bright gold, and fresh green so effects stay scheme-aware without hardcoding one palette
 - Display todo completion timing should be: checkmark immediately, item fade/removal starts roughly 10-15% into the celebration with a quick ~200 ms opacity transition, and the celebration continues independently as a send-off
@@ -139,8 +139,13 @@ netlify.toml        — build + env var injection via sed
 - User-facing error messages must never mention Supabase, backend services, table names, or internal config details; use plain language like `Something went wrong loading your data. Please try refreshing.` or `Something went wrong saving your changes. Please try again.`
 - User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
 - Scorecard display layout auto-switches by player count: 2-4 players = per-player columns, 5-6 players = selectable player rows plus shared increment buttons
-- End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view; both paths write to the same shared scorecard session state
-- Bonus Round uses the same 3-step flow on both admin and display: enter wagers, mark correct/incorrect, then auto-end the session and start a fresh one. Wagers must be between `0` and that player's current score.
+- End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view
+- Scorecard undo is an in-memory action stack scoped to the active session only; it does not persist through reloads and it resets when a new game starts
+- Scorecard audit history is persisted separately in `scorecard_sessions.score_events` as an append-only JSONB array; each score change writes per-player events with `player`, signed `amount`, `type`, and ISO `timestamp`
+- End Game closes the current scorecard session immediately, shows the winner state, and waits for an explicit `New game` action before creating the next session; both the display winner overlay and admin winner modal also offer `Archive scorecard` to soft-archive that scorecard from the winner screen
+- Bonus Round is separate from End Game. It is a fully local in-memory flow on whichever surface starts it: masked wager entry, correct/incorrect selection, reveal, then one final score write when `Apply results` is tapped
+- Bonus Round does not sync or mirror mid-flow between admin and display. The other surface keeps its normal scorecard view until it refreshes from the final score write
+- Bonus Round wagers must be between `0` and that player's current score
 - New scorecard UI should use `--color-accent` and `--color-accent-subtle` for active/interactive states per `TOKENS.md`; do not use `--amber` / `--amber-soft` in new scorecard components
 
 ## Local Dev
