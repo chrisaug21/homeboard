@@ -2276,6 +2276,7 @@
         phase: "entry",
         draftWagers: {},
         wagers: {},
+        wagerErrors: {},
         results: {},
         playerNames
       };
@@ -2321,9 +2322,18 @@
 
     function triggerAdminBonusPeek(scorecardId, playerName) {
       const key = getAdminBonusPeekKey(scorecardId, playerName);
+      const input = Array.from(document.querySelectorAll("#admin-modal-body [data-scorecard-bonus-input]")).find((element) =>
+        element.getAttribute("data-scorecard-bonus-input") === key
+      );
       const existingTimer = adminScorecardBonusPeekTimerByKey.get(key);
       if (existingTimer) {
         window.clearTimeout(existingTimer);
+        adminScorecardBonusPeekTimerByKey.delete(key);
+      }
+
+      if (input?.type === "text") {
+        setAdminBonusPeekState(scorecardId, playerName, false);
+        return;
       }
 
       setAdminBonusPeekState(scorecardId, playerName, true);
@@ -2690,43 +2700,50 @@
             ${scorecard.players.map((player) => {
               const rawWager = bonusState?.wagers?.[player.name];
               const draftWager = bonusState?.draftWagers?.[player.name];
+              const wagerError = String(bonusState?.wagerErrors?.[player.name] || "").trim();
               const hasLockedWager = Number.isFinite(Number(rawWager));
               const currentScore = Math.max(0, Number(session?.scores?.[player.name]) || 0);
               const inputKey = `${scorecard.id}:${player.name}`;
               return `
-                <div class="admin-scorecard-final-row">
-                  <div>
-                    <strong>${escapeHtml(player.name)}</strong>
-                    <div class="admin-panel-note">Current score: ${escapeHtml(formatScorecardScore(session?.scores?.[player.name] || 0))}</div>
-                  </div>
-                  <div class="admin-scorecard-toggle-row">
-                    <div class="admin-scorecard-bonus-input-wrap${hasLockedWager ? " is-locked" : ""}">
-                      <input
-                        class="admin-input admin-scorecard-bonus-input${hasLockedWager ? " is-locked" : ""}"
-                        type="password"
-                        inputmode="numeric"
-                        autocomplete="off"
-                        pattern="[0-9]*"
-                        placeholder="Wager"
-                        value="${escapeHtml(hasLockedWager ? String(rawWager) : String(draftWager || ""))}"
-                        data-scorecard-bonus-input="${escapeHtml(inputKey)}"
-                        max="${escapeHtml(currentScore)}"
-                        ${hasLockedWager ? "disabled" : ""}
-                      >
-                      ${hasLockedWager ? "" : `
-                        <button class="admin-scorecard-bonus-peek-btn" type="button" data-action="scorecard-bonus-peek" data-scorecard-bonus-peek-target="${escapeHtml(inputKey)}"${draftWager ? "" : " disabled"} aria-label="Reveal wager briefly">
-                          <i data-lucide="eye"></i>
-                        </button>
-                      `}
+                <div class="admin-scorecard-bonus-entry-block">
+                  <div class="admin-scorecard-bonus-entry-row">
+                    <div class="admin-scorecard-bonus-player-meta">
+                      <strong>${escapeHtml(player.name)}</strong>
+                      <span class="admin-panel-note">Current: ${escapeHtml(formatScorecardScore(session?.scores?.[player.name] || 0))}</span>
                     </div>
-                    <button class="admin-button admin-scorecard-lock-btn${hasLockedWager ? " is-locked" : ""}" type="button" data-action="scorecard-bonus-lock" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}"${hasLockedWager ? " disabled" : ""}>${hasLockedWager ? '<i data-lucide="lock"></i><span>Locked</span>' : "Lock in"}</button>
+                    <div class="admin-scorecard-bonus-entry-side">
+                      <div class="admin-scorecard-bonus-entry-controls">
+                        <div class="admin-scorecard-bonus-input-wrap${hasLockedWager ? " is-locked" : ""}">
+                          <input
+                            class="admin-input admin-scorecard-bonus-input${hasLockedWager ? " is-locked" : ""}"
+                            type="password"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            pattern="[0-9]*"
+                            placeholder="Wager"
+                            value="${escapeHtml(hasLockedWager ? String(rawWager) : String(draftWager || ""))}"
+                            data-scorecard-bonus-input="${escapeHtml(inputKey)}"
+                            data-scorecard-bonus-max="${escapeHtml(currentScore)}"
+                            max="${escapeHtml(currentScore)}"
+                            ${hasLockedWager ? "disabled" : ""}
+                          >
+                          ${hasLockedWager ? "" : `
+                            <button class="admin-scorecard-bonus-peek-btn" type="button" data-action="scorecard-bonus-peek" data-scorecard-bonus-peek-target="${escapeHtml(inputKey)}"${draftWager ? "" : " disabled"} aria-label="Toggle wager visibility">
+                              <i data-lucide="eye"></i>
+                            </button>
+                          `}
+                        </div>
+                        <button class="admin-button admin-scorecard-lock-icon-btn${hasLockedWager ? " is-locked" : ""}" type="button" data-action="scorecard-bonus-lock" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}"${hasLockedWager ? " disabled" : ""} aria-label="${hasLockedWager ? "Wager locked" : "Lock wager"}"><i data-lucide="lock"></i></button>
+                      </div>
+                      <div class="admin-scorecard-bonus-error"${wagerError ? "" : ' hidden'} data-scorecard-bonus-error="${escapeHtml(inputKey)}">${escapeHtml(wagerError)}</div>
+                    </div>
                   </div>
                 </div>
               `;
             }).join("")}
           </div>
           <div class="admin-actions admin-actions--end">
-            <button class="admin-button admin-button--secondary" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Cancel bonus round</button>
+            <button class="admin-button admin-button--secondary admin-scorecard-bonus-cancel-btn" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Cancel bonus round</button>
           </div>
         </div>
       `;
@@ -2771,11 +2788,11 @@
                         <div class="admin-panel-note">Selection required before reveal</div>
                       </div>
                       <div class="admin-scorecard-toggle-row">
-                        <label class="admin-scorecard-toggle-pill">
+                        <label class="admin-scorecard-toggle-pill is-correct">
                           <input type="radio" name="result_${escapeHtml(player.name)}" value="correct"${result === "correct" ? " checked" : ""}>
                           <span>Correct</span>
                         </label>
-                        <label class="admin-scorecard-toggle-pill">
+                        <label class="admin-scorecard-toggle-pill is-incorrect">
                           <input type="radio" name="result_${escapeHtml(player.name)}" value="incorrect"${result === "incorrect" ? " checked" : ""}>
                           <span>Incorrect</span>
                         </label>
@@ -2783,12 +2800,19 @@
                     </div>
                   `;
                 }).join("")}
-            <div class="admin-actions admin-actions--split">
-              <button class="admin-button admin-button--secondary" type="button" data-action="${showRevealStage ? "scorecard-bonus-back" : "scorecard-bonus-cancel"}" data-scorecard-id="${escapeHtml(scorecard.id)}">${showRevealStage ? "Back" : "Cancel bonus round"}</button>
-              ${showRevealStage
-                ? '<button class="admin-button admin-button--primary" type="submit">Apply results</button>'
-                : `<button class="admin-button admin-button--primary" type="button" data-action="scorecard-bonus-reveal" data-scorecard-id="${escapeHtml(scorecard.id)}"${allResultsSelected ? "" : " disabled"}>Reveal wagers</button>`}
-            </div>
+            ${showRevealStage
+              ? `
+                <div class="admin-actions admin-actions--split">
+                  <button class="admin-button admin-button--secondary" type="button" data-action="scorecard-bonus-back" data-scorecard-id="${escapeHtml(scorecard.id)}">Back</button>
+                  <button class="admin-button admin-button--primary" type="submit">Apply results</button>
+                </div>
+              `
+              : `
+                <div class="admin-scorecard-bonus-result-actions">
+                  <button class="admin-button admin-button--secondary admin-scorecard-bonus-cancel-btn" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Cancel bonus round</button>
+                  <button class="admin-button admin-button--primary" type="button" data-action="scorecard-bonus-reveal" data-scorecard-id="${escapeHtml(scorecard.id)}"${allResultsSelected ? "" : " disabled"}>Reveal wagers</button>
+                </div>
+              `}
           </div>
         </form>
       `;
@@ -3275,11 +3299,27 @@
         return;
       }
 
-      const parsedValue = Math.min(currentScore, Math.max(0, Number(sanitized)));
+      const parsedValue = Math.max(0, Number(sanitized));
+      if (parsedValue > currentScore) {
+        setAdminLocalBonusState(scorecardId, {
+          ...localBonusState,
+          wagerErrors: {
+            ...localBonusState.wagerErrors,
+            [playerName]: `Max wager: ${formatScorecardScore(currentScore)}`
+          }
+        });
+        rerenderScorecardManageModal();
+        return;
+      }
+
       const nextState = {
         ...localBonusState,
         draftWagers: {
           ...localBonusState.draftWagers,
+          [playerName]: ""
+        },
+        wagerErrors: {
+          ...localBonusState.wagerErrors,
           [playerName]: ""
         },
         wagers: {
@@ -3985,11 +4025,19 @@
         const playerName = playerParts.join(":");
         const localBonusState = getAdminLocalBonusState(scorecardId);
         if (localBonusState && playerName && !Number.isFinite(Number(localBonusState.wagers[playerName]))) {
+          const maxValue = Number(bonusInput.getAttribute("data-scorecard-bonus-max")) || 0;
+          const nextError = sanitized !== "" && Number(sanitized) > maxValue
+            ? `Max wager: ${formatScorecardScore(maxValue)}`
+            : "";
           setAdminLocalBonusState(scorecardId, {
             ...localBonusState,
             draftWagers: {
               ...localBonusState.draftWagers,
               [playerName]: sanitized
+            },
+            wagerErrors: {
+              ...localBonusState.wagerErrors,
+              [playerName]: nextError
             }
           });
           const peekButton = Array.from(document.querySelectorAll("#admin-modal-body [data-action='scorecard-bonus-peek']")).find((element) =>
@@ -3997,6 +4045,13 @@
           );
           if (peekButton) {
             peekButton.disabled = sanitized === "";
+          }
+          const errorEl = Array.from(document.querySelectorAll("#admin-modal-body [data-scorecard-bonus-error]")).find((element) =>
+            element.getAttribute("data-scorecard-bonus-error") === target
+          );
+          if (errorEl) {
+            errorEl.textContent = nextError;
+            errorEl.hidden = nextError === "";
           }
         }
         return;

@@ -2363,7 +2363,49 @@
       align-items: center;
     }
 
+    .admin-scorecard-bonus-entry-block,
+    .admin-scorecard-bonus-entry-side,
+    .admin-scorecard-bonus-result-actions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .admin-scorecard-bonus-entry-row,
+    .admin-scorecard-bonus-player-meta,
+    .admin-scorecard-bonus-entry-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .admin-scorecard-bonus-entry-row {
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: nowrap;
+    }
+
+    .admin-scorecard-bonus-player-meta {
+      min-width: 0;
+      flex: 1 1 auto;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .admin-scorecard-bonus-player-meta strong,
+    .admin-scorecard-bonus-player-meta .admin-panel-note {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .admin-scorecard-bonus-entry-side {
+      justify-items: end;
+      min-width: 0;
+      flex: 0 0 auto;
+    }
+
     .admin-scorecard-bonus-input {
+      width: 104px;
       min-width: 0;
       padding-right: 42px;
     }
@@ -2401,20 +2443,43 @@
     }
 
     .admin-scorecard-bonus-peek-btn svg,
-    .admin-scorecard-lock-btn svg {
+    .admin-scorecard-lock-icon-btn svg {
       width: 16px;
       height: 16px;
     }
 
-    .admin-scorecard-lock-btn.is-locked {
-      background: var(--sage-soft);
-      border-color: var(--sage);
-      color: var(--sage);
+    .admin-scorecard-lock-icon-btn {
+      width: 40px;
+      height: 40px;
+      padding: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--ink);
+      flex: 0 0 auto;
+    }
+
+    .admin-scorecard-lock-icon-btn.is-locked {
+      background: var(--sage-soft);
+      border-color: var(--sage);
+      color: var(--sage);
       cursor: default;
+      opacity: 1;
+    }
+
+    .admin-scorecard-bonus-error {
+      color: var(--rose);
+      font-size: 0.82rem;
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: right;
+    }
+
+    .admin-scorecard-bonus-cancel-btn {
+      width: 100%;
+      white-space: nowrap;
     }
 
     .admin-scorecard-lock-pill {
@@ -2484,8 +2549,10 @@
 
     .admin-scorecard-toggle-pill {
       position: relative;
-      display: inline-flex;
-      align-items: center;
+      display: flex;
+      align-items: stretch;
+      flex: 1 1 0;
+      min-width: 0;
     }
 
     .admin-scorecard-toggle-pill input {
@@ -2495,6 +2562,7 @@
     }
 
     .admin-scorecard-toggle-pill span {
+      width: 100%;
       padding: 8px 12px;
       border-radius: var(--tag-radius);
       background: rgba(255, 255, 255, 0.72);
@@ -2502,12 +2570,38 @@
       font-size: 0.82rem;
       font-weight: 700;
       color: var(--ink);
+      text-align: center;
     }
 
-    .admin-scorecard-toggle-pill input:checked + span {
-      background: var(--color-accent);
-      border-color: var(--color-accent);
+    .admin-scorecard-toggle-pill.is-correct input:checked + span {
+      background: var(--sage);
+      border-color: var(--sage);
+      color: #fff;
+    }
+
+    .admin-scorecard-toggle-pill.is-incorrect input:checked + span {
+      background: var(--rose);
+      border-color: var(--rose);
       color: var(--color-text-on-accent);
+    }
+
+    .admin-scorecard-toggle-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+      gap: 10px;
+    }
+
+    .admin-button[data-action="scorecard-bonus-reveal"]:disabled {
+      background: #e7e5e4;
+      color: #78716c;
+      cursor: default;
+      opacity: 1;
+      pointer-events: none;
+    }
+
+    form[data-modal-form="scorecard-bonus-results"] .admin-actions--split {
+      flex-direction: row;
     }
 
     .admin-scorecard-final-row .admin-input {
@@ -2517,6 +2611,14 @@
     @media (max-width: 480px) {
       .admin-header-bar {
         padding: 8px 12px;
+      }
+
+      .admin-scorecard-bonus-entry-row {
+        gap: 10px;
+      }
+
+      .admin-scorecard-bonus-input {
+        width: 92px;
       }
 
       .admin-scorecard-player-row,
@@ -2559,5 +2661,9 @@
 
       .admin-actions--split {
         flex-direction: column;
+      }
+
+      form[data-modal-form="scorecard-bonus-results"] .admin-actions--split {
+        flex-direction: row;
       }
     }

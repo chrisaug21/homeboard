@@ -2443,14 +2443,15 @@
       min-width: 120px;
     }
 
-    .scorecard-secondary-btn:disabled {
-      opacity: 0.48;
-      background: rgba(255, 255, 255, 0.48);
-      border-color: var(--border);
-      color: var(--muted);
+    .scorecard-secondary-btn[data-action="scorecard-bonus-reveal"]:disabled {
+      opacity: 1;
+      background: #e7e5e4;
+      border-color: #d6d3d1;
+      color: #78716c;
       cursor: default;
       pointer-events: none;
       box-shadow: none;
+      transform: none;
     }
 
     .scorecard-player-row {
@@ -2544,6 +2545,12 @@
       align-items: center;
     }
 
+    .scorecard-bonus-entry-side {
+      display: grid;
+      gap: 6px;
+      justify-items: end;
+    }
+
     .scorecard-bonus-input-wrap {
       position: relative;
       display: flex;
@@ -2628,6 +2635,14 @@
       justify-content: center;
       gap: 6px;
       cursor: default;
+    }
+
+    .scorecard-bonus-error {
+      color: var(--rose);
+      font-size: 0.82rem;
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: right;
     }
 
     .scorecard-bonus-reveal-grid {
@@ -2800,8 +2815,10 @@
 
     .scorecard-bonus-toggle-pill {
       position: relative;
-      display: inline-flex;
-      align-items: center;
+      display: flex;
+      align-items: stretch;
+      flex: 1 1 0;
+      min-width: 0;
     }
 
     .scorecard-bonus-toggle-pill input {
@@ -2811,6 +2828,7 @@
     }
 
     .scorecard-bonus-toggle-pill span {
+      width: 100%;
       padding: 8px 12px;
       border-radius: var(--tag-radius);
       background: var(--panel-strong);
@@ -2818,12 +2836,19 @@
       color: var(--ink);
       font-size: 0.82rem;
       font-weight: 700;
+      text-align: center;
     }
 
-    .scorecard-bonus-toggle-pill input:checked + span {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
+    .scorecard-bonus-toggle-pill.is-correct input:checked + span {
+      background: var(--sage);
+      border-color: var(--sage);
+      color: #fff;
+    }
+
+    .scorecard-bonus-toggle-pill.is-incorrect input:checked + span {
+      background: var(--rose);
+      border-color: var(--rose);
+      color: #fff;
     }
 
     @media (max-width: 1120px) {
