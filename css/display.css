@@ -2530,15 +2530,59 @@
       align-items: center;
     }
 
+    .scorecard-bonus-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
     .scorecard-bonus-input {
       width: 110px;
       min-width: 0;
       border: 1px solid var(--border);
       border-radius: var(--button-radius);
-      padding: 10px 12px;
+      padding: 10px 42px 10px 12px;
       background: var(--panel-strong);
       color: var(--ink);
       font: inherit;
+    }
+
+    .scorecard-bonus-input:not(.is-locked) {
+      border-color: rgba(180, 83, 9, 0.34);
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    .scorecard-bonus-input.is-locked {
+      background: var(--color-accent-subtle);
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+      font-weight: 800;
+    }
+
+    .scorecard-bonus-peek-btn {
+      position: absolute;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .scorecard-bonus-peek-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .scorecard-bonus-peek-btn svg,
+    .scorecard-bonus-lock-btn svg {
+      width: 16px;
+      height: 16px;
     }
 
     .scorecard-bonus-row.is-locked {
@@ -2555,6 +2599,21 @@
       background: var(--color-accent);
       border-color: var(--color-accent);
       color: var(--color-text-on-accent);
+    }
+
+    .scorecard-bonus-lock-btn {
+      min-width: 120px;
+    }
+
+    .scorecard-bonus-lock-btn.is-locked {
+      background: var(--sage-soft);
+      border-color: var(--sage);
+      color: var(--sage);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: default;
     }
 
     .scorecard-bonus-reveal-grid {
@@ -2577,6 +2636,25 @@
     .scorecard-bonus-reveal-value {
       font-size: clamp(1.8rem, 3vw, 2.8rem);
       font-weight: 800;
+    }
+
+    .scorecard-bonus-reveal-card.is-correct .scorecard-bonus-reveal-value {
+      color: var(--sage);
+    }
+
+    .scorecard-bonus-reveal-card.is-incorrect .scorecard-bonus-reveal-value {
+      color: var(--rose);
+    }
+
+    .scorecard-bonus-before,
+    .scorecard-bonus-summary {
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .scorecard-bonus-summary {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
     }
 
     .scorecard-bonus-result-row {

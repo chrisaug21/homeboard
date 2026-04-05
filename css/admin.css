@@ -2357,6 +2357,66 @@
       font-size: 0.86rem;
     }
 
+    .admin-scorecard-bonus-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .admin-scorecard-bonus-input {
+      min-width: 0;
+      padding-right: 42px;
+    }
+
+    .admin-scorecard-bonus-input:not(.is-locked) {
+      border-color: rgba(180, 83, 9, 0.34);
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    .admin-scorecard-bonus-input.is-locked {
+      background: var(--color-accent-subtle);
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+      font-weight: 800;
+    }
+
+    .admin-scorecard-bonus-peek-btn {
+      position: absolute;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .admin-scorecard-bonus-peek-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .admin-scorecard-bonus-peek-btn svg,
+    .admin-scorecard-lock-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .admin-scorecard-lock-btn.is-locked {
+      background: var(--sage-soft);
+      border-color: var(--sage);
+      color: var(--sage);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: default;
+    }
+
     .admin-scorecard-lock-pill {
       display: inline-flex;
       align-items: center;
@@ -2380,6 +2440,40 @@
     .admin-scorecard-winner-title {
       font-size: 1.3rem;
       font-weight: 800;
+    }
+
+    .admin-scorecard-bonus-reveal-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .admin-scorecard-bonus-reveal-card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.44);
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .admin-scorecard-bonus-impact {
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      font-weight: 800;
+    }
+
+    .admin-scorecard-bonus-reveal-card.is-correct .admin-scorecard-bonus-impact {
+      color: var(--sage);
+    }
+
+    .admin-scorecard-bonus-reveal-card.is-incorrect .admin-scorecard-bonus-impact {
+      color: var(--rose);
+    }
+
+    .admin-scorecard-bonus-summary {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      color: var(--muted);
+      font-size: 0.86rem;
     }
 
     .admin-scorecard-player-list,
