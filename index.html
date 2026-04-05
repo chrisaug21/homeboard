@@ -112,8 +112,8 @@
       display: none !important;
     }
   </style>
-  <link rel="stylesheet" href="css/display.css">
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/display.css?v=1.6.16">
+  <link rel="stylesheet" href="css/admin.css?v=1.6.16">
 </head>
 <body>
   <div class="app-shell" id="display-app">
@@ -277,12 +277,49 @@
         <div class="display-modal-body" id="rsvp-review-body"></div>
       </div>
     </div>
+
+    <div class="display-modal" id="scorecard-bonus-modal" hidden role="dialog" aria-modal="true" aria-labelledby="scorecard-bonus-title">
+      <div class="display-modal-backdrop" id="scorecard-bonus-backdrop"></div>
+      <div class="display-modal-sheet">
+        <div class="display-modal-header">
+          <h2 class="display-modal-title" id="scorecard-bonus-title">Bonus Round</h2>
+          <button class="display-modal-close" type="button" id="scorecard-bonus-close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="display-modal-body" id="scorecard-bonus-body"></div>
+      </div>
+    </div>
+
+    <div class="scorecard-celebration-overlay" id="scorecard-celebration-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="scorecard-celebration-title">
+      <div class="scorecard-celebration-stage" id="scorecard-celebration-stage"></div>
+      <div class="scorecard-celebration-card">
+        <div class="scorecard-celebration-layout">
+          <section class="scorecard-celebration-hero">
+            <div class="scorecard-celebration-icon" id="scorecard-celebration-icon" aria-hidden="true"><i data-lucide="trophy"></i></div>
+            <h2 class="scorecard-celebration-title" id="scorecard-celebration-title"></h2>
+          </section>
+          <section class="scorecard-celebration-scoreboard">
+            <div class="scorecard-celebration-kicker">Final scores</div>
+            <div class="scorecard-celebration-scores" id="scorecard-celebration-scores"></div>
+          </section>
+        </div>
+        <div class="scorecard-celebration-actions">
+          <button class="scorecard-celebration-button" type="button" id="scorecard-celebration-new-game">New game</button>
+          <button class="scorecard-celebration-button scorecard-celebration-button--secondary" type="button" id="scorecard-celebration-archive" data-action="scorecard-celebration-archive">Archive scorecard</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="admin-shell" id="admin-app" hidden>
-    <div class="admin-mode-pill">
-      <i data-lucide="settings-2"></i> Admin Mode
-      <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
+    <div class="admin-header-bar">
+      <div class="admin-header-brand">
+        <i data-lucide="sliders-horizontal"></i>
+        <span>Admin Mode</span>
+        <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
+      </div>
+      <button class="admin-header-settings" type="button" id="admin-settings-button" aria-label="Open settings">
+        <i data-lucide="settings"></i>
+      </button>
     </div>
 
     <div class="admin-content">
@@ -430,6 +467,10 @@
                   <input type="checkbox" name="screen_countdowns" value="countdowns">
                   <span>Countdowns</span>
                 </label>
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="screen_scorecards" value="scorecards">
+                  <span>Scorecards</span>
+                </label>
               </div>
             </div>
 
@@ -531,6 +572,17 @@
           <div class="admin-list" id="admin-rsvp-guest-list"></div>
         </section>
       </section>
+
+      <section class="admin-screen" id="admin-screen-scorecards" data-admin-screen="scorecards" hidden>
+        <section class="admin-panel" aria-labelledby="admin-scorecards-title">
+          <div class="admin-panel-header-row">
+            <h2 class="admin-panel-title" id="admin-scorecards-title">Scorecards</h2>
+            <button class="admin-button admin-button--primary admin-add-button" type="button" id="admin-scorecard-add-button">+ Add</button>
+          </div>
+          <p class="admin-panel-note" id="admin-scorecards-note">Loading scorecards…</p>
+          <div class="admin-list" id="admin-scorecard-list"></div>
+        </section>
+      </section>
     </div>
 
     <nav class="admin-nav" aria-label="Admin navigation">
@@ -550,9 +602,9 @@
         <i data-lucide="heart"></i>
         <span>RSVP</span>
       </button>
-      <button class="admin-nav-button" type="button" data-admin-nav="settings">
-        <i data-lucide="settings-2"></i>
-        <span>Settings</span>
+      <button class="admin-nav-button" type="button" data-admin-nav="scorecards">
+        <i data-lucide="trophy"></i>
+        <span>Scorecard</span>
       </button>
     </nav>
   </div>

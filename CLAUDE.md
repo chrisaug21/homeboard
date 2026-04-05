@@ -29,6 +29,7 @@ netlify.toml        — build config, env var injection via sed
 ## Two Modes
 - **Display Mode** — landscape tablet, auto-rotates screens (per-screen timers), manual swipe. Mobile screens (≤ 768 px) are redirected to Admin mode automatically.
 - **Admin Mode** — portrait phone, at `/admin`
+- Admin Settings is opened from the gear icon in the admin header, not a bottom-nav tab.
 
 ## Display Screens (in order)
 1. Upcoming Calendar (Google Cal read-only) — controlled independently by `display_settings.active_screens` and `screen_order`
@@ -45,6 +46,8 @@ netlify.toml        — build config, env var injection via sed
 - `meal_plan` — `user_id` nullable: null = shared/household, uuid = personal
 - `meal_plan_notes` — one note per household per week, keyed by `household_id` + `week_start`
 - `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` support countdown photos and delayed visibility
+- `scorecards` — scorecard definitions with `name`, `increments` (JSONB number array), `players` (JSONB `{id,name,color}` array with stable player identifiers), `show_history`, `allow_negative`, and soft delete via `archived_at`
+- `scorecard_sessions` — per-game scorecard sessions with `started_at`, `ended_at`, `scores`, `wagers`, and `wager_results` JSONB objects keyed by `players[].id`, plus `score_events` JSONB audit entries, optional `winner`, and `is_final_jeopardy`
 - `rsvps` — pre-existing wedding table, do not modify schema
 - `invited_parties` — wedding invite list with `name`, `invited_count`, nullable `rsvp_id`, and `created_at`; this is the source of truth for matched vs pending invite parties
 
@@ -77,15 +80,16 @@ netlify.toml        — build config, env var injection via sed
 ```json
 {
   "members":        [{"name": "Chris", "color": "#2563eb"}, ...],
-  "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
-  "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
-  "timer_intervals": { "upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15 },
+  "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards"],
+  "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecard_<id>"],
+  "timer_intervals": { "upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15, "scorecards": 30 },
   "upcoming_days":  5
 }
 ```
 - `display_settings.members` drives the todo assignee picker and is managed via the Settings screen. **Planned migration**: move to `users` table when multi-user auth is implemented.
 - `upcoming_calendar` and `monthly_calendar` are separate screens across display rotation and admin settings. Never write the legacy `calendar` key back to Supabase.
 - The "Default calendar view" setting has been removed. Whichever calendar screen appears first in `screen_order` renders first.
+- Scorecards are toggled by the shared `scorecards` active-screen key. In the Settings UI, Scorecards appears as one screen-order row; saving expands that slot into the underlying `scorecard_<id>` entries used by display rotation.
 - `display_settings.upcoming_days` drives the `UPCOMING_DAYS` variable in `display.js`. Update both together if changing upcoming-view logic.
 - Google Calendar currently reads a single calendar ID (`households.google_cal_id`). **Future enhancement**: support toggling multiple calendars from the Integrations settings.
 - **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.
@@ -113,10 +117,22 @@ netlify.toml        — build config, env var injection via sed
 - The display footer nav should not have an outer capsule/frame; the buttons sit directly in the footer with no shared background, border, or shadow wrapper
 - The display footer nav active colors should be controlled per scheme via `--display-nav-active-bg` and `--display-nav-active-border`; light schemes should use `--color-accent` for the active nav background, while the dark scheme should use `--color-accent-subtle`
 - Semantic interaction tokens are `--color-accent`, `--color-accent-subtle`, and `--color-text-on-accent`; use them for any new interactive, selected, highlighted, or accent-fill UI
+- Scorecard components should follow `TOKENS.md`: use `--color-accent` and `--color-accent-subtle` for interactive/active states, and use `--sage-soft` / `--rose-soft` only for positive or negative score feedback
 - `--amber` and `--amber-soft` are legacy color tokens being deprecated; keep them only for older component references during migration and do not use them directly in new components
 - The display footer upcoming/month nav buttons should use a custom inline SVG calendar outline with an empty body area so the centered `upcoming_days` / `30` overlay remains readable; do not use a Lucide calendar glyph there
-- Display footer icon mapping: `todos` = `list-todo`, `meals` = `utensils-crossed`, `upcoming_calendar` = calendar icon with centered `display_settings.upcoming_days` overlay (default `7`), `monthly_calendar` = the same calendar icon with centered `30` overlay, `countdowns` = `hourglass`, `rsvp` = `heart`, fallback = generic layout/grid icon
+- Display footer icon mapping: `todos` = `list-todo`, `meals` = `utensils-crossed`, `upcoming_calendar` = calendar icon with centered `display_settings.upcoming_days` overlay (default `7`), `monthly_calendar` = the same calendar icon with centered `30` overlay, `countdowns` = `hourglass`, `scorecards` = `trophy`, `rsvp` = `heart`, fallback = generic layout/grid icon
 - All countdown screens collapse into one footer nav button. Tapping that hourglass always jumps to the first countdown in the current rotation order, and the button remains active across every countdown screen
+- All scorecard screens collapse into one footer trophy button. Tapping it jumps to the first scorecard in the current rotation order, and swipe navigation moves between individual scorecard screens.
+- Scorecard display layout auto-switches by player count: 2-4 players render as per-player columns, 5-6 players render as selectable rows plus shared increment buttons.
+- End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view.
+- Scorecard undo is an in-memory action stack scoped to the active session. It does not persist through reloads and it resets when a new game starts.
+- Scorecard audit history is persisted in `scorecard_sessions.score_events` as an append-only JSONB array of per-player entries with `player`, signed `amount`, `type`, and ISO `timestamp`.
+- Scorecard player scores and bonus wager maps are keyed internally by stable player `id`, not player name; keep player names/colors only for display.
+- End Game closes the current scorecard session immediately, shows the winner state, and waits for `New game` before creating the next session; both the display winner overlay and admin winner modal also offer `Archive scorecard` to soft-archive that scorecard from the winner screen.
+- Bonus Round is separate from End Game. It is a fully local in-memory flow on whichever surface starts it: masked wager entry, correct/incorrect selection, reveal, then one final score write when `Apply results` is tapped.
+- Bonus Round wager state is also persisted to `scorecard_sessions` (`wagers`, `wager_results`, `is_final_jeopardy`) so refreshes can recover the active round state.
+- Bonus Round does not sync or mirror mid-flow between admin and display. The other surface stays on its normal scorecard state until it refreshes from the final score write.
+- Each wager must be between `0` and that player's current score.
 - When a display footer nav button is tapped, auto-rotation should reset immediately and resume using that destination screen's configured `display_settings.timer_intervals` value, never a hardcoded fallback unless the screen has no saved timer
 - The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
 - The Settings screen sync row should keep visible spacing below its helper copy so the sync button/timestamp do not crowd the paragraph above
@@ -125,8 +141,8 @@ netlify.toml        — build config, env var injection via sed
 - The admin to-do screen must not fail just because household settings fail; render the todo data first, then re-render for member colors if `display_settings.members` arrives afterward
 - Active incomplete todos with `due_date < today` should show the overdue treatment on both display and admin: red left border, subtle red card tint, and red overdue date-pill text
 - Todo completion celebration animations are display-view only and must fully clean up any temporary DOM they create
-- Display celebrations load bundled local copies from `js/vendor/confetti.min.js` and `js/vendor/gsap.min.js` in `index.html`; do not switch them back to CDN. Confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
-- Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if a CDN script fails to load
+- Display celebrations load local bundled copies from `js/vendor/confetti.min.js` and `js/vendor/gsap.min.js`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
+- Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if those globals are absent
 - Celebration particle colors should resolve the active scheme accent at runtime from `getComputedStyle(...).getPropertyValue('--amber')` and mix it with white, bright gold, and fresh green so effects stay scheme-aware without hardcoding one palette
 - Display todo completion timing should be: checkmark immediately, item fade/removal starts roughly 10-15% into the celebration with a quick ~200 ms opacity transition, and the celebration continues independently as a send-off
 - Checking off a display todo must reset the auto-rotation timer using the same `resetAutoRotate()` path as other display interactions so the screen does not rotate away mid-celebration

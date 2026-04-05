@@ -29,7 +29,10 @@ Screens rotate automatically using per-screen timers from `display_settings.time
    Display-only completions trigger one of seven built-in celebration animations before the card clears. `canvas-confetti` powers Confetti Burst, Star Shower, and Fireworks; GSAP powers Bubble Float, Thumbs Up Bounce, and Ink Splash; Ripple Rings stays CSS/JS only
 4. **Dinner Plan** — this week's dinner entries (Mon–Sun)
 5. **Looking Forward** — countdown cards to upcoming events with Lucide icons and days-remaining
-6. **Wedding Pulse** — live RSVP tracker (Chris & Bailey only, hidden starting Oct 11, 2026)
+6. **Scorecards** — one display screen per saved scorecard, grouped under one trophy footer button
+   Layout switches automatically: 2-4 players use per-player columns, 5-6 players use selectable player rows plus shared increment buttons
+   `screen_order` stores each saved scorecard as `scorecard_<id>`, while `active_screens` uses the shared `scorecards` toggle
+7. **Wedding Pulse** — live RSVP tracker (Chris & Bailey only, hidden starting Oct 11, 2026)
    Counts are driven by `rsvps` + `invited_parties`, the hero shows parties responded plus review count, declined/pending totals open name-list modals, and review flags open a display explainer modal
 
 ## Admin Tabs
@@ -55,9 +58,11 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 - Browse icons at [lucide.dev/icons](https://lucide.dev/icons)
 
 ### Settings
+- Accessed from the gear icon in the admin header, not the bottom nav
 - Assistant name shown in the display footer
 - Household members for todo assignee options
 - Independent Active Screens and Screen Order controls for `upcoming_calendar` and `monthly_calendar`
+- Settings shows Scorecards as one screen-order row; saving expands that slot into the underlying `scorecard_<id>` entries used by display rotation
 - Rotation timers, color scheme, Google Calendar ID, and sync controls
 
 ### RSVP
@@ -66,6 +71,16 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 - Full guest list shows every `invited_parties` row sorted Attending → Declined → Pending
 - Tapping a party opens a shared bottom-sheet modal to edit the party name, invited count, and linked RSVP, including unlinking or manual relinking
 - High-confidence matches can auto-link during refresh using the same scoring logic as the admin suggestions
+
+### Scorecard
+- Trophy tab in the admin bottom nav
+- Create/edit scorecards with 2-6 players, independent player colors, configurable increment buttons, `allow_negative`, and `show_history`
+- Active session management with score adjustments, an in-memory undo stack per active session, a persisted score audit log, End Game, and Bonus Round on both admin and display
+- End Game and Bonus Round are separate mechanics: End Game closes the session and shows the winner until `New game` is tapped, and both winner screens also offer `Archive scorecard`; Bonus Round is a wager mechanic that applies score changes but does not end the session
+- Bonus Round is fully local to whichever surface starts it. Admin and display each run the same flow independently in memory: masked wager entry, correct/incorrect selection, reveal, then one final score write to Supabase when `Apply results` is tapped
+- Bonus Round never syncs mid-flow between admin and display, and each wager is capped to that player's current score and floored at `0`
+- Winner celebrations use the locally bundled Canvas Confetti file at `js/vendor/confetti.min.js`
+- Session history filter: This week / This month / All time
 
 ## Supabase Tables
 
@@ -77,6 +92,8 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 | `meal_plan` | `user_id = null` = shared/household row shown on display |
 | `meal_plan_notes` | One note per household per week; keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` is a Lucide icon name string; also stores optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` for countdown photos and visibility timing |
+| `scorecards` | Scorecard definitions with `increments` JSONB, `players` JSONB, `show_history`, `allow_negative`, and soft delete via `archived_at` |
+| `scorecard_sessions` | Per-game score state with `scores` JSONB, optional `wagers`, optional `wager_results`, `score_events` JSONB audit entries, optional `winner`, `started_at`, `ended_at`, and `is_final_jeopardy` |
 | `rsvps` | Wedding RSVP table — do not modify schema |
 | `invited_parties` | Wedding invite source of truth. `rsvp_id = null` means pending; set means matched to an RSVP |
 
@@ -118,6 +135,13 @@ netlify.toml        — build config, env var injection, redirect rules
 - If `assistant_name` is null, missing, or blank, the display footer shows `homeboard_logo.svg` at about `120px` wide instead of text
 - The logo is rendered as an `<img>` and uses its `onerror` fallback to swap back to a text label reading `Homeboard` in the same Righteous styling if the SVG fails to load
 - Logo treatment is scheme-aware: Warm uses a subtle `brightness(0.97)`, Slate uses no filter, and Dark applies a warm gold-toned CSS filter so the mark sits comfortably on the dark footer
+
+## Scorecard Styling
+
+- Read `TOKENS.md` before editing scorecard CSS
+- Use `--color-accent`, `--color-accent-subtle`, and `--color-text-on-accent` for scorecard interactive and active states
+- Use `--sage-soft` and `--rose-soft` only for positive and negative score feedback
+- Do not use `--amber`, `--amber-soft`, or hardcoded theme hex values in new scorecard UI
 
 ## Environment Variables
 
