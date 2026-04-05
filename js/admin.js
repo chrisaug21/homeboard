@@ -100,6 +100,7 @@
     let adminScorecards = [];
     let adminScorecardSessionsById = new Map();
     let adminScorecardBonusStateById = new Map();
+    let adminScorecardArchiveConfirmId = "";
     const adminScorecardBonusPeekTimerByKey = new Map();
     const adminScorecardBonusAdvanceTimerById = new Map();
     let adminTodoLoadRequestId = 0;
@@ -506,6 +507,7 @@
     function closeAdminModal() {
       const modal = document.getElementById("admin-modal");
       if (!modal || modal.hidden) return;
+      adminScorecardArchiveConfirmId = "";
       modal.hidden = true;
       const modalBody = document.getElementById("admin-modal-body");
       if (modalBody) modalBody.innerHTML = "";
@@ -661,6 +663,14 @@
         deleteScorecard(deleteScorecardBtn.getAttribute("data-scorecard-id"));
         return;
       }
+      if (adminModalType === "scorecard-winner" && adminScorecardArchiveConfirmId) {
+        const archiveWinnerBtn = event.target.closest("[data-action='scorecard-archive']");
+        if (!archiveWinnerBtn) {
+          adminScorecardArchiveConfirmId = "";
+          rerenderScorecardWinnerModal();
+          return;
+        }
+      }
       const adjustScoreBtn = event.target.closest("[data-action='scorecard-adjust-score']");
       if (adjustScoreBtn) {
         adjustScorecardScore(
@@ -673,6 +683,17 @@
       const newGameBtn = event.target.closest("[data-action='scorecard-new-game']");
       if (newGameBtn) {
         startNextScorecardGame(newGameBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
+      const archiveScorecardBtn = event.target.closest("[data-action='scorecard-archive']");
+      if (archiveScorecardBtn) {
+        const scorecardId = archiveScorecardBtn.getAttribute("data-scorecard-id");
+        if (adminScorecardArchiveConfirmId === scorecardId) {
+          archiveScorecard(scorecardId);
+          return;
+        }
+        adminScorecardArchiveConfirmId = scorecardId;
+        rerenderScorecardWinnerModal();
         return;
       }
       const undoScoreBtn = event.target.closest("[data-action='scorecard-undo']");
@@ -2872,21 +2893,25 @@
     }
 
     function buildScorecardWinnerModalHtml(scorecard, session) {
+      const leaders = getScorecardLeaders(session?.scores);
+      const isTie = leaders.length > 1;
+      const highlightedLeaders = new Set(leaders);
       return `
         <div class="admin-scorecard-modal-stack">
           <section class="admin-scorecard-modal-section admin-scorecard-winner-panel">
-            <div class="admin-scorecard-winner-title">${escapeHtml(session.winner || "Tie")} wins! <span aria-hidden="true">🏆</span></div>
-            <div class="admin-scorecard-history-scores">
+            <div class="admin-scorecard-winner-title">${escapeHtml(isTie ? "🤝 It's a tie!" : `🏆 ${leaders[0] || session.winner || "Winner"} wins!`)}</div>
+            <div class="admin-scorecard-winner-board">
               ${scorecard.players.map((player) => `
-                <span class="admin-scorecard-history-pill${session.winner === player.name ? " is-winner" : ""}">
-                  <span>${escapeHtml(player.name)}</span>
+                <div class="admin-scorecard-winner-row${highlightedLeaders.has(player.name) ? " is-winner" : ""}">
+                  <span class="admin-scorecard-winner-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</span>
                   <strong>${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</strong>
-                </span>
+                </div>
               `).join("")}
             </div>
           </section>
-          <div class="admin-actions admin-actions--end">
+          <div class="admin-actions admin-actions--split">
             <button class="admin-button admin-button--primary" type="button" data-action="scorecard-new-game" data-scorecard-id="${escapeHtml(scorecard.id)}">New game</button>
+            <button class="admin-button admin-button--secondary" type="button" data-action="scorecard-archive" data-scorecard-id="${escapeHtml(scorecard.id)}">${adminScorecardArchiveConfirmId === scorecard.id ? "Confirm archive" : "Archive scorecard"}</button>
           </div>
         </div>
       `;
@@ -2971,7 +2996,8 @@
 
       adminModalType = "scorecard-winner";
       adminModalContext = { scorecardId };
-      openAdminModal(`${session.winner || "Tie"} wins! 🏆`, buildScorecardWinnerModalHtml(scorecard, session));
+      adminScorecardArchiveConfirmId = "";
+      openAdminModal(scorecard.name, buildScorecardWinnerModalHtml(scorecard, session));
     }
 
     function openScorecardManageModal(scorecardId, filter = "month") {
@@ -3026,7 +3052,7 @@
         return;
       }
 
-      modalTitle.textContent = `${session.winner || "Tie"} wins! 🏆`;
+      modalTitle.textContent = scorecard.name;
       modalBody.innerHTML = buildScorecardWinnerModalHtml(scorecard, session);
       refreshIcons();
     }
@@ -3224,6 +3250,10 @@
     }
 
     async function deleteScorecard(scorecardId) {
+      await archiveScorecard(scorecardId);
+    }
+
+    async function archiveScorecard(scorecardId) {
       const client = getSupabaseClient();
       if (!client || adminScorecardWritePending) {
         return;
@@ -3243,9 +3273,12 @@
         return;
       }
 
+      adminScorecardArchiveConfirmId = "";
+      clearScorecardPendingWinner(scorecardId);
+      setAdminLocalBonusState(scorecardId, null);
       closeAdminModal();
       await loadAdminScorecards();
-      showToast("Scorecard deleted.");
+      showToast("Scorecard archived.");
     }
 
     async function adjustScorecardScore(scorecardId, playerName, increment) {
@@ -3611,6 +3644,7 @@
 
       clearScorecardActionHistory(freshSession.id);
       clearScorecardPendingWinner(scorecardId);
+      adminScorecardArchiveConfirmId = "";
       setAdminLocalBonusState(scorecardId, null);
       adminScorecardSessionsById.set(scorecardId, [freshSession, ...getAdminScorecardSessions(scorecardId)]);
       renderAdminScorecardList();

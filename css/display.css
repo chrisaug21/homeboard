@@ -2739,12 +2739,10 @@
     .scorecard-celebration-card {
       position: relative;
       z-index: 1;
-      width: min(100%, 760px);
+      width: min(100%, 1040px);
       display: grid;
-      gap: 16px;
-      justify-items: center;
-      text-align: center;
-      padding: 28px;
+      gap: 22px;
+      padding: 30px;
       border-radius: 28px;
       border: 1px solid rgba(255, 255, 255, 0.16);
       background: rgba(20, 16, 14, 0.82);
@@ -2752,14 +2750,43 @@
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
     }
 
+    .scorecard-celebration-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.4fr) minmax(0, 0.6fr);
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .scorecard-celebration-hero,
+    .scorecard-celebration-scoreboard,
+    .scorecard-celebration-actions {
+      display: grid;
+      gap: 16px;
+    }
+
+    .scorecard-celebration-hero {
+      align-content: center;
+      justify-items: start;
+      text-align: left;
+    }
+
+    .scorecard-celebration-icon {
+      color: var(--scorecard-celebration-accent, var(--color-accent));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scorecard-celebration-icon svg,
+    .scorecard-celebration-emoji {
+      width: clamp(72px, 10vw, 112px);
+      height: clamp(72px, 10vw, 112px);
+    }
+
     .scorecard-celebration-kicker {
       display: inline-flex;
       align-items: center;
-      padding: 6px 10px;
-      border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: var(--scorecard-celebration-accent, var(--color-accent));
+      color: rgba(255, 250, 243, 0.72);
       font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0.08em;
@@ -2768,32 +2795,40 @@
 
     .scorecard-celebration-title {
       margin: 0;
-      font-size: clamp(2.4rem, 5vw, 4.4rem);
+      font-size: clamp(2.5rem, 4.8vw, 4.8rem);
       line-height: 0.96;
+      text-align: left;
     }
 
-    .scorecard-celebration-subtitle {
-      font-size: 1.08rem;
-      color: rgba(255, 250, 243, 0.84);
+    .scorecard-celebration-scoreboard {
+      align-content: start;
     }
 
-    .scorecard-celebration-score-pill {
+    .scorecard-celebration-score-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 14px;
-      padding: 12px 14px;
-      border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     }
 
-    .scorecard-celebration-score-pill.is-winner {
-      border-color: var(--pill-color, var(--scorecard-celebration-accent, var(--color-accent)));
+    .scorecard-celebration-score-row.is-winner {
+      font-size: 1.04rem;
+      font-weight: 800;
+    }
+
+    .scorecard-celebration-score-name {
+      font-weight: 800;
+    }
+
+    .scorecard-celebration-actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .scorecard-celebration-button {
-      border: 0;
+      width: 100%;
+      border: 1px solid var(--scorecard-celebration-accent, var(--color-accent));
       border-radius: var(--button-radius);
       padding: 12px 18px;
       background: var(--scorecard-celebration-accent, var(--color-accent));
@@ -2801,6 +2836,12 @@
       font: inherit;
       font-weight: 800;
       cursor: pointer;
+    }
+
+    .scorecard-celebration-button--secondary {
+      background: transparent;
+      color: #fffaf3;
+      border-color: rgba(255, 255, 255, 0.28);
     }
 
     @keyframes scorecard-reveal-in {
@@ -2884,5 +2925,19 @@
 
       .scorecard-celebration-card {
         padding: 22px 18px;
+      }
+
+      .scorecard-celebration-layout,
+      .scorecard-celebration-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .scorecard-celebration-hero {
+        justify-items: center;
+        text-align: center;
+      }
+
+      .scorecard-celebration-title {
+        text-align: center;
       }
     }

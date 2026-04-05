@@ -2545,6 +2545,28 @@
       font-weight: 800;
     }
 
+    .admin-scorecard-winner-board {
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-scorecard-winner-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .admin-scorecard-winner-row.is-winner {
+      font-weight: 800;
+    }
+
+    .admin-scorecard-winner-name {
+      font-weight: 700;
+    }
+
     .admin-scorecard-bonus-reveal-grid {
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }

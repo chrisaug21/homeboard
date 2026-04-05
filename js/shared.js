@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.6.8";
+    const VERSION = "1.6.9";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -615,6 +615,24 @@
 
       const leaders = sorted.filter((entry) => entry.score === sorted[0].score);
       return leaders.length === 1 ? leaders[0].name : leaders.map((entry) => entry.name).join(", ");
+    }
+
+    function getScorecardLeaders(scores) {
+      const entries = Object.entries(scores && typeof scores === "object" ? scores : {})
+        .map(([name, score]) => ({
+          name: String(name || "").trim(),
+          score: Number.isFinite(Number(score)) ? Number(score) : 0
+        }))
+        .filter((entry) => entry.name);
+      if (!entries.length) {
+        return [];
+      }
+
+      const topScore = Math.max(...entries.map((entry) => entry.score));
+      return entries
+        .filter((entry) => entry.score === topScore)
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((entry) => entry.name);
     }
 
     function mapScorecardRow(row) {

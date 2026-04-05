@@ -32,6 +32,7 @@
     let celebrationBag = [];
     let scorecardCelebrationRunId = 0;
     let scorecardCelebrationTimers = [];
+    let displayScorecardArchiveConfirmId = "";
     let monthOffset = 0;
     let weekOffset = 0;
     let lastWideFetch = 0; // ms timestamp of last 24-month fetch
@@ -1234,6 +1235,22 @@
       return getScorecardSessions(scorecardId).find((session) => session.id === pendingSessionId && session.endedAt) || null;
     }
 
+    function clearDisplayScorecardArchiveConfirm() {
+      displayScorecardArchiveConfirmId = "";
+    }
+
+    function getScorecardWinnerSummary(scorecard, session) {
+      const leaders = getScorecardLeaders(session?.scores);
+      const isTie = leaders.length > 1;
+      const accentPlayer = scorecard?.players?.find((player) => player.name === leaders[0]) || scorecard?.players?.[0] || null;
+      return {
+        leaders,
+        isTie,
+        heroLabel: isTie ? "It's a tie! 🤝" : `${leaders[0] || session?.winner || "Winner"} wins!`,
+        accentColor: accentPlayer?.color || "var(--color-accent)"
+      };
+    }
+
     function getDisplayLocalBonusState(scorecardId) {
       const state = displayScorecardBonusStateById.get(scorecardId);
       if (!state) {
@@ -1769,6 +1786,12 @@
       refreshIcons();
     }
 
+    function findFirstNonScorecardScreenIndex() {
+      const visibleScreens = getVisibleScreens();
+      const targetIndex = visibleScreens.findIndex((screen) => !screen.classList.contains("scorecard-screen"));
+      return targetIndex >= 0 ? targetIndex : 0;
+    }
+
     function renderMeals(mealItems, weeklyNote) {
       const mealGrid = document.getElementById("meal-grid");
       const monday = getMonday(new Date());
@@ -2156,10 +2179,11 @@
     function syncScorecardCelebrationOverlay() {
       const overlay = document.getElementById("scorecard-celebration-overlay");
       const titleEl = document.getElementById("scorecard-celebration-title");
-      const subtitleEl = document.getElementById("scorecard-celebration-subtitle");
+      const iconEl = document.getElementById("scorecard-celebration-icon");
       const scoresEl = document.getElementById("scorecard-celebration-scores");
       const buttonEl = document.getElementById("scorecard-celebration-new-game");
-      if (!overlay || !titleEl || !subtitleEl || !scoresEl || !buttonEl) {
+      const archiveButtonEl = document.getElementById("scorecard-celebration-archive");
+      if (!overlay || !titleEl || !iconEl || !scoresEl || !buttonEl || !archiveButtonEl) {
         return;
       }
 
@@ -2174,32 +2198,38 @@
         overlay.hidden = true;
         delete overlay.dataset.scorecardId;
         delete overlay.dataset.sessionId;
+        clearDisplayScorecardArchiveConfirm();
         stopScorecardCelebrationEffects();
         resetAutoRotate("scorecard-celebration-close");
         return;
       }
 
       const { scorecard, session } = pending;
-      const winner = scorecard.players.find((player) => player.name === session.winner) || scorecard.players[0] || null;
+      const winnerSummary = getScorecardWinnerSummary(scorecard, session);
+      const highlightedLeaders = new Set(winnerSummary.leaders);
       overlay.hidden = false;
       window.clearTimeout(autoRotateId);
       autoRotateId = null;
       autoRotateToken += 1;
       overlay.dataset.scorecardId = scorecard.id;
-      overlay.style.setProperty("--scorecard-celebration-accent", winner?.color || "var(--color-accent)");
-      titleEl.textContent = session.winner || "Tie";
-      subtitleEl.textContent = `${session.winner || "Tie"} wins!`;
+      overlay.style.setProperty("--scorecard-celebration-accent", winnerSummary.accentColor);
+      titleEl.textContent = winnerSummary.heroLabel;
+      iconEl.innerHTML = winnerSummary.isTie ? '<span class="scorecard-celebration-emoji">🤝</span>' : '<i data-lucide="trophy"></i>';
+      archiveButtonEl.textContent = displayScorecardArchiveConfirmId === scorecard.id ? "Confirm archive" : "Archive scorecard";
       scoresEl.innerHTML = scorecard.players.map((player) => `
-        <div class="scorecard-celebration-score-pill${session.winner === player.name ? " is-winner" : ""}" style="--pill-color:${escapeHtml(player.color)}">
-          <span>${escapeHtml(player.name)}</span>
+        <div class="scorecard-celebration-score-row${highlightedLeaders.has(player.name) ? " is-winner" : ""}">
+          <span class="scorecard-celebration-score-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</span>
           <strong>${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</strong>
         </div>
       `).join("");
 
       if (overlay.dataset.sessionId !== session.id) {
         overlay.dataset.sessionId = session.id;
+        clearDisplayScorecardArchiveConfirm();
         startScorecardCelebrationEffects();
       }
+
+      refreshIcons();
     }
 
     async function renderScorecardsWithData() {
@@ -3055,6 +3085,35 @@
       resetAutoRotate("scorecard-end-game");
     }
 
+    async function archiveDisplayScorecard(scorecardId) {
+      const client = getSupabaseClient();
+      if (!client || !scorecardId) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      const { error } = await client
+        .from("scorecards")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", scorecardId)
+        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .is("archived_at", null);
+
+      if (error) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
+        return;
+      }
+
+      clearDisplayScorecardArchiveConfirm();
+      clearScorecardPendingWinner(scorecardId);
+      setDisplayLocalBonusState(scorecardId, null);
+      cachedScorecardSessionsById.delete(scorecardId);
+      cachedScorecards = cachedScorecards.filter((item) => item.id !== scorecardId);
+      renderScorecards(cachedScorecards);
+      navigateToScreenIndex(findFirstNonScorecardScreenIndex());
+      showDisplayToast("Scorecard archived.");
+    }
+
     async function startNextDisplayScorecardGame(scorecardId) {
       const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
       if (!scorecard || getActiveScorecardSession(scorecardId)) {
@@ -3069,6 +3128,7 @@
 
       clearScorecardActionHistory(nextSession.id);
       clearScorecardPendingWinner(scorecardId);
+      clearDisplayScorecardArchiveConfirm();
       setDisplayLocalBonusState(scorecardId, null);
       cachedScorecardSessionsById.set(scorecardId, [nextSession, ...getScorecardSessions(scorecardId)]);
       renderScorecards(cachedScorecards);
@@ -3756,13 +3816,37 @@
       document.getElementById("rsvp-detail-backdrop").addEventListener("click", closeRsvpDetailModal);
       document.getElementById("rsvp-review-close").addEventListener("click", closeRsvpReviewModal);
       document.getElementById("rsvp-review-backdrop").addEventListener("click", closeRsvpReviewModal);
-      document.getElementById("scorecard-celebration-new-game").addEventListener("click", () => {
+      document.getElementById("scorecard-celebration-overlay").addEventListener("click", (event) => {
         const overlay = document.getElementById("scorecard-celebration-overlay");
         const scorecardId = overlay?.dataset.scorecardId || "";
         if (!scorecardId) {
           return;
         }
-        startNextDisplayScorecardGame(scorecardId);
+
+        const archiveBtn = event.target.closest("[data-action='scorecard-celebration-archive']");
+        const newGameBtn = event.target.closest("#scorecard-celebration-new-game");
+        if (displayScorecardArchiveConfirmId === scorecardId && !archiveBtn) {
+          clearDisplayScorecardArchiveConfirm();
+          syncScorecardCelebrationOverlay();
+          return;
+        }
+
+        if (newGameBtn) {
+          startNextDisplayScorecardGame(scorecardId);
+          return;
+        }
+
+        if (!archiveBtn) {
+          return;
+        }
+
+        if (displayScorecardArchiveConfirmId === scorecardId) {
+          archiveDisplayScorecard(scorecardId);
+          return;
+        }
+
+        displayScorecardArchiveConfirmId = scorecardId;
+        syncScorecardCelebrationOverlay();
       });
 
       const declinedTrigger = document.getElementById("rsvp-declined-trigger");
