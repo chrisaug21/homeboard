@@ -2318,7 +2318,7 @@
     .scorecard-history-item {
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.44);
+      background: var(--panel);
       color: var(--ink);
     }
 
