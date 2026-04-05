@@ -2443,6 +2443,16 @@
       min-width: 120px;
     }
 
+    .scorecard-secondary-btn:disabled {
+      opacity: 0.48;
+      background: rgba(255, 255, 255, 0.48);
+      border-color: var(--border);
+      color: var(--muted);
+      cursor: default;
+      pointer-events: none;
+      box-shadow: none;
+    }
+
     .scorecard-player-row {
       width: 100%;
       padding: 14px 16px;
@@ -2630,16 +2640,23 @@
       background: rgba(255, 255, 255, 0.44);
       padding: 18px;
       display: grid;
-      gap: 10px;
-      text-align: center;
+      gap: 8px;
+      text-align: left;
       opacity: 0;
       transform: perspective(600px) rotateX(-18deg) translateY(12px);
       animation: scorecard-reveal-in 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
 
+    .scorecard-bonus-player-name {
+      font-size: 1rem;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
     .scorecard-bonus-reveal-value {
       font-size: clamp(1.8rem, 3vw, 2.8rem);
       font-weight: 800;
+      line-height: 1;
     }
 
     .scorecard-bonus-reveal-card.is-correct .scorecard-bonus-reveal-value {
@@ -2650,15 +2667,23 @@
       color: var(--rose);
     }
 
-    .scorecard-bonus-before,
-    .scorecard-bonus-summary {
+    .scorecard-bonus-before {
       font-size: 0.86rem;
       color: var(--muted);
     }
 
-    .scorecard-bonus-summary {
-      border-top: 1px solid var(--border);
-      padding-top: 10px;
+    .scorecard-bonus-result-label {
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .scorecard-bonus-result-label.is-correct {
+      color: var(--sage);
+    }
+
+    .scorecard-bonus-result-label.is-incorrect {
+      color: var(--rose);
     }
 
     .scorecard-bonus-result-row {

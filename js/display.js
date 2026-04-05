@@ -1992,9 +1992,10 @@
             const impactLabel = `${impact >= 0 ? "+" : "-"}${formatScorecardScore(Math.abs(impact))}`;
             return `
               <article class="scorecard-bonus-reveal-card ${isCorrect ? "is-correct" : "is-incorrect"}">
+                <div class="scorecard-bonus-player-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</div>
                 <div class="scorecard-bonus-reveal-value">${escapeHtml(impactLabel)}</div>
                 <div class="scorecard-bonus-before">Before: ${escapeHtml(formatScorecardScore(beforeScore))}</div>
-                <div class="scorecard-bonus-summary">${escapeHtml(player.name)} wagered ${escapeHtml(formatScorecardScore(wager))} · ${escapeHtml(isCorrect ? "Correct" : "Incorrect")}</div>
+                <div class="scorecard-bonus-result-label ${isCorrect ? "is-correct" : "is-incorrect"}">${escapeHtml(isCorrect ? "Correct" : "Incorrect")}</div>
               </article>
             `;
           }).join("")}
