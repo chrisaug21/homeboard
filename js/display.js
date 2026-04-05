@@ -27,6 +27,7 @@
     let cachedScorecardSessionsById = new Map();
     let displayScorecardBonusStateById = new Map();
     const displayScorecardBonusPeekTimerByKey = new Map();
+    const displayScorecardBonusAdvanceTimerById = new Map();
     let scorecardSelectionById = new Map();
     let celebrationBag = [];
     let scorecardCelebrationRunId = 0;
@@ -1252,6 +1253,12 @@
         return;
       }
 
+      const existingAdvanceTimer = displayScorecardBonusAdvanceTimerById.get(scorecardId);
+      if (existingAdvanceTimer && (!nextState || nextState.phase !== "entry")) {
+        window.clearTimeout(existingAdvanceTimer);
+        displayScorecardBonusAdvanceTimerById.delete(scorecardId);
+      }
+
       if (!nextState) {
         displayScorecardBonusStateById.delete(scorecardId);
         return;
@@ -1959,7 +1966,7 @@
                     <div class="scorecard-bonus-entry-controls">
                       <div class="scorecard-bonus-input-wrap${isLocked ? " is-locked" : ""}">
                         <input class="scorecard-bonus-input${isLocked ? " is-locked" : ""}" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]*" min="0" max="${escapeHtml(currentScore)}" value="${escapeHtml(isLocked ? String(lockedWager) : String(draftWager || ""))}" data-scorecard-bonus-input="${escapeHtml(inputKey)}"${isLocked ? " disabled" : ""}>
-                        <button class="scorecard-bonus-peek-btn" type="button" data-action="scorecard-bonus-peek" data-scorecard-bonus-peek-target="${escapeHtml(inputKey)}"${isLocked || draftWager ? "" : " disabled"} aria-label="Reveal wager briefly"><i data-lucide="eye"></i></button>
+                        ${isLocked ? "" : `<button class="scorecard-bonus-peek-btn" type="button" data-action="scorecard-bonus-peek" data-scorecard-bonus-peek-target="${escapeHtml(inputKey)}"${draftWager ? "" : " disabled"} aria-label="Reveal wager briefly"><i data-lucide="eye"></i></button>`}
                       </div>
                       <button class="scorecard-secondary-btn scorecard-bonus-lock-btn${isLocked ? " is-locked" : ""}" type="button" data-action="scorecard-bonus-lock" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}"${isLocked ? " disabled" : ""}>${isLocked ? '<i data-lucide="lock"></i><span>Locked</span>' : "Lock in"}</button>
                     </div>
@@ -2799,11 +2806,29 @@
           [playerName]: parsedValue
         }
       };
-      if (allDisplayLocalBonusWagersLocked(nextState)) {
-        nextState.phase = "results";
-      }
       setDisplayLocalBonusState(scorecardId, nextState);
       renderScorecards(cachedScorecards);
+      if (allDisplayLocalBonusWagersLocked(nextState)) {
+        const existingAdvanceTimer = displayScorecardBonusAdvanceTimerById.get(scorecardId);
+        if (existingAdvanceTimer) {
+          window.clearTimeout(existingAdvanceTimer);
+        }
+
+        const timerId = window.setTimeout(() => {
+          displayScorecardBonusAdvanceTimerById.delete(scorecardId);
+          const currentBonusState = getDisplayLocalBonusState(scorecardId);
+          if (!currentBonusState || currentBonusState.phase !== "entry" || !allDisplayLocalBonusWagersLocked(currentBonusState)) {
+            return;
+          }
+
+          setDisplayLocalBonusState(scorecardId, {
+            ...currentBonusState,
+            phase: "results"
+          });
+          renderScorecards(cachedScorecards);
+        }, 350);
+        displayScorecardBonusAdvanceTimerById.set(scorecardId, timerId);
+      }
       resetAutoRotate("scorecard-bonus-lock");
     }
 

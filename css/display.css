@@ -2347,13 +2347,17 @@
       font-size: clamp(2rem, 3vw, 3rem);
       font-weight: 800;
       line-height: 1;
-      transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), background-color 240ms ease;
+      display: inline-block;
+      justify-self: start;
+      transform-origin: center center;
+      will-change: transform;
+      transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease;
       border-radius: 14px;
-      padding: 6px 0;
+      padding: 6px 8px;
     }
 
     .scorecard-player-score.is-score-updating {
-      transform: scale(1.2);
+      transform: scale(1.08);
     }
 
     .scorecard-player-score.is-score-positive {
