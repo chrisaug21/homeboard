@@ -2506,6 +2506,7 @@
     .scorecard-bonus-screen,
     .scorecard-bonus-status,
     .scorecard-bonus-reveal-grid,
+    .scorecard-bonus-results-form,
     .scorecard-celebration-scores {
       display: grid;
       gap: 14px;
@@ -2576,6 +2577,17 @@
     .scorecard-bonus-reveal-value {
       font-size: clamp(1.8rem, 3vw, 2.8rem);
       font-weight: 800;
+    }
+
+    .scorecard-bonus-result-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.44);
     }
 
     .scorecard-celebration-overlay {
@@ -2715,6 +2727,11 @@
 
     @media (max-width: 720px) {
       .scorecard-bonus-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .scorecard-bonus-result-row {
         flex-direction: column;
         align-items: stretch;
       }

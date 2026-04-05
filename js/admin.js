@@ -701,14 +701,15 @@
         revealScorecardBonusWagers(revealWagersBtn.getAttribute("data-scorecard-id"));
         return;
       }
+      const cancelBonusBtn = event.target.closest("[data-action='scorecard-bonus-cancel']");
+      if (cancelBonusBtn) {
+        cancelScorecardBonusRound(cancelBonusBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
       const endGameBtn = event.target.closest("[data-action='scorecard-end-game']");
       if (endGameBtn) {
         endScorecardGame(endGameBtn.getAttribute("data-scorecard-id"));
         return;
-      }
-      const backToScorecardBtn = event.target.closest("[data-action='back-to-scorecard']");
-      if (backToScorecardBtn) {
-        openScorecardManageModal(backToScorecardBtn.getAttribute("data-scorecard-id"), adminModalContext?.filter || "month");
       }
     }
 
@@ -2572,7 +2573,7 @@
             `).join("")}
           </div>
           <div class="admin-actions admin-actions--split">
-            <button class="admin-button admin-button--secondary" type="button" data-action="back-to-scorecard" data-scorecard-id="${escapeHtml(scorecard.id)}">Back to game</button>
+            <button class="admin-button admin-button--secondary" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Back to game</button>
             <button class="admin-button admin-button--primary" type="button" data-action="scorecard-bonus-reveal" data-scorecard-id="${escapeHtml(scorecard.id)}"${allLocked ? "" : " disabled"}>Reveal wagers</button>
           </div>
         </div>
@@ -2606,7 +2607,7 @@
               </div>
             `).join("")}
             <div class="admin-actions admin-actions--split">
-              <button class="admin-button admin-button--secondary" type="button" data-action="back-to-scorecard" data-scorecard-id="${escapeHtml(scorecard.id)}">Back</button>
+              <button class="admin-button admin-button--secondary" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Back to game</button>
               <button class="admin-button admin-button--primary" type="submit">Apply results</button>
             </div>
           </div>
@@ -2638,6 +2639,7 @@
     function buildScorecardManageHTML(scorecard, filter = "month") {
       const activeSession = getAdminActiveScorecardSession(scorecard.id);
       const bonusPhase = getScorecardBonusPhase(activeSession);
+      const isBonusActive = isScorecardBonusRoundActive(activeSession);
       const history = getFilteredScorecardHistory(scorecard.id, filter);
       return `
         <div class="admin-scorecard-modal-stack">
@@ -2650,15 +2652,15 @@
           </section>
           <section class="admin-scorecard-modal-section">
             <div class="admin-scorecard-section-head">
-              <h3>${bonusPhase ? "Bonus round" : "Current game"}</h3>
+              <h3>${isBonusActive ? "Bonus round" : "Current game"}</h3>
               <div class="admin-scorecard-inline-actions">
                 ${buildScorecardUndoButtonHTML(scorecard.id, activeSession)}
-                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-reset-scores" data-scorecard-id="${escapeHtml(scorecard.id)}"${bonusPhase ? " disabled" : ""}>Reset scores</button>
-                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-end-game" data-scorecard-id="${escapeHtml(scorecard.id)}"${bonusPhase ? " disabled" : ""}>End game</button>
-                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-bonus-round" data-scorecard-id="${escapeHtml(scorecard.id)}"${bonusPhase ? " disabled" : ""}>Bonus round</button>
+                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-reset-scores" data-scorecard-id="${escapeHtml(scorecard.id)}"${isBonusActive ? " disabled" : ""}>Reset scores</button>
+                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-end-game" data-scorecard-id="${escapeHtml(scorecard.id)}"${isBonusActive ? " disabled" : ""}>End game</button>
+                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-bonus-round" data-scorecard-id="${escapeHtml(scorecard.id)}"${isBonusActive ? " disabled" : ""}>Bonus round</button>
               </div>
             </div>
-            ${!activeSession ? '<div class="admin-empty">No active game.</div>' : bonusPhase === SCORECARD_BONUS_PHASES.entry ? buildScorecardBonusEntryHtml(scorecard, activeSession) : bonusPhase ? buildScorecardBonusResultsHtml(scorecard, activeSession) : `
+            ${!activeSession ? '<div class="admin-empty">No active game.</div>' : bonusPhase === SCORECARD_BONUS_PHASES.entry ? buildScorecardBonusEntryHtml(scorecard, activeSession) : isBonusActive ? buildScorecardBonusResultsHtml(scorecard, activeSession) : `
               <div class="admin-scorecard-session-list">
                 ${buildScorecardSessionRowsHTML(scorecard, activeSession)}
               </div>
@@ -3075,6 +3077,20 @@
       }
 
       showToast("Bonus Round started.");
+    }
+
+    async function cancelScorecardBonusRound(scorecardId) {
+      const nextSession = await updateAdminActiveScorecardSession(scorecardId, {
+        wagers: null,
+        wager_results: null,
+        is_final_jeopardy: false
+      });
+      if (!nextSession) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+
+      showToast("Bonus Round canceled.");
     }
 
     async function revealScorecardBonusWagers(scorecardId) {
