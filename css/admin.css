@@ -2404,7 +2404,6 @@
     }
 
     .admin-scorecard-bonus-entry-row,
-    .admin-scorecard-bonus-player-meta,
     .admin-scorecard-bonus-entry-controls {
       display: flex;
       align-items: center;
@@ -2418,9 +2417,10 @@
     }
 
     .admin-scorecard-bonus-player-meta {
+      display: grid;
+      gap: 2px;
       min-width: 0;
       flex: 1 1 auto;
-      white-space: nowrap;
       overflow: hidden;
     }
 
@@ -2431,6 +2431,10 @@
       white-space: nowrap;
     }
 
+    .admin-scorecard-bonus-current {
+      display: block;
+    }
+
     .admin-scorecard-bonus-entry-side {
       justify-items: end;
       min-width: 0;
@@ -2438,7 +2442,7 @@
     }
 
     .admin-scorecard-bonus-input {
-      width: 104px;
+      width: 128px;
       min-width: 0;
       padding-right: 42px;
     }
@@ -2508,6 +2512,7 @@
       font-weight: 700;
       line-height: 1.2;
       text-align: right;
+      min-height: 1.05rem;
     }
 
     .admin-scorecard-bonus-cancel-btn {
@@ -2651,7 +2656,7 @@
       }
 
       .admin-scorecard-bonus-input {
-        width: 92px;
+        width: 116px;
       }
 
       .admin-scorecard-player-row,

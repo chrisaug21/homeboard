@@ -1324,6 +1324,7 @@
       const input = Array.from(track.querySelectorAll("[data-scorecard-bonus-input]")).find((element) =>
         element.getAttribute("data-scorecard-bonus-input") === key
       );
+      resetAutoRotate("scorecard-bonus-peek");
       const existingTimer = displayScorecardBonusPeekTimerByKey.get(key);
       if (existingTimer) {
         window.clearTimeout(existingTimer);
@@ -3556,6 +3557,7 @@
       track.addEventListener("input", (event) => {
         const bonusInput = event.target.closest("[data-scorecard-bonus-input]");
         if (bonusInput) {
+          resetAutoRotate("scorecard-bonus-input");
           const sanitized = sanitizeDisplayBonusWagerInputValue(bonusInput.value);
           if (bonusInput.value !== sanitized) {
             bonusInput.value = sanitized;
@@ -3602,6 +3604,8 @@
           return;
         }
 
+        resetAutoRotate("scorecard-bonus-result");
+
         const form = bonusResultInput.closest("form[data-scorecard-bonus-results]");
         if (!form?.hasAttribute("data-scorecard-bonus-editable")) {
           return;
@@ -3626,6 +3630,14 @@
           }
         });
         renderScorecards(cachedScorecards);
+      });
+      track.addEventListener("focusin", (event) => {
+        if (
+          event.target.closest("[data-scorecard-bonus-input]")
+          || event.target.closest("input[name^='result_']")
+        ) {
+          resetAutoRotate("scorecard-bonus-focus");
+        }
       });
       track.addEventListener("submit", (event) => {
         const form = event.target.closest("form[data-scorecard-bonus-results]");

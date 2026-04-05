@@ -2762,7 +2762,7 @@
                   <div class="admin-scorecard-bonus-entry-row">
                     <div class="admin-scorecard-bonus-player-meta">
                       <strong>${escapeHtml(player.name)}</strong>
-                      <span class="admin-panel-note">Current: ${escapeHtml(formatScorecardScore(session?.scores?.[player.name] || 0))}</span>
+                      <span class="admin-panel-note admin-scorecard-bonus-current">Current: ${escapeHtml(formatScorecardScore(session?.scores?.[player.name] || 0))}</span>
                     </div>
                     <div class="admin-scorecard-bonus-entry-side">
                       <div class="admin-scorecard-bonus-entry-controls">

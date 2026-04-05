@@ -2643,6 +2643,7 @@
       font-weight: 700;
       line-height: 1.2;
       text-align: right;
+      min-height: 1.05rem;
     }
 
     .scorecard-bonus-reveal-grid {
