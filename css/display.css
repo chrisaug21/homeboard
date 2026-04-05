@@ -2570,7 +2570,7 @@
 
     .scorecard-bonus-input:not(.is-locked) {
       border-color: rgba(180, 83, 9, 0.34);
-      background: rgba(255, 255, 255, 0.62);
+      background: var(--panel-strong);
     }
 
     .scorecard-bonus-input.is-locked {
@@ -2653,7 +2653,7 @@
     .scorecard-bonus-reveal-card {
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.44);
+      background: var(--panel);
       padding: 18px;
       display: grid;
       gap: 8px;
@@ -2710,7 +2710,7 @@
       padding: 12px 14px;
       border-radius: var(--radius-sm);
       border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.44);
+      background: var(--panel);
     }
 
     .scorecard-celebration-overlay {
