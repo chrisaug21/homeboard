@@ -46,8 +46,8 @@ netlify.toml        — build config, env var injection via sed
 - `meal_plan` — `user_id` nullable: null = shared/household, uuid = personal
 - `meal_plan_notes` — one note per household per week, keyed by `household_id` + `week_start`
 - `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` support countdown photos and delayed visibility
-- `scorecards` — scorecard definitions with `name`, `increments` (JSONB number array), `players` (JSONB `{name,color}` array), `show_history`, `allow_negative`, and soft delete via `archived_at`
-- `scorecard_sessions` — per-game scorecard sessions with `started_at`, `ended_at`, `scores` JSONB keyed by stable player `id`, optional `wagers`, optional `wager_results`, `score_events` JSONB audit entries, optional `winner`, and `is_final_jeopardy`
+- `scorecards` — scorecard definitions with `name`, `increments` (JSONB number array), `players` (JSONB `{id,name,color}` array with stable player identifiers), `show_history`, `allow_negative`, and soft delete via `archived_at`
+- `scorecard_sessions` — per-game scorecard sessions with `started_at`, `ended_at`, `scores`, `wagers`, and `wager_results` JSONB objects keyed by `players[].id`, plus `score_events` JSONB audit entries, optional `winner`, and `is_final_jeopardy`
 - `rsvps` — pre-existing wedding table, do not modify schema
 - `invited_parties` — wedding invite list with `name`, `invited_count`, nullable `rsvp_id`, and `created_at`; this is the source of truth for matched vs pending invite parties
 
@@ -89,7 +89,7 @@ netlify.toml        — build config, env var injection via sed
 - `display_settings.members` drives the todo assignee picker and is managed via the Settings screen. **Planned migration**: move to `users` table when multi-user auth is implemented.
 - `upcoming_calendar` and `monthly_calendar` are separate screens across display rotation and admin settings. Never write the legacy `calendar` key back to Supabase.
 - The "Default calendar view" setting has been removed. Whichever calendar screen appears first in `screen_order` renders first.
-- Scorecards are toggled by the shared `scorecards` active-screen key. In the Settings UI, Scorecards appears as one screen-order row; saving expands that slot into the underlying `scorecard_[id]` entries used by display rotation.
+- Scorecards are toggled by the shared `scorecards` active-screen key. In the Settings UI, Scorecards appears as one screen-order row; saving expands that slot into the underlying `scorecard_<id>` entries used by display rotation.
 - `display_settings.upcoming_days` drives the `UPCOMING_DAYS` variable in `display.js`. Update both together if changing upcoming-view logic.
 - Google Calendar currently reads a single calendar ID (`households.google_cal_id`). **Future enhancement**: support toggling multiple calendars from the Integrations settings.
 - **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.
@@ -141,8 +141,8 @@ netlify.toml        — build config, env var injection via sed
 - The admin to-do screen must not fail just because household settings fail; render the todo data first, then re-render for member colors if `display_settings.members` arrives afterward
 - Active incomplete todos with `due_date < today` should show the overdue treatment on both display and admin: red left border, subtle red card tint, and red overdue date-pill text
 - Todo completion celebration animations are display-view only and must fully clean up any temporary DOM they create
-- Display celebrations load locally bundled `canvas-confetti@1.9.2` from `js/vendor/` plus `gsap@3.12.5`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
-- Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if a CDN script fails to load
+- Display celebrations load local bundled copies from `js/vendor/confetti.min.js` and `js/vendor/gsap.min.js`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
+- Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if those globals are absent
 - Celebration particle colors should resolve the active scheme accent at runtime from `getComputedStyle(...).getPropertyValue('--amber')` and mix it with white, bright gold, and fresh green so effects stay scheme-aware without hardcoding one palette
 - Display todo completion timing should be: checkmark immediately, item fade/removal starts roughly 10-15% into the celebration with a quick ~200 ms opacity transition, and the celebration continues independently as a send-off
 - Checking off a display todo must reset the auto-rotation timer using the same `resetAutoRotate()` path as other display interactions so the screen does not rotate away mid-celebration

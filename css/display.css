@@ -2569,7 +2569,7 @@
     }
 
     .scorecard-bonus-input:not(.is-locked) {
-      border-color: rgba(180, 83, 9, 0.34);
+      border-color: var(--color-accent);
       background: var(--panel-strong);
     }
 

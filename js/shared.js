@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.6.15";
+    const VERSION = "1.6.16";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -400,6 +400,15 @@
       return normalizeScorecardPlayers(players).find((player) => player.name === safeName) || null;
     }
 
+    function getScorecardPlayerById(players, playerId) {
+      const safeId = String(playerId || "").trim();
+      if (!safeId) {
+        return null;
+      }
+
+      return normalizeScorecardPlayers(players).find((player) => player.id === safeId) || null;
+    }
+
     function getScorecardPlayerId(players, playerName) {
       return getScorecardPlayerByName(players, playerName)?.id || "";
     }
@@ -474,17 +483,21 @@
     }
 
     function normalizeScoreEvents(events, players) {
-      const validPlayers = new Set(normalizeScorecardPlayers(players).map((player) => player.name));
+      const playerList = normalizeScorecardPlayers(players);
+      const validPlayers = new Set(playerList.map((player) => player.id));
       return Array.isArray(events) ? events
         .map((event) => {
-          const player = String(event?.player || "").trim();
-          if (!player || (validPlayers.size && !validPlayers.has(player))) {
+          const playerId = String(event?.playerId || event?.player || "").trim();
+          const normalizedPlayerId = validPlayers.has(playerId)
+            ? playerId
+            : getScorecardPlayerByName(playerList, playerId)?.id || "";
+          if (!normalizedPlayerId || (validPlayers.size && !validPlayers.has(normalizedPlayerId))) {
             return null;
           }
 
           const amount = Number(event?.amount);
           return {
-            player,
+            playerId: normalizedPlayerId,
             amount: Number.isFinite(amount) ? amount : 0,
             type: normalizeScoreEventType(event?.type),
             timestamp: String(event?.timestamp || "").trim() || new Date().toISOString()
@@ -493,9 +506,9 @@
         .filter(Boolean) : [];
     }
 
-    function buildScoreEvent(player, amount, type, timestamp = new Date().toISOString()) {
+    function buildScoreEvent(playerId, amount, type, timestamp = new Date().toISOString()) {
       return {
-        player: String(player || "").trim(),
+        playerId: String(playerId || "").trim(),
         amount: Number(amount) || 0,
         type: normalizeScoreEventType(type),
         timestamp: String(timestamp || "").trim() || new Date().toISOString()

@@ -2726,7 +2726,7 @@
 
     function buildScorecardLogModalHtml(scorecard, session, filter = "month") {
       const events = (session?.scoreEvents || []).slice().reverse();
-      const playerColorByName = new Map((scorecard?.players || []).map((player) => [player.name, player.color]));
+      const playerById = new Map((scorecard?.players || []).map((player) => [player.id, player]));
 
       return `
         <div class="admin-scorecard-modal-stack">
@@ -2739,8 +2739,8 @@
               ${events.length ? events.map((event) => `
                 <article class="admin-scorecard-log-card">
                   <div class="admin-scorecard-log-head">
-                    <strong class="admin-scorecard-log-player" style="color:${escapeHtml(playerColorByName.get(event.player) || "var(--ink)")}">
-                      ${escapeHtml(event.player)}
+                    <strong class="admin-scorecard-log-player" style="color:${escapeHtml(playerById.get(event.playerId)?.color || "var(--ink)")}">
+                      ${escapeHtml(playerById.get(event.playerId)?.name || "Unknown player")}
                     </strong>
                     <span class="admin-panel-note">${escapeHtml(formatScoreEventTime(event.timestamp))}</span>
                   </div>
@@ -3359,7 +3359,7 @@
 
       adminScorecardWritePending = true;
       const scoreEvents = appendScoreEvents(session.scoreEvents, [
-        buildScoreEvent(playerName, Number(increment), SCORE_EVENT_TYPES.increment)
+        buildScoreEvent(playerId, Number(increment), SCORE_EVENT_TYPES.increment)
       ], scorecard.players);
       const { data, error } = await client
         .from("scorecard_sessions")
@@ -3656,7 +3656,7 @@
       const scoreEvents = appendScoreEvents(
         session.scoreEvents,
         historyChanges.map((change) => buildScoreEvent(
-          change.playerName,
+          getScorecardPlayerId(scorecard.players, change.playerName),
           change.increment,
           SCORE_EVENT_TYPES.bonusRound
         )),
@@ -3721,7 +3721,7 @@
         score_events: appendScoreEvents(
           session.scoreEvents,
           action.changes.map((change) => buildScoreEvent(
-            change.playerName,
+            getScorecardPlayerId(scorecard.players, change.playerName),
             change.previousScore - change.nextScore,
             SCORE_EVENT_TYPES.undo
           )),

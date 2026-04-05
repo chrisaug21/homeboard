@@ -2802,7 +2802,7 @@
       }
 
       const scoreEvents = appendScoreEvents(session.scoreEvents, [
-        buildScoreEvent(playerName, Number(increment), SCORE_EVENT_TYPES.increment)
+        buildScoreEvent(playerId, Number(increment), SCORE_EVENT_TYPES.increment)
       ], scorecard.players);
       const { data, error } = await client
         .from("scorecard_sessions")
@@ -3092,7 +3092,7 @@
       const scoreEvents = appendScoreEvents(
         session.scoreEvents,
         historyChanges.map((change) => buildScoreEvent(
-          change.playerName,
+          getScorecardPlayerId(scorecard.players, change.playerName),
           change.increment,
           SCORE_EVENT_TYPES.bonusRound
         )),
@@ -3105,6 +3105,8 @@
           wagers: buildScorecardBonusWagers(scorecard.players, localBonusState.wagers, SCORECARD_BONUS_PHASES.complete),
           wager_results: buildScorecardBonusResults(scorecard.players, wagerResults, SCORECARD_BONUS_PHASES.complete),
           score_events: scoreEvents,
+          ended_at: new Date().toISOString(),
+          winner: getScorecardWinner(nextScores, scorecard.players),
           is_final_jeopardy: false
         })
         .eq("id", session.id)
@@ -3158,7 +3160,7 @@
         score_events: appendScoreEvents(
           session.scoreEvents,
           action.changes.map((change) => buildScoreEvent(
-            change.playerName,
+            getScorecardPlayerId(scorecard?.players || [], change.playerName),
             change.previousScore - change.nextScore,
             SCORE_EVENT_TYPES.undo
           )),

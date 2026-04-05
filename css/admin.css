@@ -2448,8 +2448,9 @@
     }
 
     .admin-scorecard-bonus-input:not(.is-locked) {
-      border-color: rgba(180, 83, 9, 0.34);
+      border-color: var(--color-accent);
       background: var(--panel-strong);
+      color: var(--ink);
     }
 
     .admin-scorecard-bonus-input.is-locked {
@@ -2493,7 +2494,7 @@
       align-items: center;
       justify-content: center;
       border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.72);
+      background: var(--panel);
       color: var(--ink);
       flex: 0 0 auto;
     }
@@ -2669,6 +2670,14 @@
       flex-direction: row;
     }
 
+    .admin-actions--split.admin-actions--stacked {
+      flex-direction: column;
+    }
+
+    .admin-actions--split.admin-actions--stacked > * {
+      width: 100%;
+    }
+
     .admin-scorecard-final-row .admin-input {
       max-width: 110px;
     }
@@ -2720,7 +2729,7 @@
         align-items: stretch;
       }
 
-      .admin-actions--split {
+      .admin-actions--split.admin-actions--stacked {
         flex-direction: column;
       }
 
