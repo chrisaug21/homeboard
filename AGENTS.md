@@ -38,7 +38,7 @@ netlify.toml        — build + env var injection via sed
 | `meal_plan_notes` | One note per household per week. Keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` = Lucide icon name string; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` drive countdown photos and delayed visibility |
 | `scorecards` | Scoreboard definitions. Columns: `id`, `household_id`, `name`, `increments` (JSONB number array), `players` (JSONB `{name,color}` array), `show_history`, `allow_negative`, `created_at`, `archived_at` |
-| `scorecard_sessions` | Scorecard game sessions. Columns: `id`, `scorecard_id`, `household_id`, `started_at`, `ended_at`, `scores` (JSONB `{player_name: score}`), nullable `wagers`, nullable `wager_results`, `score_events` (JSONB audit log array), nullable `winner`, `is_final_jeopardy`, `created_at` |
+| `scorecard_sessions` | Scorecard game sessions. Columns: `id`, `scorecard_id`, `household_id`, `started_at`, `ended_at`, `scores` (JSONB `{player_id: score}`), nullable `wagers`, nullable `wager_results`, `score_events` (JSONB audit log array), nullable `winner`, `is_final_jeopardy`, `created_at` |
 | `rsvps` | Wedding table — **do not modify schema** |
 | `invited_parties` | Wedding invite list. `rsvp_id` null = pending; set = matched to an RSVP row |
 
@@ -142,8 +142,10 @@ netlify.toml        — build + env var injection via sed
 - End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view
 - Scorecard undo is an in-memory action stack scoped to the active session only; it does not persist through reloads and it resets when a new game starts
 - Scorecard audit history is persisted separately in `scorecard_sessions.score_events` as an append-only JSONB array; each score change writes per-player events with `player`, signed `amount`, `type`, and ISO `timestamp`
+- Scorecard player scores and bonus wager maps are keyed internally by stable player `id`, not player name; keep player names/colors only for display
 - End Game closes the current scorecard session immediately, shows the winner state, and waits for an explicit `New game` action before creating the next session; both the display winner overlay and admin winner modal also offer `Archive scorecard` to soft-archive that scorecard from the winner screen
 - Bonus Round is separate from End Game. It is a fully local in-memory flow on whichever surface starts it: masked wager entry, correct/incorrect selection, reveal, then one final score write when `Apply results` is tapped
+- Bonus Round wager state is also persisted to `scorecard_sessions` (`wagers`, `wager_results`, `is_final_jeopardy`) so refreshes can recover the active round state
 - Bonus Round does not sync or mirror mid-flow between admin and display. The other surface keeps its normal scorecard view until it refreshes from the final score write
 - Bonus Round wagers must be between `0` and that player's current score
 - New scorecard UI should use `--color-accent` and `--color-accent-subtle` for active/interactive states per `TOKENS.md`; do not use `--amber` / `--amber-soft` in new scorecard components

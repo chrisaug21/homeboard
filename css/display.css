@@ -2445,9 +2445,9 @@
 
     .scorecard-secondary-btn[data-action="scorecard-bonus-reveal"]:disabled {
       opacity: 1;
-      background: #e7e5e4;
-      border-color: #d6d3d1;
-      color: #78716c;
+      background: var(--color-accent-subtle);
+      border-color: var(--color-accent);
+      color: var(--color-accent);
       cursor: default;
       pointer-events: none;
       box-shadow: none;

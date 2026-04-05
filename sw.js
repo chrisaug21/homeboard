@@ -1,11 +1,12 @@
-const CACHE_NAME = "homeboard-v1.6.11";
+const CACHE_NAME = "homeboard-v1.6.12";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
   "./manifest.json",
   "./manifest-admin.json",
   "./homeboard_logo.svg",
-  "./js/vendor/canvas-confetti.browser.min.js",
+  "./js/vendor/confetti.min.js",
+  "./js/vendor/gsap.min.js",
   "./sw.js"
 ];
 

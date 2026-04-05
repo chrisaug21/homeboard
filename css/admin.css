@@ -2630,7 +2630,7 @@
       width: 100%;
       padding: 8px 12px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.72);
+      background: var(--panel);
       border: 1px solid var(--border);
       font-size: 0.82rem;
       font-weight: 700;
@@ -2686,9 +2686,10 @@
         width: 116px;
       }
 
-      .admin-scorecard-player-row,
-      .admin-scorecard-final-row {
-        grid-template-columns: auto minmax(0, 1fr) auto;
+      .admin-scorecard-final-row,
+      .admin-scorecard-session-row {
+        flex-direction: column;
+        align-items: stretch;
       }
 
       .admin-scorecard-inline-actions {
@@ -2714,11 +2715,6 @@
       .admin-scorecard-adjust-grid-buttons {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
-
-      .admin-scorecard-final-row {
-        align-items: stretch;
-      }
-
       .admin-scorecard-history-head {
         flex-direction: column;
         align-items: stretch;

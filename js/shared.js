@@ -28,12 +28,12 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.6.11";
+    const VERSION = "1.6.12";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
     const LAST_SYNCED_KEY = "homeboard_last_synced";
-    const DISPLAY_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards"];
+    const DISPLAY_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards", "rsvp"];
 
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
@@ -326,8 +326,11 @@
       const settings = displaySettings && typeof displaySettings === "object"
         ? { ...displaySettings }
         : {};
+      const configurableDisplayScreenKeys = DISPLAY_SCREEN_KEYS.filter((key) => key !== "rsvp");
 
-      settings.active_screens = normalizeDisplayScreenList(settings.active_screens);
+      settings.active_screens = normalizeDisplayScreenList(settings.active_screens, configurableDisplayScreenKeys, {
+        allowScorecardScreens: true
+      });
       settings.screen_order = normalizeDisplayScreenList(settings.screen_order, DISPLAY_SCREEN_KEYS, {
         allowScorecardScreens: true
       });
@@ -343,11 +346,20 @@
       }
 
       return players
-        .map((player) => ({
-          name: String(player?.name || "").trim(),
-          color: String(player?.color || "").trim()
-        }))
-        .filter((player) => player.name);
+        .map((player, index) => {
+          const name = String(player?.name || "").trim();
+          const fallbackIdBase = name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "") || `player-${index + 1}`;
+          const id = String(player?.id || "").trim() || `player-${index + 1}-${fallbackIdBase}`;
+          return {
+            id,
+            name,
+            color: String(player?.color || "").trim()
+          };
+        })
+        .filter((player) => player.name && player.id);
     }
 
     function normalizeScorecardIncrements(increments) {
@@ -362,7 +374,7 @@
 
     function createScorecardZeroScores(players) {
       return Object.fromEntries(
-        normalizeScorecardPlayers(players).map((player) => [player.name, 0])
+        normalizeScorecardPlayers(players).map((player) => [player.id, 0])
       );
     }
 
@@ -372,11 +384,35 @@
       const normalized = {};
 
       playerList.forEach((player) => {
-        const rawValue = Number(source[player.name]);
-        normalized[player.name] = Number.isFinite(rawValue) ? rawValue : 0;
+        const rawValue = Number(source[player.id] ?? source[player.name]);
+        normalized[player.id] = Number.isFinite(rawValue) ? rawValue : 0;
       });
 
       return normalized;
+    }
+
+    function getScorecardPlayerByName(players, playerName) {
+      const safeName = String(playerName || "").trim();
+      if (!safeName) {
+        return null;
+      }
+
+      return normalizeScorecardPlayers(players).find((player) => player.name === safeName) || null;
+    }
+
+    function getScorecardPlayerId(players, playerName) {
+      return getScorecardPlayerByName(players, playerName)?.id || "";
+    }
+
+    function getScorecardPlayerScore(scores, playerOrName, players = []) {
+      const source = scores && typeof scores === "object" ? scores : {};
+      const player = typeof playerOrName === "object" && playerOrName
+        ? normalizeScorecardPlayers(players).find((entry) => entry.id === playerOrName.id || entry.name === playerOrName.name) || null
+        : getScorecardPlayerByName(players, playerOrName);
+      const rawValue = player
+        ? Number(source[player.id] ?? source[player.name])
+        : Number(source[String(playerOrName || "").trim()]);
+      return Number.isFinite(rawValue) ? rawValue : 0;
     }
 
     function applyScorecardIncrement(currentScore, increment, allowNegative) {
@@ -412,9 +448,9 @@
       const safeSource = source && typeof source === "object" ? source : {};
       const normalized = {};
       normalizeScorecardPlayers(players).forEach((player) => {
-        const rawValue = Number(safeSource[player.name]);
+        const rawValue = Number(safeSource[player.id] ?? safeSource[player.name]);
         if (Number.isFinite(rawValue)) {
-          normalized[player.name] = Math.max(0, rawValue);
+          normalized[player.id] = Math.max(0, rawValue);
         }
       });
       return normalized;
@@ -424,9 +460,9 @@
       const safeSource = source && typeof source === "object" ? source : {};
       const normalized = {};
       normalizeScorecardPlayers(players).forEach((player) => {
-        const value = String(safeSource[player.name] || "").trim().toLowerCase();
+        const value = String(safeSource[player.id] ?? safeSource[player.name] ?? "").trim().toLowerCase();
         if (value === "correct" || value === "incorrect") {
-          normalized[player.name] = value;
+          normalized[player.id] = value;
         }
       });
       return normalized;
@@ -489,7 +525,9 @@
 
     function getScorecardBonusPhase(session) {
       const resultPhase = normalizeScorecardBonusPhase(session?.wagerResults?.[SCORECARD_BONUS_META_KEY]);
-      if (resultPhase === SCORECARD_BONUS_PHASES.results || resultPhase === SCORECARD_BONUS_PHASES.complete) {
+      if (resultPhase === SCORECARD_BONUS_PHASES.reveal
+        || resultPhase === SCORECARD_BONUS_PHASES.results
+        || resultPhase === SCORECARD_BONUS_PHASES.complete) {
         return resultPhase;
       }
 
@@ -591,17 +629,24 @@
       scorecardPendingWinnerSessionByScorecardId.delete(safeScorecardId);
     }
 
-    function getScorecardWinner(scores) {
-      const entries = Object.entries(scores && typeof scores === "object" ? scores : {});
+    function getScorecardWinner(scores, players = []) {
+      const playerList = normalizeScorecardPlayers(players);
+      const source = scores && typeof scores === "object" ? scores : {};
+      const entries = playerList.length
+        ? playerList.map((player) => ({
+            id: player.id,
+            name: player.name,
+            score: getScorecardPlayerScore(source, player, playerList)
+          }))
+        : Object.entries(source).map(([name, score]) => ({
+            name,
+            score: Number.isFinite(Number(score)) ? Number(score) : 0
+          }));
       if (!entries.length) {
         return null;
       }
 
       const sorted = entries
-        .map(([name, score]) => ({
-          name,
-          score: Number.isFinite(Number(score)) ? Number(score) : 0
-        }))
         .sort((a, b) => {
           if (b.score !== a.score) {
             return b.score - a.score;
@@ -617,12 +662,18 @@
       return leaders.length === 1 ? leaders[0].name : leaders.map((entry) => entry.name).join(", ");
     }
 
-    function getScorecardLeaders(scores) {
-      const entries = Object.entries(scores && typeof scores === "object" ? scores : {})
-        .map(([name, score]) => ({
-          name: String(name || "").trim(),
-          score: Number.isFinite(Number(score)) ? Number(score) : 0
-        }))
+    function getScorecardLeaders(scores, players = []) {
+      const playerList = normalizeScorecardPlayers(players);
+      const source = scores && typeof scores === "object" ? scores : {};
+      const entries = (playerList.length
+        ? playerList.map((player) => ({
+            name: player.name,
+            score: getScorecardPlayerScore(source, player, playerList)
+          }))
+        : Object.entries(source).map(([name, score]) => ({
+            name: String(name || "").trim(),
+            score: Number.isFinite(Number(score)) ? Number(score) : 0
+          })))
         .filter((entry) => entry.name);
       if (!entries.length) {
         return [];
@@ -653,6 +704,8 @@
     function mapScorecardSessionRow(row, scorecard) {
       const players = scorecard?.players || [];
       const scores = normalizeScorecardScores(row?.scores, players);
+      const wagerPhase = normalizeScorecardBonusPhase(row?.wagers?.[SCORECARD_BONUS_META_KEY]) || SCORECARD_BONUS_PHASES.entry;
+      const resultPhase = normalizeScorecardBonusPhase(row?.wager_results?.[SCORECARD_BONUS_META_KEY]) || SCORECARD_BONUS_PHASES.results;
       return {
         id: row?.id || "",
         scorecardId: row?.scorecard_id || "",
@@ -660,10 +713,14 @@
         startedAt: row?.started_at || null,
         endedAt: row?.ended_at || null,
         scores,
-        wagers: row?.wagers && typeof row.wagers === "object" ? row.wagers : null,
-        wagerResults: row?.wager_results && typeof row.wager_results === "object" ? row.wager_results : null,
+        wagers: row?.wagers && typeof row.wagers === "object"
+          ? buildScorecardBonusWagers(players, row.wagers, wagerPhase)
+          : null,
+        wagerResults: row?.wager_results && typeof row.wager_results === "object"
+          ? buildScorecardBonusResults(players, row.wager_results, resultPhase)
+          : null,
         scoreEvents: normalizeScoreEvents(row?.score_events, players),
-        winner: String(row?.winner || "").trim() || getScorecardWinner(scores),
+        winner: String(row?.winner || "").trim() || getScorecardWinner(scores, players),
         isFinalJeopardy: row?.is_final_jeopardy === true,
         createdAt: row?.created_at || null
       };
