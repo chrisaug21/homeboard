@@ -68,6 +68,7 @@
         initialLoadComplete = true;
         localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
         updateLastSyncedLabel();
+        renderProgress();
         resetAutoRotate();
       }
     }
@@ -290,6 +291,15 @@
         !screen.classList.contains("screen--disabled")
         && !screen.classList.contains("screen--empty-hidden")
       );
+    }
+
+    function getOrderKeyForScreen(screen) {
+      if (!screen) {
+        return "";
+      }
+
+      const explicitKey = String(screen.dataset.screenKey || "").trim();
+      return explicitKey || getScreenKeyForElement(screen);
     }
 
     function getScreenKeyForElement(screen) {
@@ -2163,6 +2173,8 @@
       const orderedScorecards = getScorecardOrder(displaySettings.screen_order, scorecards, displaySettings.active_screens);
       if (!orderedScorecards.length) {
         syncScorecardCelebrationOverlay();
+        const screenOrder = Array.isArray(displaySettings.screen_order) ? displaySettings.screen_order : DISPLAY_SCREEN_KEYS;
+        applyScreenOrder(screenOrder);
         reconcileRotationState();
         return;
       }
@@ -2330,6 +2342,9 @@
         firstCountdownScreen.innerHTML = "";
         firstCountdownScreen.classList.add("screen--empty-hidden");
         firstCountdownScreen.setAttribute("aria-hidden", "true");
+        const displaySettings = normalizeDisplaySettings(cachedHouseholdConfig?.display_settings);
+        const screenOrder = Array.isArray(displaySettings.screen_order) ? displaySettings.screen_order : DISPLAY_SCREEN_KEYS;
+        applyScreenOrder(screenOrder);
         reconcileRotationState();
         return;
       }
@@ -2386,6 +2401,9 @@
         lastCountdown.insertAdjacentElement("afterend", section);
       });
 
+      const displaySettings = normalizeDisplaySettings(cachedHouseholdConfig?.display_settings);
+      const screenOrder = Array.isArray(displaySettings.screen_order) ? displaySettings.screen_order : DISPLAY_SCREEN_KEYS;
+      applyScreenOrder(screenOrder);
       reconcileRotationState();
     }
 
@@ -2621,11 +2639,24 @@
     }
 
     function renderProgress() {
+      if (!initialLoadComplete || !cachedHouseholdConfig) {
+        displayNav.innerHTML = "";
+        displayNav.hidden = true;
+        return;
+      }
+
       const visibleScreens = getVisibleScreens();
+      if (!visibleScreens.length) {
+        displayNav.innerHTML = "";
+        displayNav.hidden = true;
+        return;
+      }
+
       const activeScreenKey = getScreenKeyForElement(visibleScreens[currentIndex]);
       displayNav.innerHTML = getDisplayNavItems().map((item) =>
         buildDisplayNavButtonMarkup(item, item.key === activeScreenKey)
       ).join("");
+      displayNav.hidden = false;
       refreshIcons();
     }
 
@@ -2702,21 +2733,45 @@
     }
 
     function applyScreenOrder(screenOrder) {
-      const rsvpScreen = track.querySelector(".rsvp-screen");
-      const anchor = rsvpScreen || null;
-      for (const screenName of screenOrder) {
-        if (isScorecardScreenKey(screenName)) {
-          const scorecardScreen = track.querySelector(`.scorecard-screen[data-screen-key="${screenName}"]`);
-          if (scorecardScreen && scorecardScreen.parentElement === track) {
-            track.insertBefore(scorecardScreen, anchor);
+      const orderedKeys = Array.isArray(screenOrder) ? screenOrder : [];
+      const currentScreenKey = getOrderKeyForScreen(getVisibleScreens()[currentIndex]);
+      const allScreens = Array.from(track.children);
+      const placed = new Set();
+      const nextOrder = [];
+
+      orderedKeys.forEach((screenKey) => {
+        if (isScorecardScreenKey(screenKey)) {
+          const scorecardScreen = allScreens.find((screen) => getOrderKeyForScreen(screen) === screenKey);
+          if (scorecardScreen && !placed.has(scorecardScreen)) {
+            nextOrder.push(scorecardScreen);
+            placed.add(scorecardScreen);
           }
-          continue;
+          return;
         }
-        getRegisteredScreens(screenName).forEach((screen) => {
-          if (screen.parentElement === track) {
-            track.insertBefore(screen, anchor);
+
+        allScreens.forEach((screen) => {
+          if (placed.has(screen) || getScreenKeyForElement(screen) !== screenKey) {
+            return;
           }
+          nextOrder.push(screen);
+          placed.add(screen);
         });
+      });
+
+      allScreens.forEach((screen) => {
+        if (!placed.has(screen)) {
+          nextOrder.push(screen);
+        }
+      });
+
+      nextOrder.forEach((screen) => track.appendChild(screen));
+
+      if (currentScreenKey) {
+        const visibleScreens = getVisibleScreens();
+        const nextIndex = visibleScreens.findIndex((screen) => getOrderKeyForScreen(screen) === currentScreenKey);
+        if (nextIndex >= 0) {
+          currentIndex = nextIndex;
+        }
       }
     }
 
