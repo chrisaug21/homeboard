@@ -2567,6 +2567,11 @@
       font-weight: 700;
     }
 
+    .admin-scorecard-winner-panel + .admin-actions--split,
+    .admin-scorecard-modal-stack > .admin-actions--split {
+      flex-direction: row;
+    }
+
     .admin-scorecard-bonus-reveal-grid {
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
@@ -2724,6 +2729,10 @@
       }
 
       form[data-modal-form="scorecard-bonus-results"] .admin-actions--split {
+        flex-direction: row;
+      }
+
+      .admin-scorecard-modal-stack > .admin-actions--split {
         flex-direction: row;
       }
     }

@@ -2214,7 +2214,7 @@
       overlay.dataset.scorecardId = scorecard.id;
       overlay.style.setProperty("--scorecard-celebration-accent", winnerSummary.accentColor);
       titleEl.textContent = winnerSummary.heroLabel;
-      iconEl.innerHTML = winnerSummary.isTie ? '<span class="scorecard-celebration-emoji">🤝</span>' : '<i data-lucide="trophy"></i>';
+      iconEl.innerHTML = '<i data-lucide="trophy"></i>';
       archiveButtonEl.textContent = displayScorecardArchiveConfirmId === scorecard.id ? "Confirm archive" : "Archive scorecard";
       scoresEl.innerHTML = scorecard.players.map((player) => `
         <div class="scorecard-celebration-score-row${highlightedLeaders.has(player.name) ? " is-winner" : ""}">
