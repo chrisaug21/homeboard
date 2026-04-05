@@ -2472,19 +2472,12 @@
 
       const { data, error } = await client
         .from("scorecard_sessions")
-        .upsert(payload, {
-          onConflict: "scorecard_id",
-          ignoreDuplicates: true
-        })
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at");
+        .insert(payload)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
+        .single();
 
-      if (error) {
-        return null;
-      }
-
-      const insertedRow = Array.isArray(data) ? data[0] : data;
-      if (insertedRow) {
-        return mapScorecardSessionRow(insertedRow, scorecard);
+      if (!error && data) {
+        return mapScorecardSessionRow(data, scorecard);
       }
 
       const { data: existingRow, error: existingError } = await client
@@ -3284,9 +3277,14 @@
       if (!scorecardId) {
         const scorecard = mapScorecardRow(savedRow);
         const session = await createFreshScorecardSession(scorecard);
-        if (session) {
-          adminScorecardSessionsById.set(scorecard.id, [session]);
+        if (!session) {
+          closeAdminModal();
+          await loadAdminScorecards();
+          showToast("Scorecard saved, but the first game could not start. Please try again.");
+          return;
         }
+
+        adminScorecardSessionsById.set(scorecard.id, [session]);
       }
 
       closeAdminModal();
