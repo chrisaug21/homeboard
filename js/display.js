@@ -1227,12 +1227,20 @@
     }
 
     function getPendingWinnerScorecardSession(scorecardId) {
-      const pendingSessionId = getScorecardPendingWinnerSessionId(scorecardId);
-      if (!pendingSessionId || getActiveScorecardSession(scorecardId)) {
+      if (getActiveScorecardSession(scorecardId)) {
         return null;
       }
 
-      return getScorecardSessions(scorecardId).find((session) => session.id === pendingSessionId && session.endedAt) || null;
+      const sessions = getScorecardSessions(scorecardId);
+      const pendingSessionId = getScorecardPendingWinnerSessionId(scorecardId);
+      if (pendingSessionId) {
+        const pendingSession = sessions.find((session) => session.id === pendingSessionId && session.endedAt);
+        if (pendingSession) {
+          return pendingSession;
+        }
+      }
+
+      return sessions.find((session) => session.endedAt) || null;
     }
 
     function clearDisplayScorecardArchiveConfirm() {
@@ -2207,6 +2215,7 @@
       const { scorecard, session } = pending;
       const winnerSummary = getScorecardWinnerSummary(scorecard, session);
       const highlightedLeaders = new Set(winnerSummary.leaders);
+      const shouldCelebrate = getScorecardPendingWinnerSessionId(scorecard.id) === session.id;
       overlay.hidden = false;
       window.clearTimeout(autoRotateId);
       autoRotateId = null;
@@ -2226,7 +2235,11 @@
       if (overlay.dataset.sessionId !== session.id) {
         overlay.dataset.sessionId = session.id;
         clearDisplayScorecardArchiveConfirm();
-        startScorecardCelebrationEffects();
+        if (shouldCelebrate) {
+          startScorecardCelebrationEffects();
+        } else {
+          stopScorecardCelebrationEffects();
+        }
       }
 
       refreshIcons();

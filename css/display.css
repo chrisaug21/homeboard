@@ -2737,6 +2737,7 @@
     }
 
     .scorecard-celebration-card {
+      --scorecard-celebration-grid-gap: 28px;
       position: relative;
       z-index: 1;
       width: min(100%, 1040px);
@@ -2752,8 +2753,8 @@
 
     .scorecard-celebration-layout {
       display: grid;
-      grid-template-columns: minmax(0, 0.47fr) minmax(0, 0.53fr);
-      gap: 28px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--scorecard-celebration-grid-gap);
       align-items: stretch;
     }
 
@@ -2824,6 +2825,7 @@
 
     .scorecard-celebration-actions {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--scorecard-celebration-grid-gap);
     }
 
     .scorecard-celebration-button {
