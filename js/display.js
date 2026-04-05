@@ -25,6 +25,7 @@
     let cachedWeddingSnapshot = null;
     let cachedScorecards = [];
     let cachedScorecardSessionsById = new Map();
+    let displayScorecardBonusStateById = new Map();
     let scorecardSelectionById = new Map();
     let celebrationBag = [];
     let scorecardCelebrationRunId = 0;
@@ -1230,6 +1231,63 @@
       return getScorecardSessions(scorecardId).find((session) => session.id === pendingSessionId && session.endedAt) || null;
     }
 
+    function getDisplayLocalBonusState(scorecardId) {
+      const state = displayScorecardBonusStateById.get(scorecardId);
+      if (!state) {
+        return null;
+      }
+
+      const activeSession = getActiveScorecardSession(scorecardId);
+      if (!activeSession || activeSession.id !== state.sessionId) {
+        displayScorecardBonusStateById.delete(scorecardId);
+        return null;
+      }
+
+      return state;
+    }
+
+    function setDisplayLocalBonusState(scorecardId, nextState) {
+      if (!scorecardId) {
+        return;
+      }
+
+      if (!nextState) {
+        displayScorecardBonusStateById.delete(scorecardId);
+        return;
+      }
+
+      displayScorecardBonusStateById.set(scorecardId, nextState);
+    }
+
+    function createDisplayLocalBonusState(sessionId, players) {
+      const playerNames = normalizeScorecardPlayers(players).map((player) => player.name);
+      return {
+        sessionId,
+        phase: "entry",
+        wagers: {},
+        results: {},
+        revealed: false,
+        playerNames
+      };
+    }
+
+    function allDisplayLocalBonusWagersLocked(state) {
+      return !!state && Array.isArray(state.playerNames) && state.playerNames.length > 0
+        && state.playerNames.every((playerName) => Number.isFinite(Number(state.wagers[playerName])));
+    }
+
+    function allDisplayLocalBonusResultsSelected(state) {
+      return !!state && Array.isArray(state.playerNames) && state.playerNames.length > 0
+        && state.playerNames.every((playerName) => {
+          const result = String(state.results[playerName] || "").trim().toLowerCase();
+          return result === "correct" || result === "incorrect";
+        });
+    }
+
+    function sanitizeDisplayBonusWagerInputValue(rawValue) {
+      return String(rawValue || "").replace(/\D+/g, "");
+    }
+
     function getScorecardOrder(screenOrder, scorecards) {
       const order = Array.isArray(screenOrder) ? screenOrder : [];
       const seen = new Set();
@@ -1838,13 +1896,10 @@
       `;
     }
 
-    function buildDisplayBonusRoundMarkup(scorecard, session) {
-      const wagers = getScorecardBonusWagers(session, scorecard.players);
-      const phase = getScorecardBonusPhase(session);
-      const lockedCount = countScorecardLockedWagers(session, scorecard.players);
-      const allLocked = lockedCount === scorecard.players.length;
+    function buildDisplayBonusRoundMarkup(scorecard, session, bonusState) {
+      const lockedCount = Object.keys(bonusState?.wagers || {}).length;
 
-      if (phase === SCORECARD_BONUS_PHASES.entry) {
+      if (bonusState?.phase === "entry") {
         return `
           <div class="scorecard-bonus-screen">
             <div class="scorecard-bonus-status">
@@ -1854,8 +1909,8 @@
             <div class="scorecard-bonus-stack">
               ${scorecard.players.map((player) => {
                 const currentScore = Math.max(0, Number(session.scores[player.name]) || 0);
-                const lockedWager = wagers[player.name];
-                const isLocked = Number.isFinite(lockedWager);
+                const lockedWager = bonusState?.wagers?.[player.name];
+                const isLocked = Number.isFinite(Number(lockedWager));
                 return `
                   <div class="scorecard-bonus-row${isLocked ? " is-locked" : ""}">
                     <div>
@@ -1863,7 +1918,7 @@
                       <div class="scorecard-bonus-note">Current score: ${escapeHtml(formatScorecardScore(session.scores[player.name] || 0))}</div>
                     </div>
                     <div class="scorecard-bonus-entry-controls">
-                      <input class="scorecard-bonus-input" type="password" inputmode="numeric" pattern="[0-9]*" min="0" max="${escapeHtml(currentScore)}" value="${isLocked ? escapeHtml(String(lockedWager)) : "0"}" data-scorecard-bonus-input="${escapeHtml(scorecard.id)}:${escapeHtml(player.name)}"${isLocked ? " disabled" : ""}>
+                      <input class="scorecard-bonus-input" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]*" min="0" max="${escapeHtml(currentScore)}" value="${isLocked ? escapeHtml(String(lockedWager)) : ""}" data-scorecard-bonus-input="${escapeHtml(scorecard.id)}:${escapeHtml(player.name)}"${isLocked ? " disabled" : ""}>
                       <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-lock" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}"${isLocked ? " disabled" : ""}>${isLocked ? "Locked" : "Lock in"}</button>
                     </div>
                   </div>
@@ -1871,47 +1926,47 @@
               }).join("")}
             </div>
             <div class="scorecard-secondary-actions">
-              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Back to game</button>
-              ${allLocked ? `<button class="scorecard-secondary-btn scorecard-secondary-btn--accent" type="button" data-action="scorecard-bonus-reveal" data-scorecard-id="${escapeHtml(scorecard.id)}">Reveal wagers</button>` : ""}
+              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Cancel bonus round</button>
             </div>
           </div>
         `;
       }
 
-      const existingResults = getScorecardBonusResults(session, scorecard.players);
       return `
         <div class="scorecard-bonus-screen scorecard-bonus-screen--revealed">
           <div class="scorecard-bonus-status">
-            <strong>Wagers revealed</strong>
-            <span>Mark each player correct or incorrect, then apply the round.</span>
+            <strong>${bonusState?.revealed ? "Wagers revealed" : "Set results"}</strong>
+            <span>${bonusState?.revealed ? "Review the revealed wagers, then apply the round." : "Mark each player correct or incorrect before revealing wagers."}</span>
           </div>
-          <div class="scorecard-bonus-reveal-grid">
+          ${bonusState?.revealed ? `<div class="scorecard-bonus-reveal-grid">
             ${scorecard.players.map((player) => `
               <article class="scorecard-bonus-reveal-card">
                 <div class="scorecard-player-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</div>
-                <div class="scorecard-bonus-reveal-value">${escapeHtml(formatScorecardScore(wagers[player.name] || 0))}</div>
+                <div class="scorecard-bonus-reveal-value">${escapeHtml(formatScorecardScore(bonusState?.wagers?.[player.name] || 0))}</div>
               </article>
             `).join("")}
-          </div>
+          </div>` : ""}
           <form class="scorecard-bonus-results-form" data-scorecard-bonus-results="${escapeHtml(scorecard.id)}">
             ${scorecard.players.map((player) => `
               <div class="scorecard-bonus-result-row">
                 <strong>${escapeHtml(player.name)}</strong>
                 <div class="scorecard-bonus-toggle-row">
                   <label class="scorecard-bonus-toggle-pill">
-                    <input type="radio" name="result_${escapeHtml(player.name)}" value="correct"${existingResults[player.name] !== "incorrect" ? " checked" : ""}>
+                    <input type="radio" name="result_${escapeHtml(player.name)}" value="correct"${bonusState?.results?.[player.name] === "correct" ? " checked" : ""}>
                     <span>Correct</span>
                   </label>
                   <label class="scorecard-bonus-toggle-pill">
-                    <input type="radio" name="result_${escapeHtml(player.name)}" value="incorrect"${existingResults[player.name] === "incorrect" ? " checked" : ""}>
+                    <input type="radio" name="result_${escapeHtml(player.name)}" value="incorrect"${bonusState?.results?.[player.name] === "incorrect" ? " checked" : ""}>
                     <span>Incorrect</span>
                   </label>
                 </div>
               </div>
             `).join("")}
             <div class="scorecard-secondary-actions">
-              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Back to game</button>
-              <button class="scorecard-secondary-btn scorecard-secondary-btn--accent" type="submit">Apply results</button>
+              <button class="scorecard-secondary-btn" type="button" data-action="scorecard-bonus-cancel" data-scorecard-id="${escapeHtml(scorecard.id)}">Cancel bonus round</button>
+              ${bonusState?.revealed
+                ? '<button class="scorecard-secondary-btn scorecard-secondary-btn--accent" type="submit">Apply results</button>'
+                : `<button class="scorecard-secondary-btn scorecard-secondary-btn--accent" type="button" data-action="scorecard-bonus-reveal" data-scorecard-id="${escapeHtml(scorecard.id)}"${allDisplayLocalBonusResultsSelected(bonusState) ? "" : " disabled"}>Reveal wagers</button>`}
             </div>
           </form>
         </div>
@@ -1927,10 +1982,10 @@
       }
 
       const label = scorecard.name.toUpperCase();
-      const bonusPhase = getScorecardBonusPhase(activeSession);
-      const isBonusActive = isScorecardBonusRoundActive(activeSession);
+      const localBonusState = getDisplayLocalBonusState(scorecard.id);
+      const isBonusActive = !!localBonusState;
       const layoutMarkup = isBonusActive
-        ? buildDisplayBonusRoundMarkup(scorecard, activeSession)
+        ? buildDisplayBonusRoundMarkup(scorecard, activeSession, localBonusState)
         : scorecard.players.length <= 4
           ? buildScorecardColumnLayout(scorecard, session)
           : buildScorecardRowLayout(scorecard, session);
@@ -2086,6 +2141,9 @@
       sessionsById = await ensureDisplayScorecardSessions(scorecards, sessionsById);
       cachedScorecards = scorecards;
       cachedScorecardSessionsById = sessionsById;
+      Array.from(displayScorecardBonusStateById.keys()).forEach((scorecardId) => {
+        getDisplayLocalBonusState(scorecardId);
+      });
       renderScorecards(scorecards);
       resolveScreen("scorecards");
     }
@@ -2642,82 +2700,72 @@
     async function beginDisplayBonusRound(scorecardId) {
       const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
       const session = getActiveScorecardSession(scorecardId);
-      if (!scorecard || !session || isScorecardBonusRoundActive(session)) {
+      if (!scorecard || !session) {
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
 
-      const nextSession = await updateDisplayActiveScorecardSession(scorecardId, {
-        wagers: buildScorecardBonusWagers(scorecard.players, {}, SCORECARD_BONUS_PHASES.entry),
-        wager_results: null,
-        is_final_jeopardy: false
-      });
-      if (!nextSession) {
-        showDisplayToast("Something went wrong saving your changes. Please try again.");
-        return;
-      }
-
+      setDisplayLocalBonusState(scorecardId, createDisplayLocalBonusState(session.id, scorecard.players));
+      renderScorecards(cachedScorecards);
       resetAutoRotate("scorecard-bonus-start");
     }
 
     async function cancelDisplayScorecardBonusRound(scorecardId) {
-      const nextSession = await updateDisplayActiveScorecardSession(scorecardId, {
-        wagers: null,
-        wager_results: null,
-        is_final_jeopardy: false
-      });
-      if (!nextSession) {
-        showDisplayToast("Something went wrong saving your changes. Please try again.");
-        return;
-      }
-
+      setDisplayLocalBonusState(scorecardId, null);
+      renderScorecards(cachedScorecards);
       resetAutoRotate("scorecard-bonus-cancel");
     }
 
-    async function lockDisplayScorecardBonusWager(scorecardId, playerName, rawValue) {
+    function lockDisplayScorecardBonusWager(scorecardId, playerName, rawValue) {
       const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
       const session = getActiveScorecardSession(scorecardId);
-      if (!scorecard || !session) {
+      const localBonusState = getDisplayLocalBonusState(scorecardId);
+      if (!scorecard || !session || !localBonusState || localBonusState.phase !== "entry") {
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
 
       const currentScore = Math.max(0, Number(session.scores[playerName]) || 0);
-      const parsedValue = Number(rawValue);
-      const lockedWagers = getScorecardBonusWagers(session, scorecard.players);
-      lockedWagers[playerName] = Math.min(currentScore, Math.max(0, Number.isFinite(parsedValue) ? parsedValue : 0));
-      const nextSession = await updateDisplayActiveScorecardSession(scorecardId, {
-        wagers: buildScorecardBonusWagers(scorecard.players, lockedWagers, SCORECARD_BONUS_PHASES.entry)
-      });
-      if (!nextSession) {
-        showDisplayToast("Something went wrong saving your changes. Please try again.");
+      const sanitized = sanitizeDisplayBonusWagerInputValue(rawValue);
+      if (sanitized === "") {
+        showDisplayToast("Enter a wager before locking it in.");
         return;
       }
 
+      const parsedValue = Math.min(currentScore, Math.max(0, Number(sanitized)));
+      const nextState = {
+        ...localBonusState,
+        wagers: {
+          ...localBonusState.wagers,
+          [playerName]: parsedValue
+        }
+      };
+      if (allDisplayLocalBonusWagersLocked(nextState)) {
+        nextState.phase = "results";
+      }
+      setDisplayLocalBonusState(scorecardId, nextState);
+      renderScorecards(cachedScorecards);
       resetAutoRotate("scorecard-bonus-lock");
     }
 
-    async function revealDisplayScorecardBonusWagers(scorecardId) {
-      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
-      const session = getActiveScorecardSession(scorecardId);
-      if (!scorecard || !session) {
+    function revealDisplayScorecardBonusWagers(scorecardId) {
+      const localBonusState = getDisplayLocalBonusState(scorecardId);
+      if (!localBonusState) {
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
 
-      if (countScorecardLockedWagers(session, scorecard.players) !== scorecard.players.length) {
-        showDisplayToast("All wagers need to be locked first.");
+      if (!allDisplayLocalBonusWagersLocked(localBonusState) || !allDisplayLocalBonusResultsSelected(localBonusState)) {
+        showDisplayToast("Set every result before revealing wagers.");
         return;
       }
 
-      const nextSession = await updateDisplayActiveScorecardSession(scorecardId, {
-        wagers: buildScorecardBonusWagers(scorecard.players, getScorecardBonusWagers(session, scorecard.players), SCORECARD_BONUS_PHASES.reveal),
-        wager_results: buildScorecardBonusResults(scorecard.players, getScorecardBonusResults(session, scorecard.players), SCORECARD_BONUS_PHASES.results)
+      setDisplayLocalBonusState(scorecardId, {
+        ...localBonusState,
+        phase: "reveal",
+        revealed: true
       });
-      if (!nextSession) {
-        showDisplayToast("Something went wrong saving your changes. Please try again.");
-        return;
-      }
+      renderScorecards(cachedScorecards);
 
       const screen = track.querySelector(`.scorecard-screen[data-scorecard-id="${scorecardId}"]`);
       screen?.querySelectorAll(".scorecard-bonus-reveal-card").forEach((card) => {
@@ -2732,17 +2780,17 @@
       const client = getSupabaseClient();
       const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
       const session = getActiveScorecardSession(scorecardId);
-      if (!client || !scorecard || !session) {
+      const localBonusState = getDisplayLocalBonusState(scorecardId);
+      if (!client || !scorecard || !session || !localBonusState) {
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
 
-      const wagers = getScorecardBonusWagers(session, scorecard.players);
       const nextScores = { ...session.scores };
       const historyChanges = [];
       scorecard.players.forEach((player) => {
         const previousScore = Number(session.scores[player.name]) || 0;
-        const wager = Math.max(0, Number(wagers[player.name]) || 0);
+        const wager = Math.max(0, Number(localBonusState.wagers[player.name]) || 0);
         const wasCorrect = wagerResults[player.name] === "correct";
         const nextScore = applyScorecardIncrement(previousScore, wasCorrect ? wager : -wager, scorecard.allowNegative);
         nextScores[player.name] = nextScore;
@@ -2756,12 +2804,7 @@
 
       const { data, error } = await client
         .from("scorecard_sessions")
-        .update({
-          scores: nextScores,
-          wagers: buildScorecardBonusWagers(scorecard.players, wagers, SCORECARD_BONUS_PHASES.complete),
-          wager_results: buildScorecardBonusResults(scorecard.players, wagerResults, SCORECARD_BONUS_PHASES.complete),
-          is_final_jeopardy: true
-        })
+        .update({ scores: nextScores })
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
         .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
@@ -2780,6 +2823,7 @@
       cachedScorecardSessionsById.set(scorecardId, getScorecardSessions(scorecardId).map((item) =>
         item.id === session.id ? mapScorecardSessionRow(data, scorecard) : item
       ));
+      setDisplayLocalBonusState(scorecardId, null);
       renderScorecards(cachedScorecards);
       historyChanges.forEach((change) => {
         animateScorecardScore(scorecardId, change.playerName, change.increment);
@@ -2822,6 +2866,7 @@
         return;
       }
 
+      setDisplayLocalBonusState(scorecardId, null);
       const { data, error } = await client
         .from("scorecard_sessions")
         .update({
@@ -2862,6 +2907,7 @@
 
       clearScorecardActionHistory(nextSession.id);
       clearScorecardPendingWinner(scorecardId);
+      setDisplayLocalBonusState(scorecardId, null);
       cachedScorecardSessionsById.set(scorecardId, [nextSession, ...getScorecardSessions(scorecardId)]);
       renderScorecards(cachedScorecards);
       syncScorecardCelebrationOverlay();
@@ -3328,6 +3374,43 @@
           revealDisplayScorecardBonusWagers(revealBtn.getAttribute("data-scorecard-id"));
           return;
         }
+      });
+      track.addEventListener("input", (event) => {
+        const bonusInput = event.target.closest("[data-scorecard-bonus-input]");
+        if (bonusInput) {
+          const sanitized = sanitizeDisplayBonusWagerInputValue(bonusInput.value);
+          if (bonusInput.value !== sanitized) {
+            bonusInput.value = sanitized;
+          }
+          return;
+        }
+
+        const bonusResultInput = event.target.closest("input[name^='result_']");
+        if (!bonusResultInput) {
+          return;
+        }
+
+        const form = bonusResultInput.closest("form[data-scorecard-bonus-results]");
+        const scorecardId = String(form?.getAttribute("data-scorecard-bonus-results") || "").trim();
+        const localBonusState = getDisplayLocalBonusState(scorecardId);
+        if (!localBonusState) {
+          return;
+        }
+
+        const playerName = String(bonusResultInput.name || "").replace(/^result_/, "");
+        if (!playerName) {
+          return;
+        }
+
+        setDisplayLocalBonusState(scorecardId, {
+          ...localBonusState,
+          phase: "results",
+          results: {
+            ...localBonusState.results,
+            [playerName]: bonusResultInput.value
+          }
+        });
+        renderScorecards(cachedScorecards);
       });
       track.addEventListener("submit", (event) => {
         const form = event.target.closest("form[data-scorecard-bonus-results]");

@@ -139,10 +139,12 @@ netlify.toml        — build + env var injection via sed
 - User-facing error messages must never mention Supabase, backend services, table names, or internal config details; use plain language like `Something went wrong loading your data. Please try refreshing.` or `Something went wrong saving your changes. Please try again.`
 - User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
 - Scorecard display layout auto-switches by player count: 2-4 players = per-player columns, 5-6 players = selectable player rows plus shared increment buttons
-- End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view; both paths write to the same shared scorecard session state
+- End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view
 - Scorecard undo is an in-memory action stack scoped to the active session only; it does not persist through reloads and it resets on score reset or when a new game starts
 - End Game closes the current scorecard session immediately, shows the winner state, and waits for an explicit `New game` action before creating the next session
-- Bonus Round is separate from End Game. It switches the scorecard into a wager flow: masked wager entry on display, simultaneous reveal, admin correct/incorrect result application, then return to normal play without ending the session. Wagers must be between `0` and that player's current score.
+- Bonus Round is separate from End Game. It is a fully local in-memory flow on whichever surface starts it: masked wager entry, correct/incorrect selection, reveal, then one final score write when `Apply results` is tapped
+- Bonus Round does not sync or mirror mid-flow between admin and display. The other surface keeps its normal scorecard view until it refreshes from the final score write
+- Bonus Round wagers must be between `0` and that player's current score
 - New scorecard UI should use `--color-accent` and `--color-accent-subtle` for active/interactive states per `TOKENS.md`; do not use `--amber` / `--amber-soft` in new scorecard components
 
 ## Local Dev

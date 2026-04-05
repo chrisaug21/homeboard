@@ -124,10 +124,12 @@ netlify.toml        — build config, env var injection via sed
 - All countdown screens collapse into one footer nav button. Tapping that hourglass always jumps to the first countdown in the current rotation order, and the button remains active across every countdown screen
 - All scorecard screens collapse into one footer trophy button. Tapping it jumps to the first scorecard in the current rotation order, and swipe navigation moves between individual scorecard screens.
 - Scorecard display layout auto-switches by player count: 2-4 players render as per-player columns, 5-6 players render as selectable rows plus shared increment buttons.
-- End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view; both paths write to the same shared scorecard session state.
+- End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view.
 - Scorecard undo is an in-memory action stack scoped to the active session. It does not persist through reloads and it resets on score reset or when a new game starts.
 - End Game closes the current scorecard session immediately, shows the winner state, and waits for `New game` before creating the next session.
-- Bonus Round is separate from End Game. It runs as a wager flow: masked wager entry on the display, simultaneous reveal, admin correct/incorrect result entry, then a return to normal play without ending the session. Each wager must be between `0` and that player's current score.
+- Bonus Round is separate from End Game. It is a fully local in-memory flow on whichever surface starts it: masked wager entry, correct/incorrect selection, reveal, then one final score write when `Apply results` is tapped.
+- Bonus Round does not sync or mirror mid-flow between admin and display. The other surface stays on its normal scorecard state until it refreshes from the final score write.
+- Each wager must be between `0` and that player's current score.
 - When a display footer nav button is tapped, auto-rotation should reset immediately and resume using that destination screen's configured `display_settings.timer_intervals` value, never a hardcoded fallback unless the screen has no saved timer
 - The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
 - The Settings screen sync row should keep visible spacing below its helper copy so the sync button/timestamp do not crowd the paragraph above
