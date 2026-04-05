@@ -3217,6 +3217,37 @@
       resetAutoRotate("scorecard-end-game");
     }
 
+    async function endDisplayActiveScorecardSessionIfNeeded(scorecardId, scorecard) {
+      const client = getSupabaseClient();
+      const activeSession = getActiveScorecardSession(scorecardId);
+      if (!client || !scorecard || !activeSession || activeSession.endedAt) {
+        return activeSession;
+      }
+
+      const { data, error } = await client
+        .from("scorecard_sessions")
+        .update({
+          ended_at: new Date().toISOString(),
+          winner: getScorecardWinner(activeSession.scores, scorecard.players)
+        })
+        .eq("id", activeSession.id)
+        .eq("scorecard_id", scorecardId)
+        .is("ended_at", null)
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
+        .maybeSingle();
+
+      if (error || !data) {
+        return null;
+      }
+
+      const endedSession = mapScorecardSessionRow(data, scorecard);
+      cachedScorecardSessionsById.set(scorecardId, getScorecardSessions(scorecardId).map((item) =>
+        item.id === activeSession.id ? endedSession : item
+      ));
+      clearScorecardActionHistory(activeSession.id);
+      return endedSession;
+    }
+
     async function archiveDisplayScorecard(scorecardId) {
       const client = getSupabaseClient();
       if (!client || !scorecardId) {
@@ -3248,7 +3279,13 @@
 
     async function startNextDisplayScorecardGame(scorecardId) {
       const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
-      if (!scorecard || getActiveScorecardSession(scorecardId)) {
+      if (!scorecard) {
+        return;
+      }
+
+      const endedSession = await endDisplayActiveScorecardSessionIfNeeded(scorecardId, scorecard);
+      if (getActiveScorecardSession(scorecardId) && !endedSession) {
+        showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
 
