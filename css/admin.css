@@ -2156,11 +2156,44 @@
 
     .admin-scorecard-adjust-card,
     .admin-scorecard-history-card,
+    .admin-scorecard-log-card,
     .admin-scorecard-modal-section {
       padding: 14px;
       border-radius: 18px;
       background: var(--panel);
       border: 1px solid var(--border);
+    }
+
+    .admin-scorecard-log-card,
+    .admin-scorecard-log-head,
+    .admin-scorecard-log-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .admin-scorecard-log-card {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .admin-scorecard-log-player,
+    .admin-scorecard-log-amount {
+      font-weight: 800;
+    }
+
+    .admin-scorecard-log-meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .admin-scorecard-log-amount.is-positive {
+      color: var(--sage);
+    }
+
+    .admin-scorecard-log-amount.is-negative {
+      color: var(--rose);
     }
 
     .admin-scorecard-session-row,

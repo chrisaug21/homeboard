@@ -75,7 +75,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 ### Scorecard
 - Trophy tab in the admin bottom nav
 - Create/edit scorecards with 2-6 players, independent player colors, configurable increment buttons, `allow_negative`, and `show_history`
-- Active session management with score adjustments, an in-memory undo stack per active session, Reset scores, End Game, and Bonus Round on both admin and display
+- Active session management with score adjustments, an in-memory undo stack per active session, a persisted score audit log, End Game, and Bonus Round on both admin and display
 - End Game and Bonus Round are separate mechanics: End Game closes the session and shows the winner until `New game` is tapped; Bonus Round is a wager mechanic that applies score changes but does not end the session
 - Bonus Round is fully local to whichever surface starts it. Admin and display each run the same flow independently in memory: masked wager entry, correct/incorrect selection, reveal, then one final score write to Supabase when `Apply results` is tapped
 - Bonus Round never syncs mid-flow between admin and display, and each wager is capped to that player's current score and floored at `0`
@@ -93,7 +93,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 | `meal_plan_notes` | One note per household per week; keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` is a Lucide icon name string; also stores optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` for countdown photos and visibility timing |
 | `scorecards` | Scorecard definitions with `increments` JSONB, `players` JSONB, `show_history`, `allow_negative`, and soft delete via `archived_at` |
-| `scorecard_sessions` | Per-game score state with `scores` JSONB, optional `wagers`, optional `wager_results`, optional `winner`, `started_at`, `ended_at`, and `is_final_jeopardy` |
+| `scorecard_sessions` | Per-game score state with `scores` JSONB, optional `wagers`, optional `wager_results`, `score_events` JSONB audit entries, optional `winner`, `started_at`, `ended_at`, and `is_final_jeopardy` |
 | `rsvps` | Wedding RSVP table — do not modify schema |
 | `invited_parties` | Wedding invite source of truth. `rsvp_id = null` means pending; set means matched to an RSVP |
 

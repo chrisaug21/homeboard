@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.6.4";
+    const VERSION = "1.6.5";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -397,6 +397,11 @@
     const SCORECARD_BONUS_META_KEY = "__phase";
     const scorecardActionHistoryBySessionId = new Map();
     const scorecardPendingWinnerSessionByScorecardId = new Map();
+    const SCORE_EVENT_TYPES = {
+      increment: "increment",
+      undo: "undo",
+      bonusRound: "bonus_round"
+    };
 
     function normalizeScorecardBonusPhase(value) {
       const normalized = String(value || "").trim().toLowerCase();
@@ -425,6 +430,47 @@
         }
       });
       return normalized;
+    }
+
+    function normalizeScoreEventType(value) {
+      const normalized = String(value || "").trim().toLowerCase();
+      return Object.values(SCORE_EVENT_TYPES).includes(normalized) ? normalized : SCORE_EVENT_TYPES.increment;
+    }
+
+    function normalizeScoreEvents(events, players) {
+      const validPlayers = new Set(normalizeScorecardPlayers(players).map((player) => player.name));
+      return Array.isArray(events) ? events
+        .map((event) => {
+          const player = String(event?.player || "").trim();
+          if (!player || (validPlayers.size && !validPlayers.has(player))) {
+            return null;
+          }
+
+          const amount = Number(event?.amount);
+          return {
+            player,
+            amount: Number.isFinite(amount) ? amount : 0,
+            type: normalizeScoreEventType(event?.type),
+            timestamp: String(event?.timestamp || "").trim() || new Date().toISOString()
+          };
+        })
+        .filter(Boolean) : [];
+    }
+
+    function buildScoreEvent(player, amount, type, timestamp = new Date().toISOString()) {
+      return {
+        player: String(player || "").trim(),
+        amount: Number(amount) || 0,
+        type: normalizeScoreEventType(type),
+        timestamp: String(timestamp || "").trim() || new Date().toISOString()
+      };
+    }
+
+    function appendScoreEvents(existingEvents, nextEvents, players) {
+      return [
+        ...normalizeScoreEvents(existingEvents, players),
+        ...normalizeScoreEvents(nextEvents, players)
+      ];
     }
 
     function buildScorecardBonusWagers(players, wagers = {}, phase = SCORECARD_BONUS_PHASES.entry) {
@@ -598,6 +644,7 @@
         scores,
         wagers: row?.wagers && typeof row.wagers === "object" ? row.wagers : null,
         wagerResults: row?.wager_results && typeof row.wager_results === "object" ? row.wager_results : null,
+        scoreEvents: normalizeScoreEvents(row?.score_events, players),
         winner: String(row?.winner || "").trim() || getScorecardWinner(scores),
         isFinalJeopardy: row?.is_final_jeopardy === true,
         createdAt: row?.created_at || null
@@ -627,6 +674,29 @@
         hour: "numeric",
         minute: "2-digit"
       }).format(date);
+    }
+
+    function formatScoreEventTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return "Unknown time";
+      }
+
+      return new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        minute: "2-digit"
+      }).format(date);
+    }
+
+    function formatScoreEventTypeLabel(value) {
+      switch (normalizeScoreEventType(value)) {
+        case SCORE_EVENT_TYPES.undo:
+          return "Undo";
+        case SCORE_EVENT_TYPES.bonusRound:
+          return "Bonus round";
+        default:
+          return "Increment";
+      }
     }
 
     function formatScorecardSessionDuration(startedAt, endedAt) {

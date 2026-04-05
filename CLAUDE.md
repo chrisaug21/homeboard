@@ -47,7 +47,7 @@ netlify.toml        — build config, env var injection via sed
 - `meal_plan_notes` — one note per household per week, keyed by `household_id` + `week_start`
 - `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` support countdown photos and delayed visibility
 - `scorecards` — scorecard definitions with `name`, `increments` (JSONB number array), `players` (JSONB `{name,color}` array), `show_history`, `allow_negative`, and soft delete via `archived_at`
-- `scorecard_sessions` — per-game scorecard sessions with `started_at`, `ended_at`, `scores` JSONB, optional `wagers`, optional `wager_results`, optional `winner`, and `is_final_jeopardy`
+- `scorecard_sessions` — per-game scorecard sessions with `started_at`, `ended_at`, `scores` JSONB, optional `wagers`, optional `wager_results`, `score_events` JSONB audit entries, optional `winner`, and `is_final_jeopardy`
 - `rsvps` — pre-existing wedding table, do not modify schema
 - `invited_parties` — wedding invite list with `name`, `invited_count`, nullable `rsvp_id`, and `created_at`; this is the source of truth for matched vs pending invite parties
 
@@ -125,7 +125,8 @@ netlify.toml        — build config, env var injection via sed
 - All scorecard screens collapse into one footer trophy button. Tapping it jumps to the first scorecard in the current rotation order, and swipe navigation moves between individual scorecard screens.
 - Scorecard display layout auto-switches by player count: 2-4 players render as per-player columns, 5-6 players render as selectable rows plus shared increment buttons.
 - End Game and Bonus Round controls are available on both the display scorecard screen and the admin scorecard detail view.
-- Scorecard undo is an in-memory action stack scoped to the active session. It does not persist through reloads and it resets on score reset or when a new game starts.
+- Scorecard undo is an in-memory action stack scoped to the active session. It does not persist through reloads and it resets when a new game starts.
+- Scorecard audit history is persisted in `scorecard_sessions.score_events` as an append-only JSONB array of per-player entries with `player`, signed `amount`, `type`, and ISO `timestamp`.
 - End Game closes the current scorecard session immediately, shows the winner state, and waits for `New game` before creating the next session.
 - Bonus Round is separate from End Game. It is a fully local in-memory flow on whichever surface starts it: masked wager entry, correct/incorrect selection, reveal, then one final score write when `Apply results` is tapped.
 - Bonus Round does not sync or mirror mid-flow between admin and display. The other surface stays on its normal scorecard state until it refreshes from the final score write.

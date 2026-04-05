@@ -1149,7 +1149,7 @@
 
       const { data, error } = await client
         .from("scorecard_sessions")
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .in("scorecard_id", ids)
         .order("started_at", { ascending: false });
@@ -1184,9 +1184,10 @@
           household_id: DISPLAY_HOUSEHOLD_ID,
           started_at: new Date().toISOString(),
           scores: createScorecardZeroScores(scorecard.players),
+          score_events: [],
           is_final_jeopardy: false
         })
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
 
       if (error || !data) {
@@ -2714,12 +2715,18 @@
         return;
       }
 
+      const scoreEvents = appendScoreEvents(session.scoreEvents, [
+        buildScoreEvent(playerName, Number(increment), SCORE_EVENT_TYPES.increment)
+      ], scorecard.players);
       const { data, error } = await client
         .from("scorecard_sessions")
-        .update({ scores: nextScores })
+        .update({
+          scores: nextScores,
+          score_events: scoreEvents
+        })
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
 
       if (error || !data) {
@@ -2758,7 +2765,7 @@
         .update(payload)
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
 
       if (error || !data) {
@@ -2932,12 +2939,24 @@
         });
       });
 
+      const scoreEvents = appendScoreEvents(
+        session.scoreEvents,
+        historyChanges.map((change) => buildScoreEvent(
+          change.playerName,
+          change.increment,
+          SCORE_EVENT_TYPES.bonusRound
+        )),
+        scorecard.players
+      );
       const { data, error } = await client
         .from("scorecard_sessions")
-        .update({ scores: nextScores })
+        .update({
+          scores: nextScores,
+          score_events: scoreEvents
+        })
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
 
       if (error || !data) {
@@ -2977,7 +2996,19 @@
         nextScores[change.playerName] = change.previousScore;
       });
 
-      const nextSession = await updateDisplayActiveScorecardSession(scorecardId, { scores: nextScores });
+      const scorecard = cachedScorecards.find((item) => item.id === scorecardId);
+      const nextSession = await updateDisplayActiveScorecardSession(scorecardId, {
+        scores: nextScores,
+        score_events: appendScoreEvents(
+          session.scoreEvents,
+          action.changes.map((change) => buildScoreEvent(
+            change.playerName,
+            change.previousScore - change.nextScore,
+            SCORE_EVENT_TYPES.undo
+          )),
+          scorecard?.players || []
+        )
+      });
       if (!nextSession) {
         pushScorecardActionHistory(session.id, action);
         showDisplayToast("Something went wrong saving your changes. Please try again.");
@@ -3005,7 +3036,7 @@
         })
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
 
       if (error || !data) {

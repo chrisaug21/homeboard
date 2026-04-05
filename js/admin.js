@@ -670,11 +670,6 @@
         );
         return;
       }
-      const resetScoresBtn = event.target.closest("[data-action='scorecard-reset-scores']");
-      if (resetScoresBtn) {
-        resetScorecardScores(resetScoresBtn.getAttribute("data-scorecard-id"));
-        return;
-      }
       const newGameBtn = event.target.closest("[data-action='scorecard-new-game']");
       if (newGameBtn) {
         startNextScorecardGame(newGameBtn.getAttribute("data-scorecard-id"));
@@ -683,6 +678,22 @@
       const undoScoreBtn = event.target.closest("[data-action='scorecard-undo']");
       if (undoScoreBtn) {
         undoScorecardAction(undoScoreBtn.getAttribute("data-scorecard-id"));
+        return;
+      }
+      const scoreLogBtn = event.target.closest("[data-action='scorecard-open-log']");
+      if (scoreLogBtn) {
+        openScorecardLogModal(
+          scoreLogBtn.getAttribute("data-scorecard-id"),
+          adminModalContext?.filter || "month"
+        );
+        return;
+      }
+      const closeScoreLogBtn = event.target.closest("[data-action='scorecard-close-log']");
+      if (closeScoreLogBtn) {
+        openScorecardManageModal(
+          closeScoreLogBtn.getAttribute("data-scorecard-id"),
+          closeScoreLogBtn.getAttribute("data-filter") || "month"
+        );
         return;
       }
       const historyFilterBtn = event.target.closest("[data-action='scorecard-history-filter']");
@@ -2388,7 +2399,7 @@
 
       const { data, error } = await client
         .from("scorecard_sessions")
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .in("scorecard_id", ids)
         .order("started_at", { ascending: false });
@@ -2422,13 +2433,14 @@
         household_id: DISPLAY_HOUSEHOLD_ID,
         started_at: new Date().toISOString(),
         scores: createScorecardZeroScores(scorecard.players),
+        score_events: [],
         is_final_jeopardy: false
       };
 
       const { data, error } = await client
         .from("scorecard_sessions")
         .insert(payload)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
 
       if (error || !data) {
@@ -2660,6 +2672,47 @@
       `;
     }
 
+    function buildScorecardLogButtonHTML(scorecardId, session) {
+      return `
+        <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-open-log" data-scorecard-id="${escapeHtml(scorecardId)}"${session ? "" : " disabled"}>Score log</button>
+      `;
+    }
+
+    function buildScorecardLogModalHtml(scorecard, session, filter = "month") {
+      const events = (session?.scoreEvents || []).slice().reverse();
+      const playerColorByName = new Map((scorecard?.players || []).map((player) => [player.name, player.color]));
+
+      return `
+        <div class="admin-scorecard-modal-stack">
+          <section class="admin-scorecard-modal-section">
+            <div class="admin-scorecard-section-head">
+              <h3>Current session</h3>
+              <span class="admin-panel-note">${escapeHtml(formatScorecardSessionDate(session?.startedAt || session?.createdAt))}</span>
+            </div>
+            <div class="admin-scorecard-history-list">
+              ${events.length ? events.map((event) => `
+                <article class="admin-scorecard-log-card">
+                  <div class="admin-scorecard-log-head">
+                    <strong class="admin-scorecard-log-player" style="color:${escapeHtml(playerColorByName.get(event.player) || "var(--ink)")}">
+                      ${escapeHtml(event.player)}
+                    </strong>
+                    <span class="admin-panel-note">${escapeHtml(formatScoreEventTime(event.timestamp))}</span>
+                  </div>
+                  <div class="admin-scorecard-log-meta">
+                    <span class="admin-scorecard-log-amount ${event.amount >= 0 ? "is-positive" : "is-negative"}">${event.amount >= 0 ? "+" : "−"}${escapeHtml(formatScorecardScore(Math.abs(event.amount)))}</span>
+                    <span>${escapeHtml(formatScoreEventTypeLabel(event.type))}</span>
+                  </div>
+                </article>
+              `).join("") : '<div class="admin-empty">No score events yet.</div>'}
+            </div>
+          </section>
+          <div class="admin-actions admin-actions--end">
+            <button class="admin-button admin-button--secondary" type="button" data-action="scorecard-close-log" data-scorecard-id="${escapeHtml(scorecard.id)}" data-filter="${escapeHtml(filter)}">Close</button>
+          </div>
+        </div>
+      `;
+    }
+
     function buildScorecardHistoryEntryHTML(scorecard, session) {
       const winnerLabel = session.winner || "Tie";
       return `
@@ -2856,12 +2909,14 @@
           <section class="admin-scorecard-modal-section">
             <div class="admin-scorecard-section-head">
               <h3>${isBonusActive ? "Bonus round" : "Current game"}</h3>
-              <div class="admin-scorecard-inline-actions">
-                ${buildScorecardUndoButtonHTML(scorecard.id, activeSession)}
-                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-reset-scores" data-scorecard-id="${escapeHtml(scorecard.id)}"${isBonusActive ? " disabled" : ""}>Reset scores</button>
-                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-end-game" data-scorecard-id="${escapeHtml(scorecard.id)}"${isBonusActive ? " disabled" : ""}>End game</button>
-                <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-bonus-round" data-scorecard-id="${escapeHtml(scorecard.id)}"${activeSession ? "" : " disabled"}>Bonus round</button>
-              </div>
+              ${isBonusActive ? "" : `
+                <div class="admin-scorecard-inline-actions">
+                  ${buildScorecardUndoButtonHTML(scorecard.id, activeSession)}
+                  ${buildScorecardLogButtonHTML(scorecard.id, activeSession)}
+                  <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-end-game" data-scorecard-id="${escapeHtml(scorecard.id)}"${activeSession ? "" : " disabled"}>End game</button>
+                  <button class="admin-button admin-button--secondary admin-button--small" type="button" data-action="scorecard-bonus-round" data-scorecard-id="${escapeHtml(scorecard.id)}"${activeSession ? "" : " disabled"}>Bonus round</button>
+                </div>
+              `}
             </div>
             ${!activeSession ? '<div class="admin-empty">No active game.</div>' : localBonusState?.phase === "entry" ? buildScorecardBonusEntryHtml(scorecard, localBonusState, activeSession) : isBonusActive ? buildScorecardBonusResultsHtml(scorecard, localBonusState, activeSession, localBonusState.phase === "reveal") : `
               <div class="admin-scorecard-session-list">
@@ -2935,6 +2990,18 @@
       openAdminModal(scorecard.name, buildScorecardManageHTML(scorecard, filter));
     }
 
+    function openScorecardLogModal(scorecardId, filter = "month") {
+      const scorecard = getAdminScorecardById(scorecardId);
+      const session = getAdminActiveScorecardSession(scorecardId);
+      if (!scorecard || !session) {
+        return;
+      }
+
+      adminModalType = "scorecard-log";
+      adminModalContext = { scorecardId, filter };
+      openAdminModal(`${scorecard.name} score log`, buildScorecardLogModalHtml(scorecard, session, filter));
+    }
+
     function openScorecardEditModal(scorecardId) {
       const scorecard = getAdminScorecardById(scorecardId);
       if (!scorecard) {
@@ -2978,6 +3045,24 @@
 
       modalTitle.textContent = scorecard.name;
       modalBody.innerHTML = buildScorecardManageHTML(scorecard, adminModalContext.filter || "month");
+      refreshIcons();
+    }
+
+    function rerenderScorecardLogModal() {
+      if (adminModalType !== "scorecard-log" || !adminModalContext?.scorecardId) {
+        return;
+      }
+
+      const scorecard = getAdminScorecardById(adminModalContext.scorecardId);
+      const session = getAdminActiveScorecardSession(adminModalContext.scorecardId);
+      const modalTitle = document.getElementById("admin-modal-title");
+      const modalBody = document.getElementById("admin-modal-body");
+      if (!scorecard || !session || !modalTitle || !modalBody) {
+        return;
+      }
+
+      modalTitle.textContent = `${scorecard.name} score log`;
+      modalBody.innerHTML = buildScorecardLogModalHtml(scorecard, session, adminModalContext.filter || "month");
       refreshIcons();
     }
 
@@ -3059,6 +3144,10 @@
 
       if (adminModalType === "scorecard-manage") {
         rerenderScorecardManageModal();
+      }
+
+      if (adminModalType === "scorecard-log") {
+        rerenderScorecardLogModal();
       }
 
       if (adminModalType === "scorecard-winner") {
@@ -3178,12 +3267,18 @@
       }
 
       adminScorecardWritePending = true;
+      const scoreEvents = appendScoreEvents(session.scoreEvents, [
+        buildScoreEvent(playerName, Number(increment), SCORE_EVENT_TYPES.increment)
+      ], scorecard.players);
       const { data, error } = await client
         .from("scorecard_sessions")
-        .update({ scores: nextScores })
+        .update({
+          scores: nextScores,
+          score_events: scoreEvents
+        })
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
       adminScorecardWritePending = false;
 
@@ -3224,7 +3319,7 @@
         .update(payload)
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
       adminScorecardWritePending = false;
 
@@ -3240,30 +3335,6 @@
       rerenderScorecardManageModal();
       rerenderScorecardWinnerModal();
       return nextSession;
-    }
-
-    async function resetScorecardScores(scorecardId) {
-      const scorecard = getAdminScorecardById(scorecardId);
-      const session = getAdminActiveScorecardSession(scorecardId);
-      if (!scorecard || !session || adminScorecardWritePending) {
-        return;
-      }
-
-      clearScorecardActionHistory(session.id);
-      setAdminLocalBonusState(scorecardId, null);
-      const nextSession = await updateAdminActiveScorecardSession(scorecardId, {
-        scores: createScorecardZeroScores(scorecard.players),
-        wagers: null,
-        wager_results: null,
-        is_final_jeopardy: false,
-        winner: null
-      });
-      if (!nextSession) {
-        showToast(friendlySaveMessage());
-        return;
-      }
-
-      showToast("Scores reset.");
     }
 
     async function beginScorecardBonusRound(scorecardId) {
@@ -3411,12 +3482,24 @@
       });
 
       adminScorecardWritePending = true;
+      const scoreEvents = appendScoreEvents(
+        session.scoreEvents,
+        historyChanges.map((change) => buildScoreEvent(
+          change.playerName,
+          change.increment,
+          SCORE_EVENT_TYPES.bonusRound
+        )),
+        scorecard.players
+      );
       const { data, error } = await client
         .from("scorecard_sessions")
-        .update({ scores: nextScores })
+        .update({
+          scores: nextScores,
+          score_events: scoreEvents
+        })
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
       adminScorecardWritePending = false;
 
@@ -3456,7 +3539,18 @@
         nextScores[change.playerName] = change.previousScore;
       });
 
-      const nextSession = await updateAdminActiveScorecardSession(scorecardId, { scores: nextScores });
+      const nextSession = await updateAdminActiveScorecardSession(scorecardId, {
+        scores: nextScores,
+        score_events: appendScoreEvents(
+          session.scoreEvents,
+          action.changes.map((change) => buildScoreEvent(
+            change.playerName,
+            change.previousScore - change.nextScore,
+            SCORE_EVENT_TYPES.undo
+          )),
+          scorecard.players
+        )
+      });
       if (!nextSession) {
         pushScorecardActionHistory(session.id, action);
         showToast(friendlySaveMessage());
@@ -3484,7 +3578,7 @@
         })
         .eq("id", session.id)
         .eq("scorecard_id", scorecardId)
-        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, winner, is_final_jeopardy, created_at")
+        .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
         .single();
       adminScorecardWritePending = false;
 
