@@ -2189,12 +2189,14 @@
           contentType: pendingPhoto.file.type || undefined
         });
       if (uploadError) {
+        console.error("Countdown custom photo upload failed.", uploadError);
         return null;
       }
 
       const { data } = client.storage.from(COUNTDOWN_CUSTOM_PHOTO_BUCKET).getPublicUrl(path);
       const publicUrl = data?.publicUrl || null;
       if (!publicUrl) {
+        console.error("Countdown custom photo public URL missing.", { countdownId, path });
         return null;
       }
 
@@ -2203,7 +2205,11 @@
         .update({ custom_image_url: publicUrl })
         .eq("id", countdownId)
         .eq("household_id", DISPLAY_HOUSEHOLD_ID);
-      return updateError ? null : publicUrl;
+      if (updateError) {
+        console.error("Countdown custom photo URL save failed.", updateError);
+        return null;
+      }
+      return publicUrl;
     }
 
     async function saveAdminCountdown(formData) {
@@ -2259,32 +2265,38 @@
       adminCountdownWritePending = false;
       clearPendingCountdownPhoto("modal-create");
 
-      closeAdminModal();
-      await loadAdminCountdowns();
-
       if (photoSource === "custom" && pendingPhoto?.kind === "custom") {
-        uploadCountdownCustomPhoto(insertedRow.id, pendingPhoto).then(async (publicUrl) => {
-          if (publicUrl) {
-            await loadAdminCountdowns();
-          } else {
+        try {
+          const publicUrl = await uploadCountdownCustomPhoto(insertedRow.id, pendingPhoto);
+          if (!publicUrl) {
             showToast("Countdown saved, but the custom photo upload failed.");
           }
-        }).catch((e) => console.warn("Custom photo upload failed:", e));
+        } catch (error) {
+          console.warn("Custom photo upload failed:", error);
+          showToast("Countdown saved, but the custom photo upload failed.");
+        }
       } else if (pendingPhoto?.kind === "unsplash") {
-        updateCountdownPhoto(insertedRow.id, {
+        try {
+          await updateCountdownPhoto(insertedRow.id, {
           url: pendingPhoto.imageUrl,
           credit: pendingPhoto.credit,
           photographerProfile: pendingPhoto.photographerProfile || null
-        }).then(async (ok) => {
-          if (ok) await loadAdminCountdowns();
-        }).catch((e) => console.warn("Background photo save failed:", e));
+          });
+        } catch (error) {
+          console.warn("Background photo save failed:", error);
+        }
       } else if (photoSource === "unsplash") {
-        fetchUnsplashPhoto(photoKeyword || name).then(async (photo) => {
+        try {
+          const photo = await fetchUnsplashPhoto(photoKeyword || name);
           if (!photo) return;
-          const ok = await updateCountdownPhoto(insertedRow.id, photo);
-          if (ok) await loadAdminCountdowns();
-        }).catch((e) => console.warn("Background photo fetch failed:", e));
+          await updateCountdownPhoto(insertedRow.id, photo);
+        } catch (error) {
+          console.warn("Background photo fetch failed:", error);
+        }
       }
+
+      closeAdminModal();
+      await loadAdminCountdowns();
     }
 
     async function updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, options) {
@@ -2325,40 +2337,46 @@
       const pendingPhoto = adminPendingPhotos.get(id);
       clearPendingCountdownPhoto(id);
 
-      closeAdminModal();
-      await loadAdminCountdowns({ preserveScroll: true });
-
       if (options.removeCustomPhoto || options.photoSource === "unsplash") {
         removeCountdownCustomPhotoAssets(id).catch((e) => console.warn("Custom photo cleanup failed:", e));
       }
 
       if (options.photoSource === "custom") {
         if (pendingPhoto?.kind === "custom") {
-          uploadCountdownCustomPhoto(id, pendingPhoto).then(async (publicUrl) => {
-            if (publicUrl) {
-              await loadAdminCountdowns({ preserveScroll: true });
-            } else {
+          try {
+            const publicUrl = await uploadCountdownCustomPhoto(id, pendingPhoto);
+            if (!publicUrl) {
               showToast("Changes saved, but the custom photo upload failed.");
             }
-          }).catch((e) => console.warn("Custom photo upload failed:", e));
+          } catch (error) {
+            console.warn("Custom photo upload failed:", error);
+            showToast("Changes saved, but the custom photo upload failed.");
+          }
         }
       } else if (!options.removeUnsplashPhoto) {
         if (pendingPhoto?.kind === "unsplash") {
-          updateCountdownPhoto(id, {
+          try {
+            await updateCountdownPhoto(id, {
             url: pendingPhoto.imageUrl,
             credit: pendingPhoto.credit,
             photographerProfile: pendingPhoto.photographerProfile || null
-          }).then(async (ok) => {
-            if (ok) await loadAdminCountdowns({ preserveScroll: true });
-          }).catch((e) => console.warn("Background photo save failed:", e));
+            });
+          } catch (error) {
+            console.warn("Background photo save failed:", error);
+          }
         } else if (photoKeyword || name !== originalName || options.hadCustomPhoto || !options.hadUnsplashPhoto) {
-          fetchUnsplashPhoto(photoKeyword || name).then(async (photo) => {
+          try {
+            const photo = await fetchUnsplashPhoto(photoKeyword || name);
             if (!photo) return;
-            const ok = await updateCountdownPhoto(id, photo);
-            if (ok) await loadAdminCountdowns({ preserveScroll: true });
-          }).catch((e) => console.warn("Background photo fetch failed:", e));
+            await updateCountdownPhoto(id, photo);
+          } catch (error) {
+            console.warn("Background photo fetch failed:", error);
+          }
         }
       }
+
+      closeAdminModal();
+      await loadAdminCountdowns({ preserveScroll: true });
     }
 
 
