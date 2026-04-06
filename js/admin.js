@@ -976,6 +976,7 @@
         : `<div class="admin-empty">Nothing completed in ${escapeHtml(monthLabel)}.</div>`;
 
       updateArchiveMonthLabel();
+      refreshIcons();
     }
 
     function getArchivedMonthDisplay() {
