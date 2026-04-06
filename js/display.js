@@ -2587,9 +2587,7 @@
     }
 
     function shouldHideRsvpScreen() {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return formatDateKey(today) > RSVP_RETIRE_AFTER_DATE;
+      return !isRsvpDisplayScreenAvailable();
     }
 
     function removeRsvpScreen() {
@@ -2843,6 +2841,7 @@
         meals: 30,
         countdowns: 15,
         scorecards: 30,
+        rsvp: 30,
         default: 30
       };
       if (ds.timer_intervals && typeof ds.timer_intervals === "object") {
@@ -2856,7 +2855,7 @@
       applyColorScheme(config.color_scheme || "warm");
 
       // Apply active screens (must come before screen order)
-      const defaultScreens = DISPLAY_SCREEN_KEYS.filter((name) => name !== "rsvp");
+      const defaultScreens = getConfigurableDisplayScreenKeys();
       const activeScreens = Array.isArray(ds.active_screens) && ds.active_screens.length > 0
         ? ds.active_screens
         : defaultScreens;
@@ -2867,6 +2866,14 @@
         ? ds.screen_order
         : defaultScreens;
       applyScreenOrder(screenOrder);
+      if (!initialLoadComplete) {
+        const firstEntry = getOrderedVisibleScreenEntries()[0] || null;
+        if (firstEntry) {
+          activeScreenKey = firstEntry.key;
+          currentIndex = 0;
+          track.style.transform = "translateX(0%)";
+        }
+      }
     }
 
     function animateScorecardScore(scorecardId, playerName, increment) {
@@ -3545,6 +3552,7 @@
       if (screen.classList.contains("screen--meals")) return (screenTimers.meals || 30) * 1000;
       if (screen.classList.contains("countdown-screen")) return (screenTimers.countdowns || 15) * 1000;
       if (screen.classList.contains("scorecard-screen")) return (screenTimers.scorecards || 30) * 1000;
+      if (screen.classList.contains("rsvp-screen")) return (screenTimers.rsvp || 30) * 1000;
       return (screenTimers.default || 30) * 1000;
     }
 

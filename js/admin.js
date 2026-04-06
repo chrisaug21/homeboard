@@ -36,25 +36,27 @@
     ];
 
     // Screen definitions for settings UI
-    const CONFIGURABLE_SCREENS = DISPLAY_SCREEN_KEYS.filter((key) => key !== "rsvp");
+    const CONFIGURABLE_SCREENS = getConfigurableDisplayScreenKeys();
     const SCREEN_LABELS = {
       upcoming_calendar: "Upcoming Calendar",
       monthly_calendar: "Monthly Calendar",
       todos: "To-Do List",
       meals: "Meal Plan",
       countdowns: "Countdowns",
-      scorecards: "Scorecards"
+      scorecards: "Scorecards",
+      rsvp: "Wedding RSVP"
     };
-    const TIMER_SCREEN_KEYS = DISPLAY_SCREEN_KEYS.filter((key) => key !== "rsvp");
+    const TIMER_SCREEN_KEYS = getConfigurableDisplayScreenKeys();
     const TIMER_LABELS = {
       upcoming_calendar: "Upcoming Calendar",
       monthly_calendar: "Monthly Calendar",
       todos: "To-Do List",
       meals: "Meal Plan",
       countdowns: "Countdowns",
-      scorecards: "Scorecards"
+      scorecards: "Scorecards",
+      rsvp: "Wedding RSVP"
     };
-    const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15, scorecards: 30 };
+    const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15, scorecards: 30, rsvp: 30 };
 
     // Loaded from Supabase at admin init; falls back to defaults so todo form always works
     let adminHouseholdSettings = {
@@ -4875,6 +4877,11 @@
           element.classList.remove("admin-input--skeleton");
         }
       });
+
+      const rsvpToggle = document.querySelector("[name='screen_rsvp']")?.closest(".admin-settings-toggle");
+      if (rsvpToggle) {
+        rsvpToggle.hidden = !CONFIGURABLE_SCREENS.includes("rsvp");
+      }
 
       // Household
       if (assistantInput) assistantInput.value = adminHouseholdSettings.assistant_name || "";
