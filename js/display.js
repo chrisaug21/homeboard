@@ -538,10 +538,12 @@
     }
 
     function mapSupabaseTodo(todo) {
+      const description = String(todo.description || "").trim();
       return {
         id: todo.id,
         title: todo.title || "Untitled task",
         assignee: todo.assignee || "",
+        description: description || null,
         duePill: getTodoDuePill(todo.due_date),
         isOverdue: isTodoOverdue(todo.due_date)
       };
@@ -1026,6 +1028,13 @@
           : "";
         const assignee = todo.assignee ? getAssigneeMarkup(todo.assignee) : "";
         const overdueClass = todo.isOverdue ? " todo-card--overdue" : "";
+        const contentMarkup = `
+          <div class="todo-title-row">
+            <div class="todo-title">${escapeHtml(todo.title)}</div>
+            ${todo.description ? `<span class="todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>` : ""}
+          </div>
+          <div class="todo-pills">${assignee}${pill}</div>
+        `;
         return `
           <article class="todo-card${overdueClass}" data-todo-id="${escapeHtml(todo.id)}">
             <button class="todo-check-btn" type="button" aria-label="Complete ${escapeHtml(todo.title)}">
@@ -1035,10 +1044,9 @@
                 </svg>
               </div>
             </button>
-            <div class="todo-copy">
-              <div class="todo-title">${escapeHtml(todo.title)}</div>
-              <div class="todo-pills">${assignee}${pill}</div>
-            </div>
+            ${todo.description
+              ? `<button class="todo-copy todo-detail-trigger" type="button" data-action="open-todo-detail" aria-label="View details for ${escapeHtml(todo.title)}">${contentMarkup}</button>`
+              : `<div class="todo-copy">${contentMarkup}</div>`}
           </article>
         `;
       }).join("");
@@ -1052,6 +1060,22 @@
           }
         });
       });
+
+      list.querySelectorAll("[data-action='open-todo-detail']").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const card = btn.closest("[data-todo-id]");
+          if (!card) {
+            return;
+          }
+
+          const todo = cachedDisplayTodos.find((item) => item.id === card.dataset.todoId);
+          if (todo?.description) {
+            openTodoDetailModal(todo);
+          }
+        });
+      });
+
+      refreshIcons();
     }
 
     let displayToastTimeoutId = null;
@@ -1113,7 +1137,7 @@
 
       const { data, error } = await client
         .from("todos")
-        .select("id, title, due_date, assignee, archived_at, created_at")
+        .select("id, title, description, due_date, assignee, archived_at, created_at")
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null)
         .order("due_date", { ascending: true, nullsFirst: false })
@@ -3750,6 +3774,27 @@
       resetAutoRotate("event-detail-close");
     }
 
+    function openTodoDetailModal(todo) {
+      const titleEl = document.getElementById("todo-detail-title");
+      const bodyEl = document.getElementById("todo-detail-body");
+      if (!titleEl || !bodyEl) {
+        return;
+      }
+
+      titleEl.textContent = todo.title;
+      bodyEl.innerHTML = `
+        <div class="todo-detail-text">${escapeHtml(todo.description || "").replace(/\n/g, "<br>")}</div>
+      `;
+      document.getElementById("todo-detail-modal").hidden = false;
+      resetAutoRotate("todo-detail-open");
+      refreshIcons();
+    }
+
+    function closeTodoDetailModal() {
+      document.getElementById("todo-detail-modal").hidden = true;
+      resetAutoRotate("todo-detail-close");
+    }
+
     function openDayDetailModal(dateKey) {
       const date = new Date(dateKey + "T00:00:00");
       document.getElementById("day-detail-title").textContent = formatHeaderDate(date);
@@ -4169,6 +4214,8 @@
       // Modal close handlers
       document.getElementById("event-detail-close").addEventListener("click", closeEventDetailModal);
       document.getElementById("event-detail-backdrop").addEventListener("click", closeEventDetailModal);
+      document.getElementById("todo-detail-close").addEventListener("click", closeTodoDetailModal);
+      document.getElementById("todo-detail-backdrop").addEventListener("click", closeTodoDetailModal);
       document.getElementById("day-detail-close").addEventListener("click", closeDayDetailModal);
       document.getElementById("day-detail-backdrop").addEventListener("click", closeDayDetailModal);
       document.getElementById("rsvp-detail-close").addEventListener("click", closeRsvpDetailModal);

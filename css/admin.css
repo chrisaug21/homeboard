@@ -136,6 +136,20 @@
       font: inherit;
     }
 
+    .admin-field textarea {
+      width: 100%;
+      min-width: 0;
+      min-height: 96px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: var(--panel-strong);
+      color: var(--ink);
+      font: inherit;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
     .admin-input {
       width: 100%;
       min-width: 0;
@@ -151,6 +165,12 @@
       outline: 2px solid rgba(180, 83, 9, 0.22);
       outline-offset: 2px;
       border-color: rgba(180, 83, 9, 0.3);
+    }
+
+    .admin-field textarea:focus-visible {
+      outline: 2px solid var(--color-accent-subtle);
+      outline-offset: 2px;
+      border-color: var(--color-accent);
     }
 
     .admin-input:focus-visible {
@@ -1934,6 +1954,7 @@
     }
 
     html[data-scheme="dark"] .admin-field input,
+    html[data-scheme="dark"] .admin-field textarea,
     html[data-scheme="dark"] .admin-field select,
     html[data-scheme="dark"] .admin-input,
     html[data-scheme="dark"] .admin-settings-timer-input,
