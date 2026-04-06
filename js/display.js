@@ -7,6 +7,7 @@
     const monthTitleEl = document.getElementById("month-title");
 
     let currentIndex = 0;
+    let activeScreenKey = "";
     let autoRotateId = null;
     let autoRotateToken = 0;
     let pointerStartX = null;
@@ -43,7 +44,8 @@
       upcoming_calendar: track.querySelector(".screen--calendar"),
       monthly_calendar: track.querySelector(".screen--month"),
       todos: track.querySelector(".screen--todos"),
-      meals: track.querySelector(".screen--meals")
+      meals: track.querySelector(".screen--meals"),
+      rsvp: track.querySelector(".rsvp-screen")
     };
 
     function getRegisteredScreens(screenName) {
@@ -65,6 +67,12 @@
     function resolveScreen(screenId) {
       pendingScreens.delete(screenId);
       if (!initialLoadComplete && pendingScreens.size === 0) {
+        const firstEntry = getOrderedVisibleScreenEntries()[0] || null;
+        if (firstEntry) {
+          activeScreenKey = firstEntry.key;
+          currentIndex = 0;
+          track.style.transform = "translateX(0%)";
+        }
         initialLoadComplete = true;
         localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
         updateLastSyncedLabel();
@@ -283,7 +291,7 @@
     }
 
     function getScreenCount() {
-      return getVisibleScreens().length;
+      return getOrderedVisibleScreenEntries().length;
     }
 
     function getVisibleScreens() {
@@ -291,6 +299,49 @@
         !screen.classList.contains("screen--disabled")
         && !screen.classList.contains("screen--empty-hidden")
       );
+    }
+
+    function getOrderedVisibleScreenEntries() {
+      return getVisibleScreens().map((screen, index) => ({
+        screen,
+        key: getOrderKeyForScreen(screen),
+        groupKey: getScreenKeyForElement(screen),
+        index
+      }));
+    }
+
+    function syncActiveScreenState() {
+      const entries = getOrderedVisibleScreenEntries();
+      if (!entries.length) {
+        currentIndex = 0;
+        activeScreenKey = "";
+        return entries;
+      }
+
+      const activeIndex = activeScreenKey
+        ? entries.findIndex((entry) => entry.key === activeScreenKey)
+        : -1;
+
+      if (activeIndex >= 0) {
+        currentIndex = activeIndex;
+        activeScreenKey = entries[activeIndex].key;
+        return entries;
+      }
+
+      currentIndex = Math.min(currentIndex, entries.length - 1);
+      activeScreenKey = entries[currentIndex]?.key || entries[0].key;
+      currentIndex = Math.max(0, entries.findIndex((entry) => entry.key === activeScreenKey));
+      if (currentIndex < 0) {
+        currentIndex = 0;
+        activeScreenKey = entries[0].key;
+      }
+
+      return entries;
+    }
+
+    function getActiveScreenEntry() {
+      const entries = syncActiveScreenState();
+      return entries[currentIndex] || null;
     }
 
     function getOrderKeyForScreen(screen) {
@@ -341,10 +392,10 @@
     }
 
     function getDisplayNavItems() {
-      const visibleScreens = getVisibleScreens();
+      const visibleScreens = getOrderedVisibleScreenEntries();
       const visibleIndexByKey = new Map();
-      visibleScreens.forEach((screen, index) => {
-        const screenKey = getScreenKeyForElement(screen);
+      visibleScreens.forEach((entry, index) => {
+        const screenKey = entry.groupKey;
         if (!visibleIndexByKey.has(screenKey)) {
           visibleIndexByKey.set(screenKey, index);
         }
@@ -371,8 +422,8 @@
         }
       });
 
-      visibleScreens.forEach((screen, index) => {
-        const screenKey = getScreenKeyForElement(screen);
+      visibleScreens.forEach((entry, index) => {
+        const screenKey = entry.groupKey;
         if (seen.has(screenKey)) {
           return;
         }
@@ -1086,7 +1137,9 @@
 
     function mapSupabaseCountdown(countdown) {
       const { imageUrl, imageCredit } = parseUnsplashData(countdown.unsplash_image_url);
+      const safeId = String(countdown.id || "").trim();
       return {
+        id: safeId,
         name: countdown.name || "Upcoming Event",
         icon: countdown.icon || "calendar",
         eventDate: countdown.event_date,
@@ -1094,7 +1147,8 @@
         caption: formatLongDate(countdown.event_date),
         image_url: imageUrl,
         image_credit: imageCredit,
-        daysBeforeVisible: countdown.days_before_visible ?? null
+        daysBeforeVisible: countdown.days_before_visible ?? null,
+        screenKey: safeId ? `countdown_supabase_${safeId}` : ""
       };
     }
 
@@ -1110,7 +1164,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("name, icon, event_date, unsplash_image_url, days_before_visible")
+        .select("id, name, icon, event_date, unsplash_image_url, days_before_visible")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
@@ -1552,7 +1606,10 @@
           name,
           icon,
           days,
-          caption: formatLongDate(eventDate)
+          caption: formatLongDate(eventDate),
+          screenKey: item.id
+            ? `countdown_calendar_${String(item.id).trim()}`
+            : `countdown_calendar_${eventDate}_${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "event"}`
         });
       });
 
@@ -1824,22 +1881,21 @@
     }
 
     function reconcileRotationState() {
-      const visibleScreens = getVisibleScreens();
+      const visibleScreens = syncActiveScreenState();
       const screenCount = visibleScreens.length;
 
       if (!screenCount) {
         return;
       }
 
-      currentIndex = Math.min(currentIndex, screenCount - 1);
       track.style.transform = "translateX(-" + (currentIndex * 100) + "%)";
       renderProgress();
       refreshIcons();
     }
 
     function findFirstNonScorecardScreenIndex() {
-      const visibleScreens = getVisibleScreens();
-      const targetIndex = visibleScreens.findIndex((screen) => !screen.classList.contains("scorecard-screen"));
+      const visibleScreens = getOrderedVisibleScreenEntries();
+      const targetIndex = visibleScreens.findIndex((entry) => !entry.screen.classList.contains("scorecard-screen"));
       return targetIndex >= 0 ? targetIndex : 0;
     }
 
@@ -2334,8 +2390,7 @@
       if (!firstCountdownScreen) {
         firstCountdownScreen = document.createElement("section");
         firstCountdownScreen.className = "screen countdown-screen";
-        const rsvpScreen = track.querySelector(".rsvp-screen");
-        track.insertBefore(firstCountdownScreen, rsvpScreen || null);
+        track.appendChild(firstCountdownScreen);
       }
 
       if (!countdownItems.length) {
@@ -2349,6 +2404,7 @@
         return;
       }
 
+      firstCountdownScreen.dataset.screenKey = String(countdownItems[0]?.screenKey || "countdown_0").trim() || "countdown_0";
       firstCountdownScreen.classList.remove("screen--empty-hidden");
       if (!firstCountdownScreen.classList.contains("screen--disabled")) {
         firstCountdownScreen.removeAttribute("aria-hidden");
@@ -2394,6 +2450,7 @@
         if (section.classList.contains("screen--disabled")) {
           section.setAttribute("aria-hidden", "true");
         }
+        section.dataset.screenKey = String(item?.screenKey || `countdown_${index + 1}`).trim() || `countdown_${index + 1}`;
         section.innerHTML = countdownTemplate(item, index + 1);
         // Insert after the last existing countdown-screen to keep them grouped
         const allCountdowns = track.querySelectorAll(".countdown-screen");
@@ -2537,9 +2594,7 @@
     }
 
     function shouldHideRsvpScreen() {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return formatDateKey(today) > RSVP_RETIRE_AFTER_DATE;
+      return !isRsvpDisplayScreenAvailable();
     }
 
     function removeRsvpScreen() {
@@ -2645,16 +2700,15 @@
         return;
       }
 
-      const visibleScreens = getVisibleScreens();
-      if (!visibleScreens.length) {
+      const activeEntry = getActiveScreenEntry();
+      if (!activeEntry) {
         displayNav.innerHTML = "";
         displayNav.hidden = true;
         return;
       }
 
-      const activeScreenKey = getScreenKeyForElement(visibleScreens[currentIndex]);
       displayNav.innerHTML = getDisplayNavItems().map((item) =>
-        buildDisplayNavButtonMarkup(item, item.key === activeScreenKey)
+        buildDisplayNavButtonMarkup(item, item.key === activeEntry.groupKey)
       ).join("");
       displayNav.hidden = false;
       refreshIcons();
@@ -2734,7 +2788,7 @@
 
     function applyScreenOrder(screenOrder) {
       const orderedKeys = Array.isArray(screenOrder) ? screenOrder : [];
-      const currentScreenKey = getOrderKeyForScreen(getVisibleScreens()[currentIndex]);
+      const currentScreenKey = activeScreenKey || getOrderKeyForScreen(getVisibleScreens()[currentIndex]);
       const allScreens = Array.from(track.children);
       const placed = new Set();
       const nextOrder = [];
@@ -2767,10 +2821,11 @@
       nextOrder.forEach((screen) => track.appendChild(screen));
 
       if (currentScreenKey) {
-        const visibleScreens = getVisibleScreens();
-        const nextIndex = visibleScreens.findIndex((screen) => getOrderKeyForScreen(screen) === currentScreenKey);
+        const visibleScreens = getOrderedVisibleScreenEntries();
+        const nextIndex = visibleScreens.findIndex((entry) => entry.key === currentScreenKey);
         if (nextIndex >= 0) {
           currentIndex = nextIndex;
+          activeScreenKey = currentScreenKey;
         }
       }
     }
@@ -2793,6 +2848,7 @@
         meals: 30,
         countdowns: 15,
         scorecards: 30,
+        rsvp: 30,
         default: 30
       };
       if (ds.timer_intervals && typeof ds.timer_intervals === "object") {
@@ -2806,7 +2862,7 @@
       applyColorScheme(config.color_scheme || "warm");
 
       // Apply active screens (must come before screen order)
-      const defaultScreens = DISPLAY_SCREEN_KEYS.filter((name) => name !== "rsvp");
+      const defaultScreens = getConfigurableDisplayScreenKeys();
       const activeScreens = Array.isArray(ds.active_screens) && ds.active_screens.length > 0
         ? ds.active_screens
         : defaultScreens;
@@ -3451,7 +3507,8 @@
     }
 
     function goToScreen(index) {
-      const screenCount = getScreenCount();
+      const entries = syncActiveScreenState();
+      const screenCount = entries.length;
       if (!screenCount) {
         return;
       }
@@ -3475,6 +3532,7 @@
       }
 
       currentIndex = (index + screenCount) % screenCount;
+      activeScreenKey = entries[currentIndex]?.key || activeScreenKey;
       track.style.transform = "translateX(-" + (currentIndex * 100) + "%)";
       renderProgress();
     }
@@ -3485,7 +3543,7 @@
     }
 
     function getTimerForCurrentScreen() {
-      const screen = getVisibleScreens()[currentIndex];
+      const screen = getActiveScreenEntry()?.screen;
       if (!screen) return (screenTimers.default || 30) * 1000;
       if (screen.classList.contains("screen--calendar")) return (screenTimers.upcoming_calendar || 30) * 1000;
       if (screen.classList.contains("screen--month")) return (screenTimers.monthly_calendar || 60) * 1000;
@@ -3493,6 +3551,7 @@
       if (screen.classList.contains("screen--meals")) return (screenTimers.meals || 30) * 1000;
       if (screen.classList.contains("countdown-screen")) return (screenTimers.countdowns || 15) * 1000;
       if (screen.classList.contains("scorecard-screen")) return (screenTimers.scorecards || 30) * 1000;
+      if (screen.classList.contains("rsvp-screen")) return (screenTimers.rsvp || 30) * 1000;
       return (screenTimers.default || 30) * 1000;
     }
 

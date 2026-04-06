@@ -36,25 +36,33 @@
     ];
 
     // Screen definitions for settings UI
-    const CONFIGURABLE_SCREENS = DISPLAY_SCREEN_KEYS.filter((key) => key !== "rsvp");
     const SCREEN_LABELS = {
       upcoming_calendar: "Upcoming Calendar",
       monthly_calendar: "Monthly Calendar",
       todos: "To-Do List",
       meals: "Meal Plan",
       countdowns: "Countdowns",
-      scorecards: "Scorecards"
+      scorecards: "Scorecards",
+      rsvp: "Wedding RSVP"
     };
-    const TIMER_SCREEN_KEYS = DISPLAY_SCREEN_KEYS.filter((key) => key !== "rsvp");
     const TIMER_LABELS = {
       upcoming_calendar: "Upcoming Calendar",
       monthly_calendar: "Monthly Calendar",
       todos: "To-Do List",
       meals: "Meal Plan",
       countdowns: "Countdowns",
-      scorecards: "Scorecards"
+      scorecards: "Scorecards",
+      rsvp: "Wedding RSVP"
     };
-    const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15, scorecards: 30 };
+    const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15, scorecards: 30, rsvp: 30 };
+
+    function getAdminConfigurableScreens() {
+      return getConfigurableDisplayScreenKeys();
+    }
+
+    function getAdminTimerScreenKeys() {
+      return getConfigurableDisplayScreenKeys();
+    }
 
     // Loaded from Supabase at admin init; falls back to defaults so todo form always works
     let adminHouseholdSettings = {
@@ -384,6 +392,8 @@
       const membersList = document.getElementById("settings-members-list");
       const orderList = document.getElementById("settings-screen-order");
       const timerList = document.getElementById("settings-timer-list");
+      const configurableScreens = getAdminConfigurableScreens();
+      const timerScreenKeys = getAdminTimerScreenKeys();
       const assistantInput = document.getElementById("settings-assistant-name");
       const memberInput = document.getElementById("settings-member-input");
       const googleCalInput = document.getElementById("settings-google-cal-id");
@@ -399,7 +409,7 @@
       }
 
       if (orderList) {
-        orderList.innerHTML = Array.from({ length: CONFIGURABLE_SCREENS.length }, () => `
+        orderList.innerHTML = Array.from({ length: configurableScreens.length }, () => `
           <li class="admin-settings-order-item admin-skeleton-card" aria-hidden="true">
             <span class="sk" style="width:150px;height:16px;"></span>
             <div class="admin-settings-order-arrows">
@@ -411,7 +421,7 @@
       }
 
       if (timerList) {
-        timerList.innerHTML = Array.from({ length: TIMER_SCREEN_KEYS.length }, () => `
+        timerList.innerHTML = Array.from({ length: timerScreenKeys.length }, () => `
           <div class="admin-settings-timer-row admin-skeleton-card" aria-hidden="true">
             <span class="sk" style="width:132px;height:16px;"></span>
             <span class="sk" style="width:68px;height:36px;border-radius:8px;"></span>
@@ -2215,17 +2225,18 @@
     }
 
     function normalizeAdminScreenOrder(order) {
-      const configured = Array.isArray(order) ? order : [...CONFIGURABLE_SCREENS];
+      const configurableScreens = getAdminConfigurableScreens();
+      const configured = Array.isArray(order) ? order : [...configurableScreens];
       const normalized = [];
 
       configured.forEach((key) => {
         const normalizedKey = isScorecardScreenKey(key) ? "scorecards" : key;
-        if (CONFIGURABLE_SCREENS.includes(normalizedKey) && !normalized.includes(normalizedKey)) {
+        if (configurableScreens.includes(normalizedKey) && !normalized.includes(normalizedKey)) {
           normalized.push(normalizedKey);
         }
       });
 
-      CONFIGURABLE_SCREENS.forEach((key) => {
+      configurableScreens.forEach((key) => {
         if (!normalized.includes(key)) {
           normalized.push(key);
         }
@@ -4816,7 +4827,8 @@
       if (!list) return;
 
       const ds = adminHouseholdSettings.display_settings || {};
-      const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : CONFIGURABLE_SCREENS;
+      const configurableScreens = getAdminConfigurableScreens();
+      const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : configurableScreens;
       const normalizedOrder = normalizeAdminScreenOrder(screenOrder);
 
       list.innerHTML = normalizedOrder.map((name, i) => {
@@ -4842,8 +4854,9 @@
     function renderSettingsTimerList(timerIntervals) {
       const list = document.getElementById("settings-timer-list");
       if (!list) return;
+      const timerScreenKeys = getAdminTimerScreenKeys();
 
-      list.innerHTML = TIMER_SCREEN_KEYS.map((key) => {
+      list.innerHTML = timerScreenKeys.map((key) => {
         const val = (timerIntervals && timerIntervals[key] != null)
           ? timerIntervals[key]
           : TIMER_DEFAULTS[key];
@@ -4860,8 +4873,9 @@
 
     function loadAdminSettings() {
       const ds = adminHouseholdSettings.display_settings || {};
-      const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : CONFIGURABLE_SCREENS;
-      const screenOrder = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? ds.screen_order : CONFIGURABLE_SCREENS);
+      const configurableScreens = getAdminConfigurableScreens();
+      const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : configurableScreens;
+      const screenOrder = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? ds.screen_order : configurableScreens);
       const timerIntervals = ds.timer_intervals || {};
       const upcomingDays = ds.upcoming_days || 5;
       const members = Array.isArray(ds.members) ? ds.members : [];
@@ -4876,13 +4890,18 @@
         }
       });
 
+      const rsvpToggle = document.querySelector("[name='screen_rsvp']")?.closest(".admin-settings-toggle");
+      if (rsvpToggle) {
+        rsvpToggle.hidden = !configurableScreens.includes("rsvp");
+      }
+
       // Household
       if (assistantInput) assistantInput.value = adminHouseholdSettings.assistant_name || "";
 
       renderSettingsMembersList(members);
 
       // Active screen checkboxes
-      CONFIGURABLE_SCREENS.forEach((name) => {
+      configurableScreens.forEach((name) => {
         const cb = document.querySelector(`[name="screen_${name}"]`);
         if (cb) cb.checked = activeScreens.includes(name);
       });
@@ -5014,8 +5033,10 @@
       if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
 
       try {
+        const configurableScreens = getAdminConfigurableScreens();
+        const timerScreenKeys = getAdminTimerScreenKeys();
         // Active screens
-        const activeScreens = CONFIGURABLE_SCREENS.filter((name) => {
+        const activeScreens = configurableScreens.filter((name) => {
           const cb = document.querySelector(`[name="screen_${name}"]`);
           return cb && cb.checked;
         });
@@ -5031,7 +5052,7 @@
 
         // Timers
         const timerIntervals = {};
-        TIMER_SCREEN_KEYS.forEach((key) => {
+        timerScreenKeys.forEach((key) => {
           const input = document.querySelector(`[name="timer_${key}"]`);
           if (input) {
             const val = parseInt(input.value, 10);
@@ -5202,7 +5223,7 @@
       const dir = btn.getAttribute("data-order-dir");
       const idx = parseInt(btn.getAttribute("data-order-index"), 10);
       const ds = adminHouseholdSettings.display_settings;
-      const order = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? [...ds.screen_order] : [...CONFIGURABLE_SCREENS]);
+      const order = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? [...ds.screen_order] : [...getAdminConfigurableScreens()]);
 
       const swapIdx = dir === "up" ? idx - 1 : idx + 1;
       if (swapIdx < 0 || swapIdx >= order.length) return;
@@ -5224,11 +5245,11 @@
     function handleSettingsScreenToggleChange() {
       // Update state so renderSettingsScreenOrder shows the right active/inactive styling
       const ds = adminHouseholdSettings.display_settings;
-      ds.active_screens = CONFIGURABLE_SCREENS.filter((name) => {
+      ds.active_screens = getAdminConfigurableScreens().filter((name) => {
         const cb = document.querySelector(`[name="screen_${name}"]`);
         return cb && cb.checked;
       });
-      const order = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? ds.screen_order : [...CONFIGURABLE_SCREENS]);
+      const order = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? ds.screen_order : [...getAdminConfigurableScreens()]);
       renderSettingsScreenOrder(order);
       enforceMinOneActiveScreen();
     }

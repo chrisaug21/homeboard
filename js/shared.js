@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.6.17";
+    const VERSION = "1.6.20";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -275,6 +275,20 @@
       return [screenKey];
     }
 
+    function isRsvpDisplayScreenAvailable(referenceDate = new Date()) {
+      const date = referenceDate instanceof Date ? new Date(referenceDate) : new Date(referenceDate);
+      if (Number.isNaN(date.getTime())) {
+        return true;
+      }
+
+      date.setHours(0, 0, 0, 0);
+      return formatDateKey(date) <= RSVP_RETIRE_AFTER_DATE;
+    }
+
+    function getConfigurableDisplayScreenKeys(referenceDate = new Date()) {
+      return DISPLAY_SCREEN_KEYS.filter((key) => key !== "rsvp" || isRsvpDisplayScreenAvailable(referenceDate));
+    }
+
     function normalizeDisplayScreenList(screenList, fallback = DISPLAY_SCREEN_KEYS, options = {}) {
       const allowScorecardScreens = options.allowScorecardScreens === true;
       if (!Array.isArray(screenList) || screenList.length === 0) {
@@ -326,14 +340,14 @@
       const settings = displaySettings && typeof displaySettings === "object"
         ? { ...displaySettings }
         : {};
-      const configurableDisplayScreenKeys = DISPLAY_SCREEN_KEYS.filter((key) => key !== "rsvp");
+      const configurableDisplayScreenKeys = getConfigurableDisplayScreenKeys();
 
       settings.active_screens = normalizeDisplayScreenList(settings.active_screens, configurableDisplayScreenKeys, {
         allowScorecardScreens: true
-      });
-      settings.screen_order = normalizeDisplayScreenList(settings.screen_order, DISPLAY_SCREEN_KEYS, {
+      }).filter((key) => configurableDisplayScreenKeys.includes(key) || isScorecardScreenKey(key));
+      settings.screen_order = normalizeDisplayScreenList(settings.screen_order, configurableDisplayScreenKeys, {
         allowScorecardScreens: true
-      });
+      }).filter((key) => configurableDisplayScreenKeys.includes(key) || isScorecardScreenKey(key));
       settings.timer_intervals = normalizeTimerIntervals(settings.timer_intervals);
       delete settings.calendar_view;
 
