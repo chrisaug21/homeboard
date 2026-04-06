@@ -931,36 +931,6 @@
       align-items: center;
     }
 
-    .admin-choice-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .admin-choice-card {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: var(--tag-radius);
-      background: var(--panel-strong);
-      color: var(--ink);
-      font-size: 0.92rem;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .admin-choice-card:has(input:checked) {
-      border-color: var(--color-accent);
-      background: var(--color-accent-subtle);
-    }
-
-    .admin-choice-card input {
-      margin: 0;
-      accent-color: var(--color-accent);
-    }
-
     .admin-countdown-preview {
       width: 72px;
       aspect-ratio: 3 / 4;
@@ -2040,8 +2010,7 @@
     html[data-scheme="dark"] .admin-nav-button.is-active,
     html[data-scheme="dark"] .admin-settings-toggle:has(input:checked),
     html[data-scheme="dark"] .admin-settings-scheme-option:has(input:checked),
-    html[data-scheme="dark"] .admin-settings-order-btn:hover:not(:disabled),
-    html[data-scheme="dark"] .admin-choice-card:has(input:checked) {
+    html[data-scheme="dark"] .admin-settings-order-btn:hover:not(:disabled) {
       background: rgba(245, 158, 11, 0.16);
     }
 
