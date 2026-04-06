@@ -516,6 +516,32 @@
       line-height: 1.3;
     }
 
+    .admin-todo-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .admin-todo-detail-indicator {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--button-radius);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: var(--color-accent-subtle);
+      color: var(--color-accent);
+    }
+
+    .admin-todo-detail-indicator svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2.2;
+    }
+
     .admin-todo-meta {
       display: flex;
       flex-wrap: wrap;

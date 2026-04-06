@@ -888,6 +888,7 @@
     function renderAdminTodoCard(todo, options) {
       const title = escapeHtml(todo.title || "Untitled task");
       const assignee = todo.assignee ? escapeHtml(todo.assignee) : "Unassigned";
+      const hasDescription = !!String(todo.description || "").trim();
       const overdueClass = options.showComplete && isTodoOverdue(todo.due_date)
         ? " admin-todo-card--overdue"
         : "";
@@ -909,6 +910,12 @@
           ${dueMarkup}
         </div>
       `;
+      const titleMarkup = `
+        <div class="admin-todo-title-row">
+          <div class="admin-todo-title">${title}</div>
+          ${hasDescription ? `<span class="admin-todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>` : ""}
+        </div>
+      `;
 
       if (options.showComplete) {
         return `
@@ -921,7 +928,7 @@
               </div>
             </button>
             <div class="admin-todo-body">
-              <div class="admin-todo-title">${title}</div>
+              ${titleMarkup}
               ${meta}
             </div>
           </article>
@@ -931,7 +938,7 @@
       return `
         <article class="admin-todo-card" aria-label="${title}">
           <div class="admin-todo-body">
-            <div class="admin-todo-title">${title}</div>
+            ${titleMarkup}
             ${meta}
           </div>
         </article>
