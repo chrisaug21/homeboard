@@ -26,6 +26,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 1. **This Week** — Google Calendar events for the configured upcoming window (`display_settings.upcoming_days`, currently 5 or 7 days)
 2. **This Month** — full month calendar grid with events
 3. **To-do List** — shared household tasks with open count and next-up summary
+   Todos with descriptions show an info indicator and open a read-only detail modal when tapped; checkbox completion stays separate
    Display-only completions trigger one of seven built-in celebration animations before the card clears. `canvas-confetti` powers Confetti Burst, Star Shower, and Fireworks; GSAP powers Bubble Float, Thumbs Up Bounce, and Ink Splash; Ripple Rings stays CSS/JS only
 4. **Dinner Plan** — this week's dinner entries (Mon–Sun)
 5. **Looking Forward** — countdown cards to upcoming events with Lucide icons and days-remaining
@@ -38,7 +39,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 ## Admin Tabs
 
 ### To-do
-- Add tasks with title, optional assignee, optional due date
+- Add tasks with title, optional description, optional assignee, optional due date
 - Active incomplete tasks with `due_date < today` are highlighted as overdue with a red-accent card treatment
 - Mark tasks complete (archives them) or restore archived tasks
 - Archived tasks live in a collapsible drawer
@@ -88,7 +89,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 |-------|---------|
 | `households` | Household name, Google Cal config, display settings, admin PIN |
 | `users` | Linked to `auth.users`; household membership and role |
-| `todos` | Soft-delete only — never hard delete; archived via `archived_at` |
+| `todos` | Soft-delete only — never hard delete; archived via `archived_at`; optional `description` text supports admin notes and the display detail modal |
 | `meal_plan` | `user_id = null` = shared/household row shown on display |
 | `meal_plan_notes` | One note per household per week; keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` is a Lucide icon name string; also stores optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` for countdown photos and visibility timing |

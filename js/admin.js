@@ -888,6 +888,7 @@
     function renderAdminTodoCard(todo, options) {
       const title = escapeHtml(todo.title || "Untitled task");
       const assignee = todo.assignee ? escapeHtml(todo.assignee) : "Unassigned";
+      const hasDescription = !!String(todo.description || "").trim();
       const overdueClass = options.showComplete && isTodoOverdue(todo.due_date)
         ? " admin-todo-card--overdue"
         : "";
@@ -909,6 +910,12 @@
           ${dueMarkup}
         </div>
       `;
+      const titleMarkup = `
+        <div class="admin-todo-title-row">
+          <div class="admin-todo-title">${title}</div>
+          ${hasDescription ? `<span class="admin-todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>` : ""}
+        </div>
+      `;
 
       if (options.showComplete) {
         return `
@@ -921,7 +928,7 @@
               </div>
             </button>
             <div class="admin-todo-body">
-              <div class="admin-todo-title">${title}</div>
+              ${titleMarkup}
               ${meta}
             </div>
           </article>
@@ -931,7 +938,7 @@
       return `
         <article class="admin-todo-card" aria-label="${title}">
           <div class="admin-todo-body">
-            <div class="admin-todo-title">${title}</div>
+            ${titleMarkup}
             ${meta}
           </div>
         </article>
@@ -969,6 +976,7 @@
         : `<div class="admin-empty">Nothing completed in ${escapeHtml(monthLabel)}.</div>`;
 
       updateArchiveMonthLabel();
+      refreshIcons();
     }
 
     function getArchivedMonthDisplay() {
@@ -1051,6 +1059,7 @@
       }
 
       const title = String(formData.get("title") || "").trim();
+      const description = String(formData.get("description") || "").trim();
       const assignee = String(formData.get("assignee") || "").trim();
       const dueDate = String(formData.get("due_date") || "").trim();
 
@@ -1066,6 +1075,7 @@
         .insert({
           household_id: TODO_HOUSEHOLD_ID,
           title,
+          description: description || null,
           assignee: assignee || null,
           due_date: dueDate || null
         });
@@ -1090,6 +1100,7 @@
       }
 
       const title = String(formData.get("title") || "").trim();
+      const description = String(formData.get("description") || "").trim();
       const assignee = String(formData.get("assignee") || "").trim();
       const dueDate = String(formData.get("due_date") || "").trim();
 
@@ -1102,6 +1113,7 @@
         .from("todos")
         .update({
           title,
+          description: description || null,
           assignee: assignee || null,
           due_date: dueDate || null
         })
@@ -1140,6 +1152,10 @@
             <input id="modal-todo-title" name="title" type="text" maxlength="140" required
               value="${isEdit ? escapeHtml(todo.title || "") : ""}"
               placeholder="${isEdit ? "" : "What needs doing?"}">
+          </div>
+          <div class="admin-field">
+            <label for="modal-todo-description">Description</label>
+            <textarea id="modal-todo-description" name="description" rows="4" maxlength="2000" placeholder="Add details if this task needs context...">${isEdit ? escapeHtml(todo.description || "") : ""}</textarea>
           </div>
           <div class="admin-form-row">
             <div class="admin-field">
@@ -4720,7 +4736,7 @@
 
       const { data, error } = await client
         .from("todos")
-        .select("id, title, assignee, due_date, archived_at, created_at")
+        .select("id, title, description, assignee, due_date, archived_at, created_at")
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });

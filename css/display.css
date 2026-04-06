@@ -1199,6 +1199,31 @@
       min-width: 0;
     }
 
+    .todo-detail-trigger {
+      width: 100%;
+      border: none;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .todo-detail-trigger:focus-visible {
+      outline: 3px solid var(--color-accent-subtle);
+      outline-offset: 4px;
+      border-radius: var(--button-radius);
+    }
+
+    .todo-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+    }
+
     .todo-title {
       font-size: 1.35rem;
       font-weight: 700;
@@ -1207,6 +1232,24 @@
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
+    }
+
+    .todo-detail-indicator {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--button-radius);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: var(--color-accent-subtle);
+      color: var(--color-accent);
+    }
+
+    .todo-detail-indicator svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2.2;
     }
 
     .todo-meta {
@@ -1264,6 +1307,14 @@
     .todo-due-pill--future {
       background: rgba(121, 106, 94, 0.1);
       color: var(--muted);
+    }
+
+    .todo-detail-text {
+      font-size: 1rem;
+      font-weight: 500;
+      line-height: 1.6;
+      color: var(--ink);
+      white-space: normal;
     }
 
     .todo-celebration-layer {
