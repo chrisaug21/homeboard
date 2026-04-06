@@ -44,7 +44,8 @@
       upcoming_calendar: track.querySelector(".screen--calendar"),
       monthly_calendar: track.querySelector(".screen--month"),
       todos: track.querySelector(".screen--todos"),
-      meals: track.querySelector(".screen--meals")
+      meals: track.querySelector(".screen--meals"),
+      rsvp: track.querySelector(".rsvp-screen")
     };
 
     function getRegisteredScreens(screenName) {
@@ -66,6 +67,12 @@
     function resolveScreen(screenId) {
       pendingScreens.delete(screenId);
       if (!initialLoadComplete && pendingScreens.size === 0) {
+        const firstEntry = getOrderedVisibleScreenEntries()[0] || null;
+        if (firstEntry) {
+          activeScreenKey = firstEntry.key;
+          currentIndex = 0;
+          track.style.transform = "translateX(0%)";
+        }
         initialLoadComplete = true;
         localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
         updateLastSyncedLabel();
@@ -2866,14 +2873,6 @@
         ? ds.screen_order
         : defaultScreens;
       applyScreenOrder(screenOrder);
-      if (!initialLoadComplete) {
-        const firstEntry = getOrderedVisibleScreenEntries()[0] || null;
-        if (firstEntry) {
-          activeScreenKey = firstEntry.key;
-          currentIndex = 0;
-          track.style.transform = "translateX(0%)";
-        }
-      }
     }
 
     function animateScorecardScore(scorecardId, playerName, increment) {
