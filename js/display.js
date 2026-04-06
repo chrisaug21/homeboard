@@ -1211,6 +1211,7 @@
     function mapSupabaseCountdown(countdown) {
       const { imageUrl, imageCredit } = parseUnsplashData(countdown.unsplash_image_url);
       const safeId = String(countdown.id || "").trim();
+      const customImageUrl = String(countdown.custom_image_url || "").trim() || null;
       return {
         id: safeId,
         name: countdown.name || "Upcoming Event",
@@ -1218,8 +1219,8 @@
         eventDate: countdown.event_date,
         days: getDaysUntil(countdown.event_date),
         caption: formatLongDate(countdown.event_date),
-        image_url: imageUrl,
-        image_credit: imageCredit,
+        image_url: customImageUrl || imageUrl,
+        image_credit: customImageUrl ? null : imageCredit,
         daysBeforeVisible: countdown.days_before_visible ?? null,
         screenKey: safeId ? `countdown_supabase_${safeId}` : ""
       };
@@ -1237,7 +1238,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("id, name, icon, event_date, unsplash_image_url, days_before_visible")
+        .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible")
         .eq("household_id", DISPLAY_HOUSEHOLD_ID)
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
