@@ -10,6 +10,10 @@
     let activeScreenKey = "";
     let autoRotateId = null;
     let autoRotateToken = 0;
+    let isScreenTransitioning = false;
+    let screenTransitionFallbackId = null;
+    let pendingScreenOrder = null;
+    let pendingReconcile = false;
     let pointerStartX = null;
     let pointerDeltaX = 0;
     let rsvpScrollId = null;
@@ -79,6 +83,51 @@
         renderProgress();
         resetAutoRotate();
       }
+    }
+
+    function clearScreenTransitionFallback() {
+      if (screenTransitionFallbackId !== null) {
+        window.clearTimeout(screenTransitionFallbackId);
+        screenTransitionFallbackId = null;
+      }
+    }
+
+    function flushPendingDisplayState() {
+      if (pendingScreenOrder) {
+        const queuedOrder = pendingScreenOrder;
+        pendingScreenOrder = null;
+        applyScreenOrder(queuedOrder);
+      }
+
+      if (pendingReconcile) {
+        pendingReconcile = false;
+        reconcileRotationState();
+      }
+    }
+
+    function finishScreenTransition() {
+      if (!isScreenTransitioning) {
+        return;
+      }
+
+      isScreenTransitioning = false;
+      clearScreenTransitionFallback();
+      flushPendingDisplayState();
+    }
+
+    function beginScreenTransition() {
+      isScreenTransitioning = true;
+      clearScreenTransitionFallback();
+      screenTransitionFallbackId = window.setTimeout(() => {
+        finishScreenTransition();
+      }, 700);
+    }
+
+    function pauseAutoRotate(reason = "unknown") {
+      window.clearTimeout(autoRotateId);
+      autoRotateId = null;
+      autoRotateToken += 1;
+      console.log(`[rotation] paused via ${reason}; token=${autoRotateToken}`);
     }
 
     function renderScreenError(containerEl, label, retryFn) {
@@ -1881,6 +1930,11 @@
     }
 
     function reconcileRotationState() {
+      if (isScreenTransitioning) {
+        pendingReconcile = true;
+        return;
+      }
+
       const visibleScreens = syncActiveScreenState();
       const screenCount = visibleScreens.length;
 
@@ -2787,6 +2841,11 @@
     }
 
     function applyScreenOrder(screenOrder) {
+      if (isScreenTransitioning) {
+        pendingScreenOrder = Array.isArray(screenOrder) ? [...screenOrder] : [];
+        return;
+      }
+
       const orderedKeys = Array.isArray(screenOrder) ? screenOrder : [];
       const currentScreenKey = activeScreenKey || getOrderKeyForScreen(getVisibleScreens()[currentIndex]);
       const allScreens = Array.from(track.children);
@@ -3507,10 +3566,14 @@
     }
 
     function goToScreen(index) {
+      if (isScreenTransitioning) {
+        return false;
+      }
+
       const entries = syncActiveScreenState();
       const screenCount = entries.length;
       if (!screenCount) {
-        return;
+        return false;
       }
       const isForwardWrap = index >= screenCount;
       const isBackwardWrap = index < 0;
@@ -3533,13 +3596,19 @@
 
       currentIndex = (index + screenCount) % screenCount;
       activeScreenKey = entries[currentIndex]?.key || activeScreenKey;
+      beginScreenTransition();
       track.style.transform = "translateX(-" + (currentIndex * 100) + "%)";
       renderProgress();
+      return true;
     }
 
     function navigateToScreenIndex(index) {
-      goToScreen(index);
+      if (!goToScreen(index)) {
+        return false;
+      }
+
       resetAutoRotate();
+      return true;
     }
 
     function getTimerForCurrentScreen() {
@@ -3576,18 +3645,18 @@
     }
 
     function nextScreen() {
-      goToScreen(currentIndex + 1);
+      return goToScreen(currentIndex + 1);
     }
 
     function previousScreen() {
-      goToScreen(currentIndex - 1);
+      return goToScreen(currentIndex - 1);
     }
 
     function manualNavigate(direction) {
       if (direction === "next") {
-        navigateToScreenIndex(currentIndex + 1);
+        return navigateToScreenIndex(currentIndex + 1);
       } else {
-        navigateToScreenIndex(currentIndex - 1);
+        return navigateToScreenIndex(currentIndex - 1);
       }
     }
 
@@ -3596,6 +3665,7 @@
         return;
       }
 
+      pauseAutoRotate("pointerdown");
       pointerStartX = event.clientX;
       pointerDeltaX = 0;
     }
@@ -3613,12 +3683,16 @@
         return;
       }
 
+      let didNavigate = false;
       if (Math.abs(pointerDeltaX) >= 60) {
-        manualNavigate(pointerDeltaX < 0 ? "next" : "previous");
+        didNavigate = manualNavigate(pointerDeltaX < 0 ? "next" : "previous") === true;
       }
 
       pointerStartX = null;
       pointerDeltaX = 0;
+      if (!didNavigate) {
+        resetAutoRotate("pointerup");
+      }
     }
 
     function handleKeydown(event) {
@@ -3793,6 +3867,11 @@
       viewport.addEventListener("pointermove", handlePointerMove, { passive: true });
       viewport.addEventListener("pointerup", handlePointerUp, { passive: true });
       viewport.addEventListener("pointercancel", handlePointerUp, { passive: true });
+      track.addEventListener("transitionend", (event) => {
+        if (event.target === track && event.propertyName === "transform") {
+          finishScreenTransition();
+        }
+      });
 
       navLeft.addEventListener("pointerup", () => manualNavigate("previous"));
       navRight.addEventListener("pointerup", () => manualNavigate("next"));
