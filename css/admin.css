@@ -1150,6 +1150,13 @@
       border: 1px solid var(--border);
     }
 
+    .admin-countdown-photo-option[hidden],
+    .admin-countdown-photo-current[hidden],
+    .admin-countdown-photo-replace[hidden],
+    .admin-edit-photo-preview[hidden] {
+      display: none;
+    }
+
     .admin-countdown-photo-option--secondary {
       background: var(--bg-soft);
     }
