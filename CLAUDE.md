@@ -173,7 +173,10 @@ Use `netlify dev --no-watch` if Mac permissions error occurs.
 - Never hard-delete todos — always set `archived_at`
 - `meal_plan` rows with `user_id = null` are shared/household; never show personal rows (`user_id` set) on the display
 - sw.js cache prefix: `homeboard-v##`
-- When pushing any change: always increment `VERSION` in `js/shared.js` by at least a patch bump (use a minor bump for features when appropriate), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — add new tables, env vars, or screens as they are introduced
+- VERSION BUMPS ARE REQUIRED ON EVERY SINGLE PUSH WITHOUT EXCEPTION.
+- Before any push, always increment `VERSION` in `js/shared.js`, update `CACHE_NAME` in `sw.js` to the exact same version, and verify both files are included in the push.
+- If code is otherwise ready but the version has not changed yet, stop and add the version bump before pushing.
+- When pushing any change, also keep `README.md` accurate — add new tables, env vars, or screens as they are introduced.
 
 ## Planned future work
 - **Household members → users table**: `display_settings.members` currently stores the member list. Migrate to the `users` table when multi-user auth is implemented.

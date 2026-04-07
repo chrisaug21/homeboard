@@ -53,7 +53,8 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 ### Events
 - Tap a Google Calendar event to pre-fill the countdown form
 - Or enter name, date, and Lucide icon name manually
-- Optionally add or refresh an Unsplash background photo for a countdown
+- Countdown photos use one guided admin flow: if no photo exists you can search Unsplash or upload your own, an Unsplash-only countdown can be replaced by an upload, and a saved custom upload stays in charge until removed
+- Custom countdown uploads open a built-in crop step, then the cropped image is resized in the browser before upload and stored in Supabase Storage
 - Optional visibility timing controls let countdowns appear only a set number of days before the event
 - Saved countdowns appear on the display's "Looking Forward" screen
 - Browse icons at [lucide.dev/icons](https://lucide.dev/icons)
@@ -92,7 +93,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 | `todos` | Soft-delete only — never hard delete; archived via `archived_at`; optional `description` text supports admin notes and the display detail modal |
 | `meal_plan` | `user_id = null` = shared/household row shown on display |
 | `meal_plan_notes` | One note per household per week; keyed by `household_id` + `week_start` (Monday's date) |
-| `countdowns` | `icon` is a Lucide icon name string; also stores optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` for countdown photos and visibility timing |
+| `countdowns` | `icon` is a Lucide icon name string; also stores optional `unsplash_image_url`, optional `custom_image_url`, `days_before_visible`, and `photo_keyword` for countdown photos and visibility timing |
 | `scorecards` | Scorecard definitions with `increments` JSONB, `players` JSONB, `show_history`, `allow_negative`, and soft delete via `archived_at` |
 | `scorecard_sessions` | Per-game score state with `scores` JSONB, optional `wagers`, optional `wager_results`, `score_events` JSONB audit entries, optional `winner`, `started_at`, `ended_at`, and `is_final_jeopardy` |
 | `rsvps` | Wedding RSVP table — do not modify schema |
@@ -154,6 +155,8 @@ Set in Netlify dashboard. Never hardcode.
 | `SUPABASE_KEY` | Supabase anon/public key |
 | `GOOGLE_CAL_KEY` | Google Calendar read-only API key |
 | `UNSPLASH_ACCESS_KEY` | Unsplash API access key for countdown background photos |
+
+Custom countdown uploads use the public Supabase Storage bucket `countdown-photos`.
 
 ## Local Development
 

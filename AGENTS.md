@@ -92,7 +92,10 @@ netlify.toml        — build + env var injection via sed
 - Never show `meal_plan` rows where `user_id` is set in Display Mode
 - Never hardcode `SUPABASE_URL` or `SUPABASE_KEY` — injected by Netlify at build
 - sw.js cache prefix must be `homeboard-v##`
-- When pushing any change: always increment `VERSION` in `js/shared.js` by at least a patch bump (use a minor bump for features when appropriate), update `CACHE_NAME` in `sw.js` to match, and keep `README.md` accurate — document new tables, env vars, or screens as they are added
+- VERSION BUMPS ARE REQUIRED ON EVERY SINGLE PUSH WITHOUT EXCEPTION.
+- Before any push, always increment `VERSION` in `js/shared.js`, update `CACHE_NAME` in `sw.js` to the exact same version, and verify both changed in the diff.
+- If a commit has already been made but not yet pushed, add another commit with the version bump before pushing.
+- When pushing any change, also keep `README.md` accurate — document new tables, env vars, or screens as they are added.
 
 ## Styling Conventions
 - Before writing any CSS or adding styled components, read `TOKENS.md` for the canonical token reference. Always use semantic tokens (`--color-accent`, `--color-accent-subtle`) for new interactive components. Never use `--amber` or `--amber-soft` in new code.
