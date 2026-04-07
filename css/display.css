@@ -2459,6 +2459,7 @@
       border-color: var(--color-accent);
     }
 
+    .scorecard-increment-row,
     .scorecard-increment-scroll,
     .scorecard-secondary-actions,
     .scorecard-bonus-toggle-row {
@@ -2470,18 +2471,9 @@
       justify-content: center;
     }
 
-    .scorecard-increment-row {
-      display: contents;
-    }
-
-    .scorecard-columns .scorecard-increment-stack {
-      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-      gap: 10px;
-    }
-
-    .scorecard-rows .scorecard-increment-stack {
-      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-      gap: 10px;
+    .scorecard-increment-row .scorecard-action-btn {
+      flex: 1;
+      min-width: 0;
     }
 
     .scorecard-increment-scroll {
