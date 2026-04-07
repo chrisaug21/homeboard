@@ -2896,6 +2896,26 @@
         });
       });
 
+      // Any scorecard screen not matched by screen_order (e.g. added since last settings save)
+      // would fall to the catch-all end and appear split from the configured scorecards.
+      // Instead, group them immediately after the last already-placed scorecard screen.
+      const unplacedScorecards = allScreens.filter(
+        (screen) => screen.classList.contains("scorecard-screen") && !placed.has(screen)
+      );
+      if (unplacedScorecards.length > 0) {
+        let lastScorecardIndex = -1;
+        for (let i = nextOrder.length - 1; i >= 0; i--) {
+          if (nextOrder[i].classList.contains("scorecard-screen")) {
+            lastScorecardIndex = i;
+            break;
+          }
+        }
+        if (lastScorecardIndex >= 0) {
+          nextOrder.splice(lastScorecardIndex + 1, 0, ...unplacedScorecards);
+          unplacedScorecards.forEach((screen) => placed.add(screen));
+        }
+      }
+
       allScreens.forEach((screen) => {
         if (!placed.has(screen)) {
           nextOrder.push(screen);
