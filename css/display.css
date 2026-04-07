@@ -2474,8 +2474,13 @@
       display: contents;
     }
 
-    .scorecard-increment-stack {
-      grid-template-columns: repeat(3, 1fr);
+    .scorecard-columns .scorecard-increment-stack {
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 10px;
+    }
+
+    .scorecard-rows .scorecard-increment-stack {
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
       gap: 10px;
     }
 
