@@ -914,6 +914,10 @@
         showToast("Couldn\u2019t find a photo. Try a different keyword.");
         return;
       }
+      // Abort if the modal was closed or switched to a different countdown while fetching
+      if (adminModalType !== capturedModalType || (adminModalContext && adminModalContext.id) !== capturedContextId) {
+        return;
+      }
       const photoKey = capturedModalType === "edit-countdown" ? capturedContextId : "modal-create";
       setPendingCountdownPhoto(photoKey, {
         kind: "unsplash",
@@ -2426,8 +2430,6 @@
         return null;
       }
 
-      await removeCountdownCustomPhotoAssets(countdownId);
-
       const path = `${DISPLAY_HOUSEHOLD_ID}/${countdownId}.${pendingPhoto.extension}`;
       const { error: uploadError } = await client.storage
         .from(COUNTDOWN_CUSTOM_PHOTO_BUCKET)
@@ -2455,6 +2457,17 @@
       if (updateError) {
         console.error("Countdown custom photo URL save failed.", updateError);
         return null;
+      }
+
+      // Clean up other extension variants after the new upload and DB update both succeed.
+      // Skip the extension that was just uploaded so we don't delete the new file.
+      const otherPaths = COUNTDOWN_CUSTOM_PHOTO_EXTENSIONS
+        .filter((ext) => ext !== pendingPhoto.extension)
+        .map((ext) => `${DISPLAY_HOUSEHOLD_ID}/${countdownId}.${ext}`);
+      if (otherPaths.length) {
+        try {
+          await client.storage.from(COUNTDOWN_CUSTOM_PHOTO_BUCKET).remove(otherPaths);
+        } catch {}
       }
       return publicUrl;
     }
@@ -2646,6 +2659,8 @@
         showToast(friendlyDeleteMessage());
         return;
       }
+
+      removeCountdownCustomPhotoAssets(id).catch((e) => console.warn("Countdown photo cleanup failed:", e));
 
       await loadAdminCountdowns();
     }
