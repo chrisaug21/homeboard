@@ -25,6 +25,9 @@
     const adminScorecardList = document.getElementById("admin-scorecard-list");
     const adminScorecardsNote = document.getElementById("admin-scorecards-note");
     const adminScorecardAddButton = document.getElementById("admin-scorecard-add-button");
+    const adminCropperOverlay = document.getElementById("admin-cropper");
+    const adminCropperImage = document.getElementById("admin-cropper-image");
+    const adminCropperConfirmButton = document.getElementById("admin-cropper-confirm");
 
     // Person color palette — distinct from status colors (amber, sage, rose)
     const PERSON_COLOR_PALETTE = [
@@ -115,6 +118,11 @@
     const refreshingCountdowns = new Set();
     const COUNTDOWN_CUSTOM_PHOTO_BUCKET = "countdown-photos";
     const COUNTDOWN_CUSTOM_PHOTO_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
+    const COUNTDOWN_PHOTO_ASPECT_RATIO = 3 / 4;
+    const COUNTDOWN_UPLOAD_MAX_SIDE = 1200;
+    const COUNTDOWN_UPLOAD_QUALITY = 0.85;
+    let adminCountdownCropper = null;
+    let adminCountdownCropState = null;
     let adminCalMonthDate = (() => {
       const d = new Date();
       d.setDate(1);
@@ -517,6 +525,7 @@
     }
 
     function closeAdminModal() {
+      closeCountdownPhotoCropper({ preserveFileInput: false });
       const modal = document.getElementById("admin-modal");
       if (!modal || modal.hidden) return;
       adminScorecardArchiveConfirmId = "";
@@ -535,10 +544,19 @@
     }
 
     function handleEscapeKey(event) {
-      if (event.key === "Escape") closeAdminModal();
+      if (event.key !== "Escape") return;
+      if (adminCropperOverlay && !adminCropperOverlay.hidden) {
+        closeCountdownPhotoCropper({ preserveFileInput: false });
+        return;
+      }
+      closeAdminModal();
     }
 
     function handleAdminModalClick(event) {
+      if (event.target.closest("[data-action='close-photo-cropper']")) {
+        closeCountdownPhotoCropper({ preserveFileInput: false });
+        return;
+      }
       if (event.target.classList.contains("admin-modal-backdrop")) {
         closeAdminModal();
         return;
@@ -626,6 +644,7 @@
           hidden.value = "1";
           form.appendChild(hidden);
         }
+        syncCountdownPhotoUi(form);
         return;
       }
       const clearPendingPhotoBtn = event.target.closest("[data-action='clear-pending-photo-modal']");
@@ -903,7 +922,10 @@
         credit: photo.credit,
         photographerProfile: photo.photographerProfile || null
       });
+      const form = modalBody.querySelector("form[data-modal-form='countdown']");
+      clearCountdownRemovalFlag(form, "unsplash");
       setFormPhotoPreview(previewContainer, (adminPendingPhotos.get(photoKey) || {}).unsplash);
+      syncCountdownPhotoUi(form);
     }
 
 
@@ -2026,6 +2048,30 @@
       };
     }
 
+    function getCountdownCustomPhotoData(countdown) {
+      const imageUrl = String(countdown?.custom_image_url || "").trim() || null;
+      return {
+        imageUrl,
+        imageCredit: imageUrl ? "Custom photo" : null,
+        thumbnailUrl: imageUrl,
+        source: imageUrl ? "custom" : null
+      };
+    }
+
+    function getCountdownUnsplashPhotoData(countdown) {
+      const unsplashImageUrl = String(countdown?.unsplash_image_url || "").trim();
+      if (!unsplashImageUrl) {
+        return {
+          imageUrl: null,
+          imageCredit: null,
+          thumbnailUrl: null,
+          source: null
+        };
+      }
+
+      return getCountdownPhotoData({ unsplash_image_url: unsplashImageUrl });
+    }
+
     async function fetchUnsplashPhoto(query) {
       if (!UNSPLASH_ACCESS_KEY || UNSPLASH_ACCESS_KEY.startsWith("%%")) return null;
       try {
@@ -2116,6 +2162,220 @@
           <button class="admin-button admin-button--ghost-danger" type="button" data-action="clear-pending-photo-modal" data-clear-kind="${escapeHtml(photo.kind || "")}">Remove photo</button>
         </div>
       `;
+    }
+
+    function getCountdownPhotoPreviewElement(form, kind) {
+      return form?.querySelector(`.admin-edit-photo-preview[data-photo-source='${kind}']`) || null;
+    }
+
+    function getCountdownPendingPhotoElement(form, kind) {
+      return form?.querySelector(`.admin-modal-photo-pending[data-photo-kind='${kind}']`) || null;
+    }
+
+    function hasCountdownRemovalFlag(form, kind) {
+      return !!form?.querySelector(`[name='${kind === "custom" ? "remove_custom_photo" : "remove_unsplash_photo"}']`);
+    }
+
+    function clearCountdownRemovalFlag(form, kind) {
+      const input = form?.querySelector(`[name='${kind === "custom" ? "remove_custom_photo" : "remove_unsplash_photo"}']`);
+      if (input) {
+        input.remove();
+      }
+    }
+
+    function hasVisibleCountdownPhoto(form, kind) {
+      const savedPreview = getCountdownPhotoPreviewElement(form, kind);
+      const pendingPreview = getCountdownPendingPhotoElement(form, kind);
+      return (!!savedPreview && !savedPreview.hidden) || (!!pendingPreview && !pendingPreview.hidden);
+    }
+
+    function getCountdownPhotoUiState(form) {
+      if (hasVisibleCountdownPhoto(form, "custom")) {
+        return "custom";
+      }
+      if (hasVisibleCountdownPhoto(form, "unsplash")) {
+        return "unsplash";
+      }
+      return "empty";
+    }
+
+    function syncCountdownPhotoUi(form) {
+      if (!form) return;
+      const state = getCountdownPhotoUiState(form);
+      const unsplashSearch = form.querySelector("[data-countdown-photo-control='unsplash-search']");
+      const customUpload = form.querySelector("[data-countdown-photo-control='custom-upload']");
+      const unsplashCurrent = form.querySelector("[data-countdown-photo-current='unsplash']");
+      const customCurrent = form.querySelector("[data-countdown-photo-current='custom']");
+      if (unsplashSearch) unsplashSearch.hidden = state !== "empty";
+      if (customUpload) customUpload.hidden = state === "custom";
+      if (unsplashCurrent) unsplashCurrent.hidden = state !== "unsplash";
+      if (customCurrent) customCurrent.hidden = state !== "custom";
+      form.setAttribute("data-countdown-photo-state", state);
+
+      const uploadTitle = form.querySelector("[data-photo-upload-title]");
+      const uploadHint = form.querySelector("[data-photo-upload-hint]");
+      if (uploadTitle) {
+        uploadTitle.textContent = state === "unsplash" ? "Upload your own to replace it" : "Upload your own";
+      }
+      if (uploadHint) {
+        uploadHint.textContent = state === "unsplash"
+          ? "JPG, PNG, or WebP. Your uploaded photo will take over on the display."
+          : "JPG, PNG, or WebP. Your uploaded photo will be used on the display.";
+      }
+    }
+
+    function inferCountdownCustomPhotoName(file) {
+      const rawName = String(file?.name || "").replace(/\.[a-z0-9]+$/i, "").trim();
+      const safeBase = rawName
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase();
+      return `${safeBase || "countdown-photo"}.jpg`;
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+            return;
+          }
+          reject(new Error("Image export failed."));
+        }, type, quality);
+      });
+    }
+
+    async function buildProcessedCountdownPhotoFile(canvas, originalFileName) {
+      const sourceWidth = canvas.width;
+      const sourceHeight = canvas.height;
+      const longestSide = Math.max(sourceWidth, sourceHeight);
+      const scale = longestSide > COUNTDOWN_UPLOAD_MAX_SIDE
+        ? COUNTDOWN_UPLOAD_MAX_SIDE / longestSide
+        : 1;
+      const outputWidth = Math.max(1, Math.round(sourceWidth * scale));
+      const outputHeight = Math.max(1, Math.round(sourceHeight * scale));
+      const outputCanvas = document.createElement("canvas");
+      outputCanvas.width = outputWidth;
+      outputCanvas.height = outputHeight;
+      const context = outputCanvas.getContext("2d");
+      if (!context) {
+        throw new Error("Canvas is unavailable.");
+      }
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(canvas, 0, 0, outputWidth, outputHeight);
+      const blob = await canvasToBlob(outputCanvas, "image/jpeg", COUNTDOWN_UPLOAD_QUALITY);
+      return new File([blob], inferCountdownCustomPhotoName({ name: originalFileName }), {
+        type: "image/jpeg",
+        lastModified: Date.now()
+      });
+    }
+
+    function destroyCountdownPhotoCropper() {
+      if (adminCountdownCropper && typeof adminCountdownCropper.destroy === "function") {
+        adminCountdownCropper.destroy();
+      }
+      adminCountdownCropper = null;
+    }
+
+    function closeCountdownPhotoCropper(options = {}) {
+      const preserveFileInput = options.preserveFileInput === true;
+      destroyCountdownPhotoCropper();
+      if (adminCropperOverlay) {
+        adminCropperOverlay.hidden = true;
+      }
+      if (adminCropperImage) {
+        adminCropperImage.onload = null;
+        adminCropperImage.removeAttribute("src");
+      }
+      if (adminCropperConfirmButton) {
+        adminCropperConfirmButton.disabled = false;
+        adminCropperConfirmButton.textContent = "Use this crop";
+      }
+      if (!preserveFileInput && adminCountdownCropState?.input) {
+        adminCountdownCropState.input.value = "";
+      }
+      if (adminCountdownCropState?.objectUrl) {
+        URL.revokeObjectURL(adminCountdownCropState.objectUrl);
+      }
+      adminCountdownCropState = null;
+    }
+
+    function openCountdownPhotoCropper(input, file) {
+      if (!input || !file || !adminCropperOverlay || !adminCropperImage) {
+        return;
+      }
+      if (!window.Cropper) {
+        showToast("Photo editing is not available right now. Please try again.");
+        input.value = "";
+        return;
+      }
+      closeCountdownPhotoCropper({ preserveFileInput: true });
+      const objectUrl = URL.createObjectURL(file);
+      adminCountdownCropState = { input, file, objectUrl };
+      adminCropperImage.onload = () => {
+        destroyCountdownPhotoCropper();
+        adminCountdownCropper = new window.Cropper(adminCropperImage, {
+          aspectRatio: COUNTDOWN_PHOTO_ASPECT_RATIO,
+          viewMode: 1,
+          dragMode: "move",
+          guides: false,
+          background: false,
+          autoCropArea: 1,
+          responsive: true,
+          toggleDragModeOnDblclick: false
+        });
+      };
+      adminCropperImage.src = objectUrl;
+      adminCropperOverlay.hidden = false;
+      refreshIcons();
+    }
+
+    async function confirmCountdownPhotoCrop() {
+      if (!adminCountdownCropper || !adminCountdownCropState?.input) {
+        return;
+      }
+      if (adminCropperConfirmButton) {
+        adminCropperConfirmButton.disabled = true;
+        adminCropperConfirmButton.textContent = "Preparing…";
+      }
+      try {
+        const croppedCanvas = adminCountdownCropper.getCroppedCanvas({
+          imageSmoothingEnabled: true,
+          imageSmoothingQuality: "high"
+        });
+        if (!croppedCanvas) {
+          throw new Error("Crop failed.");
+        }
+        const processedFile = await buildProcessedCountdownPhotoFile(
+          croppedCanvas,
+          adminCountdownCropState.file?.name || "countdown-photo.jpg"
+        );
+        const previewUrl = URL.createObjectURL(processedFile);
+        const form = adminCountdownCropState.input.closest("form[data-modal-form='countdown']");
+        const key = getCountdownPhotoDraftKey(form);
+        if (!form || !key) {
+          URL.revokeObjectURL(previewUrl);
+          throw new Error("Form is unavailable.");
+        }
+        clearCountdownRemovalFlag(form, "custom");
+        setPendingCountdownPhoto(key, {
+          kind: "custom",
+          file: processedFile,
+          extension: "jpg",
+          imageUrl: previewUrl,
+          previewUrl,
+          credit: "Custom photo"
+        });
+        const previewContainer = getCountdownPendingPhotoElement(form, "custom");
+        setFormPhotoPreview(previewContainer, (adminPendingPhotos.get(key) || {}).custom);
+        syncCountdownPhotoUi(form);
+        closeCountdownPhotoCropper({ preserveFileInput: false });
+      } catch (error) {
+        console.warn("Custom photo crop failed:", error);
+        showToast("Couldn’t prepare that photo. Please try another one.");
+        closeCountdownPhotoCropper({ preserveFileInput: false });
+      }
     }
 
     async function refreshCountdownPhoto(id, name, photoKeyword) {
@@ -4767,7 +5027,6 @@
       if (!container || !photo) return;
       container.innerHTML = buildCountdownPendingPhotoMarkup(photo);
       container.hidden = false;
-      // If there's an existing saved photo preview in the same form, hide it so only one shows
       const form = container.closest("form");
       if (form) {
         const existing = form.querySelector(`.admin-edit-photo-preview[data-photo-source='${photo.kind}']`);
@@ -4804,13 +5063,13 @@
       if (existing) {
         existing.hidden = false;
       }
+      clearCountdownRemovalFlag(form, kind);
+      syncCountdownPhotoUi(form);
     }
 
     function handleCountdownCustomPhotoSelection(input) {
-      const form = input.closest("form[data-modal-form='countdown']");
-      const key = getCountdownPhotoDraftKey(form);
       const file = input.files && input.files[0];
-      if (!form || !key || !file) {
+      if (!file) {
         return;
       }
 
@@ -4820,18 +5079,7 @@
         input.value = "";
         return;
       }
-
-      const previewUrl = URL.createObjectURL(file);
-      setPendingCountdownPhoto(key, {
-        kind: "custom",
-        file,
-        extension,
-        imageUrl: previewUrl,
-        previewUrl,
-        credit: "Custom photo"
-      });
-      const previewContainer = form.querySelector(".admin-modal-photo-pending[data-photo-kind='custom']");
-      setFormPhotoPreview(previewContainer, (adminPendingPhotos.get(key) || {}).custom);
+      openCountdownPhotoCropper(input, file);
     }
 
     function buildCountdownFormHTML(countdown, prefill) {
@@ -4849,18 +5097,18 @@
       let existingUnsplashPhotoHTML = "";
       let existingCustomPhotoHTML = "";
       if (isEdit) {
-        const savedPhoto = getCountdownPhotoData(countdown);
-        if (savedPhoto.imageUrl && savedPhoto.source === "custom") {
+        const customPhoto = getCountdownCustomPhotoData(countdown);
+        if (customPhoto.imageUrl) {
           existingCustomPhotoHTML = `
             <div class="admin-edit-photo-preview" data-photo-source="custom">
               <button class="admin-countdown-preview-btn" type="button" data-action="view-photo"
-                data-full-url="${escapeHtml(savedPhoto.imageUrl)}" data-credit="${escapeHtml(savedPhoto.imageCredit || "")}"
+                data-full-url="${escapeHtml(customPhoto.imageUrl)}" data-credit="${escapeHtml(customPhoto.imageCredit || "")}"
                 aria-label="View full photo">
-                <img class="admin-edit-photo-thumb" src="${escapeHtml(savedPhoto.thumbnailUrl)}" alt="" aria-hidden="true"
+                <img class="admin-edit-photo-thumb" src="${escapeHtml(customPhoto.thumbnailUrl)}" alt="" aria-hidden="true"
                   onerror="this.closest('.admin-edit-photo-preview').remove();">
               </button>
               <div class="admin-edit-photo-meta">
-                <span class="admin-edit-photo-credit">${escapeHtml(savedPhoto.imageCredit || "Custom photo")}</span>
+                <span class="admin-edit-photo-credit">${escapeHtml(customPhoto.imageCredit || "Custom photo")}</span>
                 <button class="admin-button admin-button--ghost-danger" type="button"
                   data-action="remove-photo-modal" data-countdown-id="${id}" data-remove-type="custom"
                   aria-label="Remove photo" style="margin-left:0">Remove photo</button>
@@ -4869,26 +5117,24 @@
           `;
         }
 
-        if (countdown.unsplash_image_url) {
-          const unsplashPhoto = getCountdownPhotoData({ unsplash_image_url: countdown.unsplash_image_url });
-          if (unsplashPhoto.imageUrl) {
-            existingUnsplashPhotoHTML = `
-              <div class="admin-edit-photo-preview" data-photo-source="unsplash">
-                <button class="admin-countdown-preview-btn" type="button" data-action="view-photo"
-                  data-full-url="${escapeHtml(unsplashPhoto.imageUrl)}" data-credit="${escapeHtml(unsplashPhoto.imageCredit || "")}"
-                  aria-label="View full photo">
-                  <img class="admin-edit-photo-thumb" src="${escapeHtml(unsplashPhoto.thumbnailUrl)}" alt="" aria-hidden="true"
-                    onerror="this.closest('.admin-edit-photo-preview').remove();">
-                </button>
-                <div class="admin-edit-photo-meta">
-                  ${unsplashPhoto.imageCredit ? `<span class="admin-edit-photo-credit">${escapeHtml(unsplashPhoto.imageCredit)}</span>` : ""}
-                  <button class="admin-button admin-button--ghost-danger" type="button"
-                    data-action="remove-photo-modal" data-countdown-id="${id}" data-remove-type="unsplash"
-                    aria-label="Remove photo" style="margin-left:0">Remove photo</button>
-                </div>
+        const unsplashPhoto = getCountdownUnsplashPhotoData(countdown);
+        if (unsplashPhoto.imageUrl) {
+          existingUnsplashPhotoHTML = `
+            <div class="admin-edit-photo-preview" data-photo-source="unsplash">
+              <button class="admin-countdown-preview-btn" type="button" data-action="view-photo"
+                data-full-url="${escapeHtml(unsplashPhoto.imageUrl)}" data-credit="${escapeHtml(unsplashPhoto.imageCredit || "")}"
+                aria-label="View full photo">
+                <img class="admin-edit-photo-thumb" src="${escapeHtml(unsplashPhoto.thumbnailUrl)}" alt="" aria-hidden="true"
+                  onerror="this.closest('.admin-edit-photo-preview').remove();">
+              </button>
+              <div class="admin-edit-photo-meta">
+                ${unsplashPhoto.imageCredit ? `<span class="admin-edit-photo-credit">${escapeHtml(unsplashPhoto.imageCredit)}</span>` : ""}
+                <button class="admin-button admin-button--ghost-danger" type="button"
+                  data-action="remove-photo-modal" data-countdown-id="${id}" data-remove-type="unsplash"
+                  aria-label="Remove photo" style="margin-left:0">Remove photo</button>
               </div>
-            `;
-          }
+            </div>
+          `;
         }
       }
 
@@ -4916,32 +5162,44 @@
               <p class="admin-field-hint">Days before event. Optional.</p>
             </div>
           </div>
-          <div class="admin-field">
-            <label for="modal-cd-keyword">Photo keyword</label>
-            <div class="admin-icon-row">
-              <input id="modal-cd-keyword" name="photo_keyword" type="text" maxlength="100"
-                value="${photoKeyword}" placeholder="e.g. beach, mountains" autocomplete="off">
-              <button class="admin-button admin-button--secondary" type="button"
-                data-action="get-photo-modal">Get photo</button>
+          <section class="admin-countdown-photo-panel" aria-labelledby="modal-cd-photo-label">
+            <div class="admin-countdown-photo-heading">
+              <div>
+                <label id="modal-cd-photo-label" class="admin-countdown-photo-title">Photo</label>
+                <p class="admin-field-hint">Pick a background for this countdown.</p>
+              </div>
             </div>
-            <p class="admin-field-hint">Optional. Saves or refreshes the fallback Unsplash image.</p>
-          </div>
-          ${existingUnsplashPhotoHTML}
-          <div class="admin-modal-photo-pending" data-photo-kind="unsplash" hidden></div>
-          <div class="admin-field">
-            <label for="modal-cd-custom-photo">Upload photo</label>
-            <input id="modal-cd-custom-photo" name="custom_photo_file" type="file" accept="image/jpeg,image/png,image/webp">
-            <p class="admin-field-hint">JPG, PNG, or WebP. Display will use the custom photo whenever one is saved.</p>
-          </div>
-          ${existingCustomPhotoHTML}
-          <div class="admin-modal-photo-pending" data-photo-kind="custom" hidden></div>
-          <div class="admin-form-row">
-            <div class="admin-field">
-              <label for="modal-cd-icon">Icon &mdash; <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse ↗</a></label>
-              <input id="modal-cd-icon" name="icon" type="text" maxlength="60"
-                value="${icon}" placeholder="e.g. plane, heart, gem" autocomplete="off">
-              <p class="admin-field-hint">Lucide icon name. Optional.</p>
+            <div class="admin-field admin-countdown-photo-option" data-countdown-photo-control="unsplash-search">
+              <label for="modal-cd-keyword">Search Unsplash</label>
+              <div class="admin-icon-row">
+                <input id="modal-cd-keyword" name="photo_keyword" type="text" maxlength="100"
+                  value="${photoKeyword}" placeholder="e.g. beach, mountains" autocomplete="off">
+                <button class="admin-button admin-button--secondary" type="button"
+                  data-action="get-photo-modal">Get photo</button>
+              </div>
+              <p class="admin-field-hint">Search for a fallback photo you can save to this countdown.</p>
             </div>
+            <div class="admin-countdown-photo-current" data-countdown-photo-current="unsplash" hidden>
+              <div class="admin-countdown-photo-current-label">Saved Unsplash photo</div>
+              ${existingUnsplashPhotoHTML}
+              <div class="admin-modal-photo-pending" data-photo-kind="unsplash" hidden></div>
+            </div>
+            <div class="admin-field admin-countdown-photo-option admin-countdown-photo-option--secondary" data-countdown-photo-control="custom-upload">
+              <label for="modal-cd-custom-photo" data-photo-upload-title>Upload your own</label>
+              <input id="modal-cd-custom-photo" name="custom_photo_file" type="file" accept="image/jpeg,image/png,image/webp">
+              <p class="admin-field-hint" data-photo-upload-hint>JPG, PNG, or WebP. Your uploaded photo will be used on the display.</p>
+            </div>
+            <div class="admin-countdown-photo-current" data-countdown-photo-current="custom" hidden>
+              <div class="admin-countdown-photo-current-label">Your photo</div>
+              ${existingCustomPhotoHTML}
+              <div class="admin-modal-photo-pending" data-photo-kind="custom" hidden></div>
+            </div>
+          </section>
+          <div class="admin-field admin-countdown-icon-field">
+            <label for="modal-cd-icon">Icon &mdash; <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse ↗</a></label>
+            <input id="modal-cd-icon" name="icon" type="text" maxlength="60"
+              value="${icon}" placeholder="e.g. plane, heart, gem" autocomplete="off">
+            <p class="admin-field-hint">Lucide icon name. Optional.</p>
           </div>
           <div class="admin-actions">
             <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
@@ -4955,12 +5213,14 @@
       adminModalType = "add-countdown";
       adminModalContext = null;
       openAdminModal("Add Countdown", buildCountdownFormHTML(null, prefill));
+      syncCountdownPhotoUi(document.querySelector("#admin-modal-body form[data-modal-form='countdown']"));
     }
 
     function openEditCountdownModal(countdown) {
       adminModalType = "edit-countdown";
       adminModalContext = { id: countdown.id };
       openAdminModal("Edit Countdown", buildCountdownFormHTML(countdown));
+      syncCountdownPhotoUi(document.querySelector("#admin-modal-body form[data-modal-form='countdown']"));
     }
 
     function handleAdminSavedCountdownListClick(event) {
@@ -5613,6 +5873,16 @@
       document.addEventListener("keydown", handleEscapeKey);
       const lightbox = document.getElementById("admin-lightbox");
       if (lightbox) lightbox.addEventListener("click", closeAdminLightbox);
+      if (adminCropperOverlay) {
+        adminCropperOverlay.addEventListener("click", (event) => {
+          if (event.target.closest("[data-action='close-photo-cropper']")) {
+            closeCountdownPhotoCropper({ preserveFileInput: false });
+          }
+        });
+      }
+      if (adminCropperConfirmButton) {
+        adminCropperConfirmButton.addEventListener("click", confirmCountdownPhotoCrop);
+      }
       const adminCalPrevBtn = document.getElementById("admin-cal-prev");
       const adminCalNextBtn = document.getElementById("admin-cal-next");
       if (adminCalPrevBtn) adminCalPrevBtn.addEventListener("click", handleAdminCalPrev);

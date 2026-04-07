@@ -114,6 +114,7 @@
   </style>
   <link rel="stylesheet" href="css/display.css?v=1.6.21">
   <link rel="stylesheet" href="css/admin.css?v=1.6.21">
+  <link rel="stylesheet" href="js/vendor/cropper.min.css">
 </head>
 <body>
   <div class="app-shell" id="display-app">
@@ -646,10 +647,33 @@
     </div>
   </div>
 
+  <div class="admin-cropper" id="admin-cropper" hidden role="dialog" aria-modal="true" aria-labelledby="admin-cropper-title">
+    <div class="admin-cropper-backdrop" data-action="close-photo-cropper"></div>
+    <div class="admin-cropper-sheet">
+      <div class="admin-modal-header">
+        <h2 class="admin-modal-title" id="admin-cropper-title">Crop photo</h2>
+        <button class="admin-modal-close" type="button" data-action="close-photo-cropper" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="admin-cropper-body">
+        <p class="admin-field-hint">Move and zoom your photo, then tap Use this crop.</p>
+        <div class="admin-cropper-stage">
+          <img id="admin-cropper-image" src="" alt="Photo crop preview">
+        </div>
+      </div>
+      <div class="admin-actions">
+        <button class="admin-button admin-button--secondary" type="button" data-action="close-photo-cropper">Cancel</button>
+        <button class="admin-button admin-button--primary" type="button" id="admin-cropper-confirm">Use this crop</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer crossorigin="anonymous"></script>
   <script src="js/vendor/confetti.min.js" defer></script>
   <script src="js/vendor/gsap.min.js" defer></script>
+  <script src="js/vendor/cropper.min.js" defer></script>
   <script src="js/shared.js" defer></script>
   <script src="js/display.js" defer></script>
   <script src="js/admin.js" defer></script>

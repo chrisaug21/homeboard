@@ -1116,6 +1116,110 @@
       gap: 14px;
     }
 
+    .admin-countdown-photo-panel {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-radius: var(--tag-radius);
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .admin-countdown-photo-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .admin-countdown-photo-title {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .admin-countdown-photo-option,
+    .admin-countdown-photo-current {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: var(--tag-radius);
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+    }
+
+    .admin-countdown-photo-option--secondary {
+      background: var(--bg-soft);
+    }
+
+    .admin-countdown-photo-current-label {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .admin-countdown-icon-field {
+      padding-top: 4px;
+    }
+
+    .admin-cropper {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .admin-cropper[hidden] {
+      display: none;
+    }
+
+    .admin-cropper-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(30, 20, 12, 0.52);
+      backdrop-filter: blur(2px);
+    }
+
+    .admin-cropper-sheet {
+      position: relative;
+      width: min(520px, 100%);
+      max-height: 92dvh;
+      overflow: auto;
+      display: grid;
+      gap: 16px;
+      padding: 20px;
+      border-radius: 24px;
+      background: var(--bg-soft);
+      box-shadow: var(--shadow);
+    }
+
+    .admin-cropper-body {
+      display: grid;
+      gap: 12px;
+    }
+
+    .admin-cropper-stage {
+      position: relative;
+      min-height: 340px;
+      max-height: 60dvh;
+      overflow: hidden;
+      border-radius: var(--tag-radius);
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .admin-cropper-stage img {
+      display: block;
+      max-width: 100%;
+    }
+
 
     .admin-version-label {
       font-size: 0.65rem;

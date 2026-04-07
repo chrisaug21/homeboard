@@ -1,4 +1,4 @@
-const CACHE_NAME = "homeboard-v1.7.2";
+const CACHE_NAME = "homeboard-v1.8.0";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -6,6 +6,8 @@ const ASSETS_TO_CACHE = [
   "./manifest-admin.json",
   "./homeboard_logo.svg",
   "./js/vendor/confetti.min.js",
+  "./js/vendor/cropper.min.css",
+  "./js/vendor/cropper.min.js",
   "./js/vendor/gsap.min.js",
   "./sw.js"
 ];
