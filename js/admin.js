@@ -2203,25 +2203,16 @@
       if (!form) return;
       const state = getCountdownPhotoUiState(form);
       const unsplashSearch = form.querySelector("[data-countdown-photo-control='unsplash-search']");
-      const customUpload = form.querySelector("[data-countdown-photo-control='custom-upload']");
+      const customUploadPrimary = form.querySelector("[data-countdown-photo-control='custom-upload-primary']");
+      const customUploadReplace = form.querySelector("[data-countdown-photo-control='custom-upload-replace']");
       const unsplashCurrent = form.querySelector("[data-countdown-photo-current='unsplash']");
       const customCurrent = form.querySelector("[data-countdown-photo-current='custom']");
       if (unsplashSearch) unsplashSearch.hidden = state !== "empty";
-      if (customUpload) customUpload.hidden = state === "custom";
+      if (customUploadPrimary) customUploadPrimary.hidden = state !== "empty";
+      if (customUploadReplace) customUploadReplace.hidden = state !== "unsplash";
       if (unsplashCurrent) unsplashCurrent.hidden = state !== "unsplash";
       if (customCurrent) customCurrent.hidden = state !== "custom";
       form.setAttribute("data-countdown-photo-state", state);
-
-      const uploadTitle = form.querySelector("[data-photo-upload-title]");
-      const uploadHint = form.querySelector("[data-photo-upload-hint]");
-      if (uploadTitle) {
-        uploadTitle.textContent = state === "unsplash" ? "Upload your own to replace it" : "Upload your own";
-      }
-      if (uploadHint) {
-        uploadHint.textContent = state === "unsplash"
-          ? "JPG, PNG, or WebP. Your uploaded photo will take over on the display."
-          : "JPG, PNG, or WebP. Your uploaded photo will be used on the display.";
-      }
     }
 
     function inferCountdownCustomPhotoName(file) {
@@ -5055,9 +5046,10 @@
         pendingContainer.innerHTML = "";
         pendingContainer.hidden = true;
       }
-      const fileInput = kind === "custom" ? form.querySelector("[name='custom_photo_file']") : null;
-      if (fileInput) {
-        fileInput.value = "";
+      if (kind === "custom") {
+        form.querySelectorAll("[name='custom_photo_file']").forEach((fileInput) => {
+          fileInput.value = "";
+        });
       }
       const existing = form.querySelector(`.admin-edit-photo-preview[data-photo-source='${kind}']`);
       if (existing) {
@@ -5183,11 +5175,16 @@
               <div class="admin-countdown-photo-current-label">Saved Unsplash photo</div>
               ${existingUnsplashPhotoHTML}
               <div class="admin-modal-photo-pending" data-photo-kind="unsplash" hidden></div>
+              <div class="admin-field admin-countdown-photo-replace" data-countdown-photo-control="custom-upload-replace" hidden>
+                <label for="modal-cd-custom-photo-replace">Upload your own to replace it</label>
+                <input id="modal-cd-custom-photo-replace" name="custom_photo_file" type="file" accept="image/jpeg,image/png,image/webp">
+                <p class="admin-field-hint">JPG, PNG, or WebP. Your uploaded photo will take over on the display.</p>
+              </div>
             </div>
-            <div class="admin-field admin-countdown-photo-option admin-countdown-photo-option--secondary" data-countdown-photo-control="custom-upload">
-              <label for="modal-cd-custom-photo" data-photo-upload-title>Upload your own</label>
-              <input id="modal-cd-custom-photo" name="custom_photo_file" type="file" accept="image/jpeg,image/png,image/webp">
-              <p class="admin-field-hint" data-photo-upload-hint>JPG, PNG, or WebP. Your uploaded photo will be used on the display.</p>
+            <div class="admin-field admin-countdown-photo-option admin-countdown-photo-option--secondary" data-countdown-photo-control="custom-upload-primary">
+              <label for="modal-cd-custom-photo-primary">Upload your own</label>
+              <input id="modal-cd-custom-photo-primary" name="custom_photo_file" type="file" accept="image/jpeg,image/png,image/webp">
+              <p class="admin-field-hint">JPG, PNG, or WebP. Your uploaded photo will be used on the display.</p>
             </div>
             <div class="admin-countdown-photo-current" data-countdown-photo-current="custom" hidden>
               <div class="admin-countdown-photo-current-label">Your photo</div>

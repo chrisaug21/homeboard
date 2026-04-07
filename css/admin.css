@@ -1154,6 +1154,21 @@
       background: var(--bg-soft);
     }
 
+    .admin-countdown-photo-replace {
+      gap: 8px;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    .admin-countdown-photo-replace label {
+      font-size: 0.82rem;
+    }
+
+    .admin-countdown-photo-replace input[type="file"] {
+      padding: 10px 12px;
+      font-size: 0.88rem;
+    }
+
     .admin-countdown-photo-current-label {
       font-size: 0.8rem;
       font-weight: 800;
