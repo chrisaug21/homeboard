@@ -2051,7 +2051,7 @@
       return fallback;
     }
 
-    function chunkScorecardIncrements(increments, size = 5) {
+    function chunkScorecardIncrements(increments, size = 6) {
       const rows = [];
       for (let index = 0; index < increments.length; index += size) {
         rows.push(increments.slice(index, index + size));
