@@ -2467,9 +2467,13 @@
       gap: 10px;
     }
 
-    .scorecard-increment-row,
     .scorecard-secondary-actions {
       justify-content: center;
+    }
+
+    .scorecard-increment-row .scorecard-action-btn {
+      flex: 1;
+      min-width: 0;
     }
 
     .scorecard-increment-scroll {
@@ -2496,9 +2500,9 @@
 
     .scorecard-secondary-btn[data-action="scorecard-bonus-reveal"]:disabled {
       opacity: 1;
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
+      background: var(--bg-soft);
+      border-color: var(--border);
+      color: var(--muted);
       cursor: default;
       pointer-events: none;
       box-shadow: none;
