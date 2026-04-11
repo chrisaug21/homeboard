@@ -1070,8 +1070,6 @@
           wagers: buildScorecardBonusWagers(scorecard.players, localBonusState.wagers, SCORECARD_BONUS_PHASES.complete),
           wager_results: buildScorecardBonusResults(scorecard.players, wagerResults, SCORECARD_BONUS_PHASES.complete),
           score_events: scoreEvents,
-          ended_at: new Date().toISOString(),
-          winner: getScorecardWinner(nextScores, scorecard.players),
           is_final_jeopardy: false
         })
         .eq("id", session.id)
