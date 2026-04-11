@@ -522,7 +522,7 @@
 
     function buildScoreEvent(playerId, amount, type, timestamp = new Date().toISOString()) {
       return {
-        playerId: String(playerId || "").trim(),
+        player: String(playerId || "").trim(),
         amount: Number(amount) || 0,
         type: normalizeScoreEventType(type),
         timestamp: String(timestamp || "").trim() || new Date().toISOString()
