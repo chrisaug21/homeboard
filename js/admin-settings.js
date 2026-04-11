@@ -184,7 +184,7 @@
     }
 
     async function refreshAdminData() {
-      await Promise.all([
+      await Promise.allSettled([
         loadAdminTodos(),
         loadAdminMealPlan(),
         loadAdminCalendarMonth(),
