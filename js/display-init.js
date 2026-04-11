@@ -244,6 +244,10 @@
         }
       });
 
+      // Every 15 min: full sync — fetches todos, meals, config, countdowns, and checks
+      // for a new service worker so version updates appear without a manual sync.
+      window.setInterval(runFullSync, 15 * 60 * 1000);
+
       // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed
       window.setInterval(() => {
         const needsWide = (Date.now() - lastWideFetch) >= 24 * 60 * 60 * 1000;
