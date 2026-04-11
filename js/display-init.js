@@ -1,3 +1,5 @@
+    let lastWeeklyNote = "";
+
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
@@ -261,9 +263,8 @@
         }
         Promise.allSettled([fetchTodos(), fetchMeals(), fetchWeeklyNote()]).then(([todosResult, mealsResult, noteResult]) => {
           if (todosResult.status === "fulfilled" && todosResult.value !== null) renderTodoItems(todosResult.value);
-          if (mealsResult.status === "fulfilled" && mealsResult.value !== null) {
-            renderMeals(mealsResult.value, noteResult.status === "fulfilled" ? (noteResult.value || "") : "");
-          }
+          if (noteResult.status === "fulfilled" && noteResult.value !== null) lastWeeklyNote = noteResult.value;
+          if (mealsResult.status === "fulfilled" && mealsResult.value !== null) renderMeals(mealsResult.value, lastWeeklyNote);
         });
       }, 5 * 60 * 1000);
 
