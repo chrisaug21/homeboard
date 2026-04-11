@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.8.9";
+    const VERSION = "1.9.1";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -522,7 +522,7 @@
 
     function buildScoreEvent(playerId, amount, type, timestamp = new Date().toISOString()) {
       return {
-        playerId: String(playerId || "").trim(),
+        player: String(playerId || "").trim(),
         amount: Number(amount) || 0,
         type: normalizeScoreEventType(type),
         timestamp: String(timestamp || "").trim() || new Date().toISOString()
