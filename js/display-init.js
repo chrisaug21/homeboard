@@ -1,3 +1,5 @@
+    let lastWeeklyNote = "";
+
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
@@ -232,14 +234,38 @@
       });
       window.addEventListener("keydown", handleKeydown);
 
-      // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed
+      // On visibility restore (screen wake, tab switch back): run a full sync if the
+      // last sync was more than 60 seconds ago. Handles Android timer throttling and
+      // ensures dates, todos, and SW version are fresh when the display wakes up.
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible") return;
+        const lastSynced = localStorage.getItem(LAST_SYNCED_KEY);
+        const elapsed = lastSynced ? Date.now() - new Date(lastSynced).getTime() : Infinity;
+        if (elapsed >= 60 * 1000) {
+          runFullSync();
+        }
+      });
+
+      // Every 30 min: full sync — fetches todos, meals, config, countdowns, and checks
+      // for a new service worker so version updates appear without a manual sync.
+      window.setInterval(runFullSync, 30 * 60 * 1000);
+
+      // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed.
+      // Todos and meals are included so content changes from admin appear within 5 min
+      // even between the 15-minute full syncs.
       window.setInterval(() => {
+        if (isSyncing) return;
         const needsWide = (Date.now() - lastWideFetch) >= 24 * 60 * 60 * 1000;
         refreshCalendarData(needsWide);
         renderScorecardsWithData();
         if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
           renderRsvpBoardWithData();
         }
+        Promise.allSettled([fetchTodos(), fetchMeals(), fetchWeeklyNote()]).then(([todosResult, mealsResult, noteResult]) => {
+          if (todosResult.status === "fulfilled" && todosResult.value !== null) renderTodoItems(todosResult.value);
+          if (noteResult.status === "fulfilled" && noteResult.value !== null) lastWeeklyNote = noteResult.value;
+          if (mealsResult.status === "fulfilled" && mealsResult.value !== null) renderMeals(mealsResult.value, lastWeeklyNote);
+        });
       }, 5 * 60 * 1000);
 
       // Week navigation — each click resets the rotation timer
