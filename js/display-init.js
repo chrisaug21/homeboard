@@ -258,10 +258,12 @@
         if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
           renderRsvpBoardWithData();
         }
-        Promise.all([fetchTodos(), fetchMeals(), fetchWeeklyNote()]).then(([remoteTodos, remoteMeals, weeklyNote]) => {
-          if (remoteTodos !== null) renderTodoItems(remoteTodos);
-          if (remoteMeals !== null) renderMeals(remoteMeals, weeklyNote || "");
-        }).catch(() => {});
+        Promise.allSettled([fetchTodos(), fetchMeals(), fetchWeeklyNote()]).then(([todosResult, mealsResult, noteResult]) => {
+          if (todosResult.status === "fulfilled" && todosResult.value !== null) renderTodoItems(todosResult.value);
+          if (mealsResult.status === "fulfilled" && mealsResult.value !== null) {
+            renderMeals(mealsResult.value, noteResult.status === "fulfilled" ? (noteResult.value || "") : "");
+          }
+        });
       }, 5 * 60 * 1000);
 
       // Week navigation — each click resets the rotation timer
