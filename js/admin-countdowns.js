@@ -601,8 +601,9 @@
       } else {
         try {
           const photo = await fetchUnsplashPhoto(photoKeyword || name);
-          if (!photo) return;
-          await updateCountdownPhoto(insertedRow.id, photo);
+          if (photo) {
+            await updateCountdownPhoto(insertedRow.id, photo);
+          }
         } catch (error) {
           console.warn("Background photo fetch failed:", error);
         }
@@ -680,8 +681,9 @@
         } else if (photoKeyword || name !== originalName || !options.hadUnsplashPhoto) {
           try {
             const photo = await fetchUnsplashPhoto(photoKeyword || name);
-            if (!photo) return;
-            await updateCountdownPhoto(id, photo);
+            if (photo) {
+              await updateCountdownPhoto(id, photo);
+            }
           } catch (error) {
             console.warn("Background photo fetch failed:", error);
           }
