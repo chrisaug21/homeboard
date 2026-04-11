@@ -426,7 +426,11 @@
 
     async function linkInvitedPartyToRsvp(partyId, rsvpId) {
       const client = getSupabaseClient();
-      if (!client || adminRsvpWritePending) {
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+      if (adminRsvpWritePending) {
         return;
       }
 
@@ -594,7 +598,10 @@
 
     async function unlinkPartyAndReopenReview(partyId, rsvpId) {
       const client = getSupabaseClient();
-      if (!client) return;
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return;
+      }
 
       adminRsvpWritePending = true;
       const { data, error } = await client
