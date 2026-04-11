@@ -676,9 +676,7 @@
       const highlightedLeaders = new Set(winnerSummary.leaders);
       const shouldCelebrate = getScorecardPendingWinnerSessionId(scorecard.id) === session.id;
       overlay.hidden = false;
-      window.clearTimeout(autoRotateId);
-      autoRotateId = null;
-      autoRotateToken += 1;
+      pauseAutoRotate("scorecard-celebration-overlay");
       overlay.dataset.scorecardId = scorecard.id;
       overlay.style.setProperty("--scorecard-celebration-accent", winnerSummary.accentColor);
       titleEl.textContent = winnerSummary.heroLabel;
