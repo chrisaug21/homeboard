@@ -232,6 +232,18 @@
       });
       window.addEventListener("keydown", handleKeydown);
 
+      // On visibility restore (screen wake, tab switch back): run a full sync if the
+      // last sync was more than 60 seconds ago. Handles Android timer throttling and
+      // ensures dates, todos, and SW version are fresh when the display wakes up.
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible") return;
+        const lastSynced = localStorage.getItem(LAST_SYNCED_KEY);
+        const elapsed = lastSynced ? Date.now() - new Date(lastSynced).getTime() : Infinity;
+        if (elapsed >= 60 * 1000) {
+          runFullSync();
+        }
+      });
+
       // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed
       window.setInterval(() => {
         const needsWide = (Date.now() - lastWideFetch) >= 24 * 60 * 60 * 1000;
