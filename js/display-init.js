@@ -244,9 +244,9 @@
         }
       });
 
-      // Every 15 min: full sync — fetches todos, meals, config, countdowns, and checks
+      // Every 30 min: full sync — fetches todos, meals, config, countdowns, and checks
       // for a new service worker so version updates appear without a manual sync.
-      window.setInterval(runFullSync, 15 * 60 * 1000);
+      window.setInterval(runFullSync, 30 * 60 * 1000);
 
       // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed.
       // Todos and meals are included so content changes from admin appear within 5 min
