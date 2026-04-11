@@ -304,7 +304,7 @@
           const input = document.querySelector(`[name="timer_${key}"]`);
           if (input) {
             const val = parseInt(input.value, 10);
-            timerIntervals[key] = val > 0 ? val : TIMER_DEFAULTS[key];
+            timerIntervals[key] = Number.isNaN(val) ? TIMER_DEFAULTS[key] : Math.min(600, Math.max(5, val));
           } else {
             timerIntervals[key] = TIMER_DEFAULTS[key];
           }
