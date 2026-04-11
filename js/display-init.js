@@ -248,7 +248,9 @@
       // for a new service worker so version updates appear without a manual sync.
       window.setInterval(runFullSync, 15 * 60 * 1000);
 
-      // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed
+      // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed.
+      // Todos and meals are included so content changes from admin appear within 5 min
+      // even between the 15-minute full syncs.
       window.setInterval(() => {
         const needsWide = (Date.now() - lastWideFetch) >= 24 * 60 * 60 * 1000;
         refreshCalendarData(needsWide);
@@ -256,6 +258,10 @@
         if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
           renderRsvpBoardWithData();
         }
+        Promise.all([fetchTodos(), fetchMeals(), fetchWeeklyNote()]).then(([remoteTodos, remoteMeals, weeklyNote]) => {
+          if (remoteTodos !== null) renderTodoItems(remoteTodos);
+          if (remoteMeals !== null) renderMeals(remoteMeals, weeklyNote || "");
+        }).catch(() => {});
       }, 5 * 60 * 1000);
 
       // Week navigation — each click resets the rotation timer
