@@ -73,13 +73,13 @@
 
     function getCelebrationPalette() {
       const styles = getComputedStyle(document.documentElement);
-      const accent = String(styles.getPropertyValue("--amber") || "").trim() || "#b45309";
+      const accent = String(styles.getPropertyValue("--color-accent") || "").trim() || "#b45309";
       return [accent, "#ffffff", "#fbbf24", "#22c55e"];
     }
 
     function getCelebrationPaletteNoWhite() {
       const styles = getComputedStyle(document.documentElement);
-      const accent = String(styles.getPropertyValue("--amber") || "").trim() || "#b45309";
+      const accent = String(styles.getPropertyValue("--color-accent") || "").trim() || "#b45309";
       return [accent, "#fbbf24", "#f97316", "#14b8a6", "#a855f7", "#22c55e"];
     }
 
@@ -261,7 +261,7 @@
       if (!layer) {
         return Promise.resolve();
       }
-      const accent = String(getComputedStyle(document.documentElement).getPropertyValue("--amber") || "").trim() || "#b45309";
+      const accent = String(getComputedStyle(document.documentElement).getPropertyValue("--color-accent") || "").trim() || "#b45309";
       Array.from({ length: 3 }, (_, index) => {
         const ring = document.createElement("span");
         ring.className = "todo-ripple-ring";
@@ -445,8 +445,6 @@
 
       const animationName = getDisplayCelebrationAnimationName();
       const origin = getTodoCelebrationOrigin(cardEl);
-      console.log(`Celebration: ${animationName} | confetti loaded: ${typeof confetti !== "undefined"} | gsap loaded: ${typeof gsap !== "undefined"}`);
-
       switch (animationName) {
         case "confetti-burst":
           return playCanvasConfettiBurst();
@@ -547,7 +545,6 @@
       }
 
       cardEl.classList.add("is-completing");
-      console.log("[todo-complete] completion reached reset path");
       resetAutoRotate("todo-complete");
       playTodoCelebration(cardEl).catch(() => {});
 
