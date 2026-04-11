@@ -337,6 +337,9 @@
         } else {
           adminHouseholdSettings.display_settings = newDs;
           adminHouseholdSettings.color_scheme = colorScheme;
+          if (typeof applyColorScheme === "function") {
+            applyColorScheme(colorScheme);
+          }
           showToast("Display settings saved.");
         }
       } finally {
