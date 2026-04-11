@@ -197,7 +197,11 @@
 
     async function saveAssistantSection() {
       const client = getSupabaseClient();
-      if (!client || assistantSavePending || !adminHouseholdConfigLoaded) return;
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+      if (assistantSavePending || !adminHouseholdConfigLoaded) return;
 
       assistantSavePending = true;
       const saveBtn = document.getElementById("settings-assistant-save");
@@ -229,7 +233,11 @@
 
     async function persistMemberList(updatedMembers, successMessage) {
       const client = getSupabaseClient();
-      if (!client || membersSavePending || !adminHouseholdConfigLoaded) {
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return false;
+      }
+      if (membersSavePending || !adminHouseholdConfigLoaded) {
         return false;
       }
 
@@ -274,7 +282,11 @@
 
     async function saveDisplaySection() {
       const client = getSupabaseClient();
-      if (!client || displaySavePending || !adminHouseholdConfigLoaded) return;
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+      if (displaySavePending || !adminHouseholdConfigLoaded) return;
 
       displaySavePending = true;
       const saveBtn = document.getElementById("settings-display-save");
@@ -350,7 +362,11 @@
 
     async function saveIntegrationsSection() {
       const client = getSupabaseClient();
-      if (!client || integrationsSavePending || !adminHouseholdConfigLoaded) return;
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+      if (integrationsSavePending || !adminHouseholdConfigLoaded) return;
 
       integrationsSavePending = true;
       const saveBtn = document.getElementById("settings-integrations-save");
