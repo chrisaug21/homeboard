@@ -207,8 +207,6 @@
         const nameInput = document.getElementById("settings-assistant-name");
         const newName = nameInput ? nameInput.value.trim() : "";
 
-        adminHouseholdSettings.assistant_name = newName;
-
         const { data, error } = await client
           .from("households")
           .update({ assistant_name: newName || null })
@@ -220,6 +218,7 @@
         } else if (!data || data.length === 0) {
           showToast(friendlySaveMessage());
         } else {
+          adminHouseholdSettings.assistant_name = newName;
           showToast("Assistant name saved.");
         }
       } finally {
@@ -358,8 +357,6 @@
         const calIdInput = document.getElementById("settings-google-cal-id");
         const newCalId = calIdInput ? calIdInput.value.trim() : "";
 
-        adminHouseholdSettings.google_cal_id = newCalId;
-
         const { data, error } = await client
           .from("households")
           .update({ google_cal_id: newCalId || null })
@@ -370,6 +367,7 @@
         } else if (!data || data.length === 0) {
           showToast(friendlySaveMessage());
         } else {
+          adminHouseholdSettings.google_cal_id = newCalId;
           showToast("Integration settings saved.");
         }
       } finally {
