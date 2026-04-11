@@ -252,6 +252,7 @@
       // Todos and meals are included so content changes from admin appear within 5 min
       // even between the 15-minute full syncs.
       window.setInterval(() => {
+        if (isSyncing) return;
         const needsWide = (Date.now() - lastWideFetch) >= 24 * 60 * 60 * 1000;
         refreshCalendarData(needsWide);
         renderScorecardsWithData();
