@@ -620,37 +620,6 @@
       openAdminModal("Edit Todo", buildTodoFormHTML(todo));
     }
 
-    async function archiveAdminTodo(todoId) {
-      const client = getSupabaseClient();
-
-      if (!client || adminTodoWritePending) {
-        if (!client) {
-          showToast(friendlySaveMessage());
-        }
-        return;
-      }
-
-      adminTodoWritePending = true;
-
-      const { error } = await client
-        .from("todos")
-        .update({
-          archived_at: new Date().toISOString()
-        })
-        .eq("id", todoId)
-        .eq("household_id", TODO_HOUSEHOLD_ID)
-        .is("archived_at", null);
-
-      if (error) {
-        adminTodoWritePending = false;
-        showToast(friendlySaveMessage());
-        return;
-      }
-
-      await loadAdminTodos();
-      adminTodoWritePending = false;
-    }
-
 
     async function archiveAdminTodoWithAnimation(todoId, cardEl) {
       const client = getSupabaseClient();
