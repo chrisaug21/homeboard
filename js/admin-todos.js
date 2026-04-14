@@ -658,21 +658,61 @@
         if (!client) showToast(friendlySaveMessage());
         return;
       }
+
+      const todo = adminTodos.find((t) => t.id === todoId);
+      const isRecurring = !!(todo && todo.recurrence_type);
+
       adminTodoWritePending = true;
       cardEl.classList.add("is-completing");
 
-      const { error } = await client
+      const now = new Date().toISOString();
+      const archivePayload = isRecurring
+        ? { archived_at: now, completed_at: now }
+        : { archived_at: now };
+
+      const { error: archiveError } = await client
         .from("todos")
-        .update({ archived_at: new Date().toISOString() })
+        .update(archivePayload)
         .eq("id", todoId)
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null);
 
-      if (error) {
+      if (archiveError) {
         adminTodoWritePending = false;
         cardEl.classList.remove("is-completing");
         showToast(friendlySaveMessage());
         return;
+      }
+
+      if (isRecurring) {
+        const nextDueDate = calculateNextDueDate(new Date(), todo.recurrence_type, todo.recurrence_config);
+        const templateId = todo.recurrence_template_id || todo.id;
+
+        const { error: insertError } = await client
+          .from("todos")
+          .insert({
+            household_id: TODO_HOUSEHOLD_ID,
+            title: todo.title,
+            description: todo.description || null,
+            assignee: todo.assignee || null,
+            recurrence_type: todo.recurrence_type,
+            recurrence_config: todo.recurrence_config,
+            recurrence_template_id: templateId,
+            due_date: nextDueDate
+          });
+
+        if (insertError) {
+          // Best-effort rollback: undo the archive so the card stays active.
+          await client
+            .from("todos")
+            .update({ archived_at: null, completed_at: null })
+            .eq("id", todoId)
+            .eq("household_id", TODO_HOUSEHOLD_ID);
+          adminTodoWritePending = false;
+          cardEl.classList.remove("is-completing");
+          showToast(friendlySaveMessage());
+          return;
+        }
       }
 
       cardEl.classList.add("is-done");
