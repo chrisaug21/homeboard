@@ -48,6 +48,7 @@
       const archivedList = document.getElementById("admin-archived-list");
       if (archivedList) {
         archivedList.addEventListener("click", handleAdminArchivedListClick);
+        archivedList.addEventListener("keydown", handleAdminArchivedListKeydown);
       }
 
       adminTodoUndoHooksInitialized = true;
@@ -101,6 +102,121 @@
         month: "short",
         day: "numeric"
       }).format(parsedDate);
+    }
+
+    function formatAdminTodoCompletionLabel(todo) {
+      const completedValue = todo.completed_at || todo.archived_at;
+      if (!completedValue) {
+        return "";
+      }
+
+      const completedDate = new Date(completedValue);
+      if (Number.isNaN(completedDate.getTime())) {
+        return "";
+      }
+
+      return `Completed ${new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric"
+      }).format(completedDate)}`;
+    }
+
+    function formatAdminTodoRecurrence(todo) {
+      if (!todo?.recurrence_type) {
+        return "";
+      }
+
+      const config = todo.recurrence_config || {};
+
+      if (todo.recurrence_type === "offset") {
+        const intervalDays = Number(config.interval_days) || 1;
+        if (intervalDays % 30 === 0 && intervalDays >= 30) {
+          const months = intervalDays / 30;
+          return months === 1 ? "Every month" : `Every ${months} months`;
+        }
+        if (intervalDays % 7 === 0 && intervalDays >= 7) {
+          const weeks = intervalDays / 7;
+          return weeks === 1 ? "Every week" : `Every ${weeks} weeks`;
+        }
+        return intervalDays === 1 ? "Every day" : `Every ${intervalDays} days`;
+      }
+
+      if (todo.recurrence_type === "scheduled") {
+        if (config.frequency === "monthly") {
+          const dayOfMonth = Number(config.day_of_month) || 1;
+          return `Every month on day ${dayOfMonth}`;
+        }
+
+        const dayIndex = Number(config.day_of_week);
+        const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dayIndex];
+        return weekday ? `Every ${weekday}` : "Every week";
+      }
+
+      return "";
+    }
+
+    function buildArchivedTodoDetailModalHTML(todo) {
+      const notes = String(todo?.description || "").trim();
+      const completionLabel = formatAdminTodoCompletionLabel(todo) || "Completed date unavailable";
+      const recurrenceLabel = formatAdminTodoRecurrence(todo);
+      const rows = [
+        `
+          <div class="admin-detail-row">
+            <span class="admin-detail-label">Title</span>
+            <span class="admin-detail-value">${escapeHtml(todo?.title || "Untitled task")}</span>
+          </div>
+        `
+      ];
+
+      if (notes) {
+        rows.push(`
+          <div class="admin-detail-row">
+            <span class="admin-detail-label">Notes</span>
+            <span class="admin-detail-value">${escapeHtml(notes)}</span>
+          </div>
+        `);
+      }
+
+      if (todo?.assignee) {
+        rows.push(`
+          <div class="admin-detail-row">
+            <span class="admin-detail-label">Assignee</span>
+            <span class="admin-detail-value">${escapeHtml(todo.assignee)}</span>
+          </div>
+        `);
+      }
+
+      rows.push(`
+        <div class="admin-detail-row">
+          <span class="admin-detail-label">Due date</span>
+          <span class="admin-detail-value">${escapeHtml(formatLongDate(todo?.due_date))}</span>
+        </div>
+      `);
+
+      rows.push(`
+        <div class="admin-detail-row">
+          <span class="admin-detail-label">Completion date</span>
+          <span class="admin-detail-value">${escapeHtml(completionLabel)}</span>
+        </div>
+      `);
+
+      if (recurrenceLabel) {
+        rows.push(`
+          <div class="admin-detail-row">
+            <span class="admin-detail-label">Repeats</span>
+            <span class="admin-detail-value">${escapeHtml(recurrenceLabel)}</span>
+          </div>
+        `);
+      }
+
+      return `
+        <div class="admin-detail-stack">
+          ${rows.join("")}
+          <div class="admin-actions admin-actions--end">
+            <button class="admin-button admin-button--primary" type="button" data-action="close-modal">Close</button>
+          </div>
+        </div>
+      `;
     }
 
     function buildAdminTodoDeleteModalHTML(todo) {
@@ -158,6 +274,12 @@
         dueMarkup = `<span class="admin-pill admin-pill--due">${escapeHtml(formatAdminTodoDate(todo.due_date))}</span>`;
       }
 
+      const completionLabel = !options.showComplete
+        ? formatAdminTodoCompletionLabel(todo)
+        : "";
+      const completionMarkup = completionLabel
+        ? `<span class="admin-pill admin-pill--completed">${escapeHtml(completionLabel)}</span>`
+        : "";
       const undoAction = !options.showComplete && isUndoableArchivedTodo(todo) ? `
         <div style="margin-top:6px;">
           <button class="admin-button admin-button--small admin-button--secondary" type="button"
@@ -170,6 +292,7 @@
         <div class="admin-todo-meta">
           ${buildAdminAssigneePill(assignee)}
           ${dueMarkup}
+          ${completionMarkup}
         </div>
       `;
       const infoIcon = hasDescription
@@ -215,7 +338,7 @@
       }
 
       return `
-        <article class="admin-todo-card" aria-label="${title}">
+        <article class="admin-todo-card admin-todo-card--archived" data-todo-id="${escapeHtml(todo.id)}" role="button" tabindex="0" aria-label="View details for ${title}">
           <div class="admin-todo-body">
             ${titleMarkup}
             ${meta}
@@ -727,6 +850,12 @@
       openAdminModal("Remove Todo", buildAdminTodoDeleteModalHTML(todo));
     }
 
+    function openArchivedTodoDetailModal(todo) {
+      adminModalType = "archived-todo-detail";
+      adminModalContext = { id: todo.id };
+      openAdminModal("Completed Todo", buildArchivedTodoDetailModalHTML(todo));
+    }
+
     async function archiveAdminTodoWithAnimation(todoId, cardEl) {
       const client = getSupabaseClient();
       if (!client || adminTodoWritePending) {
@@ -850,6 +979,38 @@
       const undoBtn = event.target.closest("[data-action='undo-complete-todo']");
       if (undoBtn) {
         undoAdminTodoCompletion(undoBtn.getAttribute("data-todo-id"));
+        return;
+      }
+
+      const card = event.target.closest(".admin-todo-card--archived");
+      if (!card) {
+        return;
+      }
+
+      const todo = adminArchivedTodos.find((item) => item.id === card.getAttribute("data-todo-id"));
+      if (todo) {
+        openArchivedTodoDetailModal(todo);
+      }
+    }
+
+    function handleAdminArchivedListKeydown(event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      if (event.key === " ") event.preventDefault();
+
+      const undoBtn = event.target.closest("[data-action='undo-complete-todo']");
+      if (undoBtn) {
+        undoAdminTodoCompletion(undoBtn.getAttribute("data-todo-id"));
+        return;
+      }
+
+      const card = event.target.closest(".admin-todo-card--archived");
+      if (!card) {
+        return;
+      }
+
+      const todo = adminArchivedTodos.find((item) => item.id === card.getAttribute("data-todo-id"));
+      if (todo) {
+        openArchivedTodoDetailModal(todo);
       }
     }
 
