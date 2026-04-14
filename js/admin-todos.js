@@ -1,3 +1,5 @@
+    let adminTodoStopRepeatConfirmId = null;
+
     function buildAdminTodoSkeletonHTML() {
       const activeCard = () => `
         <article class="admin-todo-card admin-todo-card--active admin-skeleton-card" aria-hidden="true">
@@ -65,10 +67,22 @@
         dueMarkup = `<span class="admin-pill admin-pill--due">${escapeHtml(formatAdminTodoDate(todo.due_date))}</span>`;
       }
 
+      const recurringBadge = options.showComplete && todo.recurrence_type
+        ? `<span class="admin-pill" style="background:rgba(21,128,61,0.1);color:var(--sage);">Repeats</span>`
+        : "";
+      const stopRepeatAction = options.showComplete && todo.recurrence_type ? `
+        <div style="margin-top:6px;">
+          <button class="admin-todo-stop-btn" type="button"
+                  data-action="stop-repeating" data-todo-id="${escapeHtml(todo.id)}">
+            Stop repeating
+          </button>
+        </div>
+      ` : "";
       const meta = `
         <div class="admin-todo-meta">
           ${buildAdminAssigneePill(assignee)}
           ${dueMarkup}
+          ${recurringBadge}
         </div>
       `;
       const titleMarkup = `
@@ -91,6 +105,7 @@
             <div class="admin-todo-body">
               ${titleMarkup}
               ${meta}
+              ${stopRepeatAction}
             </div>
           </article>
         `;
@@ -228,6 +243,11 @@
         return;
       }
 
+      const recurrenceData = readTodoRecurrenceFromFormData(formData);
+      if (!validateTodoRecurrenceFromData(recurrenceData, formData)) {
+        return;
+      }
+
       adminTodoWritePending = true;
       setModalSaving(true);
 
@@ -238,7 +258,9 @@
           title,
           description: description || null,
           assignee: assignee || null,
-          due_date: dueDate || null
+          due_date: dueDate || null,
+          recurrence_type: recurrenceData.recurrence_type,
+          recurrence_config: recurrenceData.recurrence_config
         });
 
       adminTodoWritePending = false;
@@ -267,6 +289,11 @@
 
       if (!title || adminTodoWritePending) return;
 
+      const recurrenceData = readTodoRecurrenceFromFormData(formData);
+      if (!validateTodoRecurrenceFromData(recurrenceData, formData)) {
+        return;
+      }
+
       adminTodoWritePending = true;
       setModalSaving(true);
 
@@ -276,7 +303,9 @@
           title,
           description: description || null,
           assignee: assignee || null,
-          due_date: dueDate || null
+          due_date: dueDate || null,
+          recurrence_type: recurrenceData.recurrence_type,
+          recurrence_config: recurrenceData.recurrence_config
         })
         .eq("id", id)
         .eq("household_id", TODO_HOUSEHOLD_ID)
@@ -306,6 +335,36 @@
       const assigneeOptions = ["", ...memberNames, ...extraMember].map((name) =>
         `<option value="${escapeHtml(name)}"${name === currentAssignee ? " selected" : ""}>${escapeHtml(name || "Unassigned")}</option>`
       ).join("");
+
+      // Recurrence pre-population
+      const recurrenceEnabled = isEdit && !!todo.recurrence_type;
+      const recurrenceType = (isEdit && todo.recurrence_type) || "offset";
+      const recurrenceConfig = (isEdit && todo.recurrence_config) || {};
+
+      let intervalValue = 1;
+      let intervalUnit = "days";
+      if (recurrenceType === "offset" && recurrenceConfig.interval_days) {
+        const d = recurrenceConfig.interval_days;
+        if (d % 7 === 0 && d >= 7) {
+          intervalValue = d / 7;
+          intervalUnit = "weeks";
+        } else {
+          intervalValue = d;
+        }
+      }
+
+      const scheduledFreq = (recurrenceType === "scheduled" && recurrenceConfig.frequency) || "weekly";
+      const dayOfWeek = (scheduledFreq === "weekly" && recurrenceConfig.day_of_week !== undefined)
+        ? recurrenceConfig.day_of_week
+        : 1;
+      const dayOfMonth = (scheduledFreq === "monthly" && recurrenceConfig.day_of_month)
+        ? recurrenceConfig.day_of_month
+        : 1;
+
+      const dayOptions = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        .map((d, i) => `<option value="${i}"${dayOfWeek === i ? " selected" : ""}>${d}</option>`)
+        .join("");
+
       return `
         <form data-modal-form="todo" novalidate>
           <div class="admin-field">
@@ -315,8 +374,8 @@
               placeholder="${isEdit ? "" : "What needs doing?"}">
           </div>
           <div class="admin-field">
-            <label for="modal-todo-description">Description</label>
-            <textarea id="modal-todo-description" name="description" rows="4" maxlength="2000" placeholder="Add details if this task needs context...">${isEdit ? escapeHtml(todo.description || "") : ""}</textarea>
+            <label for="modal-todo-description">Notes</label>
+            <textarea id="modal-todo-description" name="description" rows="3" maxlength="2000" placeholder="Add details if this task needs context...">${isEdit ? escapeHtml(todo.description || "") : ""}</textarea>
           </div>
           <div class="admin-form-row">
             <div class="admin-field">
@@ -326,9 +385,72 @@
               </select>
             </div>
             <div class="admin-field">
-              <label for="modal-todo-due">Due date</label>
+              <label for="modal-todo-due" id="modal-todo-due-label">${recurrenceEnabled ? "First due date" : "Due date"}</label>
               <input id="modal-todo-due" name="due_date" type="date"
-                value="${isEdit ? escapeHtml(todo.due_date || "") : ""}">
+                value="${isEdit ? escapeHtml(todo.due_date || "") : ""}"
+                ${recurrenceEnabled ? "required" : ""}>
+            </div>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0 8px;">
+          <div class="admin-field" style="margin-top:0;">
+            <label class="admin-settings-toggle admin-settings-toggle--block" style="margin:0;">
+              <input type="checkbox" name="recurrence_enabled" id="modal-todo-recurrence"
+                     onchange="handleTodoRecurrenceChange(this.form)"
+                     ${recurrenceEnabled ? "checked" : ""}>
+              <span>Repeat this task</span>
+            </label>
+          </div>
+          <div id="modal-todo-recurrence-section"${!recurrenceEnabled ? " hidden" : ""}>
+            <div class="admin-field">
+              <label for="modal-todo-recurrence-type">Repeats</label>
+              <select id="modal-todo-recurrence-type" name="recurrence_type"
+                      onchange="handleTodoRecurrenceTypeChange(this.form)">
+                <option value="offset"${recurrenceType !== "scheduled" ? " selected" : ""}>After completion</option>
+                <option value="scheduled"${recurrenceType === "scheduled" ? " selected" : ""}>On a fixed schedule</option>
+              </select>
+            </div>
+            <div id="modal-todo-offset-config"${recurrenceType === "scheduled" ? " hidden" : ""}>
+              <div class="admin-form-row">
+                <div class="admin-field">
+                  <label for="modal-todo-interval-value">Repeat every</label>
+                  <input type="number" id="modal-todo-interval-value" name="interval_value"
+                         min="1" max="365" value="${intervalValue}">
+                </div>
+                <div class="admin-field">
+                  <label for="modal-todo-interval-unit">&nbsp;</label>
+                  <select id="modal-todo-interval-unit" name="interval_unit">
+                    <option value="days"${intervalUnit === "days" ? " selected" : ""}>days</option>
+                    <option value="weeks"${intervalUnit === "weeks" ? " selected" : ""}>weeks</option>
+                  </select>
+                </div>
+              </div>
+              <p class="admin-field-hint">The task will come back this many days after you complete it.</p>
+            </div>
+            <div id="modal-todo-scheduled-config"${recurrenceType !== "scheduled" ? " hidden" : ""}>
+              <div class="admin-field">
+                <label for="modal-todo-scheduled-freq">Frequency</label>
+                <select id="modal-todo-scheduled-freq" name="scheduled_frequency"
+                        onchange="handleTodoScheduledFreqChange(this.form)">
+                  <option value="weekly"${scheduledFreq !== "monthly" ? " selected" : ""}>Every week on a specific day</option>
+                  <option value="monthly"${scheduledFreq === "monthly" ? " selected" : ""}>Every month on a specific date</option>
+                </select>
+              </div>
+              <div id="modal-todo-weekly-config"${scheduledFreq === "monthly" ? " hidden" : ""}>
+                <div class="admin-field">
+                  <label for="modal-todo-day-of-week">Day of the week</label>
+                  <select id="modal-todo-day-of-week" name="day_of_week">
+                    ${dayOptions}
+                  </select>
+                </div>
+              </div>
+              <div id="modal-todo-monthly-config"${scheduledFreq !== "monthly" ? " hidden" : ""}>
+                <div class="admin-field">
+                  <label for="modal-todo-day-of-month">Day of the month (1–28)</label>
+                  <input type="number" id="modal-todo-day-of-month" name="day_of_month"
+                         min="1" max="28" value="${dayOfMonth}">
+                  <p class="admin-field-hint">Use a day between 1 and 28 so it works in February.</p>
+                </div>
+              </div>
             </div>
           </div>
           <div class="admin-actions">
@@ -337,6 +459,110 @@
           </div>
         </form>
       `;
+    }
+
+    function handleTodoRecurrenceChange(form) {
+      if (!form) return;
+      const enabledEl = form.querySelector('[name="recurrence_enabled"]');
+      const enabled = enabledEl && enabledEl.checked;
+      const section = document.getElementById("modal-todo-recurrence-section");
+      const dueLabel = document.getElementById("modal-todo-due-label");
+      const dueInput = form.querySelector('[name="due_date"]');
+      if (section) section.hidden = !enabled;
+      if (dueLabel) dueLabel.textContent = enabled ? "First due date" : "Due date";
+      if (dueInput) dueInput.required = !!enabled;
+    }
+
+    function handleTodoRecurrenceTypeChange(form) {
+      if (!form) return;
+      const typeEl = form.querySelector('[name="recurrence_type"]');
+      if (!typeEl) return;
+      const type = typeEl.value;
+      const offsetConfig = document.getElementById("modal-todo-offset-config");
+      const scheduledConfig = document.getElementById("modal-todo-scheduled-config");
+      if (offsetConfig) offsetConfig.hidden = type !== "offset";
+      if (scheduledConfig) scheduledConfig.hidden = type !== "scheduled";
+    }
+
+    function handleTodoScheduledFreqChange(form) {
+      if (!form) return;
+      const freqEl = form.querySelector('[name="scheduled_frequency"]');
+      if (!freqEl) return;
+      const freq = freqEl.value;
+      const weeklyConfig = document.getElementById("modal-todo-weekly-config");
+      const monthlyConfig = document.getElementById("modal-todo-monthly-config");
+      if (weeklyConfig) weeklyConfig.hidden = freq !== "weekly";
+      if (monthlyConfig) monthlyConfig.hidden = freq !== "monthly";
+    }
+
+    function readTodoRecurrenceFromFormData(formData) {
+      const enabled = formData.get("recurrence_enabled") === "on";
+      if (!enabled) {
+        return { recurrence_type: null, recurrence_config: null };
+      }
+
+      const type = String(formData.get("recurrence_type") || "offset").trim();
+
+      if (type === "offset") {
+        const rawVal = parseInt(String(formData.get("interval_value") || "1").trim(), 10);
+        const intervalValue = Number.isNaN(rawVal) ? 1 : rawVal;
+        const unit = String(formData.get("interval_unit") || "days").trim();
+        const intervalDays = unit === "weeks" ? intervalValue * 7 : intervalValue;
+        return { recurrence_type: "offset", recurrence_config: { interval_days: intervalDays } };
+      }
+
+      if (type === "scheduled") {
+        const freq = String(formData.get("scheduled_frequency") || "weekly").trim();
+        if (freq === "monthly") {
+          const rawDom = parseInt(String(formData.get("day_of_month") || "1").trim(), 10);
+          const dayOfMonth = Number.isNaN(rawDom) ? 1 : rawDom;
+          return { recurrence_type: "scheduled", recurrence_config: { frequency: "monthly", day_of_month: dayOfMonth } };
+        }
+        const rawDow = parseInt(String(formData.get("day_of_week") || "1").trim(), 10);
+        const dayOfWeek = Number.isNaN(rawDow) ? 1 : rawDow;
+        return { recurrence_type: "scheduled", recurrence_config: { frequency: "weekly", day_of_week: dayOfWeek } };
+      }
+
+      return { recurrence_type: null, recurrence_config: null };
+    }
+
+    function validateTodoRecurrenceFromData(recurrenceData, formData) {
+      if (!recurrenceData.recurrence_type) return true;
+
+      const form = document.querySelector('#admin-modal-body form[data-modal-form="todo"]');
+
+      const dueValue = String(formData.get("due_date") || "").trim();
+      if (!dueValue) {
+        const dueInput = form && form.querySelector('[name="due_date"]');
+        setFieldError(dueInput, "A start date is required when repeating is turned on.");
+        if (dueInput) dueInput.focus();
+        return false;
+      }
+
+      if (recurrenceData.recurrence_type === "offset") {
+        const intervalDays = recurrenceData.recurrence_config.interval_days;
+        if (!intervalDays || intervalDays < 1 || !Number.isInteger(intervalDays)) {
+          const valEl = form && form.querySelector('[name="interval_value"]');
+          setFieldError(valEl, "Enter a number of 1 or more.");
+          if (valEl) valEl.focus();
+          return false;
+        }
+      }
+
+      if (
+        recurrenceData.recurrence_type === "scheduled" &&
+        recurrenceData.recurrence_config.frequency === "monthly"
+      ) {
+        const dom = recurrenceData.recurrence_config.day_of_month;
+        if (!dom || dom < 1 || dom > 28 || !Number.isInteger(dom)) {
+          const domEl = form && form.querySelector('[name="day_of_month"]');
+          setFieldError(domEl, "Enter a day between 1 and 28.");
+          if (domEl) domEl.focus();
+          return false;
+        }
+      }
+
+      return true;
     }
 
     async function openAddTodoModal() {
@@ -436,6 +662,42 @@
         return;
       }
 
+      // Stop repeating — first click shows inline confirmation.
+      const stopRepeatBtn = event.target.closest("[data-action='stop-repeating']");
+      if (stopRepeatBtn) {
+        const todoId = stopRepeatBtn.getAttribute("data-todo-id");
+        const wrapper = stopRepeatBtn.parentElement;
+        if (!wrapper) return;
+        adminTodoStopRepeatConfirmId = todoId;
+        wrapper.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:rgba(166,76,99,0.06);border:1px solid rgba(166,76,99,0.16);border-radius:var(--tag-radius);font-size:0.82rem;">
+            <span>Stop repeating and remove all upcoming instances?</span>
+            <div style="display:flex;gap:8px;">
+              <button class="admin-button admin-button--small admin-button--secondary" type="button"
+                      data-action="cancel-stop-repeating" data-todo-id="${escapeHtml(todoId)}">Cancel</button>
+              <button class="admin-button admin-button--small admin-button--ghost-danger" type="button"
+                      data-action="confirm-stop-repeating" data-todo-id="${escapeHtml(todoId)}">Yes, stop repeating</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Confirm stop repeating — execute the archive.
+      const confirmStopBtn = event.target.closest("[data-action='confirm-stop-repeating']");
+      if (confirmStopBtn) {
+        archiveAdminTodoSeries(confirmStopBtn.getAttribute("data-todo-id"));
+        return;
+      }
+
+      // Cancel stop repeating — restore original card list.
+      const cancelStopBtn = event.target.closest("[data-action='cancel-stop-repeating']");
+      if (cancelStopBtn) {
+        adminTodoStopRepeatConfirmId = null;
+        loadAdminTodos();
+        return;
+      }
+
       // Tapping anywhere else on an active card opens the edit modal.
       const card = event.target.closest(".admin-todo-card--active");
       if (card && !card.classList.contains("is-completing")) {
@@ -475,7 +737,7 @@
 
       const { data, error } = await client
         .from("todos")
-        .select("id, title, description, assignee, due_date, archived_at, created_at")
+        .select("id, title, description, assignee, due_date, archived_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
@@ -500,4 +762,37 @@
       });
 
       return { active, archived };
+    }
+
+    async function archiveAdminTodoSeries(todoId) {
+      const client = getSupabaseClient();
+      if (!client || adminTodoWritePending) return;
+
+      const todo = adminTodos.find((t) => t.id === todoId);
+      if (!todo) return;
+
+      adminTodoWritePending = true;
+      const now = new Date().toISOString();
+      // Works for both cases: instance (use its template) and template itself (use its own id)
+      const templateId = todo.recurrence_template_id || todo.id;
+
+      const [{ error: templateError }, { error: instancesError }] = await Promise.all([
+        client.from("todos").update({ archived_at: now })
+          .eq("id", templateId)
+          .eq("household_id", TODO_HOUSEHOLD_ID)
+          .is("archived_at", null),
+        client.from("todos").update({ archived_at: now })
+          .eq("recurrence_template_id", templateId)
+          .eq("household_id", TODO_HOUSEHOLD_ID)
+          .is("archived_at", null)
+      ]);
+
+      adminTodoWritePending = false;
+      adminTodoStopRepeatConfirmId = null;
+
+      if (templateError || instancesError) {
+        showToast(friendlySaveMessage());
+      }
+
+      await loadAdminTodos();
     }
