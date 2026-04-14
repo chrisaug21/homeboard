@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.9.17";
+    const VERSION = "1.9.18";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1384,9 +1384,13 @@
           // the current month's occurrence (same as the current due date).
           // Use max(completedDate, currentDueDate) as the anchor so the
           // calculation always advances past the current instance.
+          //
+          // IMPORTANT: parse the due date string as a local date, not UTC.
+          // new Date("2026-04-15") is UTC midnight, which becomes Apr 14 in
+          // western timezones — making the max comparison silently wrong.
           if (currentDueDate) {
-            const due = new Date(currentDueDate);
-            due.setHours(0, 0, 0, 0);
+            const parts = String(currentDueDate).split("-");
+            const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
             if (due > base) {
               base.setTime(due.getTime());
             }
