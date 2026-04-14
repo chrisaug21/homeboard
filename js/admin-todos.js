@@ -654,7 +654,7 @@
       }
 
       if (isRecurring) {
-        const nextDueDate = calculateNextDueDate(new Date(), todo.recurrence_type, todo.recurrence_config);
+        const nextDueDate = calculateNextDueDate(new Date(), todo.recurrence_type, todo.recurrence_config, todo.due_date);
         const templateId = todo.recurrence_template_id || todo.id;
 
         const { error: insertError } = await client

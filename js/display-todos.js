@@ -5,6 +5,7 @@
         title: todo.title || "Untitled task",
         assignee: todo.assignee || "",
         description: description || null,
+        dueDate: todo.due_date || null,
         duePill: getTodoDuePill(todo.due_date),
         isOverdue: isTodoOverdue(todo.due_date),
         recurrenceType: todo.recurrence_type || null,
@@ -573,7 +574,7 @@
       }
 
       if (isRecurring) {
-        const nextDueDate = calculateNextDueDate(new Date(), todo.recurrenceType, todo.recurrenceConfig);
+        const nextDueDate = calculateNextDueDate(new Date(), todo.recurrenceType, todo.recurrenceConfig, todo.dueDate);
         const templateId = todo.recurrenceTemplateId || todoId;
 
         const { error: insertError } = await client

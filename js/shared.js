@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.9.16";
+    const VERSION = "1.9.17";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1353,7 +1353,7 @@
 
     // Returns the next due date (YYYY-MM-DD) for a recurring todo after it is completed.
     // completedDate: Date object representing the local date of completion.
-    function calculateNextDueDate(completedDate, recurrenceType, recurrenceConfig) {
+    function calculateNextDueDate(completedDate, recurrenceType, recurrenceConfig, currentDueDate) {
       const base = new Date(completedDate);
       base.setHours(0, 0, 0, 0);
 
@@ -1367,6 +1367,10 @@
         const freq = recurrenceConfig && recurrenceConfig.frequency;
 
         if (freq === "weekly") {
+          // Weekly uses completedDate as anchor. The % 7 arithmetic naturally
+          // lands on the next occurrence of that weekday after today, so early
+          // completion already produces the correct upcoming date without the
+          // max(completedDate, currentDueDate) adjustment needed for monthly.
           const targetDay = Number(recurrenceConfig.day_of_week ?? 1); // 0=Sun … 6=Sat
           const currentDay = base.getDay();
           // Always advance by at least 1 day — never return the same day.
@@ -1376,9 +1380,20 @@
         }
 
         if (freq === "monthly") {
+          // For monthly, completing before the target day-of-month would find
+          // the current month's occurrence (same as the current due date).
+          // Use max(completedDate, currentDueDate) as the anchor so the
+          // calculation always advances past the current instance.
+          if (currentDueDate) {
+            const due = new Date(currentDueDate);
+            due.setHours(0, 0, 0, 0);
+            if (due > base) {
+              base.setTime(due.getTime());
+            }
+          }
           const rawDay = Number(recurrenceConfig.day_of_month) || 1;
           const targetDay = Math.min(rawDay, 28); // cap for February safety
-          // Advance to next month if today already meets or passes the target day.
+          // Advance to next month if anchor meets or passes the target day.
           if (base.getDate() >= targetDay) {
             base.setMonth(base.getMonth() + 1);
           }
