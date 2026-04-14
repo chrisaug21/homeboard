@@ -67,9 +67,6 @@
         dueMarkup = `<span class="admin-pill admin-pill--due">${escapeHtml(formatAdminTodoDate(todo.due_date))}</span>`;
       }
 
-      const recurringBadge = options.showComplete && todo.recurrence_type
-        ? `<span class="admin-pill" style="background:rgba(21,128,61,0.1);color:var(--sage);">Repeats</span>`
-        : "";
       const stopRepeatAction = options.showComplete && todo.recurrence_type ? `
         <div style="margin-top:6px;">
           <button class="admin-todo-stop-btn" type="button"
@@ -82,13 +79,21 @@
         <div class="admin-todo-meta">
           ${buildAdminAssigneePill(assignee)}
           ${dueMarkup}
-          ${recurringBadge}
         </div>
       `;
+      const infoIcon = hasDescription
+        ? `<span class="admin-todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>`
+        : "";
+      const repeatIcon = options.showComplete && todo.recurrence_type
+        ? `<span class="admin-todo-detail-indicator" style="background:rgba(121,106,94,0.1);color:var(--muted);" aria-hidden="true"><i data-lucide="repeat-2"></i></span>`
+        : "";
+      const indicators = infoIcon || repeatIcon
+        ? `<div style="display:flex;gap:4px;flex-shrink:0;">${infoIcon}${repeatIcon}</div>`
+        : "";
       const titleMarkup = `
         <div class="admin-todo-title-row">
           <div class="admin-todo-title">${title}</div>
-          ${hasDescription ? `<span class="admin-todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>` : ""}
+          ${indicators}
         </div>
       `;
 
@@ -345,13 +350,22 @@
       let intervalUnit = "days";
       if (recurrenceType === "offset" && recurrenceConfig.interval_days) {
         const d = recurrenceConfig.interval_days;
-        if (d % 7 === 0 && d >= 7) {
+        if (d % 30 === 0 && d >= 30) {
+          intervalValue = d / 30;
+          intervalUnit = "months";
+        } else if (d % 7 === 0 && d >= 7) {
           intervalValue = d / 7;
           intervalUnit = "weeks";
         } else {
           intervalValue = d;
         }
       }
+      const initialHintUnit = intervalUnit === "weeks"
+        ? (intervalValue === 1 ? "week" : "weeks")
+        : intervalUnit === "months"
+          ? (intervalValue === 1 ? "month" : "months")
+          : (intervalValue === 1 ? "day" : "days");
+      const initialHintText = `Next occurrence will be created ${intervalValue} ${initialHintUnit} after completion.`;
 
       const scheduledFreq = (recurrenceType === "scheduled" && recurrenceConfig.frequency) || "weekly";
       const dayOfWeek = (scheduledFreq === "weekly" && recurrenceConfig.day_of_week !== undefined)
@@ -392,21 +406,19 @@
             </div>
           </div>
           <hr style="border:none;border-top:1px solid var(--border);margin:12px 0 8px;">
-          <div class="admin-field" style="margin-top:0;">
-            <label class="admin-settings-toggle admin-settings-toggle--block" style="margin:0;">
-              <input type="checkbox" name="recurrence_enabled" id="modal-todo-recurrence"
-                     onchange="handleTodoRecurrenceChange(this.form)"
-                     ${recurrenceEnabled ? "checked" : ""}>
-              <span>Repeat this task</span>
-            </label>
-          </div>
+          <label class="admin-settings-toggle admin-settings-toggle--block">
+            <input type="checkbox" name="recurrence_enabled" id="modal-todo-recurrence"
+                   onchange="handleTodoRecurrenceChange(this.form)"
+                   ${recurrenceEnabled ? "checked" : ""}>
+            <span>Repeat this task</span>
+          </label>
           <div id="modal-todo-recurrence-section"${!recurrenceEnabled ? " hidden" : ""}>
             <div class="admin-field">
               <label for="modal-todo-recurrence-type">Repeats</label>
               <select id="modal-todo-recurrence-type" name="recurrence_type"
                       onchange="handleTodoRecurrenceTypeChange(this.form)">
-                <option value="offset"${recurrenceType !== "scheduled" ? " selected" : ""}>After completion</option>
-                <option value="scheduled"${recurrenceType === "scheduled" ? " selected" : ""}>On a fixed schedule</option>
+                <option value="offset"${recurrenceType !== "scheduled" ? " selected" : ""}>After an interval</option>
+                <option value="scheduled"${recurrenceType === "scheduled" ? " selected" : ""}>On a set schedule</option>
               </select>
             </div>
             <div id="modal-todo-offset-config"${recurrenceType === "scheduled" ? " hidden" : ""}>
@@ -414,17 +426,20 @@
                 <div class="admin-field">
                   <label for="modal-todo-interval-value">Repeat every</label>
                   <input type="number" id="modal-todo-interval-value" name="interval_value"
-                         min="1" max="365" value="${intervalValue}">
+                         min="1" max="365" value="${intervalValue}"
+                         oninput="handleTodoIntervalChange(this.form)">
                 </div>
                 <div class="admin-field">
                   <label for="modal-todo-interval-unit">&nbsp;</label>
-                  <select id="modal-todo-interval-unit" name="interval_unit">
+                  <select id="modal-todo-interval-unit" name="interval_unit"
+                          onchange="handleTodoIntervalChange(this.form)">
                     <option value="days"${intervalUnit === "days" ? " selected" : ""}>days</option>
                     <option value="weeks"${intervalUnit === "weeks" ? " selected" : ""}>weeks</option>
+                    <option value="months"${intervalUnit === "months" ? " selected" : ""}>months</option>
                   </select>
                 </div>
               </div>
-              <p class="admin-field-hint">The task will come back this many days after you complete it.</p>
+              <p class="admin-field-hint" id="modal-todo-interval-hint">${initialHintText}</p>
             </div>
             <div id="modal-todo-scheduled-config"${recurrenceType !== "scheduled" ? " hidden" : ""}>
               <div class="admin-field">
@@ -495,6 +510,22 @@
       if (monthlyConfig) monthlyConfig.hidden = freq !== "monthly";
     }
 
+    function handleTodoIntervalChange(form) {
+      if (!form) return;
+      const hint = document.getElementById("modal-todo-interval-hint");
+      if (!hint) return;
+      const valEl = form.querySelector('[name="interval_value"]');
+      const unitEl = form.querySelector('[name="interval_unit"]');
+      const val = parseInt(String(valEl ? valEl.value : "1").trim(), 10) || 1;
+      const unit = unitEl ? unitEl.value : "days";
+      const unitLabel = unit === "weeks"
+        ? (val === 1 ? "week" : "weeks")
+        : unit === "months"
+          ? (val === 1 ? "month" : "months")
+          : (val === 1 ? "day" : "days");
+      hint.textContent = `Next occurrence will be created ${val} ${unitLabel} after completion.`;
+    }
+
     function readTodoRecurrenceFromFormData(formData) {
       const enabled = formData.get("recurrence_enabled") === "on";
       if (!enabled) {
@@ -507,7 +538,7 @@
         const rawVal = parseInt(String(formData.get("interval_value") || "1").trim(), 10);
         const intervalValue = Number.isNaN(rawVal) ? 1 : rawVal;
         const unit = String(formData.get("interval_unit") || "days").trim();
-        const intervalDays = unit === "weeks" ? intervalValue * 7 : intervalValue;
+        const intervalDays = unit === "weeks" ? intervalValue * 7 : unit === "months" ? intervalValue * 30 : intervalValue;
         return { recurrence_type: "offset", recurrence_config: { interval_days: intervalDays } };
       }
 

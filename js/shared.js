@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.9.13";
+    const VERSION = "1.9.14";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
