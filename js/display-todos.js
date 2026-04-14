@@ -6,7 +6,10 @@
         assignee: todo.assignee || "",
         description: description || null,
         duePill: getTodoDuePill(todo.due_date),
-        isOverdue: isTodoOverdue(todo.due_date)
+        isOverdue: isTodoOverdue(todo.due_date),
+        recurrenceType: todo.recurrence_type || null,
+        recurrenceConfig: todo.recurrence_config || null,
+        recurrenceTemplateId: todo.recurrence_template_id || null
       };
     }
 
@@ -544,20 +547,51 @@
         return;
       }
 
+      const todo = cachedDisplayTodos && cachedDisplayTodos.find((t) => t.id === todoId);
+      const isRecurring = !!(todo && todo.recurrenceType);
+
       cardEl.classList.add("is-completing");
       resetAutoRotate("todo-complete");
       playTodoCelebration(cardEl).catch(() => {});
 
+      const now = new Date().toISOString();
+      const archivePayload = isRecurring
+        ? { archived_at: now, completed_at: now }
+        : { archived_at: now };
+
       const { error } = await client
         .from("todos")
-        .update({ archived_at: new Date().toISOString() })
+        .update(archivePayload)
         .eq("id", todoId)
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null);
+
       if (error) {
         cardEl.classList.remove("is-completing");
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
+      }
+
+      if (isRecurring) {
+        const nextDueDate = calculateNextDueDate(new Date(), todo.recurrenceType, todo.recurrenceConfig);
+        const templateId = todo.recurrenceTemplateId || todoId;
+
+        const { error: insertError } = await client
+          .from("todos")
+          .insert({
+            household_id: TODO_HOUSEHOLD_ID,
+            title: todo.title,
+            description: todo.description || null,
+            assignee: todo.assignee || null,
+            recurrence_type: todo.recurrenceType,
+            recurrence_config: todo.recurrenceConfig,
+            recurrence_template_id: templateId,
+            due_date: nextDueDate
+          });
+
+        if (insertError) {
+          showDisplayToast("Completed, but the next occurrence couldn't be created. Try syncing.");
+        }
       }
 
       window.setTimeout(() => {
@@ -585,7 +619,7 @@
 
       const { data, error } = await client
         .from("todos")
-        .select("id, title, description, due_date, assignee, archived_at, created_at")
+        .select("id, title, description, due_date, assignee, archived_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null)
         .order("due_date", { ascending: true, nullsFirst: false })
