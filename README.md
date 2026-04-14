@@ -41,8 +41,9 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 ### To-do
 - Add tasks with title, optional description, optional assignee, optional due date
 - Active incomplete tasks with `due_date < today` are highlighted as overdue with a red-accent card treatment
-- Mark tasks complete (archives them) or restore archived tasks
-- Archived tasks live in a collapsible drawer
+- Mark tasks complete (archives them), remove tasks with a confirmation flow, or restore the most recently completed task
+- Recurring tasks can remove just the current occurrence or stop the whole repeating series
+- Archived tasks live in a collapsible drawer with a month filter and a read-only detail modal
 
 ### Meals
 - Week navigation — previous, current, and next week
@@ -90,7 +91,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 |-------|---------|
 | `households` | Household name, Google Cal config, display settings, admin PIN |
 | `users` | Linked to `auth.users`; household membership and role |
-| `todos` | Soft-delete only — never hard delete; archived via `archived_at`; optional `description` text supports admin notes and the display detail modal |
+| `todos` | Soft-delete only — never hard delete; removed rows use `deleted_at`, completed rows use `archived_at`, and optional `description` text supports admin notes and the display detail modal |
 | `meal_plan` | `user_id = null` = shared/household row shown on display |
 | `meal_plan_notes` | One note per household per week; keyed by `household_id` + `week_start` (Monday's date) |
 | `countdowns` | `icon` is a Lucide icon name string; also stores optional `unsplash_image_url`, optional `custom_image_url`, `days_before_visible`, and `photo_keyword` for countdown photos and visibility timing |
