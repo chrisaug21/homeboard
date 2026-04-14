@@ -1351,6 +1351,47 @@
       };
     }
 
+    // Returns the next due date (YYYY-MM-DD) for a recurring todo after it is completed.
+    // completedDate: Date object representing the local date of completion.
+    function calculateNextDueDate(completedDate, recurrenceType, recurrenceConfig) {
+      const base = new Date(completedDate);
+      base.setHours(0, 0, 0, 0);
+
+      if (recurrenceType === "offset") {
+        const days = Number((recurrenceConfig && recurrenceConfig.interval_days) || 1);
+        base.setDate(base.getDate() + days);
+        return formatDateKey(base);
+      }
+
+      if (recurrenceType === "scheduled") {
+        const freq = recurrenceConfig && recurrenceConfig.frequency;
+
+        if (freq === "weekly") {
+          const targetDay = Number(recurrenceConfig.day_of_week ?? 1); // 0=Sun … 6=Sat
+          const currentDay = base.getDay();
+          // Always advance by at least 1 day — never return the same day.
+          const daysToAdd = ((targetDay - currentDay + 7) % 7) || 7;
+          base.setDate(base.getDate() + daysToAdd);
+          return formatDateKey(base);
+        }
+
+        if (freq === "monthly") {
+          const rawDay = Number(recurrenceConfig.day_of_month) || 1;
+          const targetDay = Math.min(rawDay, 28); // cap for February safety
+          // Advance to next month if today already meets or passes the target day.
+          if (base.getDate() >= targetDay) {
+            base.setMonth(base.getMonth() + 1);
+          }
+          base.setDate(targetDay);
+          return formatDateKey(base);
+        }
+      }
+
+      // Fallback: 1 day ahead.
+      base.setDate(base.getDate() + 1);
+      return formatDateKey(base);
+    }
+
     function normalizeMealType(type) {
       return String(type || "")
         .trim()
