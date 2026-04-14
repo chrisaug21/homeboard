@@ -565,7 +565,8 @@
         .update(archivePayload)
         .eq("id", todoId)
         .eq("household_id", TODO_HOUSEHOLD_ID)
-        .is("archived_at", null);
+        .is("archived_at", null)
+        .is("deleted_at", null);
 
       if (error) {
         cardEl.classList.remove("is-completing");
@@ -623,6 +624,7 @@
         .select("id, title, description, due_date, assignee, archived_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null)
+        .is("deleted_at", null)
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
 

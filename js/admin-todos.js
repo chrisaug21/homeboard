@@ -1,4 +1,3 @@
-    let adminTodoStopRepeatConfirmId = null;
     let lastCompletedTodo = null;
     let adminArchivedTodos = [];
     let adminTodoUndoHooksInitialized = false;
@@ -104,6 +103,42 @@
       }).format(parsedDate);
     }
 
+    function buildAdminTodoDeleteModalHTML(todo) {
+      const title = escapeHtml(todo?.title || "this todo");
+
+      if (todo?.recurrence_type) {
+        return `
+          <div class="admin-detail-stack">
+            <p class="admin-field-hint">Choose what to remove for <strong>${title}</strong>.</p>
+            <div class="admin-actions admin-actions--stack">
+              <button class="admin-button admin-button--secondary" type="button"
+                      data-action="remove-todo-occurrence" data-todo-id="${escapeHtml(todo.id)}">
+                Remove just this occurrence
+              </button>
+              <button class="admin-button admin-button--danger" type="button"
+                      data-action="remove-todo-series" data-todo-id="${escapeHtml(todo.id)}">
+                Stop repeating and remove all
+              </button>
+              <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="admin-detail-stack">
+          <p class="admin-field-hint">Remove this todo?</p>
+          <div class="admin-actions admin-actions--split">
+            <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            <button class="admin-button admin-button--danger" type="button"
+                    data-action="confirm-remove-todo" data-todo-id="${escapeHtml(todo.id)}">
+              Remove
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
     function renderAdminTodoCard(todo, options) {
       const title = escapeHtml(todo.title || "Untitled task");
       const assignee = todo.assignee ? escapeHtml(todo.assignee) : "Unassigned";
@@ -123,14 +158,6 @@
         dueMarkup = `<span class="admin-pill admin-pill--due">${escapeHtml(formatAdminTodoDate(todo.due_date))}</span>`;
       }
 
-      const stopRepeatAction = options.showComplete && todo.recurrence_type ? `
-        <div style="margin-top:6px;">
-          <button class="admin-todo-stop-btn" type="button"
-                  data-action="stop-repeating" data-todo-id="${escapeHtml(todo.id)}">
-            Stop repeating
-          </button>
-        </div>
-      ` : "";
       const undoAction = !options.showComplete && isUndoableArchivedTodo(todo) ? `
         <div style="margin-top:6px;">
           <button class="admin-button admin-button--small admin-button--secondary" type="button"
@@ -174,7 +201,14 @@
             <div class="admin-todo-body">
               ${titleMarkup}
               ${meta}
-              ${stopRepeatAction}
+              <div class="admin-todo-secondary-actions">
+                <button class="admin-todo-remove-btn" type="button"
+                        data-action="prompt-remove-todo" data-todo-id="${escapeHtml(todo.id)}"
+                        aria-label="Remove ${title}">
+                  <i data-lucide="trash-2"></i>
+                  <span>Remove</span>
+                </button>
+              </div>
             </div>
           </article>
         `;
@@ -380,7 +414,8 @@
         })
         .eq("id", id)
         .eq("household_id", TODO_HOUSEHOLD_ID)
-        .is("archived_at", null);
+        .is("archived_at", null)
+        .is("deleted_at", null);
 
       adminTodoWritePending = false;
 
@@ -686,6 +721,11 @@
       openAdminModal("Edit Todo", buildTodoFormHTML(todo));
     }
 
+    function openAdminTodoDeleteModal(todo) {
+      adminModalType = "delete-todo";
+      adminModalContext = { id: todo.id };
+      openAdminModal("Remove Todo", buildAdminTodoDeleteModalHTML(todo));
+    }
 
     async function archiveAdminTodoWithAnimation(todoId, cardEl) {
       const client = getSupabaseClient();
@@ -711,7 +751,8 @@
         .update(archivePayload)
         .eq("id", todoId)
         .eq("household_id", TODO_HOUSEHOLD_ID)
-        .is("archived_at", null);
+        .is("archived_at", null)
+        .is("deleted_at", null);
 
       if (archiveError) {
         adminTodoWritePending = false;
@@ -745,7 +786,8 @@
             .from("todos")
             .update({ archived_at: null, completed_at: null, completed: false })
             .eq("id", todoId)
-            .eq("household_id", TODO_HOUSEHOLD_ID);
+            .eq("household_id", TODO_HOUSEHOLD_ID)
+            .is("deleted_at", null);
           adminTodoWritePending = false;
           cardEl.classList.remove("is-completing");
           showToast(friendlySaveMessage());
@@ -785,39 +827,13 @@
         return;
       }
 
-      // Stop repeating — first click shows inline confirmation.
-      const stopRepeatBtn = event.target.closest("[data-action='stop-repeating']");
-      if (stopRepeatBtn) {
-        const todoId = stopRepeatBtn.getAttribute("data-todo-id");
-        const wrapper = stopRepeatBtn.parentElement;
-        if (!wrapper) return;
-        adminTodoStopRepeatConfirmId = todoId;
-        wrapper.innerHTML = `
-          <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:rgba(166,76,99,0.06);border:1px solid rgba(166,76,99,0.16);border-radius:var(--tag-radius);font-size:0.82rem;">
-            <span>Stop repeating and remove all upcoming instances?</span>
-            <div style="display:flex;gap:8px;">
-              <button class="admin-button admin-button--small admin-button--secondary" type="button"
-                      data-action="cancel-stop-repeating" data-todo-id="${escapeHtml(todoId)}">Cancel</button>
-              <button class="admin-button admin-button--small admin-button--ghost-danger" type="button"
-                      data-action="confirm-stop-repeating" data-todo-id="${escapeHtml(todoId)}">Yes, stop repeating</button>
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      // Confirm stop repeating — execute the archive.
-      const confirmStopBtn = event.target.closest("[data-action='confirm-stop-repeating']");
-      if (confirmStopBtn) {
-        archiveAdminTodoSeries(confirmStopBtn.getAttribute("data-todo-id"));
-        return;
-      }
-
-      // Cancel stop repeating — restore original card list.
-      const cancelStopBtn = event.target.closest("[data-action='cancel-stop-repeating']");
-      if (cancelStopBtn) {
-        adminTodoStopRepeatConfirmId = null;
-        loadAdminTodos();
+      const removeBtn = event.target.closest("[data-action='prompt-remove-todo']");
+      if (removeBtn) {
+        const todoId = removeBtn.getAttribute("data-todo-id");
+        const todo = adminTodos.find((item) => item.id === todoId);
+        if (todo) {
+          openAdminTodoDeleteModal(todo);
+        }
         return;
       }
 
@@ -832,11 +848,9 @@
 
     function handleAdminArchivedListClick(event) {
       const undoBtn = event.target.closest("[data-action='undo-complete-todo']");
-      if (!undoBtn) {
-        return;
+      if (undoBtn) {
+        undoAdminTodoCompletion(undoBtn.getAttribute("data-todo-id"));
       }
-
-      undoAdminTodoCompletion(undoBtn.getAttribute("data-todo-id"));
     }
 
     function handleAdminActiveListKeydown(event) {
@@ -848,6 +862,16 @@
         const card = archiveBtn.closest(".admin-todo-card");
         if (card && !card.classList.contains("is-completing")) {
           archiveAdminTodoWithAnimation(archiveBtn.getAttribute("data-todo-id"), card);
+        }
+        return;
+      }
+
+      const removeBtn = event.target.closest("[data-action='prompt-remove-todo']");
+      if (removeBtn) {
+        const todoId = removeBtn.getAttribute("data-todo-id");
+        const todo = adminTodos.find((item) => item.id === todoId);
+        if (todo) {
+          openAdminTodoDeleteModal(todo);
         }
         return;
       }
@@ -869,7 +893,7 @@
 
       const { data, error } = await client
         .from("todos")
-        .select("id, title, description, assignee, due_date, archived_at, completed_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
+        .select("id, title, description, assignee, due_date, archived_at, completed_at, deleted_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
@@ -882,6 +906,10 @@
       const archived = [];
 
       data.forEach((todo) => {
+        if (todo.deleted_at) {
+          return;
+        }
+
         if (todo.archived_at) {
           archived.push(todo);
         } else {
@@ -919,7 +947,8 @@
           .from("todos")
           .update({ archived_at: null, completed: false })
           .eq("id", todoId)
-          .eq("household_id", TODO_HOUSEHOLD_ID);
+          .eq("household_id", TODO_HOUSEHOLD_ID)
+          .is("deleted_at", null);
 
         adminTodoWritePending = false;
 
@@ -939,7 +968,8 @@
         .from("todos")
         .update({ archived_at: null, completed_at: null, completed: false })
         .eq("id", todoId)
-        .eq("household_id", TODO_HOUSEHOLD_ID);
+        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("deleted_at", null);
 
       if (unarchiveError) {
         adminTodoWritePending = false;
@@ -952,7 +982,8 @@
           .from("todos")
           .update({ archived_at: originalArchivedAt, completed_at: originalCompletedAt, completed: true })
           .eq("id", todoId)
-          .eq("household_id", TODO_HOUSEHOLD_ID);
+          .eq("household_id", TODO_HOUSEHOLD_ID)
+          .is("deleted_at", null);
 
         adminTodoWritePending = false;
         await loadAdminTodos();
@@ -965,6 +996,7 @@
         .delete()
         .eq("id", lastCompletedTodo.generatedTodoId)
         .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("deleted_at", null)
         .is("archived_at", null)
         .select("id")
         .single();
@@ -974,7 +1006,8 @@
           .from("todos")
           .update({ archived_at: originalArchivedAt, completed_at: originalCompletedAt, completed: true })
           .eq("id", todoId)
-          .eq("household_id", TODO_HOUSEHOLD_ID);
+          .eq("household_id", TODO_HOUSEHOLD_ID)
+          .is("deleted_at", null);
 
         adminTodoWritePending = false;
         await loadAdminTodos();
@@ -987,35 +1020,124 @@
       await loadAdminTodos();
     }
 
-    async function archiveAdminTodoSeries(todoId) {
+    async function removeAdminTodo(todoId) {
       const client = getSupabaseClient();
-      if (!client || adminTodoWritePending) return;
-
-      const todo = adminTodos.find((t) => t.id === todoId);
-      if (!todo) return;
+      if (!client || adminTodoWritePending) {
+        if (!client) showToast(friendlySaveMessage());
+        return false;
+      }
 
       adminTodoWritePending = true;
       const now = new Date().toISOString();
-      // Works for both cases: instance (use its template) and template itself (use its own id)
-      const templateId = todo.recurrence_template_id || todo.id;
-
-      const [{ error: templateError }, { error: instancesError }] = await Promise.all([
-        client.from("todos").update({ archived_at: now })
-          .eq("id", templateId)
-          .eq("household_id", TODO_HOUSEHOLD_ID)
-          .is("archived_at", null),
-        client.from("todos").update({ archived_at: now })
-          .eq("recurrence_template_id", templateId)
-          .eq("household_id", TODO_HOUSEHOLD_ID)
-          .is("archived_at", null)
-      ]);
+      const { error } = await client
+        .from("todos")
+        .update({ deleted_at: now })
+        .eq("id", todoId)
+        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("archived_at", null)
+        .is("deleted_at", null);
 
       adminTodoWritePending = false;
-      adminTodoStopRepeatConfirmId = null;
 
-      if (templateError || instancesError) {
+      if (error) {
         showToast(friendlySaveMessage());
+        return false;
       }
 
+      closeAdminModal();
       await loadAdminTodos();
+      return true;
+    }
+
+    async function removeAdminRecurringTodoOccurrence(todoId) {
+      const client = getSupabaseClient();
+      if (!client || adminTodoWritePending) {
+        if (!client) showToast(friendlySaveMessage());
+        return false;
+      }
+
+      const todo = adminTodos.find((t) => t.id === todoId);
+      if (!todo) return false;
+
+      adminTodoWritePending = true;
+      const now = new Date().toISOString();
+      const templateId = todo.recurrence_template_id || todo.id;
+
+      const { error: deleteError } = await client
+        .from("todos")
+        .update({ deleted_at: now })
+        .eq("id", todoId)
+        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("archived_at", null)
+        .is("deleted_at", null);
+
+      if (deleteError) {
+        adminTodoWritePending = false;
+        showToast(friendlySaveMessage());
+        return false;
+      }
+
+      const nextDueDate = calculateNextDueDate(new Date(), todo.recurrence_type, todo.recurrence_config, todo.due_date);
+      const { error: insertError } = await client
+        .from("todos")
+        .insert({
+          household_id: TODO_HOUSEHOLD_ID,
+          title: todo.title,
+          description: todo.description || null,
+          assignee: todo.assignee || null,
+          recurrence_type: todo.recurrence_type,
+          recurrence_config: todo.recurrence_config,
+          recurrence_template_id: templateId,
+          due_date: nextDueDate
+        });
+
+      if (insertError) {
+        await client
+          .from("todos")
+          .update({ deleted_at: null })
+          .eq("id", todoId)
+          .eq("household_id", TODO_HOUSEHOLD_ID);
+        adminTodoWritePending = false;
+        showToast(friendlySaveMessage());
+        return false;
+      }
+
+      adminTodoWritePending = false;
+      closeAdminModal();
+      await loadAdminTodos();
+      return true;
+    }
+
+    async function removeAdminTodoSeries(todoId) {
+      const client = getSupabaseClient();
+      if (!client || adminTodoWritePending) {
+        if (!client) showToast(friendlySaveMessage());
+        return false;
+      }
+
+      const todo = adminTodos.find((t) => t.id === todoId);
+      if (!todo) return false;
+
+      adminTodoWritePending = true;
+      const now = new Date().toISOString();
+      const templateId = todo.recurrence_template_id || todo.id;
+
+      const { error } = await client
+        .from("todos")
+        .update({ deleted_at: now })
+        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .is("archived_at", null)
+        .is("deleted_at", null)
+        .or(`id.eq.${templateId},recurrence_template_id.eq.${templateId}`);
+
+      adminTodoWritePending = false;
+
+      if (error) {
+        showToast(friendlySaveMessage());
+        return false;
+      }
+
+      closeAdminModal();
+      await loadAdminTodos();
+      return true;
     }

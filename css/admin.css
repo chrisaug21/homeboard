@@ -192,6 +192,10 @@
       gap: 10px;
     }
 
+    .admin-actions--stack {
+      flex-direction: column;
+    }
+
     .admin-actions--split > * {
       flex: 1 1 0;
     }
@@ -546,6 +550,41 @@
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
+    }
+
+    .admin-todo-secondary-actions {
+      margin-top: 2px;
+    }
+
+    .admin-todo-remove-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .admin-todo-remove-btn:hover,
+    .admin-todo-remove-btn:focus-visible {
+      color: var(--rose);
+    }
+
+    .admin-todo-remove-btn:focus-visible {
+      outline: 0;
+    }
+
+    .admin-todo-remove-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
     }
 
     /* Completion animation on admin todo cards (mirrors display.css .todo-card rules) */
@@ -1318,6 +1357,12 @@
       justify-content: space-between;
       gap: 12px;
     }
+
+    .admin-detail-stack {
+      display: grid;
+      gap: 14px;
+    }
+
 
     .admin-modal-title {
       font-size: 1.25rem;
