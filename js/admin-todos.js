@@ -728,8 +728,19 @@
       const type = String(formData.get("recurrence_type") || "offset").trim();
 
       if (type === "offset") {
-        const rawVal = parseInt(String(formData.get("interval_value") || "1").trim(), 10);
-        const intervalValue = Number.isNaN(rawVal) ? 1 : rawVal;
+        const intervalValueText = String(formData.get("interval_value") || "").trim();
+        if (!intervalValueText) {
+          return {
+            recurrence_type: "offset",
+            recurrence_config: { interval_days: null },
+            validation_error: {
+              field: "interval_value",
+              message: "Enter a number of 1 or more."
+            }
+          };
+        }
+        const rawVal = parseInt(intervalValueText, 10);
+        const intervalValue = Number.isNaN(rawVal) ? null : rawVal;
         const unit = String(formData.get("interval_unit") || "days").trim();
         const intervalDays = unit === "weeks" ? intervalValue * 7 : unit === "months" ? intervalValue * 30 : intervalValue;
         return { recurrence_type: "offset", recurrence_config: { interval_days: intervalDays } };
@@ -738,12 +749,34 @@
       if (type === "scheduled") {
         const freq = String(formData.get("scheduled_frequency") || "weekly").trim();
         if (freq === "monthly") {
-          const rawDom = parseInt(String(formData.get("day_of_month") || "1").trim(), 10);
-          const dayOfMonth = Number.isNaN(rawDom) ? 1 : rawDom;
+          const dayOfMonthText = String(formData.get("day_of_month") || "").trim();
+          if (!dayOfMonthText) {
+            return {
+              recurrence_type: "scheduled",
+              recurrence_config: { frequency: "monthly", day_of_month: null },
+              validation_error: {
+                field: "day_of_month",
+                message: "Enter a day between 1 and 28."
+              }
+            };
+          }
+          const rawDom = parseInt(dayOfMonthText, 10);
+          const dayOfMonth = Number.isNaN(rawDom) ? null : rawDom;
           return { recurrence_type: "scheduled", recurrence_config: { frequency: "monthly", day_of_month: dayOfMonth } };
         }
-        const rawDow = parseInt(String(formData.get("day_of_week") || "1").trim(), 10);
-        const dayOfWeek = Number.isNaN(rawDow) ? 1 : rawDow;
+        const dayOfWeekText = String(formData.get("day_of_week") || "").trim();
+        if (!dayOfWeekText) {
+          return {
+            recurrence_type: "scheduled",
+            recurrence_config: { frequency: "weekly", day_of_week: null },
+            validation_error: {
+              field: "day_of_week",
+              message: "Choose a day of the week."
+            }
+          };
+        }
+        const rawDow = parseInt(dayOfWeekText, 10);
+        const dayOfWeek = Number.isNaN(rawDow) ? null : rawDow;
         return { recurrence_type: "scheduled", recurrence_config: { frequency: "weekly", day_of_week: dayOfWeek } };
       }
 
@@ -754,6 +787,13 @@
       if (!recurrenceData.recurrence_type) return true;
 
       const form = document.querySelector('#admin-modal-body form[data-modal-form="todo"]');
+
+      if (recurrenceData.validation_error) {
+        const fieldEl = form && form.querySelector(`[name="${recurrenceData.validation_error.field}"]`);
+        setFieldError(fieldEl, recurrenceData.validation_error.message);
+        if (fieldEl) fieldEl.focus();
+        return false;
+      }
 
       const dueValue = String(formData.get("due_date") || "").trim();
       if (!dueValue) {
@@ -782,6 +822,19 @@
           const domEl = form && form.querySelector('[name="day_of_month"]');
           setFieldError(domEl, "Enter a day between 1 and 28.");
           if (domEl) domEl.focus();
+          return false;
+        }
+      }
+
+      if (
+        recurrenceData.recurrence_type === "scheduled" &&
+        recurrenceData.recurrence_config.frequency === "weekly"
+      ) {
+        const dow = recurrenceData.recurrence_config.day_of_week;
+        if (!Number.isInteger(dow) || dow < 0 || dow > 6) {
+          const dowEl = form && form.querySelector('[name="day_of_week"]');
+          setFieldError(dowEl, "Choose a day of the week.");
+          if (dowEl) dowEl.focus();
           return false;
         }
       }
