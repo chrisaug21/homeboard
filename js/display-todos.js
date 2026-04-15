@@ -643,7 +643,15 @@
           .single();
 
         if (insertError) {
-          showDisplayToast("Completed, but the next occurrence couldn't be created. Try syncing.");
+          await client
+            .from("todos")
+            .update({ archived_at: null, completed_at: null })
+            .eq("id", todoId)
+            .eq("household_id", TODO_HOUSEHOLD_ID)
+            .is("deleted_at", null);
+          cardEl.classList.remove("is-completing");
+          showDisplayToast("Couldn't create next occurrence — completion reversed");
+          return;
         } else if (insertedTodo) {
           nextTodoItems = sortDisplayTodos([...nextTodoItems, mapSupabaseTodo(insertedTodo)]);
         }
