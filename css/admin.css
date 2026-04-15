@@ -186,6 +186,14 @@
       align-items: start;
     }
 
+    form[data-modal-form="todo"] .admin-form-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    form[data-modal-form="todo"] .admin-form-row:has(#modal-todo-interval-value) {
+      grid-template-columns: minmax(108px, 0.75fr) minmax(0, 1.25fr);
+    }
+
     .admin-actions {
       display: flex;
       justify-content: space-between;
@@ -1331,6 +1339,14 @@
     @media (max-width: 640px) {
       .admin-form-row:not(.admin-form-row--add-member) {
         grid-template-columns: 1fr;
+      }
+
+      form[data-modal-form="todo"] .admin-form-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      form[data-modal-form="todo"] .admin-form-row:has(#modal-todo-interval-value) {
+        grid-template-columns: minmax(108px, 0.75fr) minmax(0, 1.25fr);
       }
     }
 
