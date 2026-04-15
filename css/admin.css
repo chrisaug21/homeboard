@@ -556,6 +556,11 @@
       color: var(--color-accent);
     }
 
+    .admin-todo-detail-indicator--muted {
+      background: color-mix(in srgb, var(--muted) 12%, transparent);
+      color: var(--muted);
+    }
+
     .admin-todo-detail-indicator svg {
       width: 14px;
       height: 14px;

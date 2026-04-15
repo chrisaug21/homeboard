@@ -121,44 +121,10 @@
       }).format(completedDate)}`;
     }
 
-    function formatAdminTodoRecurrence(todo) {
-      if (!todo?.recurrence_type) {
-        return "";
-      }
-
-      const config = todo.recurrence_config || {};
-
-      if (todo.recurrence_type === "offset") {
-        const intervalDays = Number(config.interval_days) || 1;
-        if (intervalDays % 30 === 0 && intervalDays >= 30) {
-          const months = intervalDays / 30;
-          return months === 1 ? "Every month" : `Every ${months} months`;
-        }
-        if (intervalDays % 7 === 0 && intervalDays >= 7) {
-          const weeks = intervalDays / 7;
-          return weeks === 1 ? "Every week" : `Every ${weeks} weeks`;
-        }
-        return intervalDays === 1 ? "Every day" : `Every ${intervalDays} days`;
-      }
-
-      if (todo.recurrence_type === "scheduled") {
-        if (config.frequency === "monthly") {
-          const dayOfMonth = Number(config.day_of_month) || 1;
-          return `Every month on day ${dayOfMonth}`;
-        }
-
-        const dayIndex = Number(config.day_of_week);
-        const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dayIndex];
-        return weekday ? `Every ${weekday}` : "Every week";
-      }
-
-      return "";
-    }
-
     function buildArchivedTodoDetailModalHTML(todo) {
       const notes = String(todo?.description || "").trim();
       const completionLabel = formatAdminTodoCompletionLabel(todo) || "Completed date unavailable";
-      const recurrenceLabel = formatAdminTodoRecurrence(todo);
+      const recurrenceLabel = formatTodoRecurrenceLabel(todo?.recurrence_type, todo?.recurrence_config);
       const rows = [
         `
           <div class="admin-detail-row">
@@ -299,7 +265,7 @@
         ? `<span class="admin-todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>`
         : "";
       const repeatIcon = options.showComplete && todo.recurrence_type
-        ? `<span class="admin-todo-detail-indicator" style="background:rgba(121,106,94,0.1);color:var(--muted);" aria-hidden="true"><i data-lucide="repeat-2"></i></span>`
+        ? `<span class="admin-todo-detail-indicator admin-todo-detail-indicator--muted" aria-hidden="true"><i data-lucide="repeat-2"></i></span>`
         : "";
       const indicators = infoIcon || repeatIcon
         ? `<div style="display:flex;gap:4px;flex-shrink:0;">${infoIcon}${repeatIcon}</div>`

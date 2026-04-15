@@ -491,10 +491,19 @@
           : "";
         const assignee = todo.assignee ? getAssigneeMarkup(todo.assignee) : "";
         const overdueClass = todo.isOverdue ? " todo-card--overdue" : "";
+        const infoIcon = todo.description
+          ? `<span class="todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>`
+          : "";
+        const repeatIcon = todo.recurrenceType
+          ? `<span class="todo-detail-indicator todo-detail-indicator--muted" aria-hidden="true"><i data-lucide="repeat-2"></i></span>`
+          : "";
+        const indicators = infoIcon || repeatIcon
+          ? `<div class="todo-detail-indicators">${infoIcon}${repeatIcon}</div>`
+          : "";
         const contentMarkup = `
           <div class="todo-title-row">
             <div class="todo-title">${escapeHtml(todo.title)}</div>
-            ${todo.description ? `<span class="todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>` : ""}
+            ${indicators}
           </div>
           <div class="todo-pills">${assignee}${pill}</div>
         `;
@@ -507,7 +516,7 @@
                 </svg>
               </div>
             </button>
-            ${todo.description
+            ${(todo.description || todo.recurrenceType)
               ? `<button class="todo-copy todo-detail-trigger" type="button" data-action="open-todo-detail" aria-label="View details for ${escapeHtml(todo.title)}">${contentMarkup}</button>`
               : `<div class="todo-copy">${contentMarkup}</div>`}
           </article>
@@ -532,7 +541,7 @@
           }
 
           const todo = cachedDisplayTodos.find((item) => item.id === card.dataset.todoId);
-          if (todo?.description) {
+          if (todo?.description || todo?.recurrenceType) {
             openTodoDetailModal(todo);
           }
         });

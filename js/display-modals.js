@@ -51,9 +51,26 @@
       }
 
       titleEl.textContent = todo.title;
-      bodyEl.innerHTML = `
-        <div class="todo-detail-text">${escapeHtml(todo.description || "").replace(/\n/g, "<br>")}</div>
-      `;
+      const description = String(todo.description || "").trim();
+      const recurrenceLabel = formatTodoRecurrenceLabel(todo.recurrenceType, todo.recurrenceConfig);
+      let html = "";
+
+      if (description) {
+        html += `
+          <div class="todo-detail-text">${escapeHtml(description).replace(/\n/g, "<br>")}</div>
+        `;
+      }
+
+      if (recurrenceLabel) {
+        html += `
+          <div class="todo-detail-meta-row">
+            <i data-lucide="repeat-2"></i>
+            <span class="todo-detail-meta-text">${escapeHtml(recurrenceLabel)}</span>
+          </div>
+        `;
+      }
+
+      bodyEl.innerHTML = html || `<div class="todo-detail-text">No extra details.</div>`;
       document.getElementById("todo-detail-modal").hidden = false;
       resetAutoRotate("todo-detail-open");
       refreshIcons();

@@ -1351,6 +1351,64 @@
       };
     }
 
+    function formatOrdinalDay(value) {
+      const day = Math.max(1, Math.floor(Math.abs(Number(value) || 1)));
+      const mod100 = day % 100;
+      if (mod100 >= 11 && mod100 <= 13) {
+        return `${day}th`;
+      }
+
+      switch (day % 10) {
+        case 1:
+          return `${day}st`;
+        case 2:
+          return `${day}nd`;
+        case 3:
+          return `${day}rd`;
+        default:
+          return `${day}th`;
+      }
+    }
+
+    function formatTodoRecurrenceLabel(recurrenceType, recurrenceConfig) {
+      const type = String(recurrenceType || "").trim();
+      const config = recurrenceConfig && typeof recurrenceConfig === "object"
+        ? recurrenceConfig
+        : {};
+
+      if (!type) {
+        return "";
+      }
+
+      if (type === "offset") {
+        const intervalDays = Number(config.interval_days) || 1;
+
+        if (intervalDays % 30 === 0 && intervalDays >= 30) {
+          const months = intervalDays / 30;
+          return `Repeats every ${months} ${months === 1 ? "month" : "months"} after completion`;
+        }
+
+        if (intervalDays % 7 === 0 && intervalDays >= 7) {
+          const weeks = intervalDays / 7;
+          return `Repeats every ${weeks} ${weeks === 1 ? "week" : "weeks"} after completion`;
+        }
+
+        return `Repeats every ${intervalDays} ${intervalDays === 1 ? "day" : "days"} after completion`;
+      }
+
+      if (type === "scheduled") {
+        if (config.frequency === "monthly") {
+          return `Repeats on the ${formatOrdinalDay(config.day_of_month)} of each month`;
+        }
+
+        const weekdayIndex = Number(config.day_of_week);
+        const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][weekdayIndex];
+        return weekday ? `Repeats every ${weekday}` : "Repeats every week";
+      }
+
+      return "";
+    }
+
     // Returns the next due date (YYYY-MM-DD) for a recurring todo after it is completed.
     // completedDate: Date object representing the local date of completion.
     function calculateNextDueDate(completedDate, recurrenceType, recurrenceConfig, currentDueDate) {
