@@ -897,15 +897,16 @@
         ? { archived_at: now, completed_at: now }
         : { archived_at: now };
 
-      const { error: archiveError } = await client
+      const { data: archivedRows, error: archiveError } = await client
         .from("todos")
         .update(archivePayload)
+        .select("id")
         .eq("id", todoId)
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null)
         .is("deleted_at", null);
 
-      if (archiveError) {
+      if (archiveError || !Array.isArray(archivedRows) || archivedRows.length !== 1) {
         adminTodoWritePending = false;
         cardEl.classList.remove("is-completing");
         showToast(friendlySaveMessage());
