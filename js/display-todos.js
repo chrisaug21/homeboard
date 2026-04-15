@@ -14,6 +14,19 @@
       };
     }
 
+    function sortDisplayTodos(todoItems) {
+      return [...todoItems].sort((left, right) => {
+        const leftDue = left?.dueDate ? new Date(left.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        const rightDue = right?.dueDate ? new Date(right.dueDate).getTime() : Number.POSITIVE_INFINITY;
+
+        if (leftDue !== rightDue) {
+          return leftDue - rightDue;
+        }
+
+        return String(left?.title || "").localeCompare(String(right?.title || ""));
+      });
+    }
+
     function getDisplayCelebrationAnimationName() {
       if (!celebrationBag.length) {
         celebrationBag = [
@@ -589,29 +602,32 @@
       playTodoCelebration(cardEl).catch(() => {});
 
       const now = new Date().toISOString();
-      const archivePayload = isRecurring
-        ? { archived_at: now, completed_at: now }
-        : { archived_at: now };
+      const archivePayload = { archived_at: now, completed_at: now };
 
-      const { error } = await client
+      const { data: updatedRows, error } = await client
         .from("todos")
         .update(archivePayload)
+        .select("id")
         .eq("id", todoId)
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null)
         .is("deleted_at", null);
 
-      if (error) {
+      if (error || !Array.isArray(updatedRows) || updatedRows.length === 0) {
         cardEl.classList.remove("is-completing");
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
 
+      let nextTodoItems = Array.isArray(cachedDisplayTodos)
+        ? cachedDisplayTodos.filter((item) => item.id !== todoId)
+        : [];
+
       if (isRecurring) {
         const nextDueDate = calculateNextDueDate(new Date(), todo.recurrenceType, todo.recurrenceConfig, todo.dueDate);
         const templateId = todo.recurrenceTemplateId || todoId;
 
-        const { error: insertError } = await client
+        const { data: insertedTodo, error: insertError } = await client
           .from("todos")
           .insert({
             household_id: TODO_HOUSEHOLD_ID,
@@ -622,12 +638,18 @@
             recurrence_config: todo.recurrenceConfig,
             recurrence_template_id: templateId,
             due_date: nextDueDate
-          });
+          })
+          .select("id, title, description, due_date, assignee, recurrence_type, recurrence_config, recurrence_template_id")
+          .single();
 
         if (insertError) {
           showDisplayToast("Completed, but the next occurrence couldn't be created. Try syncing.");
+        } else if (insertedTodo) {
+          nextTodoItems = sortDisplayTodos([...nextTodoItems, mapSupabaseTodo(insertedTodo)]);
         }
       }
+
+      cachedDisplayTodos = nextTodoItems;
 
       window.setTimeout(() => {
         if (!cardEl.isConnected) {
@@ -636,11 +658,7 @@
 
         cardEl.classList.add("is-done");
         cardEl.addEventListener("transitionend", () => {
-          cardEl.remove();
-          const list = document.getElementById("todo-list");
-          if (list && !list.querySelector("[data-todo-id]")) {
-            renderTodoItems([]);
-          }
+          renderTodoItems(cachedDisplayTodos || []);
         }, { once: true });
       }, TODO_CELEBRATION_FADE_DELAY_MS);
     }
