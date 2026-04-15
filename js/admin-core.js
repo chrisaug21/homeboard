@@ -399,6 +399,17 @@
         closeAdminModal();
         return;
       }
+      const promptRemoveTodoBtn = event.target.closest("[data-action='prompt-remove-todo']");
+      if (promptRemoveTodoBtn) {
+        const todoId = promptRemoveTodoBtn.getAttribute("data-todo-id");
+        const todo = Array.isArray(adminTodos)
+          ? adminTodos.find((item) => item.id === todoId)
+          : null;
+        if (todo) {
+          openAdminTodoDeleteModal(todo);
+        }
+        return;
+      }
       const removeTodoBtn = event.target.closest("[data-action='confirm-remove-todo']");
       if (removeTodoBtn) {
         removeAdminTodo(removeTodoBtn.getAttribute("data-todo-id"));

@@ -244,7 +244,7 @@
         ? formatAdminTodoCompletionLabel(todo)
         : "";
       const completionMarkup = completionLabel
-        ? `<span class="admin-pill admin-pill--completed">${escapeHtml(completionLabel)}</span>`
+        ? `<div class="admin-todo-completed-at">${escapeHtml(completionLabel)}</div>`
         : "";
       const undoAction = !options.showComplete && isUndoableArchivedTodo(todo) ? `
         <div style="margin-top:6px;">
@@ -258,7 +258,6 @@
         <div class="admin-todo-meta">
           ${buildAdminAssigneePill(assignee)}
           ${dueMarkup}
-          ${completionMarkup}
         </div>
       `;
       const infoIcon = hasDescription
@@ -290,14 +289,6 @@
             <div class="admin-todo-body">
               ${titleMarkup}
               ${meta}
-              <div class="admin-todo-secondary-actions">
-                <button class="admin-todo-remove-btn" type="button"
-                        data-action="prompt-remove-todo" data-todo-id="${escapeHtml(todo.id)}"
-                        aria-label="Remove ${title}">
-                  <i data-lucide="trash-2"></i>
-                  <span>Remove</span>
-                </button>
-              </div>
             </div>
           </article>
         `;
@@ -308,6 +299,7 @@
           <div class="admin-todo-body">
             ${titleMarkup}
             ${meta}
+            ${completionMarkup}
             ${undoAction}
           </div>
         </article>
@@ -662,6 +654,16 @@
             <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
             <button class="admin-button admin-button--primary" type="submit">${isEdit ? "Save Changes" : "Add Todo"}</button>
           </div>
+          ${isEdit ? `
+            <div class="admin-modal-secondary-action">
+              <button class="admin-todo-remove-btn admin-todo-remove-btn--modal" type="button"
+                      data-action="prompt-remove-todo" data-todo-id="${escapeHtml(todo.id)}"
+                      aria-label="Remove ${escapeHtml(todo.title || "Untitled task")}">
+                <i data-lucide="trash-2"></i>
+                <span>Remove</span>
+              </button>
+            </div>
+          ` : ""}
         </form>
       `;
     }
@@ -923,16 +925,6 @@
         return;
       }
 
-      const removeBtn = event.target.closest("[data-action='prompt-remove-todo']");
-      if (removeBtn) {
-        const todoId = removeBtn.getAttribute("data-todo-id");
-        const todo = adminTodos.find((item) => item.id === todoId);
-        if (todo) {
-          openAdminTodoDeleteModal(todo);
-        }
-        return;
-      }
-
       // Tapping anywhere else on an active card opens the edit modal.
       const card = event.target.closest(".admin-todo-card--active");
       if (card && !card.classList.contains("is-completing")) {
@@ -990,16 +982,6 @@
         const card = archiveBtn.closest(".admin-todo-card");
         if (card && !card.classList.contains("is-completing")) {
           archiveAdminTodoWithAnimation(archiveBtn.getAttribute("data-todo-id"), card);
-        }
-        return;
-      }
-
-      const removeBtn = event.target.closest("[data-action='prompt-remove-todo']");
-      if (removeBtn) {
-        const todoId = removeBtn.getAttribute("data-todo-id");
-        const todo = adminTodos.find((item) => item.id === todoId);
-        if (todo) {
-          openAdminTodoDeleteModal(todo);
         }
         return;
       }

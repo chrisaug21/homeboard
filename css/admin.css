@@ -573,10 +573,6 @@
       gap: 6px;
     }
 
-    .admin-todo-secondary-actions {
-      margin-top: 2px;
-    }
-
     .admin-todo-remove-btn {
       display: inline-flex;
       align-items: center;
@@ -587,15 +583,19 @@
       color: var(--muted);
       font: inherit;
       font-size: 0.82rem;
-      font-weight: 700;
+      font-weight: 600;
       cursor: pointer;
       text-decoration: underline;
       text-underline-offset: 2px;
     }
 
+    .admin-todo-remove-btn--modal {
+      font-size: 0.78rem;
+    }
+
     .admin-todo-remove-btn:hover,
     .admin-todo-remove-btn:focus-visible {
-      color: var(--rose);
+      color: var(--ink);
     }
 
     .admin-todo-remove-btn:focus-visible {
@@ -647,9 +647,18 @@
       border: 1px solid rgba(124, 96, 69, 0.08);
     }
 
-    .admin-pill--completed {
-      background: var(--sage-soft);
-      color: var(--sage);
+    .admin-todo-completed-at {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .admin-modal-secondary-action {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
     }
 
     .admin-empty {

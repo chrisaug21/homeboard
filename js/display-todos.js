@@ -75,6 +75,29 @@
       });
     }
 
+    let displayCelebrationDebugTimeoutId = null;
+
+    // DEBUG: remove before sharing with other households
+    function showDisplayCelebrationDebugLabel(animationName) {
+      const label = document.getElementById("display-celebration-debug");
+      if (!label) {
+        return;
+      }
+
+      if (displayCelebrationDebugTimeoutId !== null) {
+        window.clearTimeout(displayCelebrationDebugTimeoutId);
+        displayCelebrationDebugTimeoutId = null;
+      }
+
+      label.textContent = animationName;
+      label.classList.add("is-visible");
+
+      displayCelebrationDebugTimeoutId = window.setTimeout(() => {
+        label.classList.remove("is-visible");
+        displayCelebrationDebugTimeoutId = null;
+      }, 6000);
+    }
+
     function getCelebrationPalette() {
       const styles = getComputedStyle(document.documentElement);
       const accent = String(styles.getPropertyValue("--color-accent") || "").trim() || "#b45309";
@@ -448,6 +471,7 @@
       }
 
       const animationName = getDisplayCelebrationAnimationName();
+      showDisplayCelebrationDebugLabel(animationName);
       const origin = getTodoCelebrationOrigin(cardEl);
       switch (animationName) {
         case "confetti-burst":
