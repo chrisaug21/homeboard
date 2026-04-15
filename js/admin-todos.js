@@ -600,7 +600,7 @@
             <input type="checkbox" name="recurrence_enabled" id="modal-todo-recurrence"
                    onchange="handleTodoRecurrenceChange(this.form)"
                    ${recurrenceEnabled ? "checked" : ""}>
-            <span>Repeat this task</span>
+            <span>Repeat this todo</span>
           </label>
           <div id="modal-todo-recurrence-section"${!recurrenceEnabled ? " hidden" : ""}>
             <div class="admin-field">
