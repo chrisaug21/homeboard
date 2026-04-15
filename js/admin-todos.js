@@ -719,6 +719,7 @@
     function readTodoRecurrenceFromFormData(formData) {
       const enabled = formData.get("recurrence_enabled") === "on";
       if (!enabled) {
+        // Editing with repeat turned off keeps the current todo as a normal one-time item.
         return { recurrence_type: null, recurrence_config: null };
       }
 
