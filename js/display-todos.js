@@ -484,7 +484,10 @@
       }
 
       const animationName = getDisplayCelebrationAnimationName();
-      showDisplayCelebrationDebugLabel(animationName);
+      // DEBUG: set window.__DEBUG_CELEBRATIONS__ = true in console to enable
+      if (window.__DEBUG_CELEBRATIONS__ === true) {
+        showDisplayCelebrationDebugLabel(animationName);
+      }
       const origin = getTodoCelebrationOrigin(cardEl);
       switch (animationName) {
         case "confetti-burst":
