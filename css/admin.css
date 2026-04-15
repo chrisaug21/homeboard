@@ -186,10 +186,22 @@
       align-items: start;
     }
 
+    form[data-modal-form="todo"] .admin-form-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    form[data-modal-form="todo"] .admin-form-row:has(#modal-todo-interval-value) {
+      grid-template-columns: minmax(108px, 0.75fr) minmax(0, 1.25fr);
+    }
+
     .admin-actions {
       display: flex;
       justify-content: space-between;
       gap: 10px;
+    }
+
+    .admin-actions--stack {
+      flex-direction: column;
     }
 
     .admin-actions--split > * {
@@ -498,6 +510,22 @@
       gap: 6px;
     }
 
+    .admin-todo-card--archived {
+      cursor: pointer;
+    }
+
+    .admin-todo-card--archived:hover,
+    .admin-todo-card--archived:focus-visible {
+      transform: translateY(-1px);
+      border-color: var(--color-accent-subtle);
+    }
+
+    .admin-todo-card--archived:focus-visible {
+      outline: 3px solid var(--ink);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 3px var(--panel-strong);
+    }
+
     .admin-todo-body {
       min-width: 0;
       display: flex;
@@ -536,6 +564,11 @@
       color: var(--color-accent);
     }
 
+    .admin-todo-detail-indicator--muted {
+      background: color-mix(in srgb, var(--muted) 12%, transparent);
+      color: var(--muted);
+    }
+
     .admin-todo-detail-indicator svg {
       width: 14px;
       height: 14px;
@@ -546,6 +579,41 @@
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
+    }
+
+    .admin-todo-remove-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .admin-todo-remove-btn--modal {
+      font-size: 0.78rem;
+    }
+
+    .admin-todo-remove-btn:hover,
+    .admin-todo-remove-btn:focus-visible {
+      color: var(--ink);
+    }
+
+    .admin-todo-remove-btn:focus-visible {
+      outline: 0;
+    }
+
+    .admin-todo-remove-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
     }
 
     /* Completion animation on admin todo cards (mirrors display.css .todo-card rules) */
@@ -585,6 +653,20 @@
 
     .admin-pill--member {
       border: 1px solid rgba(124, 96, 69, 0.08);
+    }
+
+    .admin-todo-completed-at {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .admin-modal-secondary-action {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
     }
 
     .admin-empty {
@@ -1258,6 +1340,14 @@
       .admin-form-row:not(.admin-form-row--add-member) {
         grid-template-columns: 1fr;
       }
+
+      form[data-modal-form="todo"] .admin-form-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      form[data-modal-form="todo"] .admin-form-row:has(#modal-todo-interval-value) {
+        grid-template-columns: minmax(108px, 0.75fr) minmax(0, 1.25fr);
+      }
     }
 
     /* Panel header row — title + action button side by side */
@@ -1318,6 +1408,37 @@
       justify-content: space-between;
       gap: 12px;
     }
+
+    .admin-detail-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .admin-detail-row {
+      display: grid;
+      gap: 4px;
+      padding: 12px 14px;
+      border-radius: var(--tag-radius);
+      background: var(--panel);
+      border: 1px solid var(--border);
+    }
+
+    .admin-detail-label {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .admin-detail-value {
+      font-size: 0.95rem;
+      line-height: 1.45;
+      color: var(--ink);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
 
     .admin-modal-title {
       font-size: 1.25rem;

@@ -399,6 +399,32 @@
         closeAdminModal();
         return;
       }
+      const promptRemoveTodoBtn = event.target.closest("[data-action='prompt-remove-todo']");
+      if (promptRemoveTodoBtn) {
+        const todoId = promptRemoveTodoBtn.getAttribute("data-todo-id");
+        const todo = Array.isArray(adminTodos)
+          ? adminTodos.find((item) => item.id === todoId)
+          : null;
+        if (todo) {
+          openAdminTodoDeleteModal(todo);
+        }
+        return;
+      }
+      const removeTodoBtn = event.target.closest("[data-action='confirm-remove-todo']");
+      if (removeTodoBtn) {
+        removeAdminTodo(removeTodoBtn.getAttribute("data-todo-id"));
+        return;
+      }
+      const removeTodoOccurrenceBtn = event.target.closest("[data-action='remove-todo-occurrence']");
+      if (removeTodoOccurrenceBtn) {
+        removeAdminRecurringTodoOccurrence(removeTodoOccurrenceBtn.getAttribute("data-todo-id"));
+        return;
+      }
+      const removeTodoSeriesBtn = event.target.closest("[data-action='remove-todo-series']");
+      if (removeTodoSeriesBtn) {
+        removeAdminTodoSeries(removeTodoSeriesBtn.getAttribute("data-todo-id"));
+        return;
+      }
       const linkSuggestionBtn = event.target.closest("[data-action='link-rsvp-party']");
       if (linkSuggestionBtn) {
         const partyId = linkSuggestionBtn.getAttribute("data-party-id");

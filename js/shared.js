@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.9.12";
+    const VERSION = "1.9.25";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1349,6 +1349,124 @@
         cssClass: "todo-due-pill--future",
         label: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed)
       };
+    }
+
+    function formatOrdinalDay(value) {
+      const day = Math.max(1, Math.floor(Math.abs(Number(value) || 1)));
+      const mod100 = day % 100;
+      if (mod100 >= 11 && mod100 <= 13) {
+        return `${day}th`;
+      }
+
+      switch (day % 10) {
+        case 1:
+          return `${day}st`;
+        case 2:
+          return `${day}nd`;
+        case 3:
+          return `${day}rd`;
+        default:
+          return `${day}th`;
+      }
+    }
+
+    function formatTodoRecurrenceLabel(recurrenceType, recurrenceConfig) {
+      const type = String(recurrenceType || "").trim();
+      const config = recurrenceConfig && typeof recurrenceConfig === "object"
+        ? recurrenceConfig
+        : {};
+
+      if (!type) {
+        return "";
+      }
+
+      if (type === "offset") {
+        const intervalDays = Number(config.interval_days) || 1;
+
+        if (intervalDays % 30 === 0 && intervalDays >= 30) {
+          const months = intervalDays / 30;
+          return `Repeats every ${months} ${months === 1 ? "month" : "months"} after completion`;
+        }
+
+        if (intervalDays % 7 === 0 && intervalDays >= 7) {
+          const weeks = intervalDays / 7;
+          return `Repeats every ${weeks} ${weeks === 1 ? "week" : "weeks"} after completion`;
+        }
+
+        return `Repeats every ${intervalDays} ${intervalDays === 1 ? "day" : "days"} after completion`;
+      }
+
+      if (type === "scheduled") {
+        if (config.frequency === "monthly") {
+          return `Repeats on the ${formatOrdinalDay(config.day_of_month)} of each month`;
+        }
+
+        const weekdayIndex = Number(config.day_of_week);
+        const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][weekdayIndex];
+        return weekday ? `Repeats every ${weekday}` : "Repeats every week";
+      }
+
+      return "";
+    }
+
+    // Returns the next due date (YYYY-MM-DD) for a recurring todo after it is completed.
+    // completedDate: Date object representing the local date of completion.
+    function calculateNextDueDate(completedDate, recurrenceType, recurrenceConfig, currentDueDate) {
+      const base = new Date(completedDate);
+      base.setHours(0, 0, 0, 0);
+
+      if (recurrenceType === "offset") {
+        const days = Number((recurrenceConfig && recurrenceConfig.interval_days) || 1);
+        base.setDate(base.getDate() + days);
+        return formatDateKey(base);
+      }
+
+      if (recurrenceType === "scheduled") {
+        const freq = recurrenceConfig && recurrenceConfig.frequency;
+
+        if (freq === "weekly") {
+          // Weekly uses completedDate as anchor. The % 7 arithmetic naturally
+          // lands on the next occurrence of that weekday after today, so early
+          // completion already produces the correct upcoming date without the
+          // max(completedDate, currentDueDate) adjustment needed for monthly.
+          const targetDay = Number(recurrenceConfig.day_of_week ?? 1); // 0=Sun … 6=Sat
+          const currentDay = base.getDay();
+          // Always advance by at least 1 day — never return the same day.
+          const daysToAdd = ((targetDay - currentDay + 7) % 7) || 7;
+          base.setDate(base.getDate() + daysToAdd);
+          return formatDateKey(base);
+        }
+
+        if (freq === "monthly") {
+          // For monthly, completing before the target day-of-month would find
+          // the current month's occurrence (same as the current due date).
+          // Use max(completedDate, currentDueDate) as the anchor so the
+          // calculation always advances past the current instance.
+          //
+          // IMPORTANT: parse the due date string as a local date, not UTC.
+          // new Date("2026-04-15") is UTC midnight, which becomes Apr 14 in
+          // western timezones — making the max comparison silently wrong.
+          if (currentDueDate) {
+            const parts = String(currentDueDate).split("-");
+            const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+            if (due > base) {
+              base.setTime(due.getTime());
+            }
+          }
+          const rawDay = Number(recurrenceConfig.day_of_month) || 1;
+          const targetDay = Math.min(rawDay, 28); // cap for February safety
+          // Advance to next month if anchor meets or passes the target day.
+          if (base.getDate() >= targetDay) {
+            base.setMonth(base.getMonth() + 1);
+          }
+          base.setDate(targetDay);
+          return formatDateKey(base);
+        }
+      }
+
+      // Fallback: 1 day ahead.
+      base.setDate(base.getDate() + 1);
+      return formatDateKey(base);
     }
 
     function normalizeMealType(type) {

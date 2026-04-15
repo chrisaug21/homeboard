@@ -5,9 +5,26 @@
         title: todo.title || "Untitled task",
         assignee: todo.assignee || "",
         description: description || null,
+        dueDate: todo.due_date || null,
         duePill: getTodoDuePill(todo.due_date),
-        isOverdue: isTodoOverdue(todo.due_date)
+        isOverdue: isTodoOverdue(todo.due_date),
+        recurrenceType: todo.recurrence_type || null,
+        recurrenceConfig: todo.recurrence_config || null,
+        recurrenceTemplateId: todo.recurrence_template_id || null
       };
+    }
+
+    function sortDisplayTodos(todoItems) {
+      return [...todoItems].sort((left, right) => {
+        const leftDue = left?.dueDate ? new Date(left.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        const rightDue = right?.dueDate ? new Date(right.dueDate).getTime() : Number.POSITIVE_INFINITY;
+
+        if (leftDue !== rightDue) {
+          return leftDue - rightDue;
+        }
+
+        return String(left?.title || "").localeCompare(String(right?.title || ""));
+      });
     }
 
     function getDisplayCelebrationAnimationName() {
@@ -69,6 +86,29 @@
       return new Promise((resolve) => {
         window.setTimeout(resolve, duration);
       });
+    }
+
+    let displayCelebrationDebugTimeoutId = null;
+
+    // DEBUG: remove before sharing with other households
+    function showDisplayCelebrationDebugLabel(animationName) {
+      const label = document.getElementById("display-celebration-debug");
+      if (!label) {
+        return;
+      }
+
+      if (displayCelebrationDebugTimeoutId !== null) {
+        window.clearTimeout(displayCelebrationDebugTimeoutId);
+        displayCelebrationDebugTimeoutId = null;
+      }
+
+      label.textContent = animationName;
+      label.classList.add("is-visible");
+
+      displayCelebrationDebugTimeoutId = window.setTimeout(() => {
+        label.classList.remove("is-visible");
+        displayCelebrationDebugTimeoutId = null;
+      }, 6000);
     }
 
     function getCelebrationPalette() {
@@ -444,6 +484,10 @@
       }
 
       const animationName = getDisplayCelebrationAnimationName();
+      // DEBUG: set window.__DEBUG_CELEBRATIONS__ = true in console to enable
+      if (window.__DEBUG_CELEBRATIONS__ === true) {
+        showDisplayCelebrationDebugLabel(animationName);
+      }
       const origin = getTodoCelebrationOrigin(cardEl);
       switch (animationName) {
         case "confetti-burst":
@@ -487,10 +531,19 @@
           : "";
         const assignee = todo.assignee ? getAssigneeMarkup(todo.assignee) : "";
         const overdueClass = todo.isOverdue ? " todo-card--overdue" : "";
+        const infoIcon = todo.description
+          ? `<span class="todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>`
+          : "";
+        const repeatIcon = todo.recurrenceType
+          ? `<span class="todo-detail-indicator todo-detail-indicator--muted" aria-hidden="true"><i data-lucide="repeat-2"></i></span>`
+          : "";
+        const indicators = infoIcon || repeatIcon
+          ? `<div class="todo-detail-indicators">${infoIcon}${repeatIcon}</div>`
+          : "";
         const contentMarkup = `
           <div class="todo-title-row">
             <div class="todo-title">${escapeHtml(todo.title)}</div>
-            ${todo.description ? `<span class="todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>` : ""}
+            ${indicators}
           </div>
           <div class="todo-pills">${assignee}${pill}</div>
         `;
@@ -503,7 +556,7 @@
                 </svg>
               </div>
             </button>
-            ${todo.description
+            ${(todo.description || todo.recurrenceType)
               ? `<button class="todo-copy todo-detail-trigger" type="button" data-action="open-todo-detail" aria-label="View details for ${escapeHtml(todo.title)}">${contentMarkup}</button>`
               : `<div class="todo-copy">${contentMarkup}</div>`}
           </article>
@@ -528,7 +581,7 @@
           }
 
           const todo = cachedDisplayTodos.find((item) => item.id === card.dataset.todoId);
-          if (todo?.description) {
+          if (todo?.description || todo?.recurrenceType) {
             openTodoDetailModal(todo);
           }
         });
@@ -544,21 +597,70 @@
         return;
       }
 
+      const todo = cachedDisplayTodos && cachedDisplayTodos.find((t) => t.id === todoId);
+      const isRecurring = !!(todo && todo.recurrenceType);
+
       cardEl.classList.add("is-completing");
       resetAutoRotate("todo-complete");
       playTodoCelebration(cardEl).catch(() => {});
 
-      const { error } = await client
+      const now = new Date().toISOString();
+      const archivePayload = { archived_at: now, completed_at: now };
+
+      const { data: updatedRows, error } = await client
         .from("todos")
-        .update({ archived_at: new Date().toISOString() })
+        .update(archivePayload)
+        .select("id")
         .eq("id", todoId)
         .eq("household_id", TODO_HOUSEHOLD_ID)
-        .is("archived_at", null);
-      if (error) {
+        .is("archived_at", null)
+        .is("deleted_at", null);
+
+      if (error || !Array.isArray(updatedRows) || updatedRows.length === 0) {
         cardEl.classList.remove("is-completing");
         showDisplayToast("Something went wrong saving your changes. Please try again.");
         return;
       }
+
+      let nextTodoItems = Array.isArray(cachedDisplayTodos)
+        ? cachedDisplayTodos.filter((item) => item.id !== todoId)
+        : [];
+
+      if (isRecurring) {
+        const nextDueDate = calculateNextDueDate(new Date(), todo.recurrenceType, todo.recurrenceConfig, todo.dueDate);
+        const templateId = todo.recurrenceTemplateId || todoId;
+
+        const { data: insertedTodo, error: insertError } = await client
+          .from("todos")
+          .insert({
+            household_id: TODO_HOUSEHOLD_ID,
+            title: todo.title,
+            description: todo.description || null,
+            assignee: todo.assignee || null,
+            recurrence_type: todo.recurrenceType,
+            recurrence_config: todo.recurrenceConfig,
+            recurrence_template_id: templateId,
+            due_date: nextDueDate
+          })
+          .select("id, title, description, due_date, assignee, recurrence_type, recurrence_config, recurrence_template_id")
+          .single();
+
+        if (insertError) {
+          await client
+            .from("todos")
+            .update({ archived_at: null, completed_at: null })
+            .eq("id", todoId)
+            .eq("household_id", TODO_HOUSEHOLD_ID)
+            .is("deleted_at", null);
+          cardEl.classList.remove("is-completing");
+          showDisplayToast("Couldn't create next occurrence — completion reversed");
+          return;
+        } else if (insertedTodo) {
+          nextTodoItems = sortDisplayTodos([...nextTodoItems, mapSupabaseTodo(insertedTodo)]);
+        }
+      }
+
+      cachedDisplayTodos = nextTodoItems;
 
       window.setTimeout(() => {
         if (!cardEl.isConnected) {
@@ -567,11 +669,7 @@
 
         cardEl.classList.add("is-done");
         cardEl.addEventListener("transitionend", () => {
-          cardEl.remove();
-          const list = document.getElementById("todo-list");
-          if (list && !list.querySelector("[data-todo-id]")) {
-            renderTodoItems([]);
-          }
+          renderTodoItems(cachedDisplayTodos || []);
         }, { once: true });
       }, TODO_CELEBRATION_FADE_DELAY_MS);
     }
@@ -585,9 +683,10 @@
 
       const { data, error } = await client
         .from("todos")
-        .select("id, title, description, due_date, assignee, archived_at, created_at")
+        .select("id, title, description, due_date, assignee, archived_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
         .eq("household_id", TODO_HOUSEHOLD_ID)
         .is("archived_at", null)
+        .is("deleted_at", null)
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
 
