@@ -192,7 +192,7 @@
         .from("countdowns")
         .update({ unsplash_image_url: JSON.stringify({ url: photo.url, credit: photo.credit, photographerProfile: photo.photographerProfile || null }) })
         .eq("id", id)
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID);
+        .eq("household_id", getAdminHouseholdId());
       return !error;
     }
 
@@ -459,7 +459,7 @@
         .from("countdowns")
         .update({ unsplash_image_url: null })
         .eq("id", id)
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID);
+        .eq("household_id", getAdminHouseholdId());
       if (error) {
         showToast("Couldn\u2019t remove photo. Please try again.");
         return;
@@ -470,7 +470,7 @@
     async function removeCountdownCustomPhotoAssets(countdownId) {
       const client = getSupabaseClient();
       if (!client || !countdownId) return;
-      const paths = COUNTDOWN_CUSTOM_PHOTO_EXTENSIONS.map((ext) => `${DISPLAY_HOUSEHOLD_ID}/${countdownId}.${ext}`);
+      const paths = COUNTDOWN_CUSTOM_PHOTO_EXTENSIONS.map((ext) => `${getAdminHouseholdId()}/${countdownId}.${ext}`);
       try {
         await client.storage.from(COUNTDOWN_CUSTOM_PHOTO_BUCKET).remove(paths);
       } catch {}
@@ -482,7 +482,7 @@
         return null;
       }
 
-      const path = `${DISPLAY_HOUSEHOLD_ID}/${countdownId}.${pendingPhoto.extension}`;
+      const path = `${getAdminHouseholdId()}/${countdownId}.${pendingPhoto.extension}`;
       const { error: uploadError } = await client.storage
         .from(COUNTDOWN_CUSTOM_PHOTO_BUCKET)
         .upload(path, pendingPhoto.file, {
@@ -505,7 +505,7 @@
         .from("countdowns")
         .update({ custom_image_url: publicUrl })
         .eq("id", countdownId)
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID);
+        .eq("household_id", getAdminHouseholdId());
       if (updateError) {
         console.error("Countdown custom photo URL save failed.", updateError);
         return null;
@@ -515,7 +515,7 @@
       // Skip the extension that was just uploaded so we don't delete the new file.
       const otherPaths = COUNTDOWN_CUSTOM_PHOTO_EXTENSIONS
         .filter((ext) => ext !== pendingPhoto.extension)
-        .map((ext) => `${DISPLAY_HOUSEHOLD_ID}/${countdownId}.${ext}`);
+        .map((ext) => `${getAdminHouseholdId()}/${countdownId}.${ext}`);
       if (otherPaths.length) {
         try {
           await client.storage.from(COUNTDOWN_CUSTOM_PHOTO_BUCKET).remove(otherPaths);
@@ -556,7 +556,7 @@
       const { data: insertedRow, error } = await client
         .from("countdowns")
         .insert({
-          household_id: DISPLAY_HOUSEHOLD_ID,
+          household_id: getAdminHouseholdId(),
           name,
           icon,
           event_date: eventDate,
@@ -635,7 +635,7 @@
         .from("countdowns")
         .update(updatePayload)
         .eq("id", id)
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID);
+        .eq("household_id", getAdminHouseholdId());
 
       adminCountdownEditPending = false;
 
@@ -707,7 +707,7 @@
         .from("countdowns")
         .delete()
         .eq("id", id)
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID);
+        .eq("household_id", getAdminHouseholdId());
 
       if (error) {
         showToast(friendlyDeleteMessage());
@@ -854,7 +854,7 @@
       const { data, error } = await client
         .from("countdowns")
         .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible, photo_keyword")
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
 

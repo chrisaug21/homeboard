@@ -440,7 +440,7 @@
       const { error } = await client
         .from("todos")
         .insert({
-          household_id: TODO_HOUSEHOLD_ID,
+          household_id: getAdminHouseholdId(),
           title,
           description: description || null,
           assignee: assignee || null,
@@ -494,7 +494,7 @@
           recurrence_config: recurrenceData.recurrence_config
         })
         .eq("id", id)
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .is("archived_at", null)
         .is("deleted_at", null);
 
@@ -902,7 +902,7 @@
         .update(archivePayload)
         .select("id")
         .eq("id", todoId)
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .is("archived_at", null)
         .is("deleted_at", null);
 
@@ -920,7 +920,7 @@
         const { data: generatedTodo, error: insertError } = await client
           .from("todos")
           .insert({
-            household_id: TODO_HOUSEHOLD_ID,
+            household_id: getAdminHouseholdId(),
             title: todo.title,
             description: todo.description || null,
             assignee: todo.assignee || null,
@@ -938,7 +938,7 @@
             .from("todos")
             .update({ archived_at: null, completed_at: null, completed: false })
             .eq("id", todoId)
-            .eq("household_id", TODO_HOUSEHOLD_ID)
+            .eq("household_id", getAdminHouseholdId())
             .is("deleted_at", null);
           adminTodoWritePending = false;
           cardEl.classList.remove("is-completing");
@@ -1058,7 +1058,7 @@
       const { data, error } = await client
         .from("todos")
         .select("id, title, description, assignee, due_date, archived_at, completed_at, deleted_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
 
@@ -1111,7 +1111,7 @@
           .from("todos")
           .update({ archived_at: null, completed: false })
           .eq("id", todoId)
-          .eq("household_id", TODO_HOUSEHOLD_ID)
+          .eq("household_id", getAdminHouseholdId())
           .is("deleted_at", null);
 
         adminTodoWritePending = false;
@@ -1132,7 +1132,7 @@
         .from("todos")
         .update({ archived_at: null, completed_at: null, completed: false })
         .eq("id", todoId)
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .is("deleted_at", null);
 
       if (unarchiveError) {
@@ -1146,7 +1146,7 @@
           .from("todos")
           .update({ archived_at: originalArchivedAt, completed_at: originalCompletedAt, completed: true })
           .eq("id", todoId)
-          .eq("household_id", TODO_HOUSEHOLD_ID)
+          .eq("household_id", getAdminHouseholdId())
           .is("deleted_at", null);
 
         adminTodoWritePending = false;
@@ -1159,7 +1159,7 @@
         .from("todos")
         .delete()
         .eq("id", lastCompletedTodo.generatedTodoId)
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .is("deleted_at", null)
         .is("archived_at", null)
         .select("id")
@@ -1170,7 +1170,7 @@
           .from("todos")
           .update({ archived_at: originalArchivedAt, completed_at: originalCompletedAt, completed: true })
           .eq("id", todoId)
-          .eq("household_id", TODO_HOUSEHOLD_ID)
+          .eq("household_id", getAdminHouseholdId())
           .is("deleted_at", null);
 
         adminTodoWritePending = false;
@@ -1197,7 +1197,7 @@
         .from("todos")
         .update({ deleted_at: now })
         .eq("id", todoId)
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .is("archived_at", null)
         .is("deleted_at", null);
 
@@ -1231,7 +1231,7 @@
         .from("todos")
         .update({ deleted_at: now })
         .eq("id", todoId)
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .is("archived_at", null)
         .is("deleted_at", null);
 
@@ -1245,7 +1245,7 @@
       const { error: insertError } = await client
         .from("todos")
         .insert({
-          household_id: TODO_HOUSEHOLD_ID,
+          household_id: getAdminHouseholdId(),
           title: todo.title,
           description: todo.description || null,
           assignee: todo.assignee || null,
@@ -1260,7 +1260,7 @@
           .from("todos")
           .update({ deleted_at: null })
           .eq("id", todoId)
-          .eq("household_id", TODO_HOUSEHOLD_ID);
+          .eq("household_id", getAdminHouseholdId());
         adminTodoWritePending = false;
         showToast(friendlySaveMessage());
         return false;
@@ -1289,7 +1289,7 @@
       const { error } = await client
         .from("todos")
         .update({ deleted_at: now })
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .is("archived_at", null)
         .is("deleted_at", null)
         .or(`id.eq.${templateId},recurrence_template_id.eq.${templateId}`);

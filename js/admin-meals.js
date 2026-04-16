@@ -170,7 +170,7 @@
       const { data, error } = await client
         .from("meal_plan")
         .select("id, day_of_week, meal_name, meal_type, week_start")
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .eq("week_start", formatDateKey(monday))
         .eq("meal_slot", "dinner")
         .is("user_id", null)
@@ -195,7 +195,7 @@
       const { data, error } = await client
         .from("meal_plan_notes")
         .select("note")
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("household_id", getAdminHouseholdId())
         .eq("week_start", formatDateKey(monday))
         .maybeSingle();
       if (error) return null;
@@ -261,7 +261,7 @@
           .from("meal_plan")
           .update({ meal_name: mealName, meal_type: mealType })
           .eq("id", existingMeal.id)
-          .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+          .eq("household_id", getAdminHouseholdId())
           .eq("week_start", weekStart)
           .eq("meal_slot", "dinner")
           .is("user_id", null)
@@ -274,7 +274,7 @@
         const { data, error } = await client
           .from("meal_plan")
           .insert({
-            household_id: DISPLAY_HOUSEHOLD_ID,
+            household_id: getAdminHouseholdId(),
             user_id: null,
             week_start: weekStart,
             day_of_week: dayOfWeek,
@@ -339,7 +339,7 @@
       const { error } = await client
         .from("meal_plan_notes")
         .upsert(
-          { household_id: DISPLAY_HOUSEHOLD_ID, week_start: savedWeekStart, note: noteText },
+          { household_id: getAdminHouseholdId(), week_start: savedWeekStart, note: noteText },
           { onConflict: "household_id,week_start" }
         );
 

@@ -612,7 +612,7 @@
         .update(archivePayload)
         .select("id")
         .eq("id", todoId)
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getDisplayHouseholdId())
         .is("archived_at", null)
         .is("deleted_at", null);
 
@@ -633,7 +633,7 @@
         const { data: insertedTodo, error: insertError } = await client
           .from("todos")
           .insert({
-            household_id: TODO_HOUSEHOLD_ID,
+            household_id: getDisplayHouseholdId(),
             title: todo.title,
             description: todo.description || null,
             assignee: todo.assignee || null,
@@ -650,7 +650,7 @@
             .from("todos")
             .update({ archived_at: null, completed_at: null })
             .eq("id", todoId)
-            .eq("household_id", TODO_HOUSEHOLD_ID)
+            .eq("household_id", getDisplayHouseholdId())
             .is("deleted_at", null);
           cardEl.classList.remove("is-completing");
           showDisplayToast("Couldn't create next occurrence — completion reversed");
@@ -684,7 +684,7 @@
       const { data, error } = await client
         .from("todos")
         .select("id, title, description, due_date, assignee, archived_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
-        .eq("household_id", TODO_HOUSEHOLD_ID)
+        .eq("household_id", getDisplayHouseholdId())
         .is("archived_at", null)
         .is("deleted_at", null)
         .order("due_date", { ascending: true, nullsFirst: false })

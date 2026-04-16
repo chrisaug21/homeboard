@@ -17,7 +17,7 @@
       const { data, error } = await client
         .from("meal_plan")
         .select("day_of_week, meal_name, meal_type")
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("household_id", getDisplayHouseholdId())
         .eq("week_start", formatDateKey(monday))
         .eq("meal_slot", "dinner")
         .is("user_id", null)
@@ -37,7 +37,7 @@
       const { data, error } = await client
         .from("meal_plan_notes")
         .select("note")
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("household_id", getDisplayHouseholdId())
         .eq("week_start", formatDateKey(monday))
         .maybeSingle();
       if (error) return null;
