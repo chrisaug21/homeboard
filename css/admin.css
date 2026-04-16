@@ -25,6 +25,10 @@
       padding: 24px 16px;
     }
 
+    .admin-login-screen[hidden] {
+      display: none !important;
+    }
+
     .admin-login-card {
       background: var(--panel);
       border: 1px solid var(--border);
