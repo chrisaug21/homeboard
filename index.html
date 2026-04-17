@@ -122,10 +122,8 @@
     <section class="display-pairing" id="display-pairing-screen" hidden aria-labelledby="display-pairing-title">
       <div class="display-pairing-card">
         <img class="display-pairing-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
-        <h1 class="display-pairing-title" id="display-pairing-title">Pair this display</h1>
-        <p class="display-pairing-copy">Enter the 6-character code from Settings → Display Setup on your phone.</p>
+        <p class="display-pairing-copy" id="display-pairing-title">Enter the 4-character code from Settings → Display Setup on your phone.</p>
         <form class="display-pairing-form" id="display-pairing-form" novalidate>
-          <label class="display-pairing-label" for="display-pairing-code">Pairing code</label>
           <input
             id="display-pairing-code"
             class="display-pairing-input"
@@ -135,7 +133,7 @@
             autocomplete="off"
             autocapitalize="characters"
             spellcheck="false"
-            placeholder="ABC123"
+            placeholder="ABCD"
             aria-describedby="display-pairing-help display-pairing-error"
           >
           <p class="display-pairing-help" id="display-pairing-help">Codes expire after 15 minutes and can only be used once.</p>
