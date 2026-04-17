@@ -62,7 +62,7 @@
       const client = getSupabaseClient();
       const submitButton = document.getElementById("display-pairing-submit");
       const codeInput = document.getElementById("display-pairing-code");
-      const code = sanitizeDisplayPairingCode(codeInput?.value || "");
+      const code = sanitizeDisplayPairingCode(String(codeInput?.value || "").trim());
 
       if (codeInput && codeInput.value !== code) {
         codeInput.value = code;
@@ -95,7 +95,12 @@
           .limit(1)
           .maybeSingle();
 
-        if (error || !data) {
+        if (error) {
+          setDisplayPairingError("Something went wrong pairing this display. Please try again.");
+          return;
+        }
+
+        if (!data) {
           setDisplayPairingError("Invalid or expired code. Please generate a new one from the admin.");
           return;
         }
