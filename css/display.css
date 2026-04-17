@@ -51,13 +51,22 @@
       text-align: center;
     }
 
-    .display-pairing-brand {
-      font-family: Righteous, "Bricolage Grotesque", Manrope, sans-serif;
-      font-size: 1rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--color-accent);
-      opacity: 0.78;
+    .display-pairing-logo {
+      display: block;
+      width: 160px;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+      opacity: 0.92;
+      filter: brightness(0.97);
+    }
+
+    html[data-scheme="slate"] .display-pairing-logo {
+      filter: none;
+    }
+
+    html[data-scheme="dark"] .display-pairing-logo {
+      filter: saturate(0) brightness(0) invert(0.93) sepia(0.22) saturate(0.7) brightness(1.02);
     }
 
     .display-pairing-title {

@@ -121,7 +121,7 @@
   <div class="app-shell" id="display-app">
     <section class="display-pairing" id="display-pairing-screen" hidden aria-labelledby="display-pairing-title">
       <div class="display-pairing-card">
-        <div class="display-pairing-brand">Homeboard</div>
+        <img class="display-pairing-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
         <h1 class="display-pairing-title" id="display-pairing-title">Pair this display</h1>
         <p class="display-pairing-copy">Enter the 6-character code from Settings → Display Setup on your phone.</p>
         <form class="display-pairing-form" id="display-pairing-form" novalidate>
@@ -595,24 +595,6 @@
           </div>
         </section>
 
-        <!-- Display Setup -->
-        <section class="admin-panel" aria-labelledby="settings-pairing-title">
-          <h2 class="admin-panel-title" id="settings-pairing-title">Display Setup</h2>
-          <div class="admin-settings-stack">
-            <div class="admin-settings-subsection">
-              <p class="admin-field-hint">Generate a one-time code, then enter it on the tablet to connect this display to your household.</p>
-              <div class="admin-display-pairing-card" id="settings-display-pairing-card">
-                <div class="admin-display-pairing-status" id="settings-display-pairing-status">No active pairing code.</div>
-                <div class="admin-display-pairing-code" id="settings-display-pairing-code" hidden>------</div>
-                <div class="admin-display-pairing-expiry" id="settings-display-pairing-expiry">Generate a code to start pairing.</div>
-              </div>
-            </div>
-          </div>
-          <div class="admin-actions admin-actions--end">
-            <button type="button" id="settings-display-pairing-generate" class="admin-button admin-button--primary">Generate pairing code</button>
-          </div>
-        </section>
-
         <!-- Integrations -->
         <section class="admin-panel" aria-labelledby="settings-integrations-title">
           <h2 class="admin-panel-title" id="settings-integrations-title">Integrations</h2>
@@ -629,6 +611,24 @@
           <div class="admin-actions admin-actions--end">
             <button type="button" id="settings-integrations-save"
               class="admin-button admin-button--primary">Save</button>
+          </div>
+        </section>
+
+        <!-- Display Setup -->
+        <section class="admin-panel" aria-labelledby="settings-pairing-title">
+          <h2 class="admin-panel-title" id="settings-pairing-title">Display Setup</h2>
+          <div class="admin-settings-stack">
+            <div class="admin-settings-subsection">
+              <p class="admin-field-hint">Generate a one-time code, then enter it on the tablet to connect this display to your household.</p>
+              <div class="admin-display-pairing-card" id="settings-display-pairing-card">
+                <div class="admin-display-pairing-status" id="settings-display-pairing-status">No active pairing code</div>
+                <div class="admin-display-pairing-code" id="settings-display-pairing-code" hidden>------</div>
+                <div class="admin-display-pairing-expiry" id="settings-display-pairing-expiry" hidden></div>
+              </div>
+            </div>
+          </div>
+          <div class="admin-actions admin-actions--end">
+            <button type="button" id="settings-display-pairing-generate" class="admin-button admin-button--primary">Generate pairing code</button>
           </div>
         </section>
 

@@ -79,14 +79,16 @@
         statusEl.textContent = "Active pairing code";
         codeEl.textContent = activeDisplayPairing.code;
         codeEl.hidden = false;
+        expiryEl.hidden = false;
         expiryEl.textContent = formatDisplayPairingTimeRemaining(activeDisplayPairing.expires_at);
       } else {
         activeDisplayPairing = null;
         clearDisplayPairingCountdown();
-        statusEl.textContent = "No active pairing code.";
+        statusEl.textContent = "No active pairing code";
         codeEl.textContent = "------";
         codeEl.hidden = true;
-        expiryEl.textContent = "Generate a code to start pairing.";
+        expiryEl.hidden = true;
+        expiryEl.textContent = "";
       }
 
       if (generateButton) {
