@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.11";
+    const VERSION = "2.0.12";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1235,7 +1235,6 @@
 
       const [
         { data: activeRsvpRows, error: activeRsvpError },
-        { data: supersededRsvpRows, error: supersededRsvpError },
         { data: partyRows, error: partyError }
       ] = await Promise.all([
         client
@@ -1244,25 +1243,20 @@
           .eq("status", "active")
           .order("created_at", { ascending: false }),
         client
-          .from("rsvps")
-          .select("id, name, attending, guest_count, created_at, status, merged_into_party_id")
-          .eq("status", "superseded")
-          .order("created_at", { ascending: false }),
-        client
           .from("invited_parties")
           .select("id, name, invited_count, rsvp_id, created_at")
           .order("name", { ascending: true })
       ]);
 
       if (
-        activeRsvpError || supersededRsvpError || partyError
-        || !Array.isArray(activeRsvpRows) || !Array.isArray(supersededRsvpRows) || !Array.isArray(partyRows)
+        activeRsvpError || partyError
+        || !Array.isArray(activeRsvpRows) || !Array.isArray(partyRows)
       ) {
         return null;
       }
 
       return buildWeddingRsvpSnapshot(
-        [...activeRsvpRows, ...supersededRsvpRows].map(mapWeddingRsvp),
+        activeRsvpRows.map(mapWeddingRsvp),
         partyRows.map(mapInvitedParty)
       );
     }
