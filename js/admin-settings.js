@@ -301,6 +301,11 @@
       el.textContent = label === "Never synced" ? label : `Last synced ${label}`;
     }
 
+    function markAdminLoadSynced() {
+      localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
+      updateAdminLastSyncedLabel();
+    }
+
     async function refreshAdminData() {
       await Promise.allSettled([
         loadAdminTodos(),

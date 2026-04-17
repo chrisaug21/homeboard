@@ -1893,6 +1893,13 @@
       color: var(--muted);
     }
 
+    .admin-settings-divider {
+      height: 1px;
+      width: 100%;
+      background: rgba(124, 96, 69, 0.14);
+      margin: -2px 0 2px;
+    }
+
     .admin-display-pairing-card {
       display: grid;
       gap: 8px;
@@ -2233,20 +2240,22 @@
     .admin-settings-footer-sync {
       display: flex;
       align-items: center;
-      gap: 14px;
-      justify-content: flex-end;
+      justify-content: center;
+      gap: 8px;
       margin: 4px 2px 0;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       min-height: 20px;
     }
 
     .admin-settings-footer-sync .last-synced-label {
       font-size: 0.72rem;
       opacity: 0.66;
+      text-align: center;
     }
 
     .admin-settings-footer-sync .sync-btn {
       opacity: 0.62;
+      flex-shrink: 0;
     }
 
     .admin-settings-account-actions {
@@ -2274,13 +2283,7 @@
       }
 
       .admin-settings-footer-sync {
-        display: grid;
-        gap: 10px;
-        justify-items: end;
-      }
-
-      .admin-settings-footer-sync .sync-btn {
-        justify-self: end;
+        gap: 8px;
       }
     }
 

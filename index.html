@@ -588,6 +588,13 @@
               </div>
             </div>
 
+            <div class="admin-actions admin-actions--end">
+              <button type="button" id="settings-display-save"
+                class="admin-button admin-button--primary">Save</button>
+            </div>
+
+            <div class="admin-settings-divider" aria-hidden="true"></div>
+
             <div class="admin-settings-subsection">
               <div class="admin-settings-subsection-label">Display pairing</div>
               <p class="admin-field-hint">Generate a one-time code, then enter it on the tablet to connect this display to your household.</p>
@@ -601,10 +608,6 @@
               </div>
             </div>
 
-          </div>
-          <div class="admin-actions admin-actions--end">
-            <button type="button" id="settings-display-save"
-              class="admin-button admin-button--primary">Save</button>
           </div>
         </section>
 
@@ -637,6 +640,7 @@
               <label for="settings-display-name">Display name</label>
               <input id="settings-display-name" class="admin-input" type="text" maxlength="80"
                 placeholder="Your name" autocomplete="name">
+              <p class="admin-field-hint">Used when assigning to-dos and identifying you in the household.</p>
             </div>
 
             <div class="admin-field">
@@ -672,10 +676,10 @@
         </section>
 
         <div class="admin-settings-footer-sync" aria-live="polite">
-          <span id="settings-last-synced" class="last-synced-label"></span>
           <button class="sync-btn" id="settings-sync-btn" type="button" aria-label="Sync now">
             <i data-lucide="refresh-cw"></i>
           </button>
+          <span id="settings-last-synced" class="last-synced-label"></span>
         </div>
 
       </section>

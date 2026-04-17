@@ -1142,6 +1142,7 @@
     function startAdminUI() {
       if (adminUiStarted) return;
       adminUiStarted = true;
+      applyAdminTheme(adminCurrentUser?.preferences?.admin_theme);
       setAdminScreen("todos");
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
@@ -1200,6 +1201,7 @@
       initSettingsListeners();
       ensureAdminHouseholdConfigLoaded()
         .then(() => {
+          markAdminLoadSynced();
           loadAdminTodos();
           if (adminScreen === "settings") {
             loadAdminSettings();
