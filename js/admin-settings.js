@@ -85,7 +85,7 @@
         activeDisplayPairing = null;
         clearDisplayPairingCountdown();
         statusEl.textContent = "No active pairing code";
-        codeEl.textContent = "------";
+        codeEl.textContent = "----";
         codeEl.hidden = true;
         expiryEl.hidden = true;
         expiryEl.textContent = "";
