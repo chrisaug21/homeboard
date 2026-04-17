@@ -1,6 +1,8 @@
     // ── Auth state ──────────────────────────────────────────────
     let adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
     let adminCurrentUser = null;
+    let adminUiStarted = false;
+    let adminLastSyncedInterval = null;
 
     function getAdminHouseholdId() {
       return adminCurrentHouseholdId || DISPLAY_HOUSEHOLD_ID;
@@ -39,7 +41,14 @@
       const { data, error } = await client.auth.signInWithPassword({ email, password });
       if (error) throw error;
       const userRow = await lookupAdminUserRow(data.user.id);
-      if (!userRow) throw new Error("Account not found in household");
+      if (!userRow) {
+        try {
+          await client.auth.signOut();
+        } catch {}
+        adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
+        adminCurrentUser = null;
+        throw new Error("Account not found in household");
+      }
       adminCurrentHouseholdId = userRow.household_id;
       adminCurrentUser = { displayName: userRow.display_name, householdId: userRow.household_id };
       return adminCurrentUser;
@@ -50,6 +59,11 @@
       if (client) {
         try { await client.auth.signOut(); } catch {}
       }
+      if (adminLastSyncedInterval) {
+        clearInterval(adminLastSyncedInterval);
+        adminLastSyncedInterval = null;
+      }
+      adminUiStarted = false;
       adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
       adminCurrentUser = null;
       const mainContent = document.getElementById("admin-main-content");
@@ -78,20 +92,37 @@
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Signing in\u2026"; }
         try {
           await doAdminLogin(email, password);
+          const emailInput = document.getElementById("admin-login-email");
+          const passwordInput = document.getElementById("admin-login-password");
           const loginScreen = document.getElementById("admin-login-screen");
           const mainContent = document.getElementById("admin-main-content");
+          if (emailInput) emailInput.value = "";
+          if (passwordInput) passwordInput.value = "";
           if (loginScreen) loginScreen.hidden = true;
           if (mainContent) mainContent.hidden = false;
           startAdminUI();
-        } catch {
+        } catch (err) {
+          console.error("Admin sign-in failed.", err);
+          const isCredentialError = isInvalidAdminLoginError(err);
           if (errorEl) {
             errorEl.hidden = false;
-            errorEl.textContent = "Incorrect email or password. Please try again.";
+            errorEl.textContent = isCredentialError
+              ? "Incorrect email or password. Please try again."
+              : "We couldn't reach the sign-in service right now. Please try again later.";
           }
         } finally {
           if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Sign in"; }
         }
       });
+    }
+
+    function isInvalidAdminLoginError(err) {
+      const message = String(err?.message || "").toLowerCase();
+      return message.includes("invalid login credentials")
+        || message.includes("email not confirmed")
+        || err?.status === 400
+        || err?.status === 401
+        || err?.name === "AuthApiError";
     }
     // ── End auth ─────────────────────────────────────────────────
 
@@ -1069,6 +1100,8 @@
     }
 
     function startAdminUI() {
+      if (adminUiStarted) return;
+      adminUiStarted = true;
       setAdminScreen("todos");
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
@@ -1121,7 +1154,7 @@
       if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
       setAdminConfigDependentUiDisabled(true);
       updateAdminLastSyncedLabel();
-      window.setInterval(updateAdminLastSyncedLabel, 30000);
+      adminLastSyncedInterval = window.setInterval(updateAdminLastSyncedLabel, 30000);
       loadAdminTodos();
       loadAdminMealPlan();
       initSettingsListeners();

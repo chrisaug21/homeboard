@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.2";
+    const VERSION = "2.0.3";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1501,10 +1501,12 @@
         return null;
       }
 
+      const id = isAdminMode ? getAdminHouseholdId() : getDisplayHouseholdId();
+
       const { data, error } = await client
         .from("households")
         .select("google_cal_id, google_cal_key, total_invited_guests, assistant_name, display_settings, color_scheme")
-        .eq("id", getDisplayHouseholdId())
+        .eq("id", id)
         .single();
 
       if (error || !data) {
