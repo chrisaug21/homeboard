@@ -28,7 +28,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.6";
+    const VERSION = "2.0.7";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -52,10 +52,10 @@
       return String(value || "")
         .toUpperCase()
         .replace(new RegExp(`[^${DISPLAY_PAIRING_CODE_CHARACTERS}]`, "g"), "")
-        .slice(0, 6);
+        .slice(0, 4);
     }
 
-    function generateDisplayPairingCode(length = 6) {
+    function generateDisplayPairingCode(length = 4) {
       const characters = DISPLAY_PAIRING_CODE_CHARACTERS;
       const charactersLength = characters.length;
       let result = "";

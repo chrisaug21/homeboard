@@ -67,8 +67,8 @@
         codeInput.value = code;
       }
 
-      if (code.length !== 6) {
-        setDisplayPairingError("Enter the 6-character code from the admin.");
+      if (code.length !== 4) {
+        setDisplayPairingError("Enter the 4-character code from the admin.");
         return;
       }
 
