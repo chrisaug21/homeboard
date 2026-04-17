@@ -34,11 +34,6 @@
         display_settings: ds
       };
 
-      // Apply the color scheme in admin mode too
-      if (typeof applyColorScheme === "function") {
-        applyColorScheme(adminHouseholdSettings.color_scheme);
-      }
-
       return adminHouseholdSettings;
     }
 
@@ -218,7 +213,32 @@
       }).join("");
     }
 
+    function loadAdminAccountSettings() {
+      const accountNameEl = document.getElementById("settings-account-name");
+      const displayNameInput = document.getElementById("settings-display-name");
+      const adminTheme = normalizeAdminTheme(adminCurrentUser?.preferences?.admin_theme);
+
+      if (accountNameEl && adminCurrentUser && adminCurrentUser.displayName) {
+        accountNameEl.textContent = `Signed in as ${adminCurrentUser.displayName}`;
+      } else if (accountNameEl) {
+        accountNameEl.textContent = "";
+      }
+
+      if (displayNameInput) {
+        displayNameInput.value = adminCurrentUser?.displayName || "";
+      }
+
+      const themeRadio = document.querySelector(`[name="admin_theme"][value="${adminTheme}"]`);
+      if (themeRadio) {
+        themeRadio.checked = true;
+      }
+
+      updateAdminLastSyncedLabel();
+    }
+
     function loadAdminSettings() {
+      loadAdminAccountSettings();
+
       const ds = adminHouseholdSettings.display_settings || {};
       const configurableScreens = getAdminConfigurableScreens();
       const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : configurableScreens;
@@ -270,17 +290,6 @@
       // Google Cal ID
       if (calIdInput) calIdInput.value = adminHouseholdSettings.google_cal_id || "";
 
-      // Last synced
-      updateAdminLastSyncedLabel();
-
-      // Account
-      const accountNameEl = document.getElementById("settings-account-name");
-      if (accountNameEl && adminCurrentUser && adminCurrentUser.displayName) {
-        accountNameEl.textContent = `Signed in as ${adminCurrentUser.displayName}`;
-      } else if (accountNameEl) {
-        accountNameEl.textContent = "";
-      }
-
       renderDisplayPairingCard();
       loadActiveDisplayPairing();
     }
@@ -290,6 +299,11 @@
       if (!el) return;
       const label = formatRelativeTimestamp(localStorage.getItem(LAST_SYNCED_KEY), "Never synced");
       el.textContent = label === "Never synced" ? label : `Last synced ${label}`;
+    }
+
+    function markAdminLoadSynced() {
+      localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
+      updateAdminLastSyncedLabel();
     }
 
     async function refreshAdminData() {
@@ -458,9 +472,6 @@
         } else {
           adminHouseholdSettings.display_settings = newDs;
           adminHouseholdSettings.color_scheme = colorScheme;
-          if (typeof applyColorScheme === "function") {
-            applyColorScheme(colorScheme);
-          }
           showToast("Display settings saved.");
         }
       } finally {
@@ -500,6 +511,59 @@
         }
       } finally {
         integrationsSavePending = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
+      }
+    }
+
+    async function saveAccountSection() {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+      if (accountSavePending || !adminCurrentUser?.id) return;
+
+      accountSavePending = true;
+      const saveBtn = document.getElementById("settings-account-save");
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving\u2026"; }
+
+      try {
+        const displayNameInput = document.getElementById("settings-display-name");
+        const nextDisplayName = displayNameInput ? displayNameInput.value.trim() : "";
+        const adminThemeRadio = document.querySelector("[name='admin_theme']:checked");
+        const nextAdminTheme = normalizeAdminTheme(adminThemeRadio ? adminThemeRadio.value : "warm");
+        const nextPreferences = {
+          ...(adminCurrentUser?.preferences || {}),
+          admin_theme: nextAdminTheme
+        };
+
+        const { data, error } = await client
+          .from("users")
+          .update({
+            display_name: nextDisplayName || null,
+            preferences: nextPreferences
+          })
+          .eq("id", adminCurrentUser.id)
+          .select("display_name, preferences")
+          .single();
+
+        if (error || !data) {
+          showToast(friendlySaveMessage());
+        } else {
+          adminCurrentUser = {
+            ...adminCurrentUser,
+            displayName: data.display_name || "",
+            preferences: {
+              ...(data.preferences && typeof data.preferences === "object" ? data.preferences : {}),
+              admin_theme: normalizeAdminTheme(data.preferences?.admin_theme)
+            }
+          };
+          applyAdminTheme(adminCurrentUser.preferences.admin_theme);
+          loadAdminAccountSettings();
+          showToast("Account settings saved.");
+        }
+      } finally {
+        accountSavePending = false;
         if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
       }
     }
@@ -578,8 +642,7 @@
         }
 
         await refreshAdminData();
-        localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
-        updateAdminLastSyncedLabel();
+        markAdminLoadSynced();
         showToast("Sync complete.");
       } finally {
         adminSyncing = false;
@@ -702,6 +765,9 @@
 
       const integrationsSave = document.getElementById("settings-integrations-save");
       if (integrationsSave) integrationsSave.addEventListener("click", saveIntegrationsSection);
+
+      const accountSave = document.getElementById("settings-account-save");
+      if (accountSave) accountSave.addEventListener("click", saveAccountSection);
 
       const pairingGenerate = document.getElementById("settings-display-pairing-generate");
       if (pairingGenerate) pairingGenerate.addEventListener("click", generateDisplayPairing);

@@ -1874,6 +1874,10 @@
       margin-top: 14px;
     }
 
+    .admin-settings-account-status {
+      margin: 0;
+    }
+
     .admin-settings-subsection {
       display: grid;
       gap: 10px;
@@ -1887,6 +1891,13 @@
       font-size: 0.88rem;
       font-weight: 800;
       color: var(--muted);
+    }
+
+    .admin-settings-divider {
+      height: 1px;
+      width: 100%;
+      background: rgba(124, 96, 69, 0.14);
+      margin: -2px 0 2px;
     }
 
     .admin-display-pairing-card {
@@ -2226,39 +2237,29 @@
       font-size: 0.9rem;
     }
 
-    /* Sync row */
-    .admin-sync-row {
+    .admin-settings-footer-sync {
       display: flex;
       align-items: center;
-      gap: 14px;
-      margin-top: 10px;
-      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin: 16px 2px 0;
+      flex-wrap: nowrap;
+      min-height: 20px;
     }
 
-    .admin-sync-btn {
-      display: flex;
-      align-items: center;
-      gap: 7px;
+    .admin-settings-footer-sync .last-synced-label {
+      font-size: 0.72rem;
+      opacity: 0.66;
+      text-align: center;
     }
 
-    .admin-sync-btn svg {
-      width: 15px;
-      height: 15px;
+    .admin-settings-footer-sync .sync-btn {
+      opacity: 0.62;
       flex-shrink: 0;
     }
 
-    .admin-sync-btn.is-syncing svg {
-      animation: admin-spin 1s linear infinite;
-    }
-
-    @keyframes admin-spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .admin-sync-timestamp {
-      font-size: 0.78rem;
-      color: var(--muted);
-      font-weight: 600;
+    .admin-settings-account-actions {
+      margin-top: 10px;
     }
 
     /* End-aligned actions row */
@@ -2281,14 +2282,8 @@
         width: 50%;
       }
 
-      .admin-sync-row {
-        display: grid;
-        gap: 10px;
-      }
-
-      .admin-sync-row .admin-sync-btn {
-        width: 100%;
-        justify-content: center;
+      .admin-settings-footer-sync {
+        gap: 8px;
       }
     }
 
@@ -2324,8 +2319,7 @@
     html[data-scheme="dark"] .admin-settings-timer-label,
     html[data-scheme="dark"] .admin-settings-toggle span,
     html[data-scheme="dark"] .admin-settings-scheme-option span:last-child,
-    html[data-scheme="dark"] .admin-version-label,
-    html[data-scheme="dark"] .admin-sync-timestamp {
+    html[data-scheme="dark"] .admin-version-label {
       color: var(--ink);
     }
 
