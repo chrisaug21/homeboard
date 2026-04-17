@@ -59,18 +59,12 @@
     async function handleDisplayPairingSubmit(event) {
       event.preventDefault();
 
-      const client = getSupabaseClient();
       const submitButton = document.getElementById("display-pairing-submit");
       const codeInput = document.getElementById("display-pairing-code");
       const code = sanitizeDisplayPairingCode(String(codeInput?.value || "").trim());
 
       if (codeInput && codeInput.value !== code) {
         codeInput.value = code;
-      }
-
-      if (!client) {
-        setDisplayPairingError("Something went wrong pairing this display. Please try again.");
-        return;
       }
 
       if (code.length !== 6) {
@@ -85,37 +79,27 @@
       setDisplayPairingError("");
 
       try {
-        console.log("[display pairing] querying code", code);
-        const queryResponse = await client
-          .from("display_pairings")
-          .select("household_id, expires_at")
-          .eq("code", code)
-          .maybeSingle();
-        const { data, error, status } = queryResponse;
-        console.log("[display pairing] query response", { data, error, status });
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/validate-pairing-code`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ code })
+        });
 
-        if (error) {
-          setDisplayPairingError("Something went wrong pairing this display. Please try again.");
-          return;
-        }
+        const data = await response.json().catch(() => null);
 
-        if (!data || new Date(data.expires_at) < new Date()) {
+        if (response.status === 404) {
           setDisplayPairingError("Invalid or expired code. Please generate a new one from the admin.");
           return;
         }
 
-        localStorage.setItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY, data.household_id);
-
-        const { error: deleteError } = await client
-          .from("display_pairings")
-          .delete()
-          .eq("code", code);
-
-        if (deleteError) {
-          localStorage.removeItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY);
-          setDisplayPairingError("Something went wrong pairing this display. Please try again.");
+        if (!response.ok || !data?.household_id) {
+          setDisplayPairingError("Something went wrong. Please try again.");
           return;
         }
+
+        localStorage.setItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY, data.household_id);
 
         if (codeInput) {
           codeInput.value = "";
@@ -123,7 +107,7 @@
         hideDisplayPairingUi();
         startDisplayMode();
       } catch {
-        setDisplayPairingError("Something went wrong pairing this display. Please try again.");
+        setDisplayPairingError("Something went wrong. Please try again.");
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
