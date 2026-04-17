@@ -85,15 +85,11 @@
       setDisplayPairingError("");
 
       try {
-        const nowIso = new Date().toISOString();
         console.log("[display pairing] querying code", code);
         const queryResponse = await client
           .from("display_pairings")
-          .select("id, household_id, expires_at")
+          .select("household_id, expires_at")
           .eq("code", code)
-          .gt("expires_at", nowIso)
-          .order("expires_at", { ascending: false })
-          .limit(1)
           .maybeSingle();
         const { data, error, status } = queryResponse;
         console.log("[display pairing] query response", { data, error, status });
@@ -103,7 +99,7 @@
           return;
         }
 
-        if (!data) {
+        if (!data || new Date(data.expires_at) < new Date()) {
           setDisplayPairingError("Invalid or expired code. Please generate a new one from the admin.");
           return;
         }
@@ -113,7 +109,7 @@
         const { error: deleteError } = await client
           .from("display_pairings")
           .delete()
-          .eq("id", data.id);
+          .eq("code", code);
 
         if (deleteError) {
           localStorage.removeItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY);
