@@ -206,6 +206,7 @@
     };
     let assistantSavePending = false;
     let displaySavePending = false;
+    let displayPairingGeneratePending = false;
     let integrationsSavePending = false;
     let membersSavePending = false;
     let pendingMemberRemovalIndex = null;

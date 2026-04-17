@@ -26,6 +26,126 @@
       background: rgba(21, 128, 61, 0.08);
     }
 
+    .display-pairing {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      min-height: 0;
+    }
+
+    .display-pairing[hidden] {
+      display: none !important;
+    }
+
+    .display-pairing-card {
+      width: min(100%, 560px);
+      padding: 36px 34px;
+      border-radius: var(--radius-lg);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      display: grid;
+      gap: 18px;
+      text-align: center;
+    }
+
+    .display-pairing-brand {
+      font-family: Righteous, "Bricolage Grotesque", Manrope, sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-accent);
+      opacity: 0.78;
+    }
+
+    .display-pairing-title {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      line-height: 1.05;
+    }
+
+    .display-pairing-copy,
+    .display-pairing-help,
+    .display-pairing-error {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .display-pairing-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .display-pairing-label {
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .display-pairing-input {
+      width: min(100%, 320px);
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel-strong);
+      color: var(--ink);
+      font: inherit;
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 18px 22px;
+    }
+
+    .display-pairing-input:focus-visible {
+      outline: 3px solid var(--color-accent-subtle);
+      outline-offset: 2px;
+      border-color: var(--color-accent);
+    }
+
+    .display-pairing-button {
+      justify-self: center;
+      min-width: min(100%, 320px);
+      border: 0;
+      border-radius: var(--button-radius);
+      background: var(--color-accent);
+      color: var(--color-text-on-accent);
+      font: inherit;
+      font-weight: 800;
+      padding: 14px 22px;
+      cursor: pointer;
+      transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
+    }
+
+    .display-pairing-button:hover,
+    .display-pairing-button:focus-visible {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    .display-pairing-button:focus-visible {
+      outline: 3px solid var(--color-accent-subtle);
+      outline-offset: 2px;
+    }
+
+    .display-pairing-button:disabled {
+      opacity: 0.7;
+      cursor: wait;
+      transform: none;
+    }
+
+    .display-pairing-error {
+      min-height: 1.5em;
+      color: var(--rose);
+      font-weight: 700;
+    }
+
     .progress-bar {
       position: relative;
       z-index: 2;

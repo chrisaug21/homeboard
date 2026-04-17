@@ -19,6 +19,8 @@ A household command-center PWA — always on, always current. A wall-mounted And
 
 Both modes are served from `index.html`. Netlify rewrites `/admin` to `index.html` with a 200 status. The page detects mode from `window.location.pathname` in an inline script that runs before any JS loads.
 
+Display mode now requires a one-time pairing step. The tablet stores its paired `household_id` in `localStorage` as `homeboard_household_id`; if that key is missing, the display shows a full-screen pairing form instead of the normal rotation UI.
+
 ## Display Screens
 
 Screens rotate automatically using per-screen timers from `display_settings.timer_intervals` with a 30-second fallback. Swipe left/right to navigate manually, or tap the footer icon buttons to jump directly to a screen. Countdown screens share one footer hourglass button, and the upcoming/month calendar buttons show centered number overlays (`upcoming_days` or `30`). Nav arrows hide on touch devices.
@@ -67,6 +69,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 - Independent Active Screens and Screen Order controls for `upcoming_calendar` and `monthly_calendar`
 - Settings shows Scorecards as one screen-order row; saving expands that slot into the underlying `scorecard_<id>` entries used by display rotation
 - Rotation timers, color scheme, Google Calendar ID, and sync controls
+- Display Setup generates a 6-character one-time pairing code that expires after 15 minutes and pairs a tablet to the current household
 
 ### RSVP
 - Needs Review shows flagged RSVP rows for `Unmatched`, `Duplicate`, `Count mismatch`, and `Low confidence`
@@ -97,6 +100,7 @@ Screens rotate automatically using per-screen timers from `display_settings.time
 | `countdowns` | `icon` is a Lucide icon name string; also stores optional `unsplash_image_url`, optional `custom_image_url`, `days_before_visible`, and `photo_keyword` for countdown photos and visibility timing |
 | `scorecards` | Scorecard definitions with `increments` JSONB, `players` JSONB, `show_history`, `allow_negative`, and soft delete via `archived_at` |
 | `scorecard_sessions` | Per-game score state with `scores` JSONB, optional `wagers`, optional `wager_results`, `score_events` JSONB audit entries, optional `winner`, `started_at`, `ended_at`, and `is_final_jeopardy` |
+| `display_pairings` | Temporary display pairing codes with `household_id`, uppercase `code`, and `expires_at` for one-time tablet setup |
 | `rsvps` | Wedding RSVP table — do not modify schema |
 | `invited_parties` | Wedding invite source of truth. `rsvp_id = null` means pending; set means matched to an RSVP |
 

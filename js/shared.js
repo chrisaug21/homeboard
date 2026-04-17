@@ -28,23 +28,52 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.3";
+    const VERSION = "2.0.4";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
     const LAST_SYNCED_KEY = "homeboard_last_synced";
     const HOMEBOARD_HOUSEHOLD_STORAGE_KEY = "homeboard_household_id";
     const DISPLAY_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards", "rsvp"];
+    const DISPLAY_PAIRING_CODE_CHARACTERS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
     function getDisplayHouseholdId() {
       try {
-        return localStorage.getItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY) || DISPLAY_HOUSEHOLD_ID;
+        return localStorage.getItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY) || "";
       } catch {
-        return DISPLAY_HOUSEHOLD_ID;
+        return "";
       }
+    }
+
+    function sanitizeDisplayPairingCode(value) {
+      return String(value || "")
+        .toUpperCase()
+        .replace(new RegExp(`[^${DISPLAY_PAIRING_CODE_CHARACTERS}]`, "g"), "")
+        .slice(0, 6);
+    }
+
+    function generateDisplayPairingCode(length = 6) {
+      const characters = DISPLAY_PAIRING_CODE_CHARACTERS;
+      const charactersLength = characters.length;
+      let result = "";
+
+      if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+        const randomValues = new Uint32Array(length);
+        window.crypto.getRandomValues(randomValues);
+        for (let index = 0; index < length; index += 1) {
+          result += characters[randomValues[index] % charactersLength];
+        }
+        return result;
+      }
+
+      for (let index = 0; index < length; index += 1) {
+        result += characters[Math.floor(Math.random() * charactersLength)];
+      }
+
+      return result;
     }
     const RSVP_RETIRE_AFTER_DATE = "2026-10-10";
     const RSVP_MATCH_SUGGESTION_THRESHOLD = 2.2;
