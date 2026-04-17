@@ -1,12 +1,173 @@
     let lastWeeklyNote = "";
+    let displayModeStarted = false;
+    let displayPairingListenersInitialized = false;
+    let displayLastSyncedIntervalId = null;
+    let displayFullSyncIntervalId = null;
+    let displayNarrowRefreshIntervalId = null;
+
+    function setDisplayPairingError(message) {
+      const errorEl = document.getElementById("display-pairing-error");
+      if (!errorEl) {
+        return;
+      }
+
+      errorEl.textContent = message;
+      errorEl.hidden = !message;
+    }
+
+    function showDisplayPairingUi() {
+      const pairingScreen = document.getElementById("display-pairing-screen");
+      const footer = document.getElementById("display-footer");
+      if (displayApp) {
+        displayApp.dataset.displayState = "pairing";
+      }
+      if (pairingScreen) {
+        pairingScreen.hidden = false;
+      }
+      if (viewport) {
+        viewport.hidden = true;
+      }
+      if (footer) {
+        footer.hidden = true;
+      }
+
+      const codeInput = document.getElementById("display-pairing-code");
+      if (codeInput) {
+        codeInput.value = sanitizeDisplayPairingCode(codeInput.value);
+        window.setTimeout(() => codeInput.focus(), 0);
+      }
+    }
+
+    function hideDisplayPairingUi() {
+      const pairingScreen = document.getElementById("display-pairing-screen");
+      const footer = document.getElementById("display-footer");
+      if (displayApp) {
+        displayApp.dataset.displayState = "paired";
+      }
+      if (pairingScreen) {
+        pairingScreen.hidden = true;
+      }
+      if (viewport) {
+        viewport.hidden = false;
+      }
+      if (footer) {
+        footer.hidden = false;
+      }
+      setDisplayPairingError("");
+    }
+
+    async function handleDisplayPairingSubmit(event) {
+      event.preventDefault();
+
+      const submitButton = document.getElementById("display-pairing-submit");
+      const codeInput = document.getElementById("display-pairing-code");
+      const code = sanitizeDisplayPairingCode(String(codeInput?.value || "").trim());
+
+      if (codeInput && codeInput.value !== code) {
+        codeInput.value = code;
+      }
+
+      if (code.length !== 4) {
+        setDisplayPairingError("Enter the 4-character code from the admin.");
+        return;
+      }
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Pairing…";
+      }
+      setDisplayPairingError("");
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/validate-pairing-code`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ code })
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (response.status === 404) {
+          setDisplayPairingError("Invalid or expired code. Please generate a new one from the admin.");
+          return;
+        }
+
+        if (!response.ok || !data?.household_id) {
+          setDisplayPairingError("Something went wrong. Please try again.");
+          return;
+        }
+
+        localStorage.setItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY, data.household_id);
+
+        if (codeInput) {
+          codeInput.value = "";
+        }
+        hideDisplayPairingUi();
+        startDisplayMode();
+      } catch {
+        setDisplayPairingError("Something went wrong. Please try again.");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = "Pair this display";
+        }
+      }
+    }
+
+    function initDisplayPairingListeners() {
+      if (displayPairingListenersInitialized) {
+        return;
+      }
+
+      const form = document.getElementById("display-pairing-form");
+      const codeInput = document.getElementById("display-pairing-code");
+
+      if (codeInput) {
+        codeInput.addEventListener("input", () => {
+          codeInput.value = sanitizeDisplayPairingCode(codeInput.value);
+          if (!document.getElementById("display-pairing-error")?.hidden) {
+            setDisplayPairingError("");
+          }
+        });
+      }
+
+      if (form) {
+        form.addEventListener("submit", handleDisplayPairingSubmit);
+      }
+
+      displayPairingListenersInitialized = true;
+    }
 
     function initDisplayMode() {
+      displayApp.hidden = false;
+      adminApp.hidden = true;
+      const pairingVersionEl = document.getElementById("display-pairing-version");
+      if (pairingVersionEl) pairingVersionEl.textContent = `v${VERSION}`;
+      initDisplayPairingListeners();
+
+      if (!getDisplayHouseholdId()) {
+        showDisplayPairingUi();
+        return;
+      }
+
+      hideDisplayPairingUi();
+      startDisplayMode();
+    }
+
+    function startDisplayMode() {
+      if (displayModeStarted) {
+        return;
+      }
+
+      displayModeStarted = true;
       displayApp.hidden = false;
       adminApp.hidden = true;
       const versionEl = document.getElementById("version-label");
       if (versionEl) versionEl.textContent = `v${VERSION}`;
       updateLastSyncedLabel();
-      window.setInterval(updateLastSyncedLabel, 30000);
+      displayLastSyncedIntervalId = window.setInterval(updateLastSyncedLabel, 30000);
       const syncBtn = document.getElementById("display-sync-btn");
       if (syncBtn) syncBtn.addEventListener("click", runFullSync);
       renderCalendarAndCountdowns();
@@ -248,12 +409,12 @@
 
       // Every 30 min: full sync — fetches todos, meals, config, countdowns, and checks
       // for a new service worker so version updates appear without a manual sync.
-      window.setInterval(runFullSync, 30 * 60 * 1000);
+      displayFullSyncIntervalId = window.setInterval(runFullSync, 30 * 60 * 1000);
 
       // Every 5 min: narrow refresh; automatically escalate to wide if 24h have passed.
       // Todos and meals are included so content changes from admin appear within 5 min
       // even between the 15-minute full syncs.
-      window.setInterval(() => {
+      displayNarrowRefreshIntervalId = window.setInterval(() => {
         if (isSyncing) return;
         const needsWide = (Date.now() - lastWideFetch) >= 24 * 60 * 60 * 1000;
         refreshCalendarData(needsWide);

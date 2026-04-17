@@ -1,3 +1,6 @@
+    let activeDisplayPairing = null;
+    let displayPairingCountdownId = null;
+
     async function loadAdminHouseholdConfig() {
       const client = getSupabaseClient();
       if (!client) {
@@ -37,6 +40,101 @@
       }
 
       return adminHouseholdSettings;
+    }
+
+    function clearDisplayPairingCountdown() {
+      if (displayPairingCountdownId !== null) {
+        window.clearInterval(displayPairingCountdownId);
+        displayPairingCountdownId = null;
+      }
+    }
+
+    function formatDisplayPairingTimeRemaining(expiresAt) {
+      const expiresAtMs = new Date(expiresAt).getTime();
+      const remainingMs = expiresAtMs - Date.now();
+      if (!Number.isFinite(remainingMs) || remainingMs <= 0) {
+        return "Expired";
+      }
+
+      const totalSeconds = Math.ceil(remainingMs / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}:${String(seconds).padStart(2, "0")} remaining`;
+    }
+
+    function renderDisplayPairingCard() {
+      const statusEl = document.getElementById("settings-display-pairing-status");
+      const codeEl = document.getElementById("settings-display-pairing-code");
+      const expiryEl = document.getElementById("settings-display-pairing-expiry");
+      const generateButton = document.getElementById("settings-display-pairing-generate");
+
+      if (!statusEl || !codeEl || !expiryEl) {
+        return;
+      }
+
+      const hasActiveCode = activeDisplayPairing
+        && new Date(activeDisplayPairing.expires_at).getTime() > Date.now();
+
+      if (hasActiveCode) {
+        statusEl.textContent = "Active pairing code";
+        codeEl.textContent = activeDisplayPairing.code;
+        codeEl.hidden = false;
+        expiryEl.hidden = false;
+        expiryEl.textContent = formatDisplayPairingTimeRemaining(activeDisplayPairing.expires_at);
+      } else {
+        activeDisplayPairing = null;
+        clearDisplayPairingCountdown();
+        statusEl.textContent = "No active pairing code";
+        codeEl.textContent = "----";
+        codeEl.hidden = true;
+        expiryEl.hidden = true;
+        expiryEl.textContent = "";
+      }
+
+      if (generateButton) {
+        generateButton.disabled = displayPairingGeneratePending || !adminHouseholdConfigLoaded;
+        generateButton.textContent = displayPairingGeneratePending ? "Generating…" : "Generate pairing code";
+      }
+    }
+
+    function setActiveDisplayPairing(pairing) {
+      activeDisplayPairing = pairing && pairing.code ? pairing : null;
+      clearDisplayPairingCountdown();
+      renderDisplayPairingCard();
+
+      if (activeDisplayPairing) {
+        displayPairingCountdownId = window.setInterval(() => {
+          const isStillActive = new Date(activeDisplayPairing.expires_at).getTime() > Date.now();
+          if (!isStillActive) {
+            activeDisplayPairing = null;
+          }
+          renderDisplayPairingCard();
+        }, 1000);
+      }
+    }
+
+    async function loadActiveDisplayPairing() {
+      const client = getSupabaseClient();
+      if (!client || !adminHouseholdConfigLoaded) {
+        setActiveDisplayPairing(null);
+        return;
+      }
+
+      const { data, error } = await client
+        .from("display_pairings")
+        .select("id, code, expires_at")
+        .eq("household_id", getAdminHouseholdId())
+        .gt("expires_at", new Date().toISOString())
+        .order("expires_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data) {
+        setActiveDisplayPairing(null);
+        return;
+      }
+
+      setActiveDisplayPairing(data);
     }
 
     function renderSettingsMembersList(members) {
@@ -182,6 +280,9 @@
       } else if (accountNameEl) {
         accountNameEl.textContent = "";
       }
+
+      renderDisplayPairingCard();
+      loadActiveDisplayPairing();
     }
 
     function updateAdminLastSyncedLabel() {
@@ -403,6 +504,51 @@
       }
     }
 
+    async function generateDisplayPairing() {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+      if (displayPairingGeneratePending || !adminHouseholdConfigLoaded) {
+        return;
+      }
+
+      displayPairingGeneratePending = true;
+      renderDisplayPairingCard();
+
+      try {
+        const { data: { session } } = await client.auth.getSession();
+        const accessToken = session?.access_token || "";
+
+        if (!accessToken) {
+          showToast(friendlySaveMessage());
+          return;
+        }
+
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-pairing-code`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data?.id || !data?.code || !data?.expires_at) {
+          showToast(friendlySaveMessage());
+          return;
+        }
+
+        setActiveDisplayPairing(data);
+        showToast("Pairing code generated.");
+      } finally {
+        displayPairingGeneratePending = false;
+        renderDisplayPairingCard();
+      }
+    }
+
     let adminSyncing = false;
 
     async function runAdminSync() {
@@ -556,6 +702,9 @@
 
       const integrationsSave = document.getElementById("settings-integrations-save");
       if (integrationsSave) integrationsSave.addEventListener("click", saveIntegrationsSection);
+
+      const pairingGenerate = document.getElementById("settings-display-pairing-generate");
+      if (pairingGenerate) pairingGenerate.addEventListener("click", generateDisplayPairing);
 
       const syncBtn = document.getElementById("settings-sync-btn");
       if (syncBtn) syncBtn.addEventListener("click", runAdminSync);

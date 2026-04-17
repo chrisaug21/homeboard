@@ -119,6 +119,31 @@
 </head>
 <body>
   <div class="app-shell" id="display-app">
+    <section class="display-pairing" id="display-pairing-screen" hidden aria-labelledby="display-pairing-title">
+      <div class="display-pairing-card">
+        <img class="display-pairing-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
+        <p class="display-pairing-copy" id="display-pairing-title">Enter the 4-character code from Settings → Display Setup on your phone.</p>
+        <form class="display-pairing-form" id="display-pairing-form" novalidate>
+          <input
+            id="display-pairing-code"
+            class="display-pairing-input"
+            type="text"
+            maxlength="4"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder="ABCD"
+            aria-describedby="display-pairing-help display-pairing-error"
+          >
+          <p class="display-pairing-help" id="display-pairing-help">Codes expire after 15 minutes and can only be used once.</p>
+          <p class="display-pairing-error" id="display-pairing-error" hidden></p>
+          <button class="display-pairing-button" id="display-pairing-submit" type="submit">Pair this display</button>
+        </form>
+        <div class="display-pairing-version" id="display-pairing-version" aria-hidden="true"></div>
+      </div>
+    </section>
+
     <main class="viewport" id="viewport" aria-label="Homeboard display screens">
       <button class="nav-arrow nav-arrow--left" id="nav-left" type="button" aria-label="Previous screen">
         <i data-lucide="chevron-left"></i>
@@ -224,7 +249,7 @@
       </div>
     </main>
 
-    <footer class="progress-bar" aria-label="Screen navigation">
+    <footer class="progress-bar" id="display-footer" aria-label="Screen navigation">
       <span id="household-name" class="household-name" aria-hidden="true"><span class="household-name__text">Homeboard</span></span>
       <nav class="display-nav" id="display-nav" aria-label="Screen navigation"></nav>
       <span id="display-celebration-debug" class="display-celebration-debug" aria-hidden="true"></span>
@@ -585,6 +610,24 @@
           <div class="admin-actions admin-actions--end">
             <button type="button" id="settings-integrations-save"
               class="admin-button admin-button--primary">Save</button>
+          </div>
+        </section>
+
+        <!-- Display Setup -->
+        <section class="admin-panel" aria-labelledby="settings-pairing-title">
+          <h2 class="admin-panel-title" id="settings-pairing-title">Display Setup</h2>
+          <div class="admin-settings-stack">
+            <div class="admin-settings-subsection">
+              <p class="admin-field-hint">Generate a one-time code, then enter it on the tablet to connect this display to your household.</p>
+              <div class="admin-display-pairing-card" id="settings-display-pairing-card">
+                <div class="admin-display-pairing-status" id="settings-display-pairing-status">No active pairing code</div>
+                <div class="admin-display-pairing-code" id="settings-display-pairing-code" hidden>----</div>
+                <div class="admin-display-pairing-expiry" id="settings-display-pairing-expiry" hidden></div>
+              </div>
+            </div>
+          </div>
+          <div class="admin-actions admin-actions--end">
+            <button type="button" id="settings-display-pairing-generate" class="admin-button admin-button--primary">Generate pairing code</button>
           </div>
         </section>
 
