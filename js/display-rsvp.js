@@ -1,5 +1,51 @@
+    async function fetchDisplayWeddingSnapshot() {
+      const initialSnapshot = await fetchWeddingRsvpSnapshot();
+      if ((initialSnapshot?.stats?.totalParties || 0) > 0) {
+        return initialSnapshot;
+      }
+
+      const client = getSupabaseClient();
+      if (!client) {
+        return initialSnapshot;
+      }
+
+      // RSVP data is global and intentionally not scoped by household.
+      const [
+        { data: activeRsvpRows, error: activeRsvpError },
+        { data: supersededRsvpRows, error: supersededRsvpError },
+        { data: partyRows, error: partyError }
+      ] = await Promise.all([
+        client
+          .from("rsvps")
+          .select("id, name, attending, guest_count, created_at, status, merged_into_party_id")
+          .eq("status", "active")
+          .order("created_at", { ascending: false }),
+        client
+          .from("rsvps")
+          .select("id, name, attending, guest_count, created_at, status, merged_into_party_id")
+          .eq("status", "superseded")
+          .order("created_at", { ascending: false }),
+        client
+          .from("invited_parties")
+          .select("id, name, invited_count, rsvp_id, created_at")
+          .order("name", { ascending: true })
+      ]);
+
+      if (
+        activeRsvpError || supersededRsvpError || partyError
+        || !Array.isArray(activeRsvpRows) || !Array.isArray(supersededRsvpRows) || !Array.isArray(partyRows)
+      ) {
+        return initialSnapshot;
+      }
+
+      return buildWeddingRsvpSnapshot(
+        [...activeRsvpRows, ...supersededRsvpRows].map(mapWeddingRsvp),
+        partyRows.map(mapInvitedParty)
+      );
+    }
+
     async function fetchWeddingSnapshotWithAutoMatch() {
-      const snapshot = await fetchWeddingRsvpSnapshot();
+      const snapshot = await fetchDisplayWeddingSnapshot();
       if (!snapshot) {
         return null;
       }

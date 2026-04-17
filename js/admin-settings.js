@@ -642,8 +642,7 @@
         }
 
         await refreshAdminData();
-        localStorage.setItem(LAST_SYNCED_KEY, new Date().toISOString());
-        updateAdminLastSyncedLabel();
+        markAdminLoadSynced();
         showToast("Sync complete.");
       } finally {
         adminSyncing = false;

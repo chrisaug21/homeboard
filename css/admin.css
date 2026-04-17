@@ -2242,7 +2242,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      margin: 4px 2px 0;
+      margin: 16px 2px 0;
       flex-wrap: nowrap;
       min-height: 20px;
     }

@@ -74,12 +74,10 @@
         } catch {}
         adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
         adminCurrentUser = null;
-        applyAdminTheme("warm");
         throw new Error("Account not found in household");
       }
       adminCurrentHouseholdId = userRow.household_id;
       adminCurrentUser = buildAdminCurrentUser(data.user.id, userRow);
-      applyAdminTheme(adminCurrentUser.preferences?.admin_theme);
       return adminCurrentUser;
     }
 
@@ -1128,7 +1126,6 @@
       if (userRow && userRow.household_id) {
         adminCurrentHouseholdId = userRow.household_id;
         adminCurrentUser = buildAdminCurrentUser(session.user.id, userRow);
-        applyAdminTheme(adminCurrentUser.preferences?.admin_theme);
       }
 
       const loginScreen = document.getElementById("admin-login-screen");
