@@ -7,7 +7,7 @@
       const { data, error } = await client
         .from("scorecards")
         .select("id, household_id, name, increments, players, show_history, allow_negative, created_at, archived_at")
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("household_id", getDisplayHouseholdId())
         .is("archived_at", null)
         .order("created_at", { ascending: true });
 
@@ -34,7 +34,7 @@
       const { data, error } = await client
         .from("scorecard_sessions")
         .select("id, scorecard_id, household_id, started_at, ended_at, scores, wagers, wager_results, score_events, winner, is_final_jeopardy, created_at")
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("household_id", getDisplayHouseholdId())
         .in("scorecard_id", ids)
         .order("started_at", { ascending: false });
 
@@ -63,7 +63,7 @@
 
       const payload = {
         scorecard_id: scorecard.id,
-        household_id: DISPLAY_HOUSEHOLD_ID,
+        household_id: getDisplayHouseholdId(),
         started_at: new Date().toISOString(),
         scores: createScorecardZeroScores(scorecard.players),
         score_events: [],
@@ -1215,7 +1215,7 @@
         .from("scorecards")
         .update({ archived_at: new Date().toISOString() })
         .eq("id", scorecardId)
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("household_id", getDisplayHouseholdId())
         .is("archived_at", null);
 
       if (error) {

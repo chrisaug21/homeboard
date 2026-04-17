@@ -1,3 +1,131 @@
+    // ── Auth state ──────────────────────────────────────────────
+    let adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
+    let adminCurrentUser = null;
+    let adminUiStarted = false;
+    let adminLastSyncedInterval = null;
+
+    function getAdminHouseholdId() {
+      return adminCurrentHouseholdId || DISPLAY_HOUSEHOLD_ID;
+    }
+
+    async function checkAdminAuthSession() {
+      const client = getSupabaseClient();
+      if (!client) return null;
+      try {
+        const { data: { session } } = await client.auth.getSession();
+        return session || null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function lookupAdminUserRow(authUserId) {
+      const client = getSupabaseClient();
+      if (!client) return null;
+      try {
+        const { data, error } = await client
+          .from("users")
+          .select("household_id, display_name")
+          .eq("id", authUserId)
+          .single();
+        if (error || !data) return null;
+        return data;
+      } catch {
+        return null;
+      }
+    }
+
+    async function doAdminLogin(email, password) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error("unavailable");
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      const userRow = await lookupAdminUserRow(data.user.id);
+      if (!userRow) {
+        try {
+          await client.auth.signOut();
+        } catch {}
+        adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
+        adminCurrentUser = null;
+        throw new Error("Account not found in household");
+      }
+      adminCurrentHouseholdId = userRow.household_id;
+      adminCurrentUser = { displayName: userRow.display_name, householdId: userRow.household_id };
+      return adminCurrentUser;
+    }
+
+    async function doAdminLogout() {
+      const client = getSupabaseClient();
+      if (client) {
+        try { await client.auth.signOut(); } catch {}
+      }
+      if (adminLastSyncedInterval) {
+        clearInterval(adminLastSyncedInterval);
+        adminLastSyncedInterval = null;
+      }
+      adminUiStarted = false;
+      adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
+      adminCurrentUser = null;
+      const mainContent = document.getElementById("admin-main-content");
+      const loginScreen = document.getElementById("admin-login-screen");
+      if (mainContent) mainContent.hidden = true;
+      if (loginScreen) loginScreen.hidden = false;
+      const errorEl = document.getElementById("admin-login-error");
+      if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
+      const emailInput = document.getElementById("admin-login-email");
+      const passInput = document.getElementById("admin-login-password");
+      if (emailInput) emailInput.value = "";
+      if (passInput) passInput.value = "";
+    }
+
+    function initLoginFormListeners() {
+      const form = document.getElementById("admin-login-form");
+      if (!form) return;
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("admin-login-email")?.value.trim() || "";
+        const password = document.getElementById("admin-login-password")?.value || "";
+        const submitBtn = form.querySelector("[type='submit']");
+        const errorEl = document.getElementById("admin-login-error");
+        if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
+        if (!email || !password) return;
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Signing in\u2026"; }
+        try {
+          await doAdminLogin(email, password);
+          const emailInput = document.getElementById("admin-login-email");
+          const passwordInput = document.getElementById("admin-login-password");
+          const loginScreen = document.getElementById("admin-login-screen");
+          const mainContent = document.getElementById("admin-main-content");
+          if (emailInput) emailInput.value = "";
+          if (passwordInput) passwordInput.value = "";
+          if (loginScreen) loginScreen.hidden = true;
+          if (mainContent) mainContent.hidden = false;
+          startAdminUI();
+        } catch (err) {
+          console.error("Admin sign-in failed.", err);
+          const isCredentialError = isInvalidAdminLoginError(err);
+          if (errorEl) {
+            errorEl.hidden = false;
+            errorEl.textContent = isCredentialError
+              ? "Incorrect email or password. Please try again."
+              : "We couldn't reach the sign-in service right now. Please try again later.";
+          }
+        } finally {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Sign in"; }
+        }
+      });
+    }
+
+    function isInvalidAdminLoginError(err) {
+      const message = String(err?.message || "").toLowerCase();
+      return message.includes("invalid login credentials")
+        || message.includes("email not confirmed")
+        || err?.status === 400
+        || err?.status === 401
+        || err?.name === "AuthApiError";
+    }
+    // ── End auth ─────────────────────────────────────────────────
+
     const adminActiveList = document.getElementById("admin-active-list");
     const adminArchivedList = document.getElementById("admin-archived-list");
     const adminActiveSummary = document.getElementById("admin-active-summary");
@@ -946,10 +1074,34 @@
       }
     }
 
-    function initAdminMode() {
+    async function initAdminMode() {
       document.body.classList.add("admin-mode");
       displayApp.hidden = true;
       adminApp.hidden = false;
+      initLoginFormListeners();
+
+      const session = await checkAdminAuthSession();
+      if (!session) {
+        return; // login screen is already visible by default
+      }
+
+      const userRow = await lookupAdminUserRow(session.user.id);
+      if (userRow && userRow.household_id) {
+        adminCurrentHouseholdId = userRow.household_id;
+        adminCurrentUser = { displayName: userRow.display_name, householdId: userRow.household_id };
+      }
+
+      const loginScreen = document.getElementById("admin-login-screen");
+      const mainContent = document.getElementById("admin-main-content");
+      if (loginScreen) loginScreen.hidden = true;
+      if (mainContent) mainContent.hidden = false;
+
+      startAdminUI();
+    }
+
+    function startAdminUI() {
+      if (adminUiStarted) return;
+      adminUiStarted = true;
       setAdminScreen("todos");
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
@@ -1002,7 +1154,7 @@
       if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
       setAdminConfigDependentUiDisabled(true);
       updateAdminLastSyncedLabel();
-      window.setInterval(updateAdminLastSyncedLabel, 30000);
+      adminLastSyncedInterval = window.setInterval(updateAdminLastSyncedLabel, 30000);
       loadAdminTodos();
       loadAdminMealPlan();
       initSettingsListeners();

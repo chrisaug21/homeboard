@@ -28,15 +28,24 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "1.9.25";
+    const VERSION = "2.0.3";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
     const LAST_SYNCED_KEY = "homeboard_last_synced";
+    const HOMEBOARD_HOUSEHOLD_STORAGE_KEY = "homeboard_household_id";
     const DISPLAY_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards", "rsvp"];
 
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
+    function getDisplayHouseholdId() {
+      try {
+        return localStorage.getItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY) || DISPLAY_HOUSEHOLD_ID;
+      } catch {
+        return DISPLAY_HOUSEHOLD_ID;
+      }
+    }
     const RSVP_RETIRE_AFTER_DATE = "2026-10-10";
     const RSVP_MATCH_SUGGESTION_THRESHOLD = 2.2;
     const RSVP_MATCH_DUPLICATE_THRESHOLD = 5.2;
@@ -1492,10 +1501,12 @@
         return null;
       }
 
+      const id = isAdminMode ? getAdminHouseholdId() : getDisplayHouseholdId();
+
       const { data, error } = await client
         .from("households")
         .select("google_cal_id, google_cal_key, total_invited_guests, assistant_name, display_settings, color_scheme")
-        .eq("id", DISPLAY_HOUSEHOLD_ID)
+        .eq("id", id)
         .single();
 
       if (error || !data) {

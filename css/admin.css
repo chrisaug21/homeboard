@@ -7,6 +7,81 @@
       padding-bottom: 96px;
     }
 
+    /* #admin-main-content is display:contents so its children participate in
+       the parent admin-shell grid directly, with no extra wrapper box.
+       The [hidden] rule must use !important to beat the author-level display:contents. */
+    #admin-main-content {
+      display: contents;
+    }
+    #admin-main-content[hidden] {
+      display: none !important;
+    }
+
+    .admin-login-screen {
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .admin-login-screen[hidden] {
+      display: none !important;
+    }
+
+    .admin-login-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 32px 24px 28px;
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .admin-login-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .admin-login-brand svg {
+      width: 20px;
+      height: 20px;
+      color: var(--color-accent);
+    }
+
+    #admin-login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .admin-login-error {
+      background: rgba(166, 76, 99, 0.12);
+      border: 1px solid rgba(166, 76, 99, 0.28);
+      border-radius: var(--button-radius);
+      color: var(--rose);
+      font-size: 0.82rem;
+      padding: 10px 12px;
+      line-height: 1.45;
+    }
+
+    .admin-login-submit {
+      width: 100%;
+      justify-content: center;
+      margin-top: 4px;
+    }
+
     .admin-header-bar {
       min-height: 48px;
       display: flex;

@@ -7,7 +7,7 @@
       const { data, error } = await client
         .from("households")
         .select("assistant_name, color_scheme, google_cal_id, display_settings")
-        .eq("id", DISPLAY_HOUSEHOLD_ID)
+        .eq("id", getAdminHouseholdId())
         .single();
 
       if (error || !data) {
@@ -174,6 +174,14 @@
 
       // Last synced
       updateAdminLastSyncedLabel();
+
+      // Account
+      const accountNameEl = document.getElementById("settings-account-name");
+      if (accountNameEl && adminCurrentUser && adminCurrentUser.displayName) {
+        accountNameEl.textContent = `Signed in as ${adminCurrentUser.displayName}`;
+      } else if (accountNameEl) {
+        accountNameEl.textContent = "";
+      }
     }
 
     function updateAdminLastSyncedLabel() {
@@ -214,7 +222,7 @@
         const { data, error } = await client
           .from("households")
           .update({ assistant_name: newName || null })
-          .eq("id", DISPLAY_HOUSEHOLD_ID)
+          .eq("id", getAdminHouseholdId())
           .select();
 
         if (error) {
@@ -258,7 +266,7 @@
         const { error } = await client
           .from("households")
           .update({ display_settings: newDisplaySettings })
-          .eq("id", DISPLAY_HOUSEHOLD_ID);
+          .eq("id", getAdminHouseholdId());
 
         if (error) {
           showToast(friendlySaveMessage());
@@ -340,7 +348,7 @@
         const { data, error } = await client
           .from("households")
           .update({ color_scheme: colorScheme, display_settings: newDs })
-          .eq("id", DISPLAY_HOUSEHOLD_ID)
+          .eq("id", getAdminHouseholdId())
           .select();
         if (error) {
           showToast(friendlySaveMessage());
@@ -379,7 +387,7 @@
         const { data, error } = await client
           .from("households")
           .update({ google_cal_id: newCalId || null })
-          .eq("id", DISPLAY_HOUSEHOLD_ID)
+          .eq("id", getAdminHouseholdId())
           .select();
         if (error) {
           showToast(friendlySaveMessage());
@@ -551,4 +559,14 @@
 
       const syncBtn = document.getElementById("settings-sync-btn");
       if (syncBtn) syncBtn.addEventListener("click", runAdminSync);
+
+      const logoutBtn = document.getElementById("settings-logout-btn");
+      if (logoutBtn) logoutBtn.addEventListener("click", handleSettingsLogout);
+    }
+
+    async function handleSettingsLogout() {
+      const btn = document.getElementById("settings-logout-btn");
+      if (btn) { btn.disabled = true; btn.textContent = "Signing out\u2026"; }
+      await doAdminLogout();
+      if (btn) { btn.disabled = false; btn.textContent = "Sign out"; }
     }

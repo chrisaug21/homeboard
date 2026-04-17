@@ -40,7 +40,7 @@
       const { data, error } = await client
         .from("countdowns")
         .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible")
-        .eq("household_id", DISPLAY_HOUSEHOLD_ID)
+        .eq("household_id", getDisplayHouseholdId())
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
 

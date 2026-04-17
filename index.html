@@ -113,8 +113,8 @@
     }
 
   </style>
-  <link rel="stylesheet" href="css/display.css?v=1.6.21">
-  <link rel="stylesheet" href="css/admin.css?v=1.6.21">
+  <link rel="stylesheet" href="css/display.css?v=2.0.0">
+  <link rel="stylesheet" href="css/admin.css?v=2.0.0">
   <link rel="stylesheet" href="js/vendor/cropper.min.css">
 </head>
 <body>
@@ -325,6 +325,33 @@
   </div>
 
   <div class="admin-shell" id="admin-app" hidden>
+
+    <!-- Login screen — shown when no auth session -->
+    <div class="admin-login-screen" id="admin-login-screen">
+      <div class="admin-login-card">
+        <div class="admin-login-brand">
+          <i data-lucide="sliders-horizontal"></i>
+          <span>Homeboard</span>
+        </div>
+        <form id="admin-login-form" novalidate>
+          <div class="admin-field">
+            <label for="admin-login-email">Email</label>
+            <input id="admin-login-email" class="admin-input" type="email" autocomplete="email"
+              placeholder="you@example.com" required>
+          </div>
+          <div class="admin-field">
+            <label for="admin-login-password">Password</label>
+            <input id="admin-login-password" class="admin-input" type="password" autocomplete="current-password"
+              placeholder="••••••••" required>
+          </div>
+          <div class="admin-login-error" id="admin-login-error" hidden></div>
+          <button type="submit" class="admin-button admin-button--primary admin-login-submit">Sign in</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Main admin content — shown after authentication -->
+    <div id="admin-main-content" hidden>
     <div class="admin-header-bar">
       <div class="admin-header-brand">
         <i data-lucide="sliders-horizontal"></i>
@@ -575,6 +602,16 @@
           </div>
         </section>
 
+        <!-- Account -->
+        <section class="admin-panel" aria-labelledby="settings-account-title">
+          <h2 class="admin-panel-title" id="settings-account-title">Account</h2>
+          <div id="settings-account-name" class="admin-field-hint" style="margin-bottom:12px"></div>
+          <div class="admin-actions admin-actions--end">
+            <button type="button" id="settings-logout-btn"
+              class="admin-button admin-button--secondary">Sign out</button>
+          </div>
+        </section>
+
       </section>
 
       <section class="admin-screen" id="admin-screen-rsvp" data-admin-screen="rsvp" hidden>
@@ -625,7 +662,8 @@
         <span>Scorecard</span>
       </button>
     </nav>
-  </div>
+    </div><!-- /#admin-main-content -->
+  </div><!-- /#admin-app -->
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
