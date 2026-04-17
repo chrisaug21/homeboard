@@ -560,20 +560,8 @@
       const syncBtn = document.getElementById("settings-sync-btn");
       if (syncBtn) syncBtn.addEventListener("click", runAdminSync);
 
-      const configureDisplayBtn = document.getElementById("settings-configure-display-btn");
-      if (configureDisplayBtn) configureDisplayBtn.addEventListener("click", handleConfigureDisplay);
-
       const logoutBtn = document.getElementById("settings-logout-btn");
       if (logoutBtn) logoutBtn.addEventListener("click", handleSettingsLogout);
-    }
-
-    function handleConfigureDisplay() {
-      try {
-        localStorage.setItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY, getAdminHouseholdId());
-        showToast("Display configured. The tablet will use this household on next load.");
-      } catch {
-        showToast("Something went wrong saving the display config. Please try again.");
-      }
     }
 
     async function handleSettingsLogout() {
