@@ -16,7 +16,13 @@
       }
 
       try {
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+          auth: {
+            persistSession: isAdminMode,
+            autoRefreshToken: isAdminMode,
+            detectSessionInUrl: isAdminMode
+          }
+        });
       } catch(e) {
         console.warn('Supabase unavailable, running with hardcoded data.', e);
       }
@@ -28,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.12";
+    const VERSION = "2.0.13";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
