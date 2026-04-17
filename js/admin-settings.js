@@ -518,33 +518,25 @@
       renderDisplayPairingCard();
 
       try {
-        const householdId = getAdminHouseholdId();
-        const nowIso = new Date().toISOString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-        const code = generateDisplayPairingCode();
+        const { data: { session } } = await client.auth.getSession();
+        const accessToken = session?.access_token || "";
 
-        const { error: deleteError } = await client
-          .from("display_pairings")
-          .delete()
-          .eq("household_id", householdId)
-          .gt("expires_at", nowIso);
-
-        if (deleteError) {
+        if (!accessToken) {
           showToast(friendlySaveMessage());
           return;
         }
 
-        const { data, error } = await client
-          .from("display_pairings")
-          .insert({
-            household_id: householdId,
-            code,
-            expires_at: expiresAt
-          })
-          .select("id, code, expires_at")
-          .single();
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-pairing-code`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+          }
+        });
 
-        if (error || !data) {
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data?.id || !data?.code || !data?.expires_at) {
           showToast(friendlySaveMessage());
           return;
         }
