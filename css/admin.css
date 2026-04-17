@@ -1874,6 +1874,10 @@
       margin-top: 14px;
     }
 
+    .admin-settings-account-status {
+      margin: 0;
+    }
+
     .admin-settings-subsection {
       display: grid;
       gap: 10px;
@@ -2226,39 +2230,27 @@
       font-size: 0.9rem;
     }
 
-    /* Sync row */
-    .admin-sync-row {
+    .admin-settings-footer-sync {
       display: flex;
       align-items: center;
       gap: 14px;
-      margin-top: 10px;
+      justify-content: flex-end;
+      margin: 4px 2px 0;
       flex-wrap: wrap;
+      min-height: 20px;
     }
 
-    .admin-sync-btn {
-      display: flex;
-      align-items: center;
-      gap: 7px;
+    .admin-settings-footer-sync .last-synced-label {
+      font-size: 0.72rem;
+      opacity: 0.66;
     }
 
-    .admin-sync-btn svg {
-      width: 15px;
-      height: 15px;
-      flex-shrink: 0;
+    .admin-settings-footer-sync .sync-btn {
+      opacity: 0.62;
     }
 
-    .admin-sync-btn.is-syncing svg {
-      animation: admin-spin 1s linear infinite;
-    }
-
-    @keyframes admin-spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .admin-sync-timestamp {
-      font-size: 0.78rem;
-      color: var(--muted);
-      font-weight: 600;
+    .admin-settings-account-actions {
+      margin-top: 10px;
     }
 
     /* End-aligned actions row */
@@ -2281,14 +2273,14 @@
         width: 50%;
       }
 
-      .admin-sync-row {
+      .admin-settings-footer-sync {
         display: grid;
         gap: 10px;
+        justify-items: end;
       }
 
-      .admin-sync-row .admin-sync-btn {
-        width: 100%;
-        justify-content: center;
+      .admin-settings-footer-sync .sync-btn {
+        justify-self: end;
       }
     }
 
@@ -2324,8 +2316,7 @@
     html[data-scheme="dark"] .admin-settings-timer-label,
     html[data-scheme="dark"] .admin-settings-toggle span,
     html[data-scheme="dark"] .admin-settings-scheme-option span:last-child,
-    html[data-scheme="dark"] .admin-version-label,
-    html[data-scheme="dark"] .admin-sync-timestamp {
+    html[data-scheme="dark"] .admin-version-label {
       color: var(--ink);
     }
 

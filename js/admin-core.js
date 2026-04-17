@@ -4,6 +4,16 @@
     let adminUiStarted = false;
     let adminLastSyncedInterval = null;
 
+    function normalizeAdminTheme(theme) {
+      return ["warm", "dark", "slate"].includes(theme) ? theme : "warm";
+    }
+
+    function applyAdminTheme(theme) {
+      if (typeof applyColorScheme === "function") {
+        applyColorScheme(normalizeAdminTheme(theme));
+      }
+    }
+
     function getAdminHouseholdId() {
       return adminCurrentHouseholdId || DISPLAY_HOUSEHOLD_ID;
     }
@@ -25,7 +35,7 @@
       try {
         const { data, error } = await client
           .from("users")
-          .select("household_id, display_name")
+          .select("household_id, display_name, preferences")
           .eq("id", authUserId)
           .single();
         if (error || !data) return null;
@@ -33,6 +43,23 @@
       } catch {
         return null;
       }
+    }
+
+    function buildAdminCurrentUser(authUserId, userRow) {
+      const preferences = userRow?.preferences && typeof userRow.preferences === "object"
+        ? { ...userRow.preferences }
+        : {};
+      const adminTheme = normalizeAdminTheme(preferences.admin_theme);
+
+      return {
+        id: authUserId,
+        displayName: userRow?.display_name || "",
+        householdId: userRow?.household_id || DISPLAY_HOUSEHOLD_ID,
+        preferences: {
+          ...preferences,
+          admin_theme: adminTheme
+        }
+      };
     }
 
     async function doAdminLogin(email, password) {
@@ -47,10 +74,12 @@
         } catch {}
         adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
         adminCurrentUser = null;
+        applyAdminTheme("warm");
         throw new Error("Account not found in household");
       }
       adminCurrentHouseholdId = userRow.household_id;
-      adminCurrentUser = { displayName: userRow.display_name, householdId: userRow.household_id };
+      adminCurrentUser = buildAdminCurrentUser(data.user.id, userRow);
+      applyAdminTheme(adminCurrentUser.preferences?.admin_theme);
       return adminCurrentUser;
     }
 
@@ -66,6 +95,7 @@
       adminUiStarted = false;
       adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
       adminCurrentUser = null;
+      applyAdminTheme("warm");
       const mainContent = document.getElementById("admin-main-content");
       const loginScreen = document.getElementById("admin-login-screen");
       if (mainContent) mainContent.hidden = true;
@@ -208,6 +238,7 @@
     let displaySavePending = false;
     let displayPairingGeneratePending = false;
     let integrationsSavePending = false;
+    let accountSavePending = false;
     let membersSavePending = false;
     let pendingMemberRemovalIndex = null;
     let adminHouseholdConfigPromise = null;
@@ -265,6 +296,8 @@
         "settings-assistant-save",
         "settings-member-input",
         "settings-member-add-btn",
+        "settings-google-cal-id",
+        "settings-display-pairing-generate",
         "settings-display-save",
         "settings-integrations-save"
       ];
@@ -276,11 +309,15 @@
         }
       });
 
-      const displayInputs = document.querySelectorAll("#admin-screen-settings input, #admin-screen-settings select, #admin-screen-settings button");
+      const displayInputs = document.querySelectorAll([
+        "#settings-screen-toggles input",
+        "#settings-screen-order button",
+        "#settings-timer-list input",
+        "#settings-color-scheme input",
+        "#settings-upcoming-days"
+      ].join(", "));
       displayInputs.forEach((element) => {
-        if (element.id !== "settings-sync-btn") {
-          element.disabled = disabled;
-        }
+        element.disabled = disabled;
       });
     }
 
@@ -1046,6 +1083,7 @@
     function openAdminSettings() {
       setAdminScreen("settings");
       renderAdminSettingsSkeleton();
+      loadAdminAccountSettings();
       loadAdminScorecards();
       ensureAdminHouseholdConfigLoaded()
         .then(() => loadAdminSettings())
@@ -1089,7 +1127,8 @@
       const userRow = await lookupAdminUserRow(session.user.id);
       if (userRow && userRow.household_id) {
         adminCurrentHouseholdId = userRow.household_id;
-        adminCurrentUser = { displayName: userRow.display_name, householdId: userRow.household_id };
+        adminCurrentUser = buildAdminCurrentUser(session.user.id, userRow);
+        applyAdminTheme(adminCurrentUser.preferences?.admin_theme);
       }
 
       const loginScreen = document.getElementById("admin-login-screen");

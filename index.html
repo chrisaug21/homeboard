@@ -474,32 +474,33 @@
 
       <section class="admin-screen" id="admin-screen-settings" data-admin-screen="settings" hidden>
 
-        <!-- Assistant Name -->
-        <section class="admin-panel" aria-labelledby="settings-assistant-title">
-          <h2 class="admin-panel-title" id="settings-assistant-title">Assistant Name</h2>
+        <!-- Household -->
+        <section class="admin-panel" aria-labelledby="settings-household-title">
+          <h2 class="admin-panel-title" id="settings-household-title">Household</h2>
           <div class="admin-settings-stack">
             <div class="admin-settings-subsection">
-              <p class="admin-field-hint">Shown in the bottom bar of the display view.</p>
-              <input id="settings-assistant-name" class="admin-input" type="text" maxlength="60"
-                placeholder="Leave blank to show &ldquo;Homeboard&rdquo;" autocomplete="off" aria-label="Assistant name">
+              <div class="admin-field">
+                <label for="settings-assistant-name">Assistant name</label>
+                <p class="admin-field-hint">Shown in the bottom bar of the display view.</p>
+                <input id="settings-assistant-name" class="admin-input" type="text" maxlength="60"
+                  placeholder="Leave blank to show &ldquo;Homeboard&rdquo;" autocomplete="off" aria-label="Assistant name">
+              </div>
+              <div class="admin-actions admin-actions--end">
+                <button type="button" id="settings-assistant-save"
+                  class="admin-button admin-button--primary">Save</button>
+              </div>
             </div>
-          </div>
-          <div class="admin-actions admin-actions--end">
-            <button type="button" id="settings-assistant-save"
-              class="admin-button admin-button--primary">Save</button>
-          </div>
-        </section>
 
-        <!-- Household Members -->
-        <section class="admin-panel" aria-labelledby="settings-members-title">
-          <h2 class="admin-panel-title" id="settings-members-title">Household Members</h2>
-          <div class="admin-settings-stack">
-            <div id="settings-members-list" class="admin-settings-member-list"></div>
-            <div class="admin-form-row admin-form-row--add-member">
-              <input id="settings-member-input" class="admin-input" type="text" maxlength="60"
-                placeholder="Member name" autocomplete="off">
-              <button type="button" id="settings-member-add-btn"
-                class="admin-button admin-button--primary">Save</button>
+            <div class="admin-settings-subsection">
+              <div class="admin-settings-subsection-label">Household members</div>
+              <p class="admin-field-hint">Used for to-do assignees across admin and display.</p>
+              <div id="settings-members-list" class="admin-settings-member-list"></div>
+              <div class="admin-form-row admin-form-row--add-member">
+                <input id="settings-member-input" class="admin-input" type="text" maxlength="60"
+                  placeholder="Member name" autocomplete="off">
+                <button type="button" id="settings-member-add-btn"
+                  class="admin-button admin-button--primary">Save</button>
+              </div>
             </div>
           </div>
         </section>
@@ -567,7 +568,7 @@
             </div>
 
             <div class="admin-field">
-              <label>Color scheme</label>
+              <label>Display color scheme</label>
               <div class="admin-settings-scheme-list" id="settings-color-scheme">
                 <label class="admin-settings-scheme-option">
                   <input type="radio" name="color_scheme" value="warm">
@@ -584,6 +585,19 @@
                   <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--slate"></span>
                   <span>Slate</span>
                 </label>
+              </div>
+            </div>
+
+            <div class="admin-settings-subsection">
+              <div class="admin-settings-subsection-label">Display pairing</div>
+              <p class="admin-field-hint">Generate a one-time code, then enter it on the tablet to connect this display to your household.</p>
+              <div class="admin-display-pairing-card" id="settings-display-pairing-card">
+                <div class="admin-display-pairing-status" id="settings-display-pairing-status">No active pairing code</div>
+                <div class="admin-display-pairing-code" id="settings-display-pairing-code" hidden>----</div>
+                <div class="admin-display-pairing-expiry" id="settings-display-pairing-expiry" hidden></div>
+              </div>
+              <div class="admin-actions admin-actions--end">
+                <button type="button" id="settings-display-pairing-generate" class="admin-button admin-button--primary">Generate pairing code</button>
               </div>
             </div>
 
@@ -613,47 +627,56 @@
           </div>
         </section>
 
-        <!-- Display Setup -->
-        <section class="admin-panel" aria-labelledby="settings-pairing-title">
-          <h2 class="admin-panel-title" id="settings-pairing-title">Display Setup</h2>
+        <!-- Account -->
+        <section class="admin-panel" aria-labelledby="settings-account-title">
+          <h2 class="admin-panel-title" id="settings-account-title">Account</h2>
           <div class="admin-settings-stack">
-            <div class="admin-settings-subsection">
-              <p class="admin-field-hint">Generate a one-time code, then enter it on the tablet to connect this display to your household.</p>
-              <div class="admin-display-pairing-card" id="settings-display-pairing-card">
-                <div class="admin-display-pairing-status" id="settings-display-pairing-status">No active pairing code</div>
-                <div class="admin-display-pairing-code" id="settings-display-pairing-code" hidden>----</div>
-                <div class="admin-display-pairing-expiry" id="settings-display-pairing-expiry" hidden></div>
+            <div id="settings-account-name" class="admin-field-hint admin-settings-account-status"></div>
+
+            <div class="admin-field">
+              <label for="settings-display-name">Display name</label>
+              <input id="settings-display-name" class="admin-input" type="text" maxlength="80"
+                placeholder="Your name" autocomplete="name">
+            </div>
+
+            <div class="admin-field">
+              <label>Admin theme</label>
+              <p class="admin-field-hint">This only changes the look of your admin app.</p>
+              <div class="admin-settings-scheme-list" id="settings-admin-theme">
+                <label class="admin-settings-scheme-option">
+                  <input type="radio" name="admin_theme" value="warm">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--warm"></span>
+                  <span>Warm</span>
+                </label>
+                <label class="admin-settings-scheme-option">
+                  <input type="radio" name="admin_theme" value="dark">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--dark"></span>
+                  <span>Dark</span>
+                </label>
+                <label class="admin-settings-scheme-option">
+                  <input type="radio" name="admin_theme" value="slate">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--slate"></span>
+                  <span>Slate</span>
+                </label>
               </div>
             </div>
           </div>
           <div class="admin-actions admin-actions--end">
-            <button type="button" id="settings-display-pairing-generate" class="admin-button admin-button--primary">Generate pairing code</button>
+            <button type="button" id="settings-account-save"
+              class="admin-button admin-button--primary">Save</button>
           </div>
-        </section>
-
-        <!-- Sync -->
-        <section class="admin-panel" aria-labelledby="settings-sync-title">
-          <h2 class="admin-panel-title" id="settings-sync-title">Sync</h2>
-          <p class="admin-field-hint">Re-fetches all data and checks for app updates. If a new version is available, the page reloads automatically.</p>
-          <div class="admin-sync-row">
-            <button type="button" id="settings-sync-btn"
-              class="admin-button admin-button--primary admin-sync-btn">
-              <i data-lucide="refresh-cw"></i>
-              Sync now
-            </button>
-            <span id="settings-last-synced" class="admin-sync-timestamp"></span>
-          </div>
-        </section>
-
-        <!-- Account -->
-        <section class="admin-panel" aria-labelledby="settings-account-title">
-          <h2 class="admin-panel-title" id="settings-account-title">Account</h2>
-          <div id="settings-account-name" class="admin-field-hint" style="margin-bottom:12px"></div>
-          <div class="admin-actions admin-actions--end">
+          <div class="admin-actions admin-actions--end admin-settings-account-actions">
             <button type="button" id="settings-logout-btn"
               class="admin-button admin-button--secondary">Sign out</button>
           </div>
         </section>
+
+        <div class="admin-settings-footer-sync" aria-live="polite">
+          <span id="settings-last-synced" class="last-synced-label"></span>
+          <button class="sync-btn" id="settings-sync-btn" type="button" aria-label="Sync now">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
 
       </section>
 
