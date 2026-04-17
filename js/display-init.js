@@ -86,7 +86,8 @@
 
       try {
         const nowIso = new Date().toISOString();
-        const { data, error } = await client
+        console.log("[display pairing] querying code", code);
+        const queryResponse = await client
           .from("display_pairings")
           .select("id, household_id, expires_at")
           .eq("code", code)
@@ -94,6 +95,8 @@
           .order("expires_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+        const { data, error, status } = queryResponse;
+        console.log("[display pairing] query response", { data, error, status });
 
         if (error) {
           setDisplayPairingError("Something went wrong pairing this display. Please try again.");
@@ -160,6 +163,8 @@
     function initDisplayMode() {
       displayApp.hidden = false;
       adminApp.hidden = true;
+      const pairingVersionEl = document.getElementById("display-pairing-version");
+      if (pairingVersionEl) pairingVersionEl.textContent = `v${VERSION}`;
       initDisplayPairingListeners();
 
       if (!getDisplayHouseholdId()) {

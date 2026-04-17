@@ -155,6 +155,20 @@
       font-weight: 700;
     }
 
+    .display-pairing-version {
+      margin-top: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      opacity: 0.62;
+      text-transform: none;
+    }
+
+    #display-app[data-display-state="pairing"] .household-name {
+      display: none;
+    }
+
     .progress-bar {
       position: relative;
       z-index: 2;
