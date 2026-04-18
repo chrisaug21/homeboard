@@ -94,10 +94,7 @@
       adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
       adminCurrentUser = null;
       applyAdminTheme("warm");
-      const mainContent = document.getElementById("admin-main-content");
-      const loginScreen = document.getElementById("admin-login-screen");
-      if (mainContent) mainContent.hidden = true;
-      if (loginScreen) loginScreen.hidden = false;
+      setAdminAuthView("login");
       const errorEl = document.getElementById("admin-login-error");
       if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
       const emailInput = document.getElementById("admin-login-email");
@@ -124,12 +121,9 @@
           await doAdminLogin(email, password);
           const emailInput = document.getElementById("admin-login-email");
           const passwordInput = document.getElementById("admin-login-password");
-          const loginScreen = document.getElementById("admin-login-screen");
-          const mainContent = document.getElementById("admin-main-content");
           if (emailInput) emailInput.value = "";
           if (passwordInput) passwordInput.value = "";
-          if (loginScreen) loginScreen.hidden = true;
-          if (mainContent) mainContent.hidden = false;
+          setAdminAuthView("main");
           startAdminUI();
         } catch (err) {
           console.error("Admin sign-in failed.", err);
@@ -153,6 +147,16 @@
         || err?.status === 400
         || err?.status === 401
         || err?.name === "AuthApiError";
+    }
+
+    function setAdminAuthView(view) {
+      const loadingScreen = document.getElementById("admin-auth-loading");
+      const loginScreen = document.getElementById("admin-login-screen");
+      const mainContent = document.getElementById("admin-main-content");
+
+      if (loadingScreen) loadingScreen.hidden = view !== "loading";
+      if (loginScreen) loginScreen.hidden = view !== "login";
+      if (mainContent) mainContent.hidden = view !== "main";
     }
     // ── End auth ─────────────────────────────────────────────────
 
@@ -1117,24 +1121,32 @@
       document.body.classList.add("admin-mode");
       displayApp.hidden = true;
       adminApp.hidden = false;
+      setAdminAuthView("loading");
       initLoginFormListeners();
 
       const session = await checkAdminAuthSession();
       if (!session) {
-        return; // login screen is already visible by default
+        setAdminAuthView("login");
+        return;
       }
 
+      const client = getSupabaseClient();
       const userRow = await lookupAdminUserRow(session.user.id);
-      if (userRow && userRow.household_id) {
-        adminCurrentHouseholdId = userRow.household_id;
-        adminCurrentUser = buildAdminCurrentUser(session.user.id, userRow);
+      if (!userRow?.household_id) {
+        if (client) {
+          try {
+            await client.auth.signOut();
+          } catch {}
+        }
+        adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
+        adminCurrentUser = null;
+        setAdminAuthView("login");
+        return;
       }
 
-      const loginScreen = document.getElementById("admin-login-screen");
-      const mainContent = document.getElementById("admin-main-content");
-      if (loginScreen) loginScreen.hidden = true;
-      if (mainContent) mainContent.hidden = false;
-
+      adminCurrentHouseholdId = userRow.household_id;
+      adminCurrentUser = buildAdminCurrentUser(session.user.id, userRow);
+      setAdminAuthView("main");
       startAdminUI();
     }
 
@@ -1198,12 +1210,18 @@
       loadAdminTodos();
       loadAdminMealPlan();
       initSettingsListeners();
+      if (typeof initAdminOnboarding === "function") {
+        initAdminOnboarding();
+      }
       ensureAdminHouseholdConfigLoaded()
         .then(() => {
           markAdminLoadSynced();
           loadAdminTodos();
           if (adminScreen === "settings") {
             loadAdminSettings();
+          }
+          if (typeof maybeAutoLaunchAdminOnboarding === "function") {
+            maybeAutoLaunchAdminOnboarding();
           }
         })
         .catch(() => showToast(friendlyLoadMessage()));

@@ -190,3 +190,7 @@ Functions handle JWT decoding directly in their own code using the `decodeJwtFro
 - **Household members → users table**: `display_settings.members` currently stores the member list. Migrate to the `users` table when multi-user auth is implemented.
 - **Multiple Google Calendars**: the Integrations settings panel has a code comment noting this. When implementing, each calendar will need an ID and an enabled toggle stored in `display_settings`.
 - **Recurring to-dos**: planned for a future PR; requires a schema change to the `todos` table.
+
+## Pull Request drafts
+
+Always open new PRs as drafts (`--draft` flag with `gh pr create`). This prevents CodeRabbit from auto-triggering a review before the work is ready. Only mark a PR ready for review when explicitly instructed to do so.

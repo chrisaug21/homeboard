@@ -351,8 +351,25 @@
 
   <div class="admin-shell" id="admin-app" hidden>
 
+    <div class="admin-auth-loading" id="admin-auth-loading">
+      <div class="admin-login-card admin-auth-loading-card" aria-live="polite">
+        <div class="admin-login-brand">
+          <img class="admin-login-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
+        </div>
+        <div class="admin-auth-loading-copy">
+          <div class="admin-auth-loading-spinner" aria-hidden="true"></div>
+          <p class="admin-auth-loading-label">Opening your admin…</p>
+        </div>
+        <div class="admin-auth-loading-skeleton" aria-hidden="true">
+          <span class="admin-auth-loading-bar admin-auth-loading-bar--wide"></span>
+          <span class="admin-auth-loading-bar"></span>
+          <span class="admin-auth-loading-bar admin-auth-loading-bar--short"></span>
+        </div>
+      </div>
+    </div>
+
     <!-- Login screen — shown when no auth session -->
-    <div class="admin-login-screen" id="admin-login-screen">
+    <div class="admin-login-screen" id="admin-login-screen" hidden>
       <div class="admin-login-card">
         <div class="admin-login-brand">
           <img class="admin-login-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
@@ -500,6 +517,15 @@
                   placeholder="Member name" autocomplete="off">
                 <button type="button" id="settings-member-add-btn"
                   class="admin-button admin-button--primary">Save</button>
+              </div>
+            </div>
+
+            <div class="admin-settings-subsection">
+              <div class="admin-settings-subsection-label">Help</div>
+              <p class="admin-field-hint">Walk through the setup steps again anytime.</p>
+              <div class="admin-actions admin-actions--end">
+                <button type="button" id="settings-onboarding-tour-btn"
+                  class="admin-button admin-button--secondary">Relaunch intro tour</button>
               </div>
             </div>
           </div>
@@ -735,6 +761,21 @@
     </div><!-- /#admin-main-content -->
   </div><!-- /#admin-app -->
 
+  <div class="admin-onboarding" id="admin-onboarding" hidden role="dialog" aria-modal="true" aria-labelledby="admin-onboarding-title">
+    <div class="admin-onboarding-backdrop" aria-hidden="true"></div>
+    <div class="admin-onboarding-shell">
+      <section class="admin-onboarding-card" aria-live="polite">
+        <div class="admin-onboarding-header">
+          <p class="admin-onboarding-step" id="admin-onboarding-step-label">Step 1 of 3</p>
+          <button class="admin-modal-close admin-onboarding-close" type="button" id="admin-onboarding-close" aria-label="Close" hidden>
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="admin-onboarding-body" id="admin-onboarding-body"></div>
+      </section>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <div class="admin-modal" id="admin-modal" hidden role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
@@ -803,5 +844,6 @@
   <script src="js/admin-rsvp.js" defer></script>
   <script src="js/admin-settings.js" defer></script>
   <script src="js/admin-core.js" defer></script>
+  <script src="js/admin-onboarding.js" defer></script>
 </body>
 </html>
