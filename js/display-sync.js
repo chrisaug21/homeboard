@@ -31,9 +31,11 @@
           fetchDisplayScorecards()
         ]);
 
-        cachedDisplayHouseholdMembers = newMembers;
-        if (cachedDisplayTodos !== null) {
-          renderTodoItems(cachedDisplayTodos);
+        if (newMembers !== null) {
+          cachedDisplayHouseholdMembers = newMembers;
+          if (cachedDisplayTodos !== null) {
+            renderTodoItems(cachedDisplayTodos);
+          }
         }
 
         if (newConfig) {
