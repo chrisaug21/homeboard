@@ -422,7 +422,18 @@
         if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
           renderRsvpBoardWithData();
         }
-        Promise.allSettled([fetchTodos(), fetchMeals(), fetchWeeklyNote()]).then(([todosResult, mealsResult, noteResult]) => {
+        Promise.allSettled([fetchTodos(), fetchMeals(), fetchWeeklyNote(), fetchHouseholdMembers()]).then(([todosResult, mealsResult, noteResult, membersResult]) => {
+          if (membersResult.status === "fulfilled") {
+            cachedDisplayHouseholdMembers = membersResult.value;
+            if (cachedDisplayTodos !== null) {
+              renderTodoItems(cachedDisplayTodos);
+            }
+          } else {
+            cachedDisplayHouseholdMembers = null;
+            if (cachedDisplayTodos !== null) {
+              renderTodoItems(cachedDisplayTodos);
+            }
+          }
           if (todosResult.status === "fulfilled" && todosResult.value !== null) renderTodoItems(todosResult.value);
           if (noteResult.status === "fulfilled" && noteResult.value !== null) lastWeeklyNote = noteResult.value;
           if (mealsResult.status === "fulfilled" && mealsResult.value !== null) renderMeals(mealsResult.value, lastWeeklyNote);

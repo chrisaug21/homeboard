@@ -345,36 +345,6 @@
       window.history.replaceState(window.history.state, "", nextPath);
     }
 
-    function buildNextDisplaySettingsMembers(namesToEnsure) {
-      const existingMembers = Array.isArray(adminHouseholdSettings?.display_settings?.members)
-        ? adminHouseholdSettings.display_settings.members
-            .map((member) => ({
-              name: String(member?.name || "").trim(),
-              color: String(member?.color || "").trim()
-            }))
-            .filter((member) => member.name)
-        : [];
-      const nextMembers = [...existingMembers];
-      const existingNames = new Set(nextMembers.map((member) => member.name.toLowerCase()));
-
-      namesToEnsure.forEach((name) => {
-        const safeName = String(name || "").trim();
-        if (!safeName || existingNames.has(safeName.toLowerCase())) {
-          return;
-        }
-        nextMembers.push({
-          name: safeName,
-          color: PERSON_COLOR_PALETTE[nextMembers.length % PERSON_COLOR_PALETTE.length]
-        });
-        existingNames.add(safeName.toLowerCase());
-      });
-
-      return {
-        ...adminHouseholdSettings.display_settings,
-        members: nextMembers
-      };
-    }
-
     function collectAdminOnboardingRows() {
       const rows = (adminOnboardingState.memberRows || []).map((row) => ({
         ...row,
@@ -429,7 +399,7 @@
       try {
         const { data: existingMembers, error: existingMembersError } = await client
           .from("household_members")
-          .select("display_name")
+          .select("id, display_name, color, is_active, created_at")
           .eq("household_id", getAdminHouseholdId());
 
         if (existingMembersError) {
@@ -437,24 +407,55 @@
           return;
         }
 
-        const existingMemberNames = new Set(
-          (existingMembers || [])
-            .map((member) => String(member?.display_name || "").trim().toLowerCase())
-            .filter(Boolean)
+        const normalizedExistingMembers = normalizeHouseholdMembers(existingMembers);
+        const activeExistingMembers = normalizedExistingMembers.filter((member) => member.is_active);
+        const existingMemberNames = new Set(activeExistingMembers.map((member) => member.display_name.toLowerCase()));
+        const inactiveMembersByName = new Map(
+          normalizedExistingMembers
+            .filter((member) => !member.is_active)
+            .map((member) => [member.display_name.toLowerCase(), member])
         );
+        const namesToReactivate = Array.from(new Set(
+          rows
+            .filter((row) => !row.existing)
+            .map((row) => row.name)
+            .filter((name) => inactiveMembersByName.has(name.toLowerCase()))
+        ));
 
-        const names = rows.map((row) => row.name);
+        if (namesToReactivate.length > 0) {
+          const memberIdsToReactivate = namesToReactivate
+            .map((name) => inactiveMembersByName.get(name.toLowerCase())?.id || "")
+            .filter(Boolean);
+          const { error: reactivateError } = await client
+            .from("household_members")
+            .update({ is_active: true })
+            .in("id", memberIdsToReactivate)
+            .eq("household_id", getAdminHouseholdId());
+
+          if (reactivateError) {
+            adminOnboardingState.error = friendlySaveMessage();
+            return;
+          }
+        }
+
         const additionalNames = rows
           .filter((row) => !row.existing)
           .map((row) => row.name)
-          .filter((name) => !existingMemberNames.has(name.toLowerCase()));
+          .filter((name) => !existingMemberNames.has(name.toLowerCase()))
+          .filter((name) => !inactiveMembersByName.has(name.toLowerCase()));
         if (additionalNames.length > 0) {
+          const membersForColorSelection = [...normalizedExistingMembers];
           const { error: insertError } = await client
             .from("household_members")
-            .insert(additionalNames.map((name) => ({
-              household_id: getAdminHouseholdId(),
-              display_name: name
-            })));
+            .insert(additionalNames.map((name) => {
+              const color = getNextHouseholdMemberColor(membersForColorSelection);
+              membersForColorSelection.push({ display_name: name, color });
+              return {
+                household_id: getAdminHouseholdId(),
+                display_name: name,
+                color
+              };
+            }));
 
           if (insertError) {
             adminOnboardingState.error = friendlySaveMessage();
@@ -462,22 +463,20 @@
           }
         }
 
-        const nextDisplaySettings = buildNextDisplaySettingsMembers(names);
-        const { error: householdError } = await client
-          .from("households")
-          .update({ display_settings: nextDisplaySettings })
-          .eq("id", getAdminHouseholdId());
-
-        if (householdError) {
-          adminOnboardingState.error = friendlySaveMessage();
-          return;
-        }
-
         adminOnboardingState.memberRows = rows.map((row) => ({
           ...row,
           existing: true
         }));
-        adminHouseholdSettings.display_settings = nextDisplaySettings;
+        const cachedMembersById = new Map(
+          getAdminHouseholdMembers()
+            .filter((member) => member?.has_linked_login === true)
+            .map((member) => [String(member.id || "").trim(), true])
+        );
+        const refreshedMembers = await fetchHouseholdMembers(getAdminHouseholdId());
+        adminHouseholdSettings.household_members = (refreshedMembers || getAdminHouseholdMembers()).map((member) => ({
+          ...member,
+          has_linked_login: member?.has_linked_login === true || cachedMembersById.has(String(member.id || "").trim())
+        }));
         adminOnboardingState.step = 2;
         adminOnboardingState.error = "";
         if (typeof loadAdminSettings === "function" && adminScreen === "settings") {

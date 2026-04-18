@@ -4,6 +4,7 @@
         id: todo.id,
         title: todo.title || "Untitled task",
         assignee: todo.assignee || "",
+        assigneeMemberId: todo.assignee_member_id || "",
         description: description || null,
         dueDate: todo.due_date || null,
         duePill: getTodoDuePill(todo.due_date),
@@ -529,7 +530,9 @@
         const pill = todo.duePill
           ? `<span class="todo-due-pill ${escapeHtml(todo.duePill.cssClass)}">${escapeHtml(todo.duePill.label)}</span>`
           : "";
-        const assignee = todo.assignee ? getAssigneeMarkup(todo.assignee) : "";
+        const assignee = (todo.assignee || todo.assigneeMemberId)
+          ? getAssigneeMarkup(todo.assignee, todo.assigneeMemberId)
+          : "";
         const overdueClass = todo.isOverdue ? " todo-card--overdue" : "";
         const infoIcon = todo.description
           ? `<span class="todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>`
@@ -636,13 +639,14 @@
             household_id: getDisplayHouseholdId(),
             title: todo.title,
             description: todo.description || null,
+            assignee_member_id: todo.assigneeMemberId || null,
             assignee: todo.assignee || null,
             recurrence_type: todo.recurrenceType,
             recurrence_config: todo.recurrenceConfig,
             recurrence_template_id: templateId,
             due_date: nextDueDate
           })
-          .select("id, title, description, due_date, assignee, recurrence_type, recurrence_config, recurrence_template_id")
+          .select("id, title, description, due_date, assignee, assignee_member_id, recurrence_type, recurrence_config, recurrence_template_id")
           .single();
 
         if (insertError) {
@@ -683,7 +687,7 @@
 
       const { data, error } = await client
         .from("todos")
-        .select("id, title, description, due_date, assignee, archived_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
+        .select("id, title, description, due_date, assignee, assignee_member_id, archived_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
         .eq("household_id", getDisplayHouseholdId())
         .is("archived_at", null)
         .is("deleted_at", null)

@@ -24,11 +24,19 @@
         if (remoteMeals !== null) renderMeals(remoteMeals, weeklyNote || "");
 
         // Re-fetch calendar (wide fetch refreshes countdowns too)
-        const [newConfig, newSupabaseCountdowns, newScorecards] = await Promise.all([
+        const [newConfig, newMembers, newSupabaseCountdowns, newScorecards] = await Promise.all([
           fetchHouseholdConfig(),
+          fetchHouseholdMembers(),
           fetchCountdowns(),
           fetchDisplayScorecards()
         ]);
+
+        if (newMembers !== null) {
+          cachedDisplayHouseholdMembers = newMembers;
+          if (cachedDisplayTodos !== null) {
+            renderTodoItems(cachedDisplayTodos);
+          }
+        }
 
         if (newConfig) {
           cachedHouseholdConfig = newConfig;

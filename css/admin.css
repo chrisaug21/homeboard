@@ -2348,6 +2348,10 @@
       min-height: 20px;
     }
 
+    #admin-screen-settings {
+      padding-bottom: calc(56px + env(safe-area-inset-bottom));
+    }
+
     .admin-settings-footer-sync .last-synced-label {
       font-size: 0.72rem;
       opacity: 0.66;

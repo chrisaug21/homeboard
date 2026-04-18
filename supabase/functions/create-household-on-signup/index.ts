@@ -151,6 +151,7 @@ Deno.serve(async (request) => {
     .insert({
       household_id: household.id,
       display_name: displayName,
+      color: "#2563eb",
     })
     .select("id")
     .single();

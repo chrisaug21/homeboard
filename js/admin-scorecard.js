@@ -401,14 +401,12 @@
     }
 
     function getDefaultScorecardPlayers() {
-      const members = Array.isArray(adminHouseholdSettings?.display_settings?.members)
-        ? adminHouseholdSettings.display_settings.members.filter((member) => member && member.name)
-        : [];
+      const members = getAdminHouseholdMembers();
       if (members.length) {
         return Array.from({ length: 2 }, (_, index) => {
           const member = members[index];
           return {
-            name: member?.name || "",
+            name: member?.display_name || "",
             color: member?.color || SCORECARD_PLAYER_COLOR_PALETTE[index % SCORECARD_PLAYER_COLOR_PALETTE.length]
           };
         });
