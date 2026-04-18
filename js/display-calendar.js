@@ -361,12 +361,14 @@
       markPending("calendar");
       markPending("countdowns");
 
-      const [householdConfig, supabaseCountdowns] = await Promise.all([
+      const [householdConfig, householdMembers, supabaseCountdowns] = await Promise.all([
         fetchHouseholdConfig(),
+        fetchHouseholdMembers(),
         fetchCountdowns()
       ]);
 
       cachedHouseholdConfig = householdConfig;
+      cachedDisplayHouseholdMembers = householdMembers || [];
       cachedSupabaseCountdowns = supabaseCountdowns;
 
       updateHouseholdName(householdConfig);

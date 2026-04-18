@@ -34,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.20";
+    const VERSION = "2.0.21";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -245,6 +245,68 @@
       );
 
       return String(match?.color || "").trim();
+    }
+
+    function normalizeHouseholdMembers(members) {
+      if (!Array.isArray(members)) {
+        return [];
+      }
+
+      return members
+        .map((member) => ({
+          id: String(member?.id || "").trim(),
+          display_name: String(member?.display_name || member?.name || "").trim(),
+          color: String(member?.color || "").trim(),
+          is_active: member?.is_active !== false,
+          has_linked_login: member?.has_linked_login === true
+        }))
+        .filter((member) => member.display_name);
+    }
+
+    function getHouseholdMemberById(members, memberId) {
+      const normalizedMembers = normalizeHouseholdMembers(members);
+      const normalizedId = String(memberId || "").trim();
+      if (!normalizedId) {
+        return null;
+      }
+
+      return normalizedMembers.find((member) => member.id === normalizedId) || null;
+    }
+
+    function getHouseholdMemberByName(members, name) {
+      const normalizedMembers = normalizeHouseholdMembers(members);
+      const normalizedName = String(name || "").trim().toLowerCase();
+      if (!normalizedName) {
+        return null;
+      }
+
+      return normalizedMembers.find((member) => member.display_name.toLowerCase() === normalizedName) || null;
+    }
+
+    function resolveTodoAssignee(members, assigneeMemberId, fallbackAssignee = "") {
+      const memberMatch = getHouseholdMemberById(members, assigneeMemberId)
+        || getHouseholdMemberByName(members, fallbackAssignee);
+
+      if (memberMatch) {
+        return {
+          id: memberMatch.id,
+          name: memberMatch.display_name,
+          color: memberMatch.color,
+          hasLinkedLogin: memberMatch.has_linked_login === true
+        };
+      }
+
+      const fallbackName = String(fallbackAssignee || "").trim();
+      if (!fallbackName) {
+        return null;
+      }
+
+      return {
+        id: "",
+        name: fallbackName,
+        color: "",
+        hasLinkedLogin: false
+      };
     }
 
     function formatLongDate(dateString) {
@@ -1543,6 +1605,32 @@
       }
 
       return data;
+    }
+
+    async function fetchHouseholdMembers(householdId = "") {
+      const client = getSupabaseClient();
+
+      if (!client) {
+        return null;
+      }
+
+      const id = String(householdId || (isAdminMode ? getAdminHouseholdId() : getDisplayHouseholdId()) || "").trim();
+      if (!id) {
+        return [];
+      }
+
+      const { data, error } = await client
+        .from("household_members")
+        .select("id, display_name, color, is_active, created_at")
+        .eq("household_id", id)
+        .eq("is_active", true)
+        .order("display_name", { ascending: true });
+
+      if (error || !Array.isArray(data)) {
+        return null;
+      }
+
+      return normalizeHouseholdMembers(data);
     }
 
     async function fetchGoogleCalendarEvents(calendarId, apiKey, timeMin, timeMax, maxResults = "250") {

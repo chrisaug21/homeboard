@@ -178,10 +178,10 @@ Core tables used by Homeboard:
 
 | Table | Purpose |
 |---|---|
-| `households` | household-level settings such as assistant name, color scheme, Google Calendar ID, and `display_settings` |
-| `household_members` | canonical list of household people created during signup and onboarding |
+| `households` | household-level settings such as assistant name, color scheme, Google Calendar ID, and `display_settings` (member data here is legacy fallback only) |
+| `household_members` | canonical list of household people, including `display_name`, `color`, and active status |
 | `users` | maps authenticated Supabase users to a household and role, and stores personal admin settings such as `display_name` and `preferences.admin_theme` |
-| `todos` | household to-dos; never hard-deleted |
+| `todos` | household to-dos; never hard-deleted; assignees use `assignee_member_id` with legacy text fallback in `assignee` |
 | `meal_plan` | weekly meal entries |
 | `meal_plan_notes` | one note per household per week |
 | `countdowns` | countdown definitions and photo metadata |

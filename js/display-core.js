@@ -24,6 +24,7 @@
 
     let calendarEventsMap = new Map();
     let cachedHouseholdConfig = null;
+    let cachedDisplayHouseholdMembers = [];
     let cachedDisplayTodos = null;
     let cachedSupabaseCountdowns = null;
     let cachedCalendarCountdowns = [];
@@ -523,16 +524,29 @@
       `;
     }
 
-    function getAssigneeMarkup(assignee) {
-      const memberColor = getConfiguredMemberColor(cachedHouseholdConfig?.display_settings?.members, assignee);
+    function getDisplayHouseholdMembers() {
+      if (Array.isArray(cachedDisplayHouseholdMembers) && cachedDisplayHouseholdMembers.length > 0) {
+        return cachedDisplayHouseholdMembers;
+      }
+
+      return normalizeHouseholdMembers(cachedHouseholdConfig?.display_settings?.members || []);
+    }
+
+    function getAssigneeMarkup(assignee, assigneeMemberId = "") {
+      const resolvedAssignee = resolveTodoAssignee(getDisplayHouseholdMembers(), assigneeMemberId, assignee);
+      if (!resolvedAssignee?.name) {
+        return "";
+      }
+
+      const memberColor = String(resolvedAssignee.color || "").trim();
 
       if (!memberColor) {
-        return `<span class="todo-assignee todo-assignee--other">${escapeHtml(assignee)}</span>`;
+        return `<span class="todo-assignee todo-assignee--other">${escapeHtml(resolvedAssignee.name)}</span>`;
       }
 
       return `
         <span class="todo-assignee todo-assignee--custom" style="background:${escapeHtml(hexToRgba(memberColor, 0.16))};color:${escapeHtml(memberColor)}">
-          ${escapeHtml(assignee)}
+          ${escapeHtml(resolvedAssignee.name)}
         </span>
       `;
     }

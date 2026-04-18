@@ -234,6 +234,7 @@
       assistant_name: "",
       color_scheme: "warm",
       google_cal_id: "",
+      household_members: [],
       display_settings: {
         members: []
       }
@@ -368,16 +369,39 @@
       return "Something went wrong deleting this item. Please try again.";
     }
 
-    function buildAdminAssigneePill(name) {
-      const memberColor = getConfiguredMemberColor(adminHouseholdSettings?.display_settings?.members, name);
+    function getAdminHouseholdMembers() {
+      return Array.isArray(adminHouseholdSettings?.household_members)
+        ? adminHouseholdSettings.household_members
+        : [];
+    }
+
+    function getNextHouseholdMemberColor(members) {
+      const normalizedMembers = normalizeHouseholdMembers(members);
+      const usedColors = new Set(
+        normalizedMembers
+          .map((member) => String(member?.color || "").trim().toLowerCase())
+          .filter(Boolean)
+      );
+      const nextUnused = PERSON_COLOR_PALETTE.find((color) => !usedColors.has(color.toLowerCase()));
+      if (nextUnused) {
+        return nextUnused;
+      }
+
+      return PERSON_COLOR_PALETTE[normalizedMembers.length % PERSON_COLOR_PALETTE.length];
+    }
+
+    function buildAdminAssigneePill(name, memberId = "") {
+      const assignee = resolveTodoAssignee(getAdminHouseholdMembers(), memberId, name);
+      const memberColor = String(assignee?.color || "").trim();
+      const label = assignee?.name || String(name || "").trim() || "Unassigned";
 
       if (!memberColor) {
-        return `<span class="admin-pill">${escapeHtml(name)}</span>`;
+        return `<span class="admin-pill">${escapeHtml(label)}</span>`;
       }
 
       return `
         <span class="admin-pill admin-pill--member" style="background:${escapeHtml(hexToRgba(memberColor, 0.16))};color:${escapeHtml(memberColor)}">
-          ${escapeHtml(name)}
+          ${escapeHtml(label)}
         </span>
       `;
     }

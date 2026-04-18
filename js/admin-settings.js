@@ -7,30 +7,50 @@
         throw new Error("Supabase client unavailable");
       }
 
-      const { data, error } = await client
-        .from("households")
-        .select("assistant_name, color_scheme, google_cal_id, display_settings")
-        .eq("id", getAdminHouseholdId())
-        .single();
+      const householdId = getAdminHouseholdId();
+      const [
+        { data, error },
+        { data: memberRows, error: memberError },
+        { data: userRows, error: userError }
+      ] = await Promise.all([
+        client
+          .from("households")
+          .select("assistant_name, color_scheme, google_cal_id, display_settings")
+          .eq("id", householdId)
+          .single(),
+        client
+          .from("household_members")
+          .select("id, display_name, color, is_active, created_at")
+          .eq("household_id", householdId)
+          .eq("is_active", true)
+          .order("display_name", { ascending: true }),
+        client
+          .from("users")
+          .select("member_id")
+          .eq("household_id", householdId)
+      ]);
 
-      if (error || !data) {
+      if (error || !data || memberError || userError) {
         throw new Error("Failed to load household config");
       }
 
       const ds = normalizeDisplaySettings(data.display_settings);
-      ds.members = Array.isArray(data.display_settings?.members)
-        ? data.display_settings.members
-          .map((member) => ({
-            name: String(member?.name || "").trim(),
-            color: String(member?.color || "").trim()
-          }))
-          .filter((member) => member.name)
-        : [];
+      ds.members = Array.isArray(data.display_settings?.members) ? data.display_settings.members : [];
+      const linkedMemberIds = new Set(
+        Array.isArray(userRows)
+          ? userRows.map((row) => String(row?.member_id || "").trim()).filter(Boolean)
+          : []
+      );
+      const householdMembers = normalizeHouseholdMembers(memberRows).map((member) => ({
+        ...member,
+        has_linked_login: linkedMemberIds.has(member.id)
+      }));
 
       adminHouseholdSettings = {
         assistant_name: data.assistant_name || "",
         color_scheme: data.color_scheme || "warm",
         google_cal_id: data.google_cal_id || "",
+        household_members: householdMembers,
         display_settings: ds
       };
 
@@ -144,7 +164,7 @@
       list.innerHTML = members.map((m, i) => `
         ${pendingMemberRemovalIndex === i ? `
           <div class="admin-settings-member-row admin-settings-member-row--confirm" data-member-index="${i}">
-            <span class="admin-settings-member-confirm-text">Remove ${escapeHtml(m.name)}?</span>
+            <span class="admin-settings-member-confirm-text">Remove ${escapeHtml(m.display_name)}?</span>
             <div class="admin-settings-member-actions">
               <button type="button" class="admin-button admin-button--danger admin-button--small" data-member-confirm="${i}"${membersSavePending ? " disabled" : ""}>Confirm</button>
               <button type="button" class="admin-button admin-button--secondary admin-button--small" data-member-cancel="${i}"${membersSavePending ? " disabled" : ""}>Cancel</button>
@@ -153,10 +173,13 @@
         ` : `
           <div class="admin-settings-member-row" data-member-index="${i}">
             <span class="admin-settings-member-color" style="background:${escapeHtml(m.color || "#999")}"></span>
-            <span class="admin-settings-member-name">${escapeHtml(m.name)}</span>
-            <button type="button" class="admin-settings-member-remove" data-member-remove="${i}" aria-label="Remove ${escapeHtml(m.name)}"${membersSavePending ? " disabled" : ""}>
-              <i data-lucide="x"></i>
-            </button>
+            <span class="admin-settings-member-name">${escapeHtml(m.display_name)}</span>
+            <div class="admin-settings-member-actions">
+              <span class="admin-pill${m.has_linked_login ? " admin-pill--member" : ""}">${m.has_linked_login ? "Has login" : "No login"}</span>
+              <button type="button" class="admin-settings-member-remove" data-member-remove="${i}" aria-label="Remove ${escapeHtml(m.display_name)}"${membersSavePending ? " disabled" : ""}>
+                <i data-lucide="x"></i>
+              </button>
+            </div>
           </div>
         `}
       `).join("");
@@ -245,7 +268,7 @@
       const screenOrder = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? ds.screen_order : configurableScreens);
       const timerIntervals = ds.timer_intervals || {};
       const upcomingDays = ds.upcoming_days || 5;
-      const members = Array.isArray(ds.members) ? ds.members : [];
+      const members = getAdminHouseholdMembers();
       const assistantInput = document.getElementById("settings-assistant-name");
       const memberInput = document.getElementById("settings-member-input");
       const calIdInput = document.getElementById("settings-google-cal-id");
@@ -354,7 +377,7 @@
       }
     }
 
-    async function persistMemberList(updatedMembers, successMessage) {
+    async function addHouseholdMember(displayName, successMessage) {
       const client = getSupabaseClient();
       if (!client) {
         showToast(friendlySaveMessage());
@@ -370,27 +393,30 @@
         addButton.disabled = true;
         addButton.textContent = "Saving\u2026";
       }
-      renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+      renderSettingsMembersList(getAdminHouseholdMembers());
 
       try {
-        const newDisplaySettings = {
-          ...adminHouseholdSettings.display_settings,
-          members: updatedMembers
-        };
-
-        const { error } = await client
-          .from("households")
-          .update({ display_settings: newDisplaySettings })
-          .eq("id", getAdminHouseholdId());
+        const { data, error } = await client
+          .from("household_members")
+          .insert({
+            household_id: getAdminHouseholdId(),
+            display_name: displayName,
+            color: getNextHouseholdMemberColor(getAdminHouseholdMembers())
+          })
+          .select("id, display_name, color, is_active, created_at")
+          .single();
 
         if (error) {
           showToast(friendlySaveMessage());
           return false;
         }
 
-        adminHouseholdSettings.display_settings = newDisplaySettings;
+        adminHouseholdSettings.household_members = normalizeHouseholdMembers([
+          ...getAdminHouseholdMembers(),
+          data
+        ]).sort((left, right) => left.display_name.localeCompare(right.display_name));
         pendingMemberRemovalIndex = null;
-        renderSettingsMembersList(updatedMembers);
+        renderSettingsMembersList(getAdminHouseholdMembers());
         showToast(successMessage);
         return true;
       } finally {
@@ -399,7 +425,43 @@
           addButton.disabled = false;
           addButton.textContent = "Save";
         }
-        renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+        renderSettingsMembersList(getAdminHouseholdMembers());
+      }
+    }
+
+    async function deactivateHouseholdMember(member, successMessage) {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return false;
+      }
+      if (membersSavePending || !adminHouseholdConfigLoaded || !member?.id) {
+        return false;
+      }
+
+      membersSavePending = true;
+      renderSettingsMembersList(getAdminHouseholdMembers());
+
+      try {
+        const { error } = await client
+          .from("household_members")
+          .update({ is_active: false })
+          .eq("id", member.id)
+          .eq("household_id", getAdminHouseholdId());
+
+        if (error) {
+          showToast(friendlySaveMessage());
+          return false;
+        }
+
+        adminHouseholdSettings.household_members = getAdminHouseholdMembers().filter((existingMember) => existingMember.id !== member.id);
+        pendingMemberRemovalIndex = null;
+        renderSettingsMembersList(getAdminHouseholdMembers());
+        showToast(successMessage);
+        return true;
+      } finally {
+        membersSavePending = false;
+        renderSettingsMembersList(getAdminHouseholdMembers());
       }
     }
 
@@ -655,14 +717,14 @@
       const removeBtn = event.target.closest("[data-member-remove]");
       if (removeBtn) {
         pendingMemberRemovalIndex = parseInt(removeBtn.getAttribute("data-member-remove"), 10);
-        renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+        renderSettingsMembersList(getAdminHouseholdMembers());
         return;
       }
 
       const cancelBtn = event.target.closest("[data-member-cancel]");
       if (cancelBtn) {
         pendingMemberRemovalIndex = null;
-        renderSettingsMembersList(adminHouseholdSettings.display_settings.members || []);
+        renderSettingsMembersList(getAdminHouseholdMembers());
         return;
       }
 
@@ -670,12 +732,12 @@
       if (!confirmBtn) return;
 
       const idx = parseInt(confirmBtn.getAttribute("data-member-confirm"), 10);
-      const members = adminHouseholdSettings.display_settings.members || [];
-      if (!members[idx]) {
+      const members = getAdminHouseholdMembers();
+      const member = members[idx];
+      if (!member) {
         return;
       }
-      const updated = members.filter((_, i) => i !== idx);
-      persistMemberList(updated, `${members[idx].name} removed.`);
+      deactivateHouseholdMember(member, `${member.display_name} removed.`);
     }
 
     async function handleSettingsMemberAdd() {
@@ -684,15 +746,13 @@
       const name = input.value.trim();
       if (!name) return;
 
-      const members = adminHouseholdSettings.display_settings.members || [];
-      if (members.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
+      const members = getAdminHouseholdMembers();
+      if (members.some((m) => m.display_name.toLowerCase() === name.toLowerCase())) {
         showToast(`"${name}" is already a member.`);
         return;
       }
 
-      const color = PERSON_COLOR_PALETTE[members.length % PERSON_COLOR_PALETTE.length];
-      const updated = [...members, { name, color }];
-      const didSave = await persistMemberList(updated, `${name} added.`);
+      const didSave = await addHouseholdMember(name, `${name} added.`);
       if (didSave) {
         input.value = "";
         input.focus();
