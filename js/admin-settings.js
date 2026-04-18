@@ -10,8 +10,7 @@
       const householdId = getAdminHouseholdId();
       const [
         { data, error },
-        { data: memberRows, error: memberError },
-        { data: userRows, error: userError }
+        { data: memberRows, error: memberError }
       ] = await Promise.all([
         client
           .from("households")
@@ -23,25 +22,37 @@
           .select("id, display_name, color, is_active, created_at")
           .eq("household_id", householdId)
           .eq("is_active", true)
-          .order("display_name", { ascending: true }),
-        client
-          .from("users")
-          .select("member_id")
-          .eq("household_id", householdId)
+          .order("display_name", { ascending: true })
       ]);
 
-      if (error || !data || memberError || userError) {
+      if (error || !data || memberError) {
         throw new Error("Failed to load household config");
       }
 
       const ds = normalizeDisplaySettings(data.display_settings);
       ds.members = Array.isArray(data.display_settings?.members) ? data.display_settings.members : [];
-      const linkedMemberIds = new Set(
-        Array.isArray(userRows)
-          ? userRows.map((row) => String(row?.member_id || "").trim()).filter(Boolean)
-          : []
-      );
-      const householdMembers = normalizeHouseholdMembers(memberRows).map((member) => ({
+      const normalizedMembers = normalizeHouseholdMembers(memberRows);
+      const memberIds = normalizedMembers.map((member) => member.id).filter(Boolean);
+      let linkedMemberIds = new Set();
+
+      if (memberIds.length) {
+        const { data: userRows, error: userError } = await client
+          .from("users")
+          .select("member_id")
+          .in("member_id", memberIds);
+
+        if (userError) {
+          throw new Error("Failed to load household config");
+        }
+
+        linkedMemberIds = new Set(
+          Array.isArray(userRows)
+            ? userRows.map((row) => String(row?.member_id || "").trim()).filter(Boolean)
+            : []
+        );
+      }
+
+      const householdMembers = normalizedMembers.map((member) => ({
         ...member,
         has_linked_login: linkedMemberIds.has(member.id)
       }));
@@ -612,6 +623,15 @@
         if (error || !data) {
           showToast(friendlySaveMessage());
         } else {
+          if (adminCurrentUser?.member_id) {
+            try {
+              await client
+                .from("household_members")
+                .update({ display_name: nextDisplayName })
+                .eq("id", adminCurrentUser.member_id);
+            } catch {}
+          }
+
           adminCurrentUser = {
             ...adminCurrentUser,
             displayName: data.display_name || "",

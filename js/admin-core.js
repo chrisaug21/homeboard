@@ -35,7 +35,7 @@
       try {
         const { data, error } = await client
           .from("users")
-          .select("household_id, display_name, preferences")
+          .select("household_id, display_name, preferences, member_id")
           .eq("id", authUserId)
           .single();
         if (error || !data) return null;
@@ -55,6 +55,7 @@
         id: authUserId,
         displayName: userRow?.display_name || "",
         householdId: userRow?.household_id || DISPLAY_HOUSEHOLD_ID,
+        member_id: String(userRow?.member_id || "").trim(),
         preferences: {
           ...preferences,
           admin_theme: adminTheme
