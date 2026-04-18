@@ -163,3 +163,7 @@ All Edge Functions on this project must be deployed with `verify_jwt = false`.
 This project uses ES256 asymmetric JWT signing. Supabase's built-in JWT verifier only supports HS256 and will reject all requests with `UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM` if `verify_jwt = true`.
 
 Functions handle JWT decoding directly in their own code using the `decodeJwtFromHeader` pattern. Do not deploy any Edge Function on this project with `verify_jwt = true`. Each function's directory should contain a `config.toml` with `verify_jwt = false`.
+
+## Pull Request drafts
+
+Always open new PRs as drafts (`--draft` flag with `gh pr create`). This prevents CodeRabbit from auto-triggering a review before the work is ready. Only mark a PR ready for review when explicitly instructed to do so.
