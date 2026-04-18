@@ -79,21 +79,16 @@
 
     .admin-login-brand {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
-      font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--ink);
+      justify-content: center;
     }
 
-    .admin-login-brand svg {
-      width: 20px;
-      height: 20px;
-      color: var(--color-accent);
-      flex-shrink: 0;
+    .admin-login-logo {
+      display: block;
+      width: 160px;
+      max-width: 100%;
+      height: auto;
+      opacity: 0.92;
+      filter: brightness(0.97);
     }
 
     .signup-copy {
@@ -223,8 +218,7 @@
   <main class="signup-screen">
     <section class="signup-card" aria-labelledby="signup-title">
       <div class="admin-login-brand" aria-label="Homeboard">
-        <i data-lucide="sliders-horizontal"></i>
-        <span>Homeboard</span>
+        <img class="admin-login-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
       </div>
       <div class="signup-copy">
         <h1 class="signup-title" id="signup-title">Create your household</h1>

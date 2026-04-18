@@ -44,20 +44,24 @@
 
     .admin-login-brand {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
-      font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--ink);
+      justify-content: center;
     }
 
-    .admin-login-brand svg {
-      width: 20px;
-      height: 20px;
-      color: var(--color-accent);
+    .admin-login-logo {
+      display: block;
+      width: 160px;
+      max-width: 100%;
+      height: auto;
+      opacity: 0.92;
+      filter: brightness(0.97);
+    }
+
+    html[data-scheme="slate"] .admin-login-logo {
+      filter: none;
+    }
+
+    html[data-scheme="dark"] .admin-login-logo {
+      filter: saturate(0) brightness(0) invert(0.93) sepia(0.22) saturate(0.7) brightness(1.02);
     }
 
     #admin-login-form {
