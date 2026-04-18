@@ -29,6 +29,18 @@
       display: none !important;
     }
 
+    .admin-auth-loading {
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .admin-auth-loading[hidden] {
+      display: none !important;
+    }
+
     .admin-login-card {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -40,6 +52,12 @@
       flex-direction: column;
       gap: 24px;
       box-shadow: var(--shadow);
+    }
+
+    .admin-auth-loading-card {
+      align-items: center;
+      text-align: center;
+      max-width: 320px;
     }
 
     .admin-login-brand {
@@ -86,6 +104,57 @@
       margin-top: 4px;
     }
 
+    .admin-auth-loading-copy {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+    }
+
+    .admin-auth-loading-spinner {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 3px solid color-mix(in srgb, var(--color-accent-subtle) 70%, transparent);
+      border-top-color: var(--color-accent);
+      animation: admin-auth-spin 0.9s linear infinite;
+    }
+
+    .admin-auth-loading-label {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .admin-auth-loading-skeleton {
+      width: 100%;
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-auth-loading-bar {
+      display: block;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(
+        90deg,
+        rgba(124, 96, 69, 0.1) 0%,
+        rgba(124, 96, 69, 0.2) 50%,
+        rgba(124, 96, 69, 0.1) 100%
+      );
+      background-size: 220% 100%;
+      animation: admin-auth-shimmer 1.2s ease-in-out infinite;
+    }
+
+    .admin-auth-loading-bar--wide {
+      width: 100%;
+    }
+
+    .admin-auth-loading-bar--short {
+      width: 62%;
+      justify-self: center;
+    }
+
     .admin-auth-version {
       margin-top: 4px;
       font-size: 0.7rem;
@@ -97,6 +166,21 @@
       text-transform: none;
       pointer-events: none;
       user-select: none;
+    }
+
+    @keyframes admin-auth-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes admin-auth-shimmer {
+      0% {
+        background-position: 100% 0;
+      }
+      100% {
+        background-position: -100% 0;
+      }
     }
 
     .admin-header-bar {

@@ -228,11 +228,11 @@
         <ol class="admin-onboarding-instruction-list">
           <li class="admin-onboarding-instruction-item">
             <strong>Open Homeboard on your display device</strong>
-            <span>Navigate to <span class="admin-onboarding-inline-code">homeboard.chrisaug.com</span> on the tablet or screen you want to mount. It will show a 4-character pairing code.</span>
+            <span>Navigate to <span class="admin-onboarding-inline-code">homeboard.chrisaug.com</span> on the tablet or screen you want to mount. It will prompt you to enter a 4-character pairing code.</span>
           </li>
           <li class="admin-onboarding-instruction-item">
             <strong>Enter the code in Settings</strong>
-            <span>In your Admin, go to Settings &rarr; Display Setup and enter the code. Your display will pair instantly.</span>
+            <span>In your Admin, go to Settings &rarr; Display Setup to generate the 4-character code, then enter that code on your display device. Your display will pair instantly.</span>
           </li>
         </ol>
         <p class="admin-onboarding-note admin-onboarding-note--subtle">Don&apos;t have a display device set up yet? No problem — you can do this anytime from Settings.</p>

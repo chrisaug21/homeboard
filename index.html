@@ -351,8 +351,25 @@
 
   <div class="admin-shell" id="admin-app" hidden>
 
+    <div class="admin-auth-loading" id="admin-auth-loading">
+      <div class="admin-login-card admin-auth-loading-card" aria-live="polite">
+        <div class="admin-login-brand">
+          <img class="admin-login-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
+        </div>
+        <div class="admin-auth-loading-copy">
+          <div class="admin-auth-loading-spinner" aria-hidden="true"></div>
+          <p class="admin-auth-loading-label">Opening your admin…</p>
+        </div>
+        <div class="admin-auth-loading-skeleton" aria-hidden="true">
+          <span class="admin-auth-loading-bar admin-auth-loading-bar--wide"></span>
+          <span class="admin-auth-loading-bar"></span>
+          <span class="admin-auth-loading-bar admin-auth-loading-bar--short"></span>
+        </div>
+      </div>
+    </div>
+
     <!-- Login screen — shown when no auth session -->
-    <div class="admin-login-screen" id="admin-login-screen">
+    <div class="admin-login-screen" id="admin-login-screen" hidden>
       <div class="admin-login-card">
         <div class="admin-login-brand">
           <img class="admin-login-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
