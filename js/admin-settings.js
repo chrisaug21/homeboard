@@ -8,59 +8,30 @@
       }
 
       const householdId = getAdminHouseholdId();
-      const [
-        { data, error },
-        { data: memberRows, error: memberError }
-      ] = await Promise.all([
-        client
-          .from("households")
-          .select("assistant_name, color_scheme, google_cal_id, display_settings")
-          .eq("id", householdId)
-          .single(),
-        client
-          .from("household_members")
-          .select("id, display_name, color, is_active, created_at")
-          .eq("household_id", householdId)
-          .eq("is_active", true)
-          .order("display_name", { ascending: true })
-      ]);
+      const { data, error } = await client
+        .from("households")
+        .select("assistant_name, color_scheme, google_cal_id, display_settings")
+        .eq("id", householdId)
+        .single();
 
-      if (error || !data || memberError) {
+      if (error || !data) {
+        throw new Error("Failed to load household config");
+      }
+
+      const {
+        data: memberRows,
+        error: memberError
+      } = await client.rpc("get_household_members_with_login_status", {
+        target_household_id: householdId
+      });
+
+      if (memberError) {
         throw new Error("Failed to load household config");
       }
 
       const ds = normalizeDisplaySettings(data.display_settings);
       ds.members = Array.isArray(data.display_settings?.members) ? data.display_settings.members : [];
-      const normalizedMembers = normalizeHouseholdMembers(memberRows);
-      const memberIds = normalizedMembers.map((member) => member.id).filter(Boolean);
-      let linkedMemberIds = new Set();
-
-      if (memberIds.length) {
-        const { data: userRows, error: userError } = await client
-          .from("users")
-          .select("member_id")
-          .in("member_id", memberIds);
-
-        if (userError) {
-          throw new Error("Failed to load household config");
-        }
-
-        linkedMemberIds = new Set(
-          Array.isArray(userRows)
-            ? userRows.map((row) => String(row?.member_id || "").trim()).filter(Boolean)
-            : []
-        );
-      }
-
-      const currentUserMemberId = String(adminCurrentUser?.member_id || "").trim();
-      if (currentUserMemberId) {
-        linkedMemberIds.add(currentUserMemberId);
-      }
-
-      const householdMembers = normalizedMembers.map((member) => ({
-        ...member,
-        has_linked_login: linkedMemberIds.has(member.id)
-      }));
+      const householdMembers = normalizeHouseholdMembers(memberRows);
 
       adminHouseholdSettings = {
         assistant_name: data.assistant_name || "",
