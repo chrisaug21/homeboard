@@ -1198,12 +1198,18 @@
       loadAdminTodos();
       loadAdminMealPlan();
       initSettingsListeners();
+      if (typeof initAdminOnboarding === "function") {
+        initAdminOnboarding();
+      }
       ensureAdminHouseholdConfigLoaded()
         .then(() => {
           markAdminLoadSynced();
           loadAdminTodos();
           if (adminScreen === "settings") {
             loadAdminSettings();
+          }
+          if (typeof maybeAutoLaunchAdminOnboarding === "function") {
+            maybeAutoLaunchAdminOnboarding();
           }
         })
         .catch(() => showToast(friendlyLoadMessage()));

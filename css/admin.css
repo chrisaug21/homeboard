@@ -2279,6 +2279,303 @@
       margin-top: 10px;
     }
 
+    .admin-onboarding {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+    }
+
+    .admin-onboarding[hidden] {
+      display: none;
+    }
+
+    .admin-onboarding-backdrop {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(48, 38, 29, 0.08), rgba(48, 38, 29, 0.22)),
+        rgba(245, 240, 232, 0.82);
+      backdrop-filter: blur(16px);
+    }
+
+    .admin-onboarding-shell {
+      position: relative;
+      width: min(100%, 520px);
+      max-height: min(100%, 760px);
+      display: flex;
+    }
+
+    .admin-onboarding-card {
+      position: relative;
+      width: 100%;
+      display: grid;
+      gap: 20px;
+      padding: 24px;
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow);
+      overflow: hidden auto;
+    }
+
+    .admin-onboarding-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .admin-onboarding-step {
+      margin: 0;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .admin-onboarding-close {
+      margin: -6px -6px 0 0;
+      flex-shrink: 0;
+    }
+
+    .admin-onboarding-body {
+      display: grid;
+      gap: 18px;
+    }
+
+    .admin-onboarding-copy {
+      display: grid;
+      gap: 8px;
+    }
+
+    .admin-onboarding-title {
+      margin: 0;
+      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-size: clamp(1.7rem, 6vw, 2.2rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .admin-onboarding-note {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .admin-onboarding-members {
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-onboarding-member-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .admin-onboarding-member-row .admin-input {
+      min-height: 48px;
+    }
+
+    .admin-onboarding-member-row--locked {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .admin-onboarding-member-lock {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      padding: 0 14px;
+      border-radius: var(--button-radius);
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      min-height: 48px;
+    }
+
+    .admin-onboarding-link-button {
+      justify-self: flex-start;
+      border: none;
+      background: none;
+      padding: 0;
+      color: var(--color-accent);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .admin-onboarding-link-button:hover,
+    .admin-onboarding-link-button:focus-visible {
+      text-decoration: underline;
+    }
+
+    .admin-onboarding-theme-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .admin-onboarding-theme-card {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      text-align: left;
+      border-radius: var(--tag-radius);
+      border: 2px solid rgba(124, 96, 69, 0.12);
+      background: rgba(255, 255, 255, 0.74);
+      color: inherit;
+      cursor: pointer;
+      transition: border-color 120ms ease, transform 120ms ease, background-color 120ms ease;
+    }
+
+    .admin-onboarding-theme-card:hover,
+    .admin-onboarding-theme-card:focus-visible {
+      transform: translateY(-1px);
+    }
+
+    .admin-onboarding-theme-card:focus-visible {
+      outline: 3px solid rgba(180, 83, 9, 0.28);
+      outline-offset: 2px;
+    }
+
+    .admin-onboarding-theme-card.is-selected {
+      border-color: var(--color-accent);
+      background: color-mix(in srgb, var(--color-accent-subtle) 54%, transparent);
+    }
+
+    .admin-onboarding-theme-preview {
+      display: grid;
+      gap: 8px;
+      min-height: 88px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background: var(--onboarding-theme-bg);
+      color: var(--onboarding-theme-ink);
+    }
+
+    .admin-onboarding-theme-preview::before,
+    .admin-onboarding-theme-preview::after {
+      content: "";
+      border-radius: 999px;
+      background: currentColor;
+      opacity: 0.18;
+    }
+
+    .admin-onboarding-theme-preview::before {
+      width: 44px;
+      height: 10px;
+    }
+
+    .admin-onboarding-theme-preview::after {
+      width: 72px;
+      height: 10px;
+    }
+
+    .admin-onboarding-theme-card[data-theme="warm"] {
+      --onboarding-theme-bg: #f5f0e8;
+      --onboarding-theme-ink: #30261d;
+    }
+
+    .admin-onboarding-theme-card[data-theme="dark"] {
+      --onboarding-theme-bg: #241f1c;
+      --onboarding-theme-ink: #f7efe6;
+    }
+
+    .admin-onboarding-theme-card[data-theme="slate"] {
+      --onboarding-theme-bg: #475569;
+      --onboarding-theme-ink: #f8fafc;
+    }
+
+    .admin-onboarding-theme-name {
+      font-weight: 800;
+      font-size: 0.98rem;
+    }
+
+    .admin-onboarding-feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .admin-onboarding-feature-card {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: var(--tag-radius);
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(124, 96, 69, 0.12);
+    }
+
+    .admin-onboarding-feature-icon {
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--button-radius);
+      background: color-mix(in srgb, var(--color-accent-subtle) 64%, transparent);
+      color: var(--color-accent);
+    }
+
+    .admin-onboarding-feature-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .admin-onboarding-feature-title {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .admin-onboarding-feature-copy {
+      margin: 0;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .admin-onboarding-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .admin-onboarding-actions .admin-button {
+      min-height: 46px;
+    }
+
+    .admin-onboarding-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .admin-onboarding-error {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: var(--button-radius);
+      background: rgba(166, 76, 99, 0.12);
+      border: 1px solid rgba(166, 76, 99, 0.2);
+      color: var(--rose);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
     /* End-aligned actions row */
     .admin-actions--end {
       justify-content: flex-end;
@@ -2302,6 +2599,36 @@
       .admin-settings-footer-sync {
         gap: 8px;
       }
+
+      .admin-onboarding {
+        padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+      }
+
+      .admin-onboarding-card {
+        padding: 20px 18px 18px;
+      }
+
+      .admin-onboarding-theme-grid,
+      .admin-onboarding-feature-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-onboarding-actions,
+      .admin-onboarding-actions-group {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+
+      .admin-onboarding-actions .admin-button,
+      .admin-onboarding-actions-group .admin-button {
+        flex: 1 1 0;
+      }
+
+      .admin-onboarding-actions .admin-button:only-child,
+      .admin-onboarding-actions-group .admin-button:only-child {
+        width: 100%;
+        flex-basis: 100%;
+      }
     }
 
     html[data-scheme="dark"] .admin-header-bar,
@@ -2317,6 +2644,34 @@
     html[data-scheme="dark"] .admin-display-pairing-card {
       background: rgba(255, 255, 255, 0.06);
       border-color: rgba(255, 240, 220, 0.11);
+    }
+
+    html[data-scheme="dark"] .admin-onboarding-backdrop {
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.46)),
+        rgba(23, 20, 15, 0.74);
+    }
+
+    html[data-scheme="dark"] .admin-onboarding-card,
+    html[data-scheme="dark"] .admin-onboarding-feature-card,
+    html[data-scheme="dark"] .admin-onboarding-theme-card,
+    html[data-scheme="dark"] .admin-onboarding-member-lock {
+      background: rgba(36, 31, 28, 0.94);
+      border-color: rgba(255, 240, 220, 0.11);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+    }
+
+    html[data-scheme="dark"] .admin-onboarding-title,
+    html[data-scheme="dark"] .admin-onboarding-theme-name,
+    html[data-scheme="dark"] .admin-onboarding-feature-title {
+      color: var(--ink);
+    }
+
+    html[data-scheme="dark"] .admin-onboarding-note,
+    html[data-scheme="dark"] .admin-onboarding-step,
+    html[data-scheme="dark"] .admin-onboarding-feature-copy,
+    html[data-scheme="dark"] .admin-onboarding-member-lock {
+      color: #cbbeb3;
     }
 
     html[data-scheme="dark"] .admin-header-brand {

@@ -57,6 +57,7 @@ Signup mode is public and uses invite codes to create a new household.
 - it calls the `create-household-on-signup` Edge Function with the new session access token
 - after setup succeeds, it increments `invite_codes.use_count`
 - the user is redirected into `/admin?onboarding=true`
+- the first admin session opens a 3-step onboarding overlay that adds household members, picks a display theme, and marks `users.preferences.onboarding_complete`
 
 ### Display mode
 
@@ -115,6 +116,7 @@ Display screens rotate automatically using timers from `display_settings.timer_i
 - manage weekly meals and meal notes
 - manage countdowns and countdown images
 - manage display settings
+- run or relaunch the onboarding intro tour from Settings
 - generate display pairing codes
 - manage RSVP review and guest list workflows
 - create and run scorecards
@@ -177,6 +179,7 @@ Core tables used by Homeboard:
 | Table | Purpose |
 |---|---|
 | `households` | household-level settings such as assistant name, color scheme, Google Calendar ID, and `display_settings` |
+| `household_members` | canonical list of household people created during signup and onboarding |
 | `users` | maps authenticated Supabase users to a household and role, and stores personal admin settings such as `display_name` and `preferences.admin_theme` |
 | `todos` | household to-dos; never hard-deleted |
 | `meal_plan` | weekly meal entries |
