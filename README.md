@@ -4,6 +4,7 @@ Homeboard is a household command-center PWA built for two surfaces:
 
 - a wall-mounted display at `/` that rotates through shared household info
 - a phone-friendly admin app at `/admin` for managing that household
+- a public self-serve signup page at `/signup` for new household creation with invite codes
 
 It is a plain HTML/CSS/JS app with Supabase as the backend and Netlify for hosting.
 
@@ -28,8 +29,9 @@ Both modes are served from a single `index.html`.
 |---|---|---|---|
 | Display | `/` | wall tablet | landscape |
 | Admin | `/admin` | phone | portrait |
+| Signup | `/signup` | phone | portrait |
 
-Netlify rewrites `/admin` to `index.html`, and the app decides which mode to boot from `window.location.pathname` before the main scripts run.
+Netlify rewrites `/admin` to `index.html` and `/signup` to `signup.html`. The main app decides which mode to boot from `window.location.pathname` before the main scripts run.
 
 ## Auth And Access
 
@@ -45,6 +47,16 @@ Admin mode uses Supabase Auth email/password sign-in.
 - admin reads and writes are scoped to that household
 
 If a valid Supabase auth user exists but there is no matching row in `public.users`, the app signs the user back out and blocks access.
+
+### Signup mode
+
+Signup mode is public and uses invite codes to create a new household.
+
+- the browser validates the uppercase invite code against `invite_codes`
+- it creates the auth account through `supabase.auth.signUp()`
+- it calls the `create-household-on-signup` Edge Function with the new session access token
+- after setup succeeds, it increments `invite_codes.use_count`
+- the user is redirected into `/admin?onboarding=true`
 
 ### Display mode
 
@@ -173,6 +185,7 @@ Core tables used by Homeboard:
 | `scorecards` | scorecard definitions |
 | `scorecard_sessions` | active and completed scorecard sessions |
 | `display_pairings` | temporary pairing codes for display setup |
+| `invite_codes` | self-serve household signup codes with active state and usage limits |
 | `rsvps` | wedding RSVP data; schema is treated as fixed |
 | `invited_parties` | wedding invite list and RSVP matching source of truth |
 
