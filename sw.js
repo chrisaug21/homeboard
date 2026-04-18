@@ -1,7 +1,8 @@
-const CACHE_NAME = "homeboard-v2.0.13";
+const CACHE_NAME = "homeboard-v2.0.14";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
+  "./signup.html",
   "./manifest.json",
   "./manifest-admin.json",
   "./homeboard_logo.svg",

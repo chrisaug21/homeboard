@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#F5F0E8">
+  <title>Homeboard Sign Up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=Righteous&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f0e8;
+      --bg-soft: #fbf7f1;
+      --panel: rgba(255, 252, 246, 0.86);
+      --panel-strong: rgba(255, 250, 242, 0.96);
+      --ink: #30261d;
+      --muted: #796a5e;
+      --border: rgba(124, 96, 69, 0.18);
+      --amber: #b45309;
+      --amber-soft: #f7d9aa;
+      --color-accent: #b45309;
+      --color-accent-subtle: #f7d9aa;
+      --color-text-on-accent: #ffffff;
+      --sage: #15803d;
+      --sage-soft: #dcefdc;
+      --rose: #a64c63;
+      --rose-soft: #f8dce3;
+      --shadow: 0 18px 44px rgba(98, 73, 46, 0.12);
+      --radius-lg: 28px;
+      --radius-md: 22px;
+      --radius-sm: 16px;
+      --button-radius: 8px;
+      --tag-radius: 12px;
+      --transition: 560ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Manrope", sans-serif;
+    }
+
+    body {
+      background-image:
+        radial-gradient(circle at top left, rgba(244, 196, 125, 0.26), transparent 28%),
+        radial-gradient(circle at top right, rgba(21, 128, 61, 0.12), transparent 30%),
+        linear-gradient(135deg, #f8f4ed 0%, #f5f0e8 44%, #efe7db 100%);
+    }
+
+    .signup-screen {
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .signup-card {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding: 32px 24px 28px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .signup-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .signup-brand svg {
+      width: 20px;
+      height: 20px;
+      color: var(--color-accent);
+      flex-shrink: 0;
+    }
+
+    .signup-copy {
+      display: grid;
+      gap: 8px;
+    }
+
+    .signup-title {
+      margin: 0;
+      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-size: clamp(1.7rem, 6vw, 2.1rem);
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .signup-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+
+    .signup-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .admin-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .admin-field label {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .admin-input {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid rgba(124, 96, 69, 0.16);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.84);
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .admin-input::placeholder {
+      color: rgba(121, 106, 94, 0.72);
+    }
+
+    .admin-input:focus-visible {
+      outline: 2px solid rgba(180, 83, 9, 0.22);
+      outline-offset: 2px;
+      border-color: rgba(180, 83, 9, 0.3);
+    }
+
+    .signup-code-input {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .admin-login-error {
+      background: rgba(166, 76, 99, 0.12);
+      border: 1px solid rgba(166, 76, 99, 0.28);
+      border-radius: var(--button-radius);
+      color: var(--rose);
+      font-size: 0.82rem;
+      padding: 10px 12px;
+      line-height: 1.45;
+    }
+
+    .admin-button {
+      border: 0;
+      border-radius: var(--button-radius);
+      padding: 12px 16px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 140ms ease, opacity 140ms ease, background-color 140ms ease;
+    }
+
+    .admin-button:hover,
+    .admin-button:focus-visible {
+      transform: translateY(-1px);
+    }
+
+    .admin-button:focus-visible {
+      outline: 3px solid var(--ink);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+    }
+
+    .admin-button:disabled {
+      cursor: wait;
+      opacity: 0.6;
+      transform: none;
+    }
+
+    .admin-button--primary {
+      background: var(--color-accent);
+      color: var(--color-text-on-accent);
+    }
+
+    .signup-submit {
+      width: 100%;
+      justify-content: center;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 480px) {
+      .signup-card {
+        padding: 28px 20px 24px;
+      }
+
+      .signup-submit {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="signup-screen">
+    <section class="signup-card" aria-labelledby="signup-title">
+      <div class="signup-brand" aria-label="Homeboard">
+        <i data-lucide="sliders-horizontal"></i>
+        <span>Homeboard</span>
+      </div>
+      <div class="signup-copy">
+        <h1 class="signup-title" id="signup-title">Create your household</h1>
+        <p class="signup-note">Use your invite code to set up your Homeboard account and jump straight into Admin Mode.</p>
+      </div>
+      <form class="signup-form" id="signup-form" novalidate>
+        <div class="admin-field">
+          <label for="invite-code">Invite code</label>
+          <input
+            id="invite-code"
+            class="admin-input signup-code-input"
+            type="text"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder="HB-X7K2PQ"
+            required
+          >
+        </div>
+        <div class="admin-field">
+          <label for="display-name">Your name</label>
+          <input
+            id="display-name"
+            class="admin-input"
+            type="text"
+            autocomplete="name"
+            placeholder="Chris"
+            required
+          >
+        </div>
+        <div class="admin-field">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            class="admin-input"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            required
+          >
+        </div>
+        <div class="admin-field">
+          <label for="password">Password</label>
+          <input
+            id="password"
+            class="admin-input"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            placeholder="At least 8 characters"
+            required
+          >
+        </div>
+        <div class="admin-login-error" id="signup-error" hidden role="alert"></div>
+        <button class="admin-button admin-button--primary signup-submit" id="signup-submit" type="submit">Create account</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer crossorigin="anonymous"></script>
+  <script>
+    const SUPABASE_URL = "%%SUPABASE_URL%%";
+    const SUPABASE_KEY = "%%SUPABASE_KEY%%";
+    const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+    const isAuthMode = pathname === "/admin" || pathname === "/signup";
+    let sb = null;
+
+    function initSupabaseClient() {
+      if (sb) {
+        return sb;
+      }
+
+      if (!window.supabase || typeof window.supabase.createClient !== "function") {
+        return null;
+      }
+
+      try {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+          auth: {
+            persistSession: isAuthMode,
+            autoRefreshToken: isAuthMode,
+            detectSessionInUrl: isAuthMode
+          }
+        });
+      } catch (error) {
+        console.warn("Supabase unavailable during signup.", error);
+      }
+
+      return sb;
+    }
+
+    function getSupabaseClient() {
+      return sb || initSupabaseClient();
+    }
+
+    function normalizeInviteCode(value) {
+      return String(value || "").trim().toUpperCase();
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById("signup-error");
+      if (!errorEl) {
+        return;
+      }
+
+      errorEl.textContent = message;
+      errorEl.hidden = false;
+    }
+
+    function clearError() {
+      const errorEl = document.getElementById("signup-error");
+      if (!errorEl) {
+        return;
+      }
+
+      errorEl.hidden = true;
+      errorEl.textContent = "";
+    }
+
+    function setSubmitting(isSubmitting) {
+      const submitButton = document.getElementById("signup-submit");
+      if (!submitButton) {
+        return;
+      }
+
+      submitButton.disabled = isSubmitting;
+      submitButton.textContent = isSubmitting ? "Creating account…" : "Create account";
+    }
+
+    function mapSignupError(error) {
+      const message = String(error?.message || "").toLowerCase();
+      if (message.includes("user already registered")) {
+        return "An account with that email already exists.";
+      }
+      if (message.includes("password should be at least 6 characters")) {
+        return "Please choose a password at least 8 characters long.";
+      }
+      return "Something went wrong. Please try again.";
+    }
+
+    async function loadInviteCodeRecord(client, code) {
+      const { data, error } = await client
+        .from("invite_codes")
+        .select("code, use_count, max_uses")
+        .eq("code", code)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        return null;
+      }
+
+      const useCount = Number(data.use_count || 0);
+      const maxUses = Number(data.max_uses);
+
+      if (!Number.isFinite(maxUses) || useCount >= maxUses) {
+        return null;
+      }
+
+      return {
+        code: data.code,
+        useCount,
+        maxUses
+      };
+    }
+
+    async function createHousehold(accessToken, displayName) {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/create-household-on-signup`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ display_name: displayName })
+      });
+
+      if (!response.ok) {
+        throw new Error("create-household-failed");
+      }
+    }
+
+    async function incrementInviteCodeUseCount(client, inviteCode, currentUseCount) {
+      const { error } = await client
+        .from("invite_codes")
+        .update({ use_count: currentUseCount + 1 })
+        .eq("code", inviteCode);
+
+      if (error) {
+        throw error;
+      }
+    }
+
+    function prefillInviteCodeFromUrl() {
+      const inviteInput = document.getElementById("invite-code");
+      if (!inviteInput) {
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const code = normalizeInviteCode(params.get("code"));
+      if (code) {
+        inviteInput.value = code;
+      }
+    }
+
+    function initErrorReset() {
+      const fields = Array.from(document.querySelectorAll("#signup-form input"));
+      fields.forEach((field) => {
+        field.addEventListener("input", () => {
+          if (field.id === "invite-code") {
+            const start = field.selectionStart;
+            const end = field.selectionEnd;
+            field.value = normalizeInviteCode(field.value);
+            if (typeof start === "number" && typeof end === "number") {
+              field.setSelectionRange(start, end);
+            }
+          }
+          clearError();
+        });
+      });
+    }
+
+    async function handleSignupSubmit(event) {
+      event.preventDefault();
+      clearError();
+
+      const client = getSupabaseClient();
+      if (!client) {
+        showError("Something went wrong. Please try again.");
+        return;
+      }
+
+      const inviteInput = document.getElementById("invite-code");
+      const nameInput = document.getElementById("display-name");
+      const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
+
+      const inviteCode = normalizeInviteCode(inviteInput?.value);
+      const displayName = String(nameInput?.value || "").trim();
+      const email = String(emailInput?.value || "").trim();
+      const password = String(passwordInput?.value || "");
+
+      if (inviteInput) {
+        inviteInput.value = inviteCode;
+      }
+
+      if (!inviteCode || !displayName || !email || !password) {
+        showError("Please fill out all fields.");
+        return;
+      }
+
+      if (password.length < 8) {
+        showError("Please choose a password at least 8 characters long.");
+        return;
+      }
+
+      setSubmitting(true);
+
+      try {
+        const inviteRecord = await loadInviteCodeRecord(client, inviteCode);
+        if (!inviteRecord) {
+          showError("This invite code isn't valid or has already been used.");
+          return;
+        }
+
+        const { data, error } = await client.auth.signUp({
+          email,
+          password
+        });
+
+        if (error) {
+          showError(mapSignupError(error));
+          return;
+        }
+
+        const accessToken = data?.session?.access_token;
+        if (!accessToken) {
+          showError("Something went wrong setting up your household. Please contact support.");
+          return;
+        }
+
+        try {
+          await createHousehold(accessToken, displayName);
+        } catch (error) {
+          console.error("Household setup failed.", error);
+          showError("Something went wrong setting up your household. Please contact support.");
+          return;
+        }
+
+        try {
+          await incrementInviteCodeUseCount(client, inviteCode, inviteRecord.useCount);
+        } catch (error) {
+          console.error("Invite code use_count update failed.", error);
+        }
+
+        window.location.replace("/admin?onboarding=true");
+      } catch (error) {
+        console.error("Signup failed.", error);
+        showError("Something went wrong. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
+    function initSignupPage() {
+      if (window.lucide && typeof window.lucide.createIcons === "function") {
+        window.lucide.createIcons();
+      }
+
+      prefillInviteCodeFromUrl();
+      initErrorReset();
+
+      const form = document.getElementById("signup-form");
+      if (form) {
+        form.addEventListener("submit", handleSignupSubmit);
+      }
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initSignupPage, { once: true });
+    } else {
+      initSignupPage();
+    }
+  </script>
+</body>
+</html>
