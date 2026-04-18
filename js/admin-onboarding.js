@@ -1,4 +1,4 @@
-    const ADMIN_ONBOARDING_TOTAL_STEPS = 3;
+    const ADMIN_ONBOARDING_TOTAL_STEPS = 4;
     const adminOnboardingFeatureCards = [
       {
         icon: "list-todo",
@@ -147,12 +147,9 @@
         ${adminOnboardingState.error ? `<p class="admin-onboarding-error">${escapeHtml(adminOnboardingState.error)}</p>` : ""}
         <form id="admin-onboarding-step1-form" novalidate>
           <div class="admin-onboarding-members">${rowsMarkup}</div>
-          <button class="admin-button admin-button--secondary admin-onboarding-add-button" type="button" id="admin-onboarding-add-member"${adminOnboardingBusy ? " disabled" : ""}>Add another member</button>
-          <div class="admin-onboarding-actions">
-            <span></span>
-            <div class="admin-onboarding-actions-group">
-              <button class="admin-button admin-button--primary" type="submit"${adminOnboardingBusy ? " disabled" : ""}>Continue</button>
-            </div>
+          <div class="admin-onboarding-actions admin-onboarding-actions--step1">
+            <button class="admin-button admin-button--secondary admin-onboarding-add-button" type="button" id="admin-onboarding-add-member"${adminOnboardingBusy ? " disabled" : ""}>Add another member</button>
+            <button class="admin-button admin-button--primary" type="submit"${adminOnboardingBusy ? " disabled" : ""}>Continue</button>
           </div>
         </form>
       `;
@@ -216,6 +213,32 @@
         <div class="admin-onboarding-actions">
           <button class="admin-button admin-button--secondary" type="button" id="admin-onboarding-back"${adminOnboardingBusy ? " disabled" : ""}>Back</button>
           <div class="admin-onboarding-actions-group">
+            <button class="admin-button admin-button--primary" type="button" id="admin-onboarding-continue-features"${adminOnboardingBusy ? " disabled" : ""}>Continue</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAdminOnboardingStep4() {
+      return `
+        <div class="admin-onboarding-copy">
+          <h1 class="admin-onboarding-title" id="admin-onboarding-title">Set up your wall display</h1>
+          <p class="admin-onboarding-note">Homeboard is designed to run on a tablet or screen mounted in your home.</p>
+        </div>
+        <ol class="admin-onboarding-instruction-list">
+          <li class="admin-onboarding-instruction-item">
+            <strong>Open Homeboard on your display device</strong>
+            <span>Navigate to <span class="admin-onboarding-inline-code">homeboard.chrisaug.com</span> on the tablet or screen you want to mount. It will show a 4-character pairing code.</span>
+          </li>
+          <li class="admin-onboarding-instruction-item">
+            <strong>Enter the code in Settings</strong>
+            <span>In your Admin, go to Settings &rarr; Display Setup and enter the code. Your display will pair instantly.</span>
+          </li>
+        </ol>
+        <p class="admin-onboarding-note admin-onboarding-note--subtle">Don&apos;t have a display device set up yet? No problem — you can do this anytime from Settings.</p>
+        <div class="admin-onboarding-actions">
+          <button class="admin-button admin-button--secondary" type="button" id="admin-onboarding-back"${adminOnboardingBusy ? " disabled" : ""}>Back</button>
+          <div class="admin-onboarding-actions-group">
             <button class="admin-button admin-button--primary" type="button" id="admin-onboarding-finish"${adminOnboardingBusy ? " disabled" : ""}>Get started</button>
           </div>
         </div>
@@ -238,8 +261,10 @@
         body.innerHTML = renderAdminOnboardingStep1();
       } else if (adminOnboardingState.step === 2) {
         body.innerHTML = renderAdminOnboardingStep2();
-      } else {
+      } else if (adminOnboardingState.step === 3) {
         body.innerHTML = renderAdminOnboardingStep3();
+      } else {
+        body.innerHTML = renderAdminOnboardingStep4();
       }
 
       refreshIcons();
@@ -595,6 +620,13 @@
 
       if (event.target.closest("#admin-onboarding-continue-theme")) {
         saveAdminOnboardingTheme();
+        return;
+      }
+
+      if (event.target.closest("#admin-onboarding-continue-features")) {
+        adminOnboardingState.step = 4;
+        adminOnboardingState.error = "";
+        renderAdminOnboarding();
         return;
       }
 

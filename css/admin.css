@@ -2404,7 +2404,6 @@
 
     .admin-onboarding-add-button {
       justify-self: flex-start;
-      margin-top: 8px;
     }
 
     .admin-onboarding-theme-grid {
@@ -2554,6 +2553,44 @@
       margin-left: auto;
     }
 
+    .admin-onboarding-actions--step1 {
+      margin-top: 12px;
+      flex-wrap: nowrap;
+    }
+
+    .admin-onboarding-instruction-list {
+      margin: 0;
+      padding-left: 22px;
+      display: grid;
+      gap: 14px;
+      color: var(--ink);
+    }
+
+    .admin-onboarding-instruction-item {
+      display: grid;
+      gap: 4px;
+      line-height: 1.55;
+    }
+
+    .admin-onboarding-instruction-item strong {
+      font-size: 0.96rem;
+    }
+
+    .admin-onboarding-instruction-item span {
+      color: var(--muted);
+    }
+
+    .admin-onboarding-inline-code {
+      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-size: 0.92em;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .admin-onboarding-note--subtle {
+      font-size: 0.9rem;
+    }
+
     .admin-onboarding-error {
       margin: 0;
       padding: 10px 12px;
@@ -2608,6 +2645,16 @@
         flex-wrap: wrap;
       }
 
+      .admin-onboarding-actions--step1 {
+        justify-content: space-between;
+        flex-wrap: nowrap;
+      }
+
+      .admin-onboarding-actions--step1 .admin-button {
+        flex: 0 1 auto;
+        width: auto;
+      }
+
       .admin-onboarding-actions .admin-button,
       .admin-onboarding-actions-group .admin-button {
         flex: 1 1 0;
@@ -2659,7 +2706,8 @@
     html[data-scheme="dark"] .admin-onboarding-note,
     html[data-scheme="dark"] .admin-onboarding-step,
     html[data-scheme="dark"] .admin-onboarding-feature-copy,
-    html[data-scheme="dark"] .admin-onboarding-member-lock {
+    html[data-scheme="dark"] .admin-onboarding-member-lock,
+    html[data-scheme="dark"] .admin-onboarding-instruction-item span {
       color: #cbbeb3;
     }
 
