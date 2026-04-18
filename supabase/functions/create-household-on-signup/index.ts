@@ -8,10 +8,16 @@ const corsHeaders = {
 };
 
 const defaultDisplaySettings = {
-  screen_order: ["calendar", "todos", "meal_plan", "countdowns"],
-  calendar_view: "week",
-  active_screens: ["calendar", "todos", "meal_plan", "countdowns"],
+  screen_order: ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
+  active_screens: ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns"],
   timer_interval: 30,
+  timer_intervals: {
+    upcoming_calendar: 30,
+    monthly_calendar: 45,
+    todos: 30,
+    meals: 30,
+    countdowns: 10,
+  },
 };
 
 type JwtPayload = {
@@ -80,7 +86,7 @@ Deno.serve(async (request) => {
   try {
     requestBody = await request.json();
   } catch (_error) {
-    return jsonResponse(400, { error: "display_name is required" });
+    return jsonResponse(400, { error: "Invalid request body" });
   }
 
   const displayName = typeof requestBody.display_name === "string"
@@ -105,6 +111,19 @@ Deno.serve(async (request) => {
       persistSession: false,
     },
   });
+
+  const { data: existingUser } = await supabase
+    .from("users")
+    .select("household_id, member_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (existingUser?.household_id) {
+    return jsonResponse(200, {
+      household_id: existingUser.household_id,
+      member_id: existingUser.member_id,
+    });
+  }
 
   const householdName = `${displayName}'s Household`;
 
