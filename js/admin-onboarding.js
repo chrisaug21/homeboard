@@ -29,6 +29,7 @@
 
     let adminOnboardingInitialized = false;
     let adminOnboardingBusy = false;
+    let adminOnboardingPreviousActiveElement = null;
     let adminOnboardingState = {
       isOpen: false,
       mode: "signup",
@@ -60,22 +61,37 @@
       return params.get("onboarding") === "true" && !isAdminOnboardingComplete();
     }
 
-    function buildAdminOnboardingDefaultMemberRows() {
+    function buildAdminOnboardingDefaultMemberRows(existingMemberNames = []) {
+      const displayName = String(adminCurrentUser?.displayName || "").trim();
+      const normalizedExistingNames = Array.isArray(existingMemberNames)
+        ? existingMemberNames.map((name) => String(name || "").trim().toLowerCase()).filter(Boolean)
+        : [];
       return [
         {
-          name: String(adminCurrentUser?.displayName || "").trim(),
-          existing: true,
+          name: displayName,
+          existing: normalizedExistingNames.includes(displayName.toLowerCase()),
           locked: true
         }
       ];
     }
 
     async function loadAdminOnboardingMemberRows(mode) {
+      const client = getSupabaseClient();
       if (mode !== "tour") {
-        return buildAdminOnboardingDefaultMemberRows();
+        if (!client) {
+          return buildAdminOnboardingDefaultMemberRows();
+        }
+        const { data, error } = await client
+          .from("household_members")
+          .select("display_name")
+          .eq("household_id", getAdminHouseholdId())
+          .eq("is_active", true);
+        const existingMemberNames = error || !Array.isArray(data)
+          ? []
+          : data.map((member) => String(member?.display_name || "").trim()).filter(Boolean);
+        return buildAdminOnboardingDefaultMemberRows(existingMemberNames);
       }
 
-      const client = getSupabaseClient();
       if (!client) {
         return buildAdminOnboardingDefaultMemberRows();
       }
@@ -104,10 +120,9 @@
 
       const hasLockedRow = rows.some((row) => row.locked);
       if (!hasLockedRow && signedInName) {
+        const existingMemberNames = rows.map((row) => row.name);
         rows.unshift({
-          name: signedInName,
-          existing: true,
-          locked: true
+          ...buildAdminOnboardingDefaultMemberRows(existingMemberNames)[0]
         });
       }
 
@@ -276,13 +291,21 @@
         return;
       }
 
+      adminOnboardingPreviousActiveElement = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
       const memberRows = await loadAdminOnboardingMemberRows(mode);
+      const initialTheme = normalizeAdminTheme(
+        adminCurrentUser?.preferences?.admin_theme
+          || adminHouseholdSettings?.color_scheme
+          || "warm"
+      );
       adminOnboardingState = {
         isOpen: true,
         mode,
         step: 1,
         canDismiss: mode === "tour",
-        selectedTheme: "warm",
+        selectedTheme: initialTheme,
         memberRows,
         error: ""
       };
@@ -290,6 +313,12 @@
       root.hidden = false;
       document.body.style.overflow = "hidden";
       renderAdminOnboarding();
+      const firstInteractiveElement = root.querySelector(
+        'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (firstInteractiveElement instanceof HTMLElement) {
+        firstInteractiveElement.focus();
+      }
     }
 
     function closeAdminOnboarding() {
@@ -303,6 +332,10 @@
       adminOnboardingBusy = false;
       root.hidden = true;
       document.body.style.overflow = "";
+      if (adminOnboardingPreviousActiveElement instanceof HTMLElement) {
+        adminOnboardingPreviousActiveElement.focus();
+      }
+      adminOnboardingPreviousActiveElement = null;
     }
 
     function removeOnboardingParamFromUrl() {
@@ -364,11 +397,13 @@
 
       if (rows.some((row) => !row.name)) {
         adminOnboardingState.error = "Add a name for every household member before continuing.";
+        renderAdminOnboarding();
         return null;
       }
 
       if (duplicateNames.size > 0) {
         adminOnboardingState.error = "Each household member should only be listed once.";
+        renderAdminOnboarding();
         return null;
       }
 
@@ -383,8 +418,8 @@
       if (!client || !rows || !adminCurrentUser?.id) {
         if (!client) {
           adminOnboardingState.error = friendlySaveMessage();
-          renderAdminOnboarding();
         }
+        renderAdminOnboarding();
         return;
       }
 
@@ -470,40 +505,58 @@
 
       try {
         const selectedTheme = normalizeAdminTheme(adminOnboardingState.selectedTheme);
-        const { error: householdError } = await client
-          .from("households")
-          .update({ color_scheme: selectedTheme })
-          .eq("id", getAdminHouseholdId());
+        const currentAdminTheme = normalizeAdminTheme(adminCurrentUser?.preferences?.admin_theme);
+        const currentHouseholdTheme = normalizeAdminTheme(adminHouseholdSettings?.color_scheme);
+        const shouldUpdateHouseholdTheme = currentHouseholdTheme !== selectedTheme;
+        const shouldUpdateAdminTheme = currentAdminTheme !== selectedTheme;
 
-        if (householdError) {
-          adminOnboardingState.error = friendlySaveMessage();
-          return;
-        }
+        if (shouldUpdateHouseholdTheme) {
+          const { error: householdError } = await client
+            .from("households")
+            .update({ color_scheme: selectedTheme })
+            .eq("id", getAdminHouseholdId());
 
-        const nextPreferences = {
-          ...(adminCurrentUser.preferences || {}),
-          admin_theme: selectedTheme
-        };
-        const { data, error: userError } = await client
-          .from("users")
-          .update({ preferences: nextPreferences })
-          .eq("id", adminCurrentUser.id)
-          .select("preferences")
-          .single();
-
-        if (userError || !data) {
-          adminOnboardingState.error = friendlySaveMessage();
-          return;
-        }
-
-        adminCurrentUser = {
-          ...adminCurrentUser,
-          preferences: {
-            ...(data.preferences && typeof data.preferences === "object" ? data.preferences : {}),
-            admin_theme: normalizeAdminTheme(data.preferences?.admin_theme)
+          if (householdError) {
+            adminOnboardingState.error = friendlySaveMessage();
+            return;
           }
-        };
-        adminHouseholdSettings.color_scheme = selectedTheme;
+          adminHouseholdSettings.color_scheme = selectedTheme;
+        }
+
+        if (shouldUpdateAdminTheme) {
+          const nextPreferences = {
+            ...(adminCurrentUser.preferences || {}),
+            admin_theme: selectedTheme
+          };
+          const { data, error: userError } = await client
+            .from("users")
+            .update({ preferences: nextPreferences })
+            .eq("id", adminCurrentUser.id)
+            .select("preferences")
+            .single();
+
+          if (userError || !data) {
+            adminOnboardingState.error = friendlySaveMessage();
+            return;
+          }
+
+          adminCurrentUser = {
+            ...adminCurrentUser,
+            preferences: {
+              ...(data.preferences && typeof data.preferences === "object" ? data.preferences : {}),
+              admin_theme: normalizeAdminTheme(data.preferences?.admin_theme)
+            }
+          };
+        } else {
+          adminCurrentUser = {
+            ...adminCurrentUser,
+            preferences: {
+              ...(adminCurrentUser.preferences || {}),
+              admin_theme: selectedTheme
+            }
+          };
+        }
+
         applyAdminTheme(selectedTheme);
         if (typeof loadAdminAccountSettings === "function") {
           loadAdminAccountSettings();
@@ -646,6 +699,11 @@
       }
       adminOnboardingState.memberRows[index].name = String(input.value || "").slice(0, 40);
       adminOnboardingState.error = "";
+      const errorBanner = document.querySelector(".admin-onboarding-error");
+      if (errorBanner instanceof HTMLElement) {
+        errorBanner.textContent = "";
+        errorBanner.hidden = true;
+      }
     }
 
     function handleAdminOnboardingBodySubmit(event) {

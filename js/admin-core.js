@@ -1130,12 +1130,22 @@
         return;
       }
 
+      const client = getSupabaseClient();
       const userRow = await lookupAdminUserRow(session.user.id);
-      if (userRow && userRow.household_id) {
-        adminCurrentHouseholdId = userRow.household_id;
-        adminCurrentUser = buildAdminCurrentUser(session.user.id, userRow);
+      if (!userRow?.household_id) {
+        if (client) {
+          try {
+            await client.auth.signOut();
+          } catch {}
+        }
+        adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
+        adminCurrentUser = null;
+        setAdminAuthView("login");
+        return;
       }
 
+      adminCurrentHouseholdId = userRow.household_id;
+      adminCurrentUser = buildAdminCurrentUser(session.user.id, userRow);
       setAdminAuthView("main");
       startAdminUI();
     }

@@ -2539,7 +2539,7 @@
     .admin-onboarding-theme-preview::after {
       content: "";
       border-radius: 999px;
-      background: currentColor;
+      background: currentcolor;
       opacity: 0.18;
     }
 
