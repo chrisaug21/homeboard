@@ -2402,20 +2402,9 @@
       min-height: 48px;
     }
 
-    .admin-onboarding-link-button {
+    .admin-onboarding-add-button {
       justify-self: flex-start;
-      border: none;
-      background: none;
-      padding: 0;
-      color: var(--color-accent);
-      font: inherit;
-      font-weight: 800;
-      cursor: pointer;
-    }
-
-    .admin-onboarding-link-button:hover,
-    .admin-onboarding-link-button:focus-visible {
-      text-decoration: underline;
+      margin-top: 8px;
     }
 
     .admin-onboarding-theme-grid {
@@ -2492,8 +2481,8 @@
     }
 
     .admin-onboarding-theme-card[data-theme="slate"] {
-      --onboarding-theme-bg: #475569;
-      --onboarding-theme-ink: #f8fafc;
+      --onboarding-theme-bg: #f8fafc;
+      --onboarding-theme-ink: #334155;
     }
 
     .admin-onboarding-theme-name {

@@ -1,7 +1,7 @@
     const ADMIN_ONBOARDING_TOTAL_STEPS = 3;
     const adminOnboardingFeatureCards = [
       {
-        icon: "check-square",
+        icon: "list-todo",
         title: "To-dos",
         description: "Assign tasks to household members, set due dates, and keep track of what needs doing."
       },
@@ -11,7 +11,7 @@
         description: "See upcoming events at a glance. Connect Google Calendar to pull in events automatically."
       },
       {
-        icon: "timer",
+        icon: "hourglass",
         title: "Countdowns",
         description: "Track things you're looking forward to. Add your own events or turn a Google Calendar event into a countdown."
       },
@@ -35,7 +35,7 @@
       step: 1,
       canDismiss: false,
       selectedTheme: "warm",
-      memberNames: [],
+      memberRows: [],
       error: ""
     };
 
@@ -60,27 +60,82 @@
       return params.get("onboarding") === "true" && !isAdminOnboardingComplete();
     }
 
-    function buildAdminOnboardingMemberNames() {
-      const displayName = String(adminCurrentUser?.displayName || "").trim();
-      return [displayName];
+    function buildAdminOnboardingDefaultMemberRows() {
+      return [
+        {
+          name: String(adminCurrentUser?.displayName || "").trim(),
+          existing: true,
+          locked: true
+        }
+      ];
+    }
+
+    async function loadAdminOnboardingMemberRows(mode) {
+      if (mode !== "tour") {
+        return buildAdminOnboardingDefaultMemberRows();
+      }
+
+      const client = getSupabaseClient();
+      if (!client) {
+        return buildAdminOnboardingDefaultMemberRows();
+      }
+
+      const signedInName = String(adminCurrentUser?.displayName || "").trim();
+      const signedInNameKey = signedInName.toLowerCase();
+      const { data, error } = await client
+        .from("household_members")
+        .select("id, display_name")
+        .eq("household_id", getAdminHouseholdId())
+        .eq("is_active", true)
+        .order("display_name", { ascending: true });
+
+      if (error || !Array.isArray(data) || data.length === 0) {
+        return buildAdminOnboardingDefaultMemberRows();
+      }
+
+      const rows = data
+        .map((member) => ({
+          id: String(member?.id || "").trim(),
+          name: String(member?.display_name || "").trim(),
+          existing: true,
+          locked: String(member?.display_name || "").trim().toLowerCase() === signedInNameKey
+        }))
+        .filter((member) => member.name);
+
+      const hasLockedRow = rows.some((row) => row.locked);
+      if (!hasLockedRow && signedInName) {
+        rows.unshift({
+          name: signedInName,
+          existing: true,
+          locked: true
+        });
+      }
+
+      rows.sort((left, right) => Number(Boolean(right.locked)) - Number(Boolean(left.locked)));
+      return rows.length > 0 ? rows : buildAdminOnboardingDefaultMemberRows();
     }
 
     function renderAdminOnboardingStep1() {
-      const firstName = escapeHtml(adminOnboardingState.memberNames[0] || "");
-      const additionalRows = adminOnboardingState.memberNames.slice(1).map((name, index) => `
-        <div class="admin-onboarding-member-row" data-onboarding-member-row="${index + 1}">
+      const memberRows = Array.isArray(adminOnboardingState.memberRows)
+        ? adminOnboardingState.memberRows
+        : [];
+      const rowsMarkup = memberRows.map((row, index) => `
+        <div class="admin-onboarding-member-row${row.locked ? " admin-onboarding-member-row--locked" : ""}" data-onboarding-member-row="${index}">
           <input
             class="admin-input"
             type="text"
             maxlength="40"
-            value="${escapeHtml(name)}"
-            data-onboarding-member-input="${index + 1}"
+            value="${escapeHtml(row.name)}"
+            data-onboarding-member-input="${index}"
             placeholder="Member name"
             autocomplete="off"
+            ${row.locked ? 'readonly aria-readonly="true"' : ""}
           >
-          <button class="admin-settings-member-remove" type="button" data-onboarding-remove-member="${index + 1}" aria-label="Remove member"${adminOnboardingBusy ? " disabled" : ""}>
-            <i data-lucide="x"></i>
-          </button>
+          ${row.locked
+            ? '<span class="admin-onboarding-member-lock">You</span>'
+            : `<button class="admin-settings-member-remove" type="button" data-onboarding-remove-member="${index}" aria-label="Remove member"${adminOnboardingBusy ? " disabled" : ""}>
+                <i data-lucide="x"></i>
+              </button>`}
         </div>
       `).join("");
 
@@ -91,14 +146,8 @@
         </div>
         ${adminOnboardingState.error ? `<p class="admin-onboarding-error">${escapeHtml(adminOnboardingState.error)}</p>` : ""}
         <form id="admin-onboarding-step1-form" novalidate>
-          <div class="admin-onboarding-members">
-            <div class="admin-onboarding-member-row admin-onboarding-member-row--locked">
-              <input class="admin-input" type="text" maxlength="40" value="${firstName}" readonly aria-readonly="true">
-              <span class="admin-onboarding-member-lock">You</span>
-            </div>
-            ${additionalRows}
-          </div>
-          <button class="admin-onboarding-link-button" type="button" id="admin-onboarding-add-member"${adminOnboardingBusy ? " disabled" : ""}>Add another member</button>
+          <div class="admin-onboarding-members">${rowsMarkup}</div>
+          <button class="admin-button admin-button--secondary admin-onboarding-add-button" type="button" id="admin-onboarding-add-member"${adminOnboardingBusy ? " disabled" : ""}>Add another member</button>
           <div class="admin-onboarding-actions">
             <span></span>
             <div class="admin-onboarding-actions-group">
@@ -119,7 +168,7 @@
       return `
         <div class="admin-onboarding-copy">
           <h1 class="admin-onboarding-title" id="admin-onboarding-title">Choose your display style</h1>
-          <p class="admin-onboarding-note">This controls how Homeboard looks on your wall display. You can change it anytime in Settings.</p>
+          <p class="admin-onboarding-note">Pick the look and feel for your Admin and wall display. You can change it anytime in Settings.</p>
         </div>
         ${adminOnboardingState.error ? `<p class="admin-onboarding-error">${escapeHtml(adminOnboardingState.error)}</p>` : ""}
         <div class="admin-onboarding-theme-grid" role="radiogroup" aria-label="Display style">
@@ -196,19 +245,20 @@
       refreshIcons();
     }
 
-    function openAdminOnboarding(mode = "tour") {
+    async function openAdminOnboarding(mode = "tour") {
       const root = getAdminOnboardingRoot();
       if (!root) {
         return;
       }
 
+      const memberRows = await loadAdminOnboardingMemberRows(mode);
       adminOnboardingState = {
         isOpen: true,
         mode,
         step: 1,
         canDismiss: mode === "tour",
         selectedTheme: "warm",
-        memberNames: buildAdminOnboardingMemberNames(),
+        memberRows,
         error: ""
       };
       adminOnboardingBusy = false;
@@ -267,13 +317,16 @@
       };
     }
 
-    function collectAdminOnboardingNames() {
-      const names = adminOnboardingState.memberNames.map((name) => String(name || "").trim());
+    function collectAdminOnboardingRows() {
+      const rows = (adminOnboardingState.memberRows || []).map((row) => ({
+        ...row,
+        name: String(row?.name || "").trim()
+      }));
       const duplicateNames = new Set();
       const seen = new Set();
 
-      names.forEach((name) => {
-        const normalized = name.toLowerCase();
+      rows.forEach((row) => {
+        const normalized = row.name.toLowerCase();
         if (!normalized) {
           return;
         }
@@ -284,7 +337,7 @@
         seen.add(normalized);
       });
 
-      if (names.some((name) => !name)) {
+      if (rows.some((row) => !row.name)) {
         adminOnboardingState.error = "Add a name for every household member before continuing.";
         return null;
       }
@@ -295,14 +348,14 @@
       }
 
       adminOnboardingState.error = "";
-      adminOnboardingState.memberNames = names;
-      return names;
+      adminOnboardingState.memberRows = rows;
+      return rows;
     }
 
     async function saveAdminOnboardingMembers() {
       const client = getSupabaseClient();
-      const names = collectAdminOnboardingNames();
-      if (!client || !names || !adminCurrentUser?.id) {
+      const rows = collectAdminOnboardingRows();
+      if (!client || !rows || !adminCurrentUser?.id) {
         if (!client) {
           adminOnboardingState.error = friendlySaveMessage();
           renderAdminOnboarding();
@@ -330,7 +383,11 @@
             .filter(Boolean)
         );
 
-        const additionalNames = names.slice(1).filter((name) => !existingMemberNames.has(name.toLowerCase()));
+        const names = rows.map((row) => row.name);
+        const additionalNames = rows
+          .filter((row) => !row.existing)
+          .map((row) => row.name)
+          .filter((name) => !existingMemberNames.has(name.toLowerCase()));
         if (additionalNames.length > 0) {
           const { error: insertError } = await client
             .from("household_members")
@@ -356,6 +413,10 @@
           return;
         }
 
+        adminOnboardingState.memberRows = rows.map((row) => ({
+          ...row,
+          existing: true
+        }));
         adminHouseholdSettings.display_settings = nextDisplaySettings;
         adminOnboardingState.step = 2;
         adminOnboardingState.error = "";
@@ -492,8 +553,9 @@
       const removeButton = event.target.closest("[data-onboarding-remove-member]");
       if (removeButton) {
         const index = Number(removeButton.getAttribute("data-onboarding-remove-member"));
-        if (Number.isInteger(index) && index > 0) {
-          adminOnboardingState.memberNames.splice(index, 1);
+        const row = adminOnboardingState.memberRows[index];
+        if (Number.isInteger(index) && index >= 0 && row && !row.locked) {
+          adminOnboardingState.memberRows.splice(index, 1);
           adminOnboardingState.error = "";
           renderAdminOnboarding();
         }
@@ -501,7 +563,11 @@
       }
 
       if (event.target.closest("#admin-onboarding-add-member")) {
-        adminOnboardingState.memberNames.push("");
+        adminOnboardingState.memberRows.push({
+          name: "",
+          existing: false,
+          locked: false
+        });
         adminOnboardingState.error = "";
         renderAdminOnboarding();
         const inputs = Array.from(document.querySelectorAll("[data-onboarding-member-input]"));
@@ -543,10 +609,10 @@
         return;
       }
       const index = Number(input.getAttribute("data-onboarding-member-input"));
-      if (!Number.isInteger(index) || index < 1) {
+      if (!Number.isInteger(index) || index < 0 || !adminOnboardingState.memberRows[index]) {
         return;
       }
-      adminOnboardingState.memberNames[index] = String(input.value || "").slice(0, 40);
+      adminOnboardingState.memberRows[index].name = String(input.value || "").slice(0, 40);
       adminOnboardingState.error = "";
     }
 
@@ -593,7 +659,9 @@
         closeButton.addEventListener("click", handleAdminOnboardingClose);
       }
       if (relaunchButton) {
-        relaunchButton.addEventListener("click", () => openAdminOnboarding("tour"));
+        relaunchButton.addEventListener("click", () => {
+          openAdminOnboarding("tour");
+        });
       }
       document.addEventListener("keydown", handleAdminOnboardingKeydown);
     }
