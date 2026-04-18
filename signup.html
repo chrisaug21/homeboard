@@ -155,6 +155,11 @@
       letter-spacing: 0.08em;
     }
 
+    .signup-code-input::placeholder {
+      letter-spacing: normal;
+      text-transform: none;
+    }
+
     .admin-login-error {
       background: rgba(166, 76, 99, 0.12);
       border: 1px solid rgba(166, 76, 99, 0.28);
@@ -201,6 +206,19 @@
       width: 100%;
       justify-content: center;
       margin-top: 4px;
+    }
+
+    .signup-version {
+      margin-top: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      opacity: 0.62;
+      text-align: center;
+      text-transform: none;
+      pointer-events: none;
+      user-select: none;
     }
 
     @media (max-width: 480px) {
@@ -275,6 +293,7 @@
         </div>
         <div class="admin-login-error" id="signup-error" hidden role="alert"></div>
         <button class="admin-button admin-button--primary signup-submit" id="signup-submit" type="submit">Create account</button>
+        <div class="signup-version" id="signup-version" aria-hidden="true"></div>
       </form>
     </section>
   </main>
@@ -532,6 +551,11 @@
     function initSignupPage() {
       if (window.lucide && typeof window.lucide.createIcons === "function") {
         window.lucide.createIcons();
+      }
+
+      const signupVersionEl = document.getElementById("signup-version");
+      if (signupVersionEl) {
+        signupVersionEl.textContent = `v${VERSION}`;
       }
 
       prefillInviteCodeFromUrl();

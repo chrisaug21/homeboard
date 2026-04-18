@@ -108,6 +108,8 @@
 
     function initLoginFormListeners() {
       const form = document.getElementById("admin-login-form");
+      const loginVersionEl = document.getElementById("admin-login-version");
+      if (loginVersionEl) loginVersionEl.textContent = `v${VERSION}`;
       if (!form) return;
       form.addEventListener("submit", async (e) => {
         e.preventDefault();

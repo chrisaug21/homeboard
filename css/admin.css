@@ -86,6 +86,19 @@
       margin-top: 4px;
     }
 
+    .admin-auth-version {
+      margin-top: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      opacity: 0.62;
+      text-align: center;
+      text-transform: none;
+      pointer-events: none;
+      user-select: none;
+    }
+
     .admin-header-bar {
       min-height: 48px;
       display: flex;
