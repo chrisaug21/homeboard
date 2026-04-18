@@ -52,6 +52,11 @@
         );
       }
 
+      const currentUserMemberId = String(adminCurrentUser?.member_id || "").trim();
+      if (currentUserMemberId) {
+        linkedMemberIds.add(currentUserMemberId);
+      }
+
       const householdMembers = normalizedMembers.map((member) => ({
         ...member,
         has_linked_login: linkedMemberIds.has(member.id)
@@ -173,7 +178,7 @@
       }
 
       list.innerHTML = members.map((m, i) => `
-        ${pendingMemberRemovalIndex === i ? `
+        ${pendingMemberRemovalIndex === i && !m.has_linked_login ? `
           <div class="admin-settings-member-row admin-settings-member-row--confirm" data-member-index="${i}">
             <span class="admin-settings-member-confirm-text">Remove ${escapeHtml(m.display_name)}?</span>
             <div class="admin-settings-member-actions">
@@ -187,9 +192,11 @@
             <span class="admin-settings-member-name">${escapeHtml(m.display_name)}</span>
             <div class="admin-settings-member-actions">
               <span class="admin-pill${m.has_linked_login ? " admin-pill--member" : ""}">${m.has_linked_login ? "Has login" : "No login"}</span>
-              <button type="button" class="admin-settings-member-remove" data-member-remove="${i}" aria-label="Remove ${escapeHtml(m.display_name)}"${membersSavePending ? " disabled" : ""}>
-                <i data-lucide="x"></i>
-              </button>
+              ${m.has_linked_login ? "" : `
+                <button type="button" class="admin-settings-member-remove" data-member-remove="${i}" aria-label="Remove ${escapeHtml(m.display_name)}"${membersSavePending ? " disabled" : ""}>
+                  <i data-lucide="x"></i>
+                </button>
+              `}
             </div>
           </div>
         `}
