@@ -423,8 +423,13 @@
           renderRsvpBoardWithData();
         }
         Promise.allSettled([fetchTodos(), fetchMeals(), fetchWeeklyNote(), fetchHouseholdMembers()]).then(([todosResult, mealsResult, noteResult, membersResult]) => {
-          if (membersResult.status === "fulfilled" && membersResult.value !== null) {
+          if (membersResult.status === "fulfilled") {
             cachedDisplayHouseholdMembers = membersResult.value;
+            if (cachedDisplayTodos !== null) {
+              renderTodoItems(cachedDisplayTodos);
+            }
+          } else {
+            cachedDisplayHouseholdMembers = null;
             if (cachedDisplayTodos !== null) {
               renderTodoItems(cachedDisplayTodos);
             }

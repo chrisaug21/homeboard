@@ -602,12 +602,22 @@
           showToast(friendlySaveMessage());
         } else {
           if (adminCurrentUser?.member_id) {
-            try {
-              await client
-                .from("household_members")
-                .update({ display_name: nextDisplayName })
-                .eq("id", adminCurrentUser.member_id);
-            } catch {}
+            if (!nextDisplayName) {
+              console.warn("Skipping household member display name sync because the saved account display name is blank.");
+            } else {
+              try {
+                const { error: memberSyncError } = await client
+                  .from("household_members")
+                  .update({ display_name: nextDisplayName })
+                  .eq("id", adminCurrentUser.member_id);
+
+                if (memberSyncError) {
+                  console.warn("Failed to sync account display name to household member.", memberSyncError);
+                }
+              } catch (memberSyncError) {
+                console.warn("Failed to sync account display name to household member.", memberSyncError);
+              }
+            }
           }
 
           adminCurrentUser = {

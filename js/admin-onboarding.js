@@ -408,11 +408,41 @@
         }
 
         const normalizedExistingMembers = normalizeHouseholdMembers(existingMembers);
-        const existingMemberNames = new Set(normalizedExistingMembers.map((member) => member.display_name.toLowerCase()));
+        const activeExistingMembers = normalizedExistingMembers.filter((member) => member.is_active);
+        const existingMemberNames = new Set(activeExistingMembers.map((member) => member.display_name.toLowerCase()));
+        const inactiveMembersByName = new Map(
+          normalizedExistingMembers
+            .filter((member) => !member.is_active)
+            .map((member) => [member.display_name.toLowerCase(), member])
+        );
+        const namesToReactivate = Array.from(new Set(
+          rows
+            .filter((row) => !row.existing)
+            .map((row) => row.name)
+            .filter((name) => inactiveMembersByName.has(name.toLowerCase()))
+        ));
+
+        if (namesToReactivate.length > 0) {
+          const memberIdsToReactivate = namesToReactivate
+            .map((name) => inactiveMembersByName.get(name.toLowerCase())?.id || "")
+            .filter(Boolean);
+          const { error: reactivateError } = await client
+            .from("household_members")
+            .update({ is_active: true })
+            .in("id", memberIdsToReactivate)
+            .eq("household_id", getAdminHouseholdId());
+
+          if (reactivateError) {
+            adminOnboardingState.error = friendlySaveMessage();
+            return;
+          }
+        }
+
         const additionalNames = rows
           .filter((row) => !row.existing)
           .map((row) => row.name)
-          .filter((name) => !existingMemberNames.has(name.toLowerCase()));
+          .filter((name) => !existingMemberNames.has(name.toLowerCase()))
+          .filter((name) => !inactiveMembersByName.has(name.toLowerCase()));
         if (additionalNames.length > 0) {
           const membersForColorSelection = [...normalizedExistingMembers];
           const { error: insertError } = await client
@@ -437,7 +467,16 @@
           ...row,
           existing: true
         }));
-        adminHouseholdSettings.household_members = await fetchHouseholdMembers(getAdminHouseholdId()) || getAdminHouseholdMembers();
+        const cachedMembersById = new Map(
+          getAdminHouseholdMembers()
+            .filter((member) => member?.has_linked_login === true)
+            .map((member) => [String(member.id || "").trim(), true])
+        );
+        const refreshedMembers = await fetchHouseholdMembers(getAdminHouseholdId());
+        adminHouseholdSettings.household_members = (refreshedMembers || getAdminHouseholdMembers()).map((member) => ({
+          ...member,
+          has_linked_login: member?.has_linked_login === true || cachedMembersById.has(String(member.id || "").trim())
+        }));
         adminOnboardingState.step = 2;
         adminOnboardingState.error = "";
         if (typeof loadAdminSettings === "function" && adminScreen === "settings") {

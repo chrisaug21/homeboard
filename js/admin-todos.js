@@ -433,13 +433,19 @@
       const title = String(formData.get("title") || "").trim();
       const description = String(formData.get("description") || "").trim();
       const selectedAssigneeId = String(formData.get("assignee") || "").trim();
-      const legacyAssignee = String(formData.get("legacy_assignee") || "").trim();
       const dueDate = String(formData.get("due_date") || "").trim();
-      const assigneeMember = getHouseholdMemberById(getAdminHouseholdMembers(), selectedAssigneeId);
-      const assigneeMemberId = assigneeMember ? assigneeMember.id : null;
-      const assignee = assigneeMember
-        ? assigneeMember.display_name
-        : (legacyAssignee || null);
+      let assigneeMemberId = null;
+      let assignee = null;
+      if (selectedAssigneeId === "") {
+        assigneeMemberId = null;
+        assignee = null;
+      } else {
+        const assigneeMember = getHouseholdMemberById(getAdminHouseholdMembers(), selectedAssigneeId);
+        if (assigneeMember) {
+          assigneeMemberId = assigneeMember.id;
+          assignee = assigneeMember.display_name;
+        }
+      }
 
       if (!title || adminTodoWritePending) {
         return;
@@ -488,13 +494,19 @@
       const title = String(formData.get("title") || "").trim();
       const description = String(formData.get("description") || "").trim();
       const selectedAssigneeId = String(formData.get("assignee") || "").trim();
-      const legacyAssignee = String(formData.get("legacy_assignee") || "").trim();
       const dueDate = String(formData.get("due_date") || "").trim();
-      const assigneeMember = getHouseholdMemberById(getAdminHouseholdMembers(), selectedAssigneeId);
-      const assigneeMemberId = assigneeMember ? assigneeMember.id : null;
-      const assignee = assigneeMember
-        ? assigneeMember.display_name
-        : (legacyAssignee || null);
+      let assigneeMemberId = null;
+      let assignee = null;
+      if (selectedAssigneeId === "") {
+        assigneeMemberId = null;
+        assignee = null;
+      } else {
+        const assigneeMember = getHouseholdMemberById(getAdminHouseholdMembers(), selectedAssigneeId);
+        if (assigneeMember) {
+          assigneeMemberId = assigneeMember.id;
+          assignee = assigneeMember.display_name;
+        }
+      }
 
       if (!title || adminTodoWritePending) return;
 

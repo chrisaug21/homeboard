@@ -24,7 +24,7 @@
 
     let calendarEventsMap = new Map();
     let cachedHouseholdConfig = null;
-    let cachedDisplayHouseholdMembers = [];
+    let cachedDisplayHouseholdMembers = null;
     let cachedDisplayTodos = null;
     let cachedSupabaseCountdowns = null;
     let cachedCalendarCountdowns = [];
@@ -525,7 +525,7 @@
     }
 
     function getDisplayHouseholdMembers() {
-      if (Array.isArray(cachedDisplayHouseholdMembers) && cachedDisplayHouseholdMembers.length > 0) {
+      if (cachedDisplayHouseholdMembers !== null) {
         return cachedDisplayHouseholdMembers;
       }
 

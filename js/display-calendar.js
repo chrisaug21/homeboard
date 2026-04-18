@@ -368,7 +368,7 @@
       ]);
 
       cachedHouseholdConfig = householdConfig;
-      cachedDisplayHouseholdMembers = householdMembers || [];
+      cachedDisplayHouseholdMembers = householdMembers;
       cachedSupabaseCountdowns = supabaseCountdowns;
 
       updateHouseholdName(householdConfig);
