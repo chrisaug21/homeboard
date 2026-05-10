@@ -403,6 +403,15 @@
     }
 
     async function loadAdminRsvpScreen() {
+      if (!isRsvpDisplayScreenAvailable(getAdminHouseholdId())) {
+        adminWeddingSnapshot = null;
+        adminRsvpUnmatchedNote.textContent = "";
+        adminRsvpGuestListNote.textContent = "";
+        adminRsvpUnmatchedList.innerHTML = "";
+        adminRsvpGuestList.innerHTML = "";
+        return;
+      }
+
       adminRsvpUnmatchedNote.textContent = "Loading RSVP matches\u2026";
       adminRsvpGuestListNote.textContent = "Loading invited parties\u2026";
       adminRsvpUnmatchedList.innerHTML = buildAdminRsvpReviewSkeletonHTML();

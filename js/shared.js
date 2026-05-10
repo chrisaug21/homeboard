@@ -34,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.26";
+    const VERSION = "2.0.27";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -45,6 +45,7 @@
 
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    const RSVP_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
     function getDisplayHouseholdId() {
       try {
@@ -381,7 +382,23 @@
       return [screenKey];
     }
 
-    function isRsvpDisplayScreenAvailable(referenceDate = new Date()) {
+    function isRsvpHouseholdId(householdId) {
+      return String(householdId || "").trim() === RSVP_HOUSEHOLD_ID;
+    }
+
+    function getRsvpFeatureHouseholdId() {
+      if (isAdminMode && typeof getAdminHouseholdId === "function") {
+        return getAdminHouseholdId();
+      }
+
+      return getDisplayHouseholdId();
+    }
+
+    function isRsvpDisplayScreenAvailable(householdId = getRsvpFeatureHouseholdId(), referenceDate = new Date()) {
+      if (!isRsvpHouseholdId(householdId)) {
+        return false;
+      }
+
       const date = referenceDate instanceof Date ? new Date(referenceDate) : new Date(referenceDate);
       if (Number.isNaN(date.getTime())) {
         return true;
@@ -391,8 +408,8 @@
       return formatDateKey(date) <= RSVP_RETIRE_AFTER_DATE;
     }
 
-    function getConfigurableDisplayScreenKeys(referenceDate = new Date()) {
-      return DISPLAY_SCREEN_KEYS.filter((key) => key !== "rsvp" || isRsvpDisplayScreenAvailable(referenceDate));
+    function getConfigurableDisplayScreenKeys(householdId = getRsvpFeatureHouseholdId(), referenceDate = new Date()) {
+      return DISPLAY_SCREEN_KEYS.filter((key) => key !== "rsvp" || isRsvpDisplayScreenAvailable(householdId, referenceDate));
     }
 
     function normalizeDisplayScreenList(screenList, fallback = DISPLAY_SCREEN_KEYS, options = {}) {
@@ -1297,7 +1314,7 @@
 
     async function fetchWeddingRsvpSnapshot() {
       const client = getSupabaseClient();
-      if (!client) {
+      if (!client || !isRsvpDisplayScreenAvailable()) {
         return null;
       }
 

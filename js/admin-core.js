@@ -1080,6 +1080,10 @@
     }
 
     function setAdminScreen(nextScreen) {
+      if (nextScreen === "rsvp" && !isRsvpDisplayScreenAvailable(getAdminHouseholdId())) {
+        nextScreen = "todos";
+      }
+
       adminScreen = nextScreen;
 
       adminScreens.forEach((screen) => {
@@ -1106,6 +1110,21 @@
         } else {
           adminSettingsButton.removeAttribute("aria-current");
         }
+      }
+    }
+
+    function syncAdminRsvpVisibility() {
+      const rsvpNavButton = document.querySelector("[data-admin-nav='rsvp']");
+      const rsvpScreen = document.querySelector("[data-admin-screen='rsvp']");
+      const rsvpEnabled = isRsvpDisplayScreenAvailable(getAdminHouseholdId());
+
+      if (rsvpNavButton) {
+        rsvpNavButton.hidden = !rsvpEnabled;
+      }
+
+      if (rsvpScreen && !rsvpEnabled) {
+        rsvpScreen.hidden = true;
+        rsvpScreen.classList.remove("is-active");
       }
     }
 
@@ -1179,6 +1198,7 @@
       if (adminUiStarted) return;
       adminUiStarted = true;
       applyAdminTheme(adminCurrentUser?.preferences?.admin_theme);
+      syncAdminRsvpVisibility();
       setAdminScreen("todos");
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
