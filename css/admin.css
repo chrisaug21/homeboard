@@ -980,8 +980,7 @@
       right: 0;
       bottom: 0;
       z-index: 10;
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      display: flex;
       gap: 8px;
       padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
       background: rgb(255, 250, 243);
@@ -994,6 +993,7 @@
       padding: 10px 4px;
       background: transparent;
       color: var(--muted);
+      flex: 1 1 0;
       display: grid;
       justify-items: center;
       align-items: center;

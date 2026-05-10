@@ -223,11 +223,11 @@
     const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15, scorecards: 30, rsvp: 30 };
 
     function getAdminConfigurableScreens() {
-      return getConfigurableDisplayScreenKeys();
+      return getConfigurableDisplayScreenKeys(getAdminHouseholdId());
     }
 
     function getAdminTimerScreenKeys() {
-      return getConfigurableDisplayScreenKeys();
+      return getConfigurableDisplayScreenKeys(getAdminHouseholdId());
     }
 
     // Loaded from Supabase at admin init; falls back to defaults so todo form always works
@@ -1080,6 +1080,10 @@
     }
 
     function setAdminScreen(nextScreen) {
+      if (nextScreen === "rsvp" && !isRsvpDisplayScreenAvailable(getAdminHouseholdId())) {
+        nextScreen = "todos";
+      }
+
       adminScreen = nextScreen;
 
       adminScreens.forEach((screen) => {
@@ -1109,7 +1113,27 @@
       }
     }
 
+    function syncAdminRsvpVisibility() {
+      const rsvpNavButton = document.querySelector("[data-admin-nav='rsvp']");
+      const rsvpScreen = document.querySelector("[data-admin-screen='rsvp']");
+      const rsvpEnabled = isRsvpDisplayScreenAvailable(getAdminHouseholdId());
+
+      if (rsvpNavButton) {
+        rsvpNavButton.hidden = !rsvpEnabled;
+        rsvpNavButton.style.display = rsvpEnabled ? "" : "none";
+      }
+
+      if (rsvpScreen) {
+        rsvpScreen.hidden = !rsvpEnabled || adminScreen !== "rsvp";
+        rsvpScreen.style.display = rsvpEnabled ? "" : "none";
+        if (!rsvpEnabled) {
+          rsvpScreen.classList.remove("is-active");
+        }
+      }
+    }
+
     function openAdminSettings() {
+      syncAdminRsvpVisibility();
       setAdminScreen("settings");
       renderAdminSettingsSkeleton();
       loadAdminAccountSettings();
@@ -1179,6 +1203,7 @@
       if (adminUiStarted) return;
       adminUiStarted = true;
       applyAdminTheme(adminCurrentUser?.preferences?.admin_theme);
+      syncAdminRsvpVisibility();
       setAdminScreen("todos");
       adminNavButtons.forEach((button) => button.addEventListener("click", handleAdminNavClick));
       adminActiveList.addEventListener("click", handleAdminActiveListClick);

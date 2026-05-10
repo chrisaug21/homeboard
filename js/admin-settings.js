@@ -253,7 +253,9 @@
 
       const ds = adminHouseholdSettings.display_settings || {};
       const configurableScreens = getAdminConfigurableScreens();
-      const activeScreens = Array.isArray(ds.active_screens) ? ds.active_screens : configurableScreens;
+      const activeScreens = Array.isArray(ds.active_screens)
+        ? ds.active_screens.filter((name) => configurableScreens.includes(name))
+        : configurableScreens;
       const screenOrder = normalizeAdminScreenOrder(Array.isArray(ds.screen_order) ? ds.screen_order : configurableScreens);
       const timerIntervals = ds.timer_intervals || {};
       const upcomingDays = ds.upcoming_days || 5;
@@ -269,9 +271,16 @@
         }
       });
 
-      const rsvpToggle = document.querySelector("[name='screen_rsvp']")?.closest(".admin-settings-toggle");
+      const rsvpCheckbox = document.querySelector("[name='screen_rsvp']");
+      const rsvpToggle = rsvpCheckbox?.closest(".admin-settings-toggle");
+      const rsvpEnabled = configurableScreens.includes("rsvp");
+      if (rsvpCheckbox) {
+        rsvpCheckbox.checked = rsvpEnabled && activeScreens.includes("rsvp");
+        rsvpCheckbox.disabled = !rsvpEnabled;
+      }
       if (rsvpToggle) {
-        rsvpToggle.hidden = !configurableScreens.includes("rsvp");
+        rsvpToggle.hidden = !rsvpEnabled;
+        rsvpToggle.style.display = rsvpEnabled ? "" : "none";
       }
 
       // Household
@@ -785,7 +794,8 @@
     }
 
     function enforceMinOneActiveScreen() {
-      const checkboxes = Array.from(document.querySelectorAll("#settings-screen-toggles [type='checkbox']"));
+      const checkboxes = Array.from(document.querySelectorAll("#settings-screen-toggles [type='checkbox']"))
+        .filter((cb) => !cb.closest(".admin-settings-toggle")?.hidden);
       const checkedBoxes = checkboxes.filter((cb) => cb.checked);
       checkboxes.forEach((cb) => {
         // Disable the last checked box so the user can't uncheck it
