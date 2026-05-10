@@ -223,11 +223,11 @@
     const TIMER_DEFAULTS = { upcoming_calendar: 30, monthly_calendar: 60, todos: 45, meals: 30, countdowns: 15, scorecards: 30, rsvp: 30 };
 
     function getAdminConfigurableScreens() {
-      return getConfigurableDisplayScreenKeys();
+      return getConfigurableDisplayScreenKeys(getAdminHouseholdId());
     }
 
     function getAdminTimerScreenKeys() {
-      return getConfigurableDisplayScreenKeys();
+      return getConfigurableDisplayScreenKeys(getAdminHouseholdId());
     }
 
     // Loaded from Supabase at admin init; falls back to defaults so todo form always works

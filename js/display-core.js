@@ -443,6 +443,7 @@
 
     function getDisplayNavItems() {
       const visibleScreens = getOrderedVisibleScreenEntries();
+      const rsvpEnabled = isRsvpDisplayScreenAvailable(getDisplayHouseholdId());
       const visibleIndexByKey = new Map();
       visibleScreens.forEach((entry, index) => {
         const screenKey = entry.groupKey;
@@ -457,6 +458,9 @@
 
       configuredOrder.forEach((screenKey) => {
         const normalizedKey = isScorecardScreenKey(screenKey) ? "scorecards" : screenKey;
+        if (normalizedKey === "rsvp" && !rsvpEnabled) {
+          return;
+        }
         const targetIndex = visibleIndexByKey.get(normalizedKey);
         if (targetIndex === undefined || seen.has(normalizedKey)) {
           return;
@@ -474,6 +478,9 @@
 
       visibleScreens.forEach((entry, index) => {
         const screenKey = entry.groupKey;
+        if (screenKey === "rsvp" && !rsvpEnabled) {
+          return;
+        }
         if (seen.has(screenKey)) {
           return;
         }
@@ -672,11 +679,14 @@
     function applyActiveScreens(activeScreens) {
       const normalizedScreens = Array.isArray(activeScreens) ? activeScreens : [];
       const hasIndividualScorecardFlags = normalizedScreens.some((key) => isScorecardScreenKey(key));
+      const rsvpEnabled = isRsvpDisplayScreenAvailable(getDisplayHouseholdId());
       DISPLAY_SCREEN_KEYS.forEach((name) => {
         getRegisteredScreens(name).forEach((screen) => {
           const isEnabled = name === "scorecards"
             ? normalizedScreens.includes("scorecards")
               && (!hasIndividualScorecardFlags || normalizedScreens.includes(buildScorecardScreenKey(screen.dataset.scorecardId)))
+            : name === "rsvp"
+              ? normalizedScreens.includes("rsvp") && rsvpEnabled
             : normalizedScreens.includes(name);
           if (isEnabled) {
             screen.classList.remove("screen--disabled");
