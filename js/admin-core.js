@@ -1120,15 +1120,20 @@
 
       if (rsvpNavButton) {
         rsvpNavButton.hidden = !rsvpEnabled;
+        rsvpNavButton.style.display = rsvpEnabled ? "" : "none";
       }
 
-      if (rsvpScreen && !rsvpEnabled) {
-        rsvpScreen.hidden = true;
-        rsvpScreen.classList.remove("is-active");
+      if (rsvpScreen) {
+        rsvpScreen.hidden = !rsvpEnabled || adminScreen !== "rsvp";
+        rsvpScreen.style.display = rsvpEnabled ? "" : "none";
+        if (!rsvpEnabled) {
+          rsvpScreen.classList.remove("is-active");
+        }
       }
     }
 
     function openAdminSettings() {
+      syncAdminRsvpVisibility();
       setAdminScreen("settings");
       renderAdminSettingsSkeleton();
       loadAdminAccountSettings();

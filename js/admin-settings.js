@@ -280,6 +280,7 @@
       }
       if (rsvpToggle) {
         rsvpToggle.hidden = !rsvpEnabled;
+        rsvpToggle.style.display = rsvpEnabled ? "" : "none";
       }
 
       // Household
