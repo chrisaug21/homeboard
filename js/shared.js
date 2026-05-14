@@ -34,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-  const VERSION = "2.0.34";
+  const VERSION = "2.0.35";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1161,6 +1161,7 @@
     }
 
     function buildWeddingRsvpSnapshot(rsvps, invitedParties) {
+      console.log("[rsvp-matching] function called");
       const allRsvps = Array.isArray(rsvps) ? rsvps : [];
       const rsvpList = allRsvps.filter((rsvp) => rsvp.status === "active");
       const supersededRsvps = allRsvps.filter((rsvp) => rsvp.status === "superseded");
@@ -1185,6 +1186,7 @@
           matchedParty
         };
       });
+      console.log("[rsvp-matching] matching results", matchingResults);
       const matchedRsvps = matchingResults
         .filter((entry) => entry.matchedParty)
         .map((entry) => ({
@@ -1273,6 +1275,8 @@
           .eq("event_id", RSVP_EVENT_ID)
           .order("name", { ascending: true })
       ]);
+      console.log("[rsvp-matching] raw rsvps", activeRsvpRows);
+      console.log("[rsvp-matching] raw invited_parties", partyRows);
 
       if (
         activeRsvpError || partyError

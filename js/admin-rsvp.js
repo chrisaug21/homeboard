@@ -406,6 +406,7 @@
     }
 
     async function loadAdminRsvpScreen() {
+      console.log("[admin-rsvp] loadAdminRsvpScreen called");
       if (!isRsvpDisplayScreenAvailable(getAdminHouseholdId())) {
         adminWeddingSnapshot = null;
         adminRsvpUnmatchedNote.textContent = "";
