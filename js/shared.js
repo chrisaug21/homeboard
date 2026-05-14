@@ -34,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.33";
+  const VERSION = "2.0.34";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -46,6 +46,7 @@
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const RSVP_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    const RSVP_EVENT_ID = "2a3c853e-ffe7-4eba-b9b9-41a5e122cfb4";
 
     function getDisplayHouseholdId() {
       try {
@@ -1193,13 +1194,6 @@
       const unmatchedRsvps = matchingResults
         .filter((entry) => !entry.matchedParty)
         .map((entry) => entry.rsvp);
-      console.log("[rsvp-matching] matching results", matchingResults.map((entry) => ({
-        rsvpId: entry.rsvp.id,
-        rsvpName: entry.rsvp.name,
-        matched: Boolean(entry.matchedParty),
-        matchedPartyId: entry.matchedParty?.id || null,
-        matchedPartyName: entry.matchedParty?.name || null
-      })));
       const reviewItems = [];
 
       unmatchedRsvps.forEach((rsvp) => {
@@ -1276,6 +1270,7 @@
         client
           .from("invited_parties")
           .select("id, name, invited_count, rsvp_id, created_at")
+          .eq("event_id", RSVP_EVENT_ID)
           .order("name", { ascending: true })
       ]);
 
@@ -1285,9 +1280,6 @@
       ) {
         return null;
       }
-
-      console.log("[rsvp-matching] raw rsvps", activeRsvpRows);
-      console.log("[rsvp-matching] raw invited_parties", partyRows);
 
       return buildWeddingRsvpSnapshot(
         activeRsvpRows.map(mapWeddingRsvp),
