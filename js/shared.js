@@ -34,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.31";
+    const VERSION = "2.0.32";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1182,7 +1182,18 @@
           .map((party) => party.rsvpId)
           .filter(Boolean)
       );
+      const matchedPartyByRsvpId = new Map(
+        hydratedParties
+          .filter((party) => party.rsvpId)
+          .map((party) => [party.rsvpId, party])
+      );
       const unmatchedRsvps = rsvpList.filter((rsvp) => !matchedRsvpIds.has(rsvp.id));
+      const matchedRsvps = rsvpList
+        .filter((rsvp) => matchedPartyByRsvpId.has(rsvp.id))
+        .map((rsvp) => ({
+          ...rsvp,
+          matchedParty: matchedPartyByRsvpId.get(rsvp.id) || null
+        }));
       const reviewItems = [];
       const unmatchedBestMatches = new Map();
       const duplicateMatchesByParty = new Map();
@@ -1238,44 +1249,6 @@
         });
       });
 
-      hydratedParties.forEach((party) => {
-        if (!party.linkedRsvp) return;
-
-        if (party.linkedRsvp.attending === true && party.linkedRsvp.guestCount > party.invitedCount) {
-          reviewItems.push({
-            id: party.linkedRsvp.id,
-            issueType: "count_mismatch",
-            issueLabel: "Count mismatch",
-            rsvp: party.linkedRsvp,
-            matchedParty: party,
-            competingParty: null,
-            competingRsvp: null,
-            competingRsvps: [],
-            suggestions: [],
-            bestScore: party.matchScore || 0
-          });
-          return;
-        }
-
-        if (
-          (party.matchScore || 0) < RSVP_MATCH_LOW_CONFIDENCE_THRESHOLD
-          && !isLowConfidenceMatchConfirmed(party.linkedRsvp.id, party.id)
-        ) {
-          reviewItems.push({
-            id: party.linkedRsvp.id,
-            issueType: "low_confidence",
-            issueLabel: "Low confidence",
-            rsvp: party.linkedRsvp,
-            matchedParty: party,
-            competingParty: null,
-            competingRsvp: null,
-            competingRsvps: [],
-            suggestions: getInvitedPartySuggestions(party.linkedRsvp.name, hydratedParties, 3, 0),
-            bestScore: party.matchScore || 0
-          });
-        }
-      });
-
       const attendingGuests = hydratedParties.reduce((sum, party) => {
         if (!party.linkedRsvp || party.linkedRsvp.attending !== true) return sum;
         return sum + Math.min(party.linkedRsvp.guestCount, party.invitedCount);
@@ -1297,6 +1270,7 @@
 
       return {
         rsvps: rsvpList,
+        matchedRsvps,
         invitedParties: hydratedParties,
         unmatchedRsvps,
         reviewItems,

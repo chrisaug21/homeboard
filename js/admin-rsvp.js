@@ -248,7 +248,7 @@
     function renderAdminRsvpUnmatchedList() {
       const reviewItems = adminWeddingSnapshot?.reviewItems || [];
 
-      adminRsvpUnmatchedNote.textContent = "RSVPs that need your attention — unmatched, possible duplicates, unexpected guest counts, or uncertain matches.";
+      adminRsvpUnmatchedNote.textContent = "RSVPs that still need a party match, including possible duplicates.";
 
       if (!reviewItems.length) {
         adminRsvpUnmatchedList.innerHTML = '<div class="admin-empty">Nothing to review right now.</div>';
@@ -390,11 +390,14 @@
 
       adminRsvpGuestList.innerHTML = parties.map((party) => {
         const status = getAdminRsvpStatusMeta(party);
+        const meta = party.linkedRsvp
+          ? `${formatAdminGuestCount(party.invitedCount)} • RSVP: ${party.linkedRsvp.name}`
+          : formatAdminGuestCount(party.invitedCount);
         return `
           <button class="admin-rsvp-guest-row" type="button" data-party-id="${escapeHtml(party.id)}">
             <div class="admin-rsvp-guest-main">
               <div class="admin-rsvp-guest-title">${escapeHtml(party.name)}</div>
-              <div class="admin-rsvp-guest-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))}</div>
+              <div class="admin-rsvp-guest-meta">${escapeHtml(meta)}</div>
             </div>
             <span class="admin-rsvp-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
           </button>
