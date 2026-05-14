@@ -34,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.30";
+    const VERSION = "2.0.31";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1314,7 +1314,7 @@
 
     async function fetchWeddingRsvpSnapshot() {
       const client = getSupabaseClient();
-      if (!client || !isRsvpDisplayScreenAvailable()) {
+      if (!client) {
         return null;
       }
 
