@@ -34,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-  const VERSION = "2.0.35";
+  const VERSION = "2.0.36";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1272,7 +1272,7 @@
         client
           .from("invited_parties")
           .select("id, name, invited_count, rsvp_id, created_at")
-          .eq("event_id", RSVP_EVENT_ID)
+          .eq("event_id", "2a3c853e-ffe7-4eba-b9b9-41a5e122cfb4")
           .order("name", { ascending: true })
       ]);
       console.log("[rsvp-matching] raw rsvps", activeRsvpRows);
