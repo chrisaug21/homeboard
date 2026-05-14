@@ -34,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.32";
+    const VERSION = "2.0.33";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1177,64 +1177,36 @@
           .filter((rsvp) => rsvp.mergedIntoPartyId === party.id)
           .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       });
-      const matchedRsvpIds = new Set(
-        hydratedParties
-          .map((party) => party.rsvpId)
-          .filter(Boolean)
-      );
-      const matchedPartyByRsvpId = new Map(
-        hydratedParties
-          .filter((party) => party.rsvpId)
-          .map((party) => [party.rsvpId, party])
-      );
-      const unmatchedRsvps = rsvpList.filter((rsvp) => !matchedRsvpIds.has(rsvp.id));
-      const matchedRsvps = rsvpList
-        .filter((rsvp) => matchedPartyByRsvpId.has(rsvp.id))
-        .map((rsvp) => ({
-          ...rsvp,
-          matchedParty: matchedPartyByRsvpId.get(rsvp.id) || null
-        }));
-      const reviewItems = [];
-      const unmatchedBestMatches = new Map();
-      const duplicateMatchesByParty = new Map();
-
-      unmatchedRsvps.forEach((rsvp) => {
-        const bestOverallMatch = getBestInvitedPartyMatch(rsvp.name, hydratedParties);
-        unmatchedBestMatches.set(rsvp.id, bestOverallMatch);
-        if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
-          const duplicateMatches = duplicateMatchesByParty.get(bestOverallMatch.id) || [];
-          duplicateMatches.push({ rsvp, bestScore: bestOverallMatch.matchScore });
-          duplicateMatchesByParty.set(bestOverallMatch.id, duplicateMatches);
-        }
+      const matchingResults = rsvpList.map((rsvp) => {
+        const matchedParty = hydratedParties.find((party) => party.rsvpId === rsvp.id) || null;
+        return {
+          rsvp,
+          matchedParty
+        };
       });
+      const matchedRsvps = matchingResults
+        .filter((entry) => entry.matchedParty)
+        .map((entry) => ({
+          ...entry.rsvp,
+          matchedParty: entry.matchedParty
+        }));
+      const unmatchedRsvps = matchingResults
+        .filter((entry) => !entry.matchedParty)
+        .map((entry) => entry.rsvp);
+      console.log("[rsvp-matching] matching results", matchingResults.map((entry) => ({
+        rsvpId: entry.rsvp.id,
+        rsvpName: entry.rsvp.name,
+        matched: Boolean(entry.matchedParty),
+        matchedPartyId: entry.matchedParty?.id || null,
+        matchedPartyName: entry.matchedParty?.name || null
+      })));
+      const reviewItems = [];
 
       unmatchedRsvps.forEach((rsvp) => {
-        const bestOverallMatch = unmatchedBestMatches.get(rsvp.id) || null;
-        if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
-          const duplicateParty = hydratedParties.find((party) => party.id === bestOverallMatch.id) || null;
-          const duplicateMatches = duplicateMatchesByParty.get(bestOverallMatch.id) || [];
-          reviewItems.push({
-            id: rsvp.id,
-            issueType: "duplicate",
-            issueLabel: "Duplicate",
-            rsvp,
-            matchedParty: null,
-            competingParty: duplicateParty,
-            competingRsvp: rsvpById.get(bestOverallMatch.rsvpId) || null,
-            competingRsvps: duplicateMatches
-              .map((match) => match.rsvp)
-              .filter((matchRsvp) => matchRsvp.id !== rsvp.id)
-              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)),
-            suggestions: [],
-            bestScore: bestOverallMatch.matchScore
-          });
-          return;
-        }
-
         reviewItems.push({
           id: rsvp.id,
           issueType: "unmatched",
-          issueLabel: "Unmatched",
+          issueLabel: "Needs Review",
           rsvp,
           matchedParty: null,
           competingParty: null,
@@ -1245,7 +1217,7 @@
             hydratedParties.filter((party) => !party.rsvpId),
             3
           ),
-          bestScore: bestOverallMatch ? bestOverallMatch.matchScore : 0
+          bestScore: 0
         });
       });
 
@@ -1313,6 +1285,9 @@
       ) {
         return null;
       }
+
+      console.log("[rsvp-matching] raw rsvps", activeRsvpRows);
+      console.log("[rsvp-matching] raw invited_parties", partyRows);
 
       return buildWeddingRsvpSnapshot(
         activeRsvpRows.map(mapWeddingRsvp),
