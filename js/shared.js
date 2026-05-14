@@ -1,5 +1,5 @@
     const SUPABASE_URL = '%%SUPABASE_URL%%';
-    const SUPABASE_KEY = '%%SUPABASE_KEY%%';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJndnZzZ3Z4bWRlYmNxbG9raXd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTc3ODgsImV4cCI6MjA4OTA3Mzc4OH0.1csDD5Yv2gemmyX-QImdtp8acdt9VNti5pGObNSXWXA';
     const GOOGLE_CAL_KEY = '%%GOOGLE_CAL_KEY%%';
     const UNSPLASH_ACCESS_KEY = '%%UNSPLASH_ACCESS_KEY%%';
     const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -34,7 +34,7 @@
       return sb || initSupabaseClient();
     }
 
-  const VERSION = "2.0.36";
+  const VERSION = "2.0.37";
     const rotationIntervalMs = 30000;
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
@@ -1161,7 +1161,6 @@
     }
 
     function buildWeddingRsvpSnapshot(rsvps, invitedParties) {
-      console.log("[rsvp-matching] function called");
       const allRsvps = Array.isArray(rsvps) ? rsvps : [];
       const rsvpList = allRsvps.filter((rsvp) => rsvp.status === "active");
       const supersededRsvps = allRsvps.filter((rsvp) => rsvp.status === "superseded");
@@ -1186,7 +1185,6 @@
           matchedParty
         };
       });
-      console.log("[rsvp-matching] matching results", matchingResults);
       const matchedRsvps = matchingResults
         .filter((entry) => entry.matchedParty)
         .map((entry) => ({
@@ -1275,9 +1273,6 @@
           .eq("event_id", "2a3c853e-ffe7-4eba-b9b9-41a5e122cfb4")
           .order("name", { ascending: true })
       ]);
-      console.log("[rsvp-matching] raw rsvps", activeRsvpRows);
-      console.log("[rsvp-matching] raw invited_parties", partyRows);
-
       if (
         activeRsvpError || partyError
         || !Array.isArray(activeRsvpRows) || !Array.isArray(partyRows)
