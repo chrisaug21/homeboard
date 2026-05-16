@@ -338,9 +338,10 @@
 
     .marketing-card-preview {
       width: 100%;
+      height: 180px;
       flex: 1 1 auto;
       display: flex;
-      align-items: stretch;
+      align-items: center;
     }
 
     .marketing-card-copy {
@@ -373,18 +374,10 @@
       background: #F8F3EA;
     }
 
-    .marketing-calendar-weekdays,
     .marketing-calendar-days {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
-    }
-
-    .marketing-calendar-weekdays span {
-      color: var(--marketing-muted);
-      font-size: 0.78rem;
-      font-weight: 800;
-      text-align: center;
     }
 
     .marketing-calendar-day {
@@ -496,26 +489,23 @@
       border-radius: 20px;
       border: 1px solid rgba(28, 25, 23, 0.08);
       background: #F8F3EA;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       overflow: hidden;
     }
 
     .marketing-meal-cell {
       min-width: 0;
       display: grid;
-      gap: 8px;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 16px;
       padding: 12px 10px;
       background: rgba(255, 253, 247, 0.84);
       border-top: 1px solid rgba(28, 25, 23, 0.08);
-      border-right: 1px solid rgba(28, 25, 23, 0.08);
     }
 
-    .marketing-meal-cell:nth-child(-n + 3) {
+    .marketing-meal-cell:first-child {
       border-top: 0;
-    }
-
-    .marketing-meal-cell:nth-child(3n) {
-      border-right: 0;
     }
 
     .marketing-meal-day {
@@ -574,7 +564,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 24px;
-      padding: 48px 32px;
+      padding: 24px 32px;
       border-radius: 28px;
       background: var(--marketing-accent);
       box-shadow: 0 24px 44px rgba(180, 83, 9, 0.24);
@@ -635,7 +625,7 @@
       }
 
       .marketing-cta-band {
-        padding: 44px 28px;
+        padding: 22px 28px;
       }
     }
 
@@ -675,7 +665,7 @@
         flex-direction: column;
         align-items: stretch;
         gap: 20px;
-        padding: 40px 22px;
+        padding: 22px 22px;
       }
     }
 
@@ -692,8 +682,8 @@
           <img src="homeboard_logo.svg" alt="Homeboard" width="144" decoding="async">
         </div>
         <div class="marketing-hero-copy">
-          <h1 id="marketing-title">A smart dashboard for your home, built for the kitchen wall.</h1>
-          <p>Calendar, to-dos, meal plan, and countdowns — all on a tablet mounted where your family actually gathers.</p>
+          <h1 id="marketing-title">A smart dashboard for your home built for the kitchen wall.</h1>
+          <p>Calendar, to-dos, meal planning, and countdowns — all on a tablet mounted where your family actually gathers.</p>
           <div class="marketing-actions">
             <a class="marketing-button marketing-button--primary" href="/signup">Get started</a>
             <a class="marketing-button marketing-button--secondary" href="/admin">Already have an account?</a>
@@ -709,11 +699,6 @@
             </div>
             <div class="marketing-card-preview">
               <div class="marketing-calendar">
-                <div class="marketing-calendar-weekdays">
-                  <span>Wed</span>
-                  <span>Thu</span>
-                  <span>Fri</span>
-                </div>
                 <div class="marketing-calendar-days">
                   <div class="marketing-calendar-day">
                     <strong>14</strong>
@@ -726,12 +711,24 @@
                     <strong>16</strong>
                   </div>
                 </div>
+                <div class="marketing-calendar-days">
+                  <div class="marketing-calendar-day">
+                    <strong>21</strong>
+                  </div>
+                  <div class="marketing-calendar-day">
+                    <strong>22</strong>
+                    <span class="marketing-pill marketing-pill--green">Piano</span>
+                  </div>
+                  <div class="marketing-calendar-day">
+                    <strong>23</strong>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           <div class="marketing-card-copy">
             <h2>Calendar</h2>
-            <p>Syncs with Google Calendar so everyone sees what&apos;s coming up.</p>
+            <p>Syncs with Google Calendar so everyone sees what&apos;s coming up. Color-coded by calendar, today always highlighted.</p>
           </div>
         </article>
 
