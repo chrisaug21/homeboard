@@ -178,13 +178,15 @@
       max-width: 1160px;
       margin: 0 auto;
       display: grid;
-      gap: 40px;
+      gap: 28px;
     }
 
     .marketing-hero {
       display: grid;
-      gap: 28px;
+      gap: 18px;
       padding-top: 12px;
+      justify-items: center;
+      text-align: center;
     }
 
     .marketing-brand {
@@ -209,52 +211,34 @@
 
     .marketing-hero-copy {
       display: grid;
-      gap: 16px;
-      max-width: 760px;
-    }
-
-    .marketing-kicker {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      width: fit-content;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: var(--marketing-accent-soft);
-      color: var(--marketing-accent);
-      font-size: 0.88rem;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .marketing-kicker i {
-      width: 16px;
-      height: 16px;
+      gap: 14px;
+      max-width: 920px;
+      justify-items: center;
     }
 
     .marketing-hero-copy h1 {
       margin: 0;
       font-family: "Bricolage Grotesque", "Manrope", sans-serif;
-      font-size: clamp(2.6rem, 5.6vw, 5rem);
-      line-height: 0.95;
+      font-size: clamp(2.75rem, 4.2vw, 4.2rem);
+      line-height: 1.02;
       letter-spacing: -0.05em;
       color: var(--marketing-text);
-      max-width: 10ch;
+      max-width: 14ch;
     }
 
     .marketing-hero-copy p {
       margin: 0;
-      max-width: 58ch;
+      max-width: 64ch;
       color: var(--marketing-muted);
-      font-size: clamp(1rem, 2.2vw, 1.18rem);
-      line-height: 1.65;
+      font-size: clamp(1rem, 1.65vw, 1.15rem);
+      line-height: 1.6;
     }
 
     .marketing-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 14px;
+      justify-content: center;
     }
 
     .marketing-button {
@@ -290,18 +274,20 @@
 
     .marketing-button--secondary {
       background: rgba(255, 253, 247, 0.72);
-      border-color: rgba(28, 25, 23, 0.12);
+      border-color: rgba(120, 113, 108, 0.42);
+      border-width: 2px;
       color: var(--marketing-text);
     }
 
     .marketing-widgets {
+      position: relative;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 20px;
+      align-items: start;
     }
 
     .marketing-card {
-      position: relative;
       display: grid;
       gap: 18px;
       min-height: 280px;
@@ -310,7 +296,8 @@
       border: 1px solid var(--marketing-border);
       border-radius: 24px;
       box-shadow: var(--marketing-shadow);
-      overflow: hidden;
+      align-content: start;
+      align-items: start;
       opacity: 0;
       transform: translateY(26px);
       animation: marketing-card-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -322,17 +309,6 @@
 
     .marketing-card:nth-child(3) {
       animation-delay: 220ms;
-    }
-
-    .marketing-card::after {
-      content: "";
-      position: absolute;
-      inset: auto -24px -42px auto;
-      width: 132px;
-      height: 132px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(180, 83, 9, 0.16), transparent 70%);
-      pointer-events: none;
     }
 
     .marketing-card-header {
@@ -381,7 +357,7 @@
     .marketing-calendar-weekdays,
     .marketing-calendar-days {
       display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
     }
 
@@ -497,24 +473,11 @@
 
     .marketing-countdown {
       display: grid;
-      place-items: center;
       align-content: center;
       gap: 14px;
       min-height: 100%;
       text-align: center;
       padding: 8px 0;
-    }
-
-    .marketing-countdown-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: var(--marketing-secondary-soft);
-      color: var(--marketing-secondary);
-      font-size: 0.84rem;
-      font-weight: 800;
     }
 
     .marketing-countdown-title {
@@ -532,7 +495,7 @@
     }
 
     .marketing-countdown-caption {
-      color: var(--marketing-muted);
+      color: var(--marketing-text);
       font-size: 0.94rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
@@ -540,9 +503,32 @@
     }
 
     .marketing-features {
+      position: relative;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 16px;
+      padding-top: 30px;
+    }
+
+    .marketing-features::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(100%, 980px);
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(120, 113, 108, 0.28), transparent);
+    }
+
+    .marketing-features::after {
+      content: "";
+      position: absolute;
+      inset: 8px -18px -16px;
+      border-radius: 28px;
+      background: rgba(255, 253, 247, 0.30);
+      border: 1px solid rgba(28, 25, 23, 0.04);
+      z-index: -1;
     }
 
     .marketing-feature {
@@ -585,9 +571,10 @@
 
     .marketing-footer {
       color: var(--marketing-muted);
-      font-size: 0.9rem;
+      font-size: 0.94rem;
+      opacity: 0.72;
       text-align: center;
-      padding: 4px 0 0;
+      padding: 10px 0 0;
     }
 
     .marketing-footer a {
@@ -651,6 +638,10 @@
         padding: 0 6px;
         font-size: 0.64rem;
       }
+
+      .marketing-features {
+        padding-top: 24px;
+      }
     }
 
   </style>
@@ -666,10 +657,6 @@
           <img src="homeboard_logo.svg" alt="Homeboard" width="144" decoding="async">
         </div>
         <div class="marketing-hero-copy">
-          <div class="marketing-kicker">
-            <i data-lucide="monitor-smartphone"></i>
-            Homeboard
-          </div>
           <h1 id="marketing-title">A smart dashboard for your home, built for the kitchen wall.</h1>
           <p>Calendar, to-dos, meal plan, and countdowns — all on a tablet mounted where your family actually gathers.</p>
           <div class="marketing-actions">
@@ -686,42 +673,28 @@
               <i data-lucide="calendar-days"></i>
               <span>Calendar</span>
             </div>
-            <span class="marketing-card-badge">Week</span>
           </div>
           <div class="marketing-calendar">
             <div class="marketing-calendar-weekdays">
-              <span>Mon</span>
-              <span>Tue</span>
               <span>Wed</span>
               <span>Thu</span>
               <span>Fri</span>
               <span>Sat</span>
-              <span>Sun</span>
             </div>
             <div class="marketing-calendar-days">
               <div class="marketing-calendar-day">
-                <strong>12</strong>
+                <strong>14</strong>
                 <span class="marketing-pill marketing-pill--amber">Piano</span>
               </div>
               <div class="marketing-calendar-day">
-                <strong>13</strong>
-              </div>
-              <div class="marketing-calendar-day">
-                <strong>14</strong>
+                <strong>15</strong>
                 <span class="marketing-pill marketing-pill--green">Dinner</span>
               </div>
               <div class="marketing-calendar-day">
-                <strong>15</strong>
-              </div>
-              <div class="marketing-calendar-day">
                 <strong>16</strong>
-                <span class="marketing-pill marketing-pill--ink">Game Night</span>
               </div>
               <div class="marketing-calendar-day">
                 <strong>17</strong>
-              </div>
-              <div class="marketing-calendar-day">
-                <strong>18</strong>
               </div>
             </div>
           </div>
@@ -773,16 +746,11 @@
               <i data-lucide="timer-reset"></i>
               <span>Countdowns</span>
             </div>
-            <span class="marketing-card-badge">Live</span>
           </div>
           <div class="marketing-countdown">
-            <div class="marketing-countdown-badge">
-              <i data-lucide="sparkles"></i>
-              Looking forward
-            </div>
-            <div class="marketing-countdown-title">Bailey &amp; Chris 🎉</div>
-            <div class="marketing-countdown-number">147</div>
-            <div class="marketing-countdown-caption">days</div>
+            <div class="marketing-countdown-title">Summer Vacation 🌴</div>
+            <div class="marketing-countdown-number">38</div>
+            <div class="marketing-countdown-caption">DAYS</div>
           </div>
         </article>
       </section>
@@ -793,21 +761,21 @@
             <i data-lucide="calendar-days"></i>
           </div>
           <h2>Always up to date</h2>
-          <p>Syncs with Google Calendar automatically.</p>
+          <p>Connect your Google Calendar once and it shows up automatically, always current.</p>
         </article>
         <article class="marketing-feature">
           <div class="marketing-feature-icon">
             <i data-lucide="users"></i>
           </div>
           <h2>Built for households</h2>
-          <p>Multiple members, shared to-dos, meal planning.</p>
+          <p>Add family members, share to-dos, plan meals together, and keep everyone on the same page.</p>
         </article>
         <article class="marketing-feature">
           <div class="marketing-feature-icon">
             <i data-lucide="timer"></i>
           </div>
           <h2>Count down together</h2>
-          <p>See what&apos;s coming up as a family.</p>
+          <p>Add vacations, birthdays, holidays — anything worth looking forward to, visible to the whole household.</p>
         </article>
       </section>
 
