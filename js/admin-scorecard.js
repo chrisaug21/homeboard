@@ -494,26 +494,21 @@
     }
 
     function buildScorecardHistoryEntryHTML(scorecard, session) {
-      const winnerLabel = session.winner || "Tie";
+      const winningPlayers = new Set(getScorecardLeaders(session.scores, scorecard.players));
       return `
         <article class="admin-scorecard-history-card">
-          <div class="admin-scorecard-history-head">
-            <div class="admin-scorecard-history-meta">
-              <strong>${escapeHtml(formatScorecardSessionDate(session.endedAt || session.startedAt))}</strong>
-              <span>${escapeHtml(formatScorecardSessionDuration(session.startedAt, session.endedAt))}</span>
-            </div>
-            <span class="admin-scorecard-history-winner-badge">
-              <i data-lucide="trophy"></i>
-              ${escapeHtml(winnerLabel)}
-            </span>
+          <div class="admin-scorecard-history-meta">
+            <strong>${escapeHtml(formatScorecardHistoryDate(session.endedAt || session.startedAt))}</strong>
           </div>
           <div class="admin-scorecard-history-scores">
             ${scorecard.players.map((player) => `
-              <span class="admin-scorecard-history-pill${winnerLabel === player.name ? " is-winner" : ""}">
-                ${winnerLabel === player.name ? '<i data-lucide="trophy"></i>' : ""}
-                <span>${escapeHtml(player.name)}</span>
+              <div class="admin-scorecard-history-pill${winningPlayers.has(player.name) ? " is-winner" : ""}">
+                <span class="admin-scorecard-history-pill-icon" aria-hidden="true">
+                  <i data-lucide="trophy"${winningPlayers.has(player.name) ? "" : ' style="visibility:hidden"'}></i>
+                </span>
+                <span class="admin-scorecard-history-pill-name">${escapeHtml(player.name)}</span>
                 <strong>${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session.scores, player, scorecard.players)))}</strong>
-              </span>
+              </div>
             `).join("")}
           </div>
         </article>
