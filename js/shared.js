@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.40";
+    const VERSION = "2.0.45";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -904,6 +904,36 @@
       }).format(date);
     }
 
+    function formatScorecardHistoryDateRange(startValue, endValue) {
+      const formatDate = (value) => {
+        if (!value) {
+          return null;
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return null;
+        }
+
+        return new Intl.DateTimeFormat("en-US", {
+          month: "long",
+          day: "numeric"
+        }).format(date);
+      };
+
+      const startDate = formatDate(startValue);
+      const endDate = formatDate(endValue);
+
+      if (startDate && endDate) {
+        if (startDate === endDate) {
+          return startDate;
+        }
+        return `${startDate} → ${endDate}`;
+      }
+
+      return startDate || endDate || "Unknown date";
+    }
+
     function formatScoreEventTime(value) {
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) {
@@ -925,24 +955,6 @@
         default:
           return "Increment";
       }
-    }
-
-    function formatScorecardSessionDuration(startedAt, endedAt) {
-      const start = startedAt ? new Date(startedAt) : null;
-      const end = endedAt ? new Date(endedAt) : null;
-
-      if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        return "Duration unknown";
-      }
-
-      const totalMinutes = Math.max(0, Math.round((end - start) / 60000));
-      if (totalMinutes < 60) {
-        return `${totalMinutes}m`;
-      }
-
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = totalMinutes % 60;
-      return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
     }
 
     function formatRelativeTimestamp(value, emptyLabel = "") {

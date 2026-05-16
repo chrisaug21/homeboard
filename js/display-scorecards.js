@@ -363,19 +363,27 @@
         <details class="scorecard-history">
           <summary>Past games</summary>
           <div class="scorecard-history-list">
-            ${sessions.map((session) => `
-              <article class="scorecard-history-item">
-                <div class="scorecard-history-head">
-                  <strong>${escapeHtml(formatScorecardSessionDate(session.endedAt || session.startedAt))}</strong>
-                  <span>${escapeHtml(session.winner || "Tie")}</span>
-                </div>
-                <div class="scorecard-history-scores">
-                  ${scorecard.players.map((player) => `
-                    <span class="scorecard-history-pill" style="background:${escapeHtml(hexToRgba(player.color, 0.14))};color:${escapeHtml(player.color)}">${escapeHtml(player.name)} ${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session.scores, player, scorecard.players)))}</span>
-                  `).join("")}
-                </div>
-              </article>
-            `).join("")}
+            ${sessions.map((session) => {
+              const winningPlayers = new Set(getScorecardLeaders(session.scores, scorecard.players));
+              return `
+                <article class="scorecard-history-item">
+                  <div class="scorecard-history-head">
+                    <strong>${escapeHtml(formatScorecardHistoryDateRange(session.startedAt, session.endedAt))}</strong>
+                  </div>
+                  <div class="scorecard-history-scores">
+                    ${scorecard.players.map((player) => `
+                      <div class="scorecard-history-pill${winningPlayers.has(player.name) ? " is-winner" : ""}">
+                        <span class="scorecard-history-pill-icon" aria-hidden="true">
+                          <i data-lucide="trophy"${winningPlayers.has(player.name) ? "" : ' style="visibility:hidden"'}></i>
+                        </span>
+                        <span class="scorecard-history-pill-name">${escapeHtml(player.name)}</span>
+                        <strong>${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session.scores, player, scorecard.players)))}</strong>
+                      </div>
+                    `).join("")}
+                  </div>
+                </article>
+              `;
+            }).join("")}
           </div>
         </details>
       `;

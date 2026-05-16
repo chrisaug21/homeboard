@@ -36,7 +36,7 @@
           "fireworks",
           "bubble-float",
           "thumbs-up-bounce",
-          "sparkle-trail",
+          "ripple-rings",
           "ink-splash"
         ];
 
@@ -485,10 +485,8 @@
       }
 
       const animationName = getDisplayCelebrationAnimationName();
-      // DEBUG: set window.__DEBUG_CELEBRATIONS__ = true in console to enable
-      if (window.__DEBUG_CELEBRATIONS__ === true) {
-        showDisplayCelebrationDebugLabel(animationName);
-      }
+      // Temporary always-on debug label for tablet-side celebration QA.
+      showDisplayCelebrationDebugLabel(animationName);
       const origin = getTodoCelebrationOrigin(cardEl);
       switch (animationName) {
         case "confetti-burst":
@@ -501,7 +499,7 @@
           return playGsapBubbleFloat(origin);
         case "thumbs-up-bounce":
           return playGsapThumbsUp(origin);
-        case "sparkle-trail":
+        case "ripple-rings":
           return playRippleRings(origin);
         case "ink-splash":
           return playGsapInkSplash(origin);
