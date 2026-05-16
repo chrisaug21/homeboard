@@ -36,7 +36,7 @@
           "fireworks",
           "bubble-float",
           "thumbs-up-bounce",
-          "sparkle-trail",
+          "ripple-rings",
           "ink-splash"
         ];
 
@@ -499,7 +499,7 @@
           return playGsapBubbleFloat(origin);
         case "thumbs-up-bounce":
           return playGsapThumbsUp(origin);
-        case "sparkle-trail":
+        case "ripple-rings":
           return playRippleRings(origin);
         case "ink-splash":
           return playGsapInkSplash(origin);
