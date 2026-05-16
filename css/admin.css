@@ -3056,6 +3056,11 @@
       border: 1px solid var(--border);
     }
 
+    .admin-scorecard-history-card {
+      display: grid;
+      gap: 16px;
+    }
+
     .admin-scorecard-log-card,
     .admin-scorecard-log-head,
     .admin-scorecard-log-meta {
@@ -3226,6 +3231,10 @@
     .admin-scorecard-history-meta strong {
       font-size: 0.94rem;
       line-height: 1.35;
+    }
+
+    .admin-scorecard-history-meta {
+      margin-bottom: 2px;
     }
 
     .admin-scorecard-history-meta span {

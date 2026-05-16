@@ -2736,12 +2736,16 @@
 
     .scorecard-history-list {
       margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-content: start;
       max-height: min(34dvh, 320px);
       overflow-y: auto;
       padding-right: 4px;
     }
 
     .scorecard-history-item {
+      min-width: 0;
       padding: 14px;
       display: grid;
       gap: 12px;
