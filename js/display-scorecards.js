@@ -368,7 +368,7 @@
               return `
                 <article class="scorecard-history-item">
                   <div class="scorecard-history-head">
-                    <strong>${escapeHtml(formatScorecardHistoryDate(session.endedAt || session.startedAt))}</strong>
+                    <strong>${escapeHtml(formatScorecardHistoryDateRange(session.startedAt, session.endedAt))}</strong>
                   </div>
                   <div class="scorecard-history-scores">
                     ${scorecard.players.map((player) => `

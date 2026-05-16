@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.42";
+    const VERSION = "2.0.43";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -904,22 +904,31 @@
       }).format(date);
     }
 
-    function formatScorecardHistoryDate(value) {
-      if (!value) {
-        return "Unknown date";
+    function formatScorecardHistoryDateRange(startValue, endValue) {
+      const formatDate = (value) => {
+        if (!value) {
+          return null;
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return null;
+        }
+
+        return new Intl.DateTimeFormat("en-US", {
+          month: "long",
+          day: "numeric"
+        }).format(date);
+      };
+
+      const startDate = formatDate(startValue);
+      const endDate = formatDate(endValue);
+
+      if (startDate && endDate) {
+        return `${startDate} → ${endDate}`;
       }
 
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) {
-        return "Unknown date";
-      }
-
-      return new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit"
-      }).format(date).replace(",", " at");
+      return startDate || endDate || "Unknown date";
     }
 
     function formatScoreEventTime(value) {
