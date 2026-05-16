@@ -372,10 +372,10 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      padding: 16px;
-      border-radius: 20px;
+      padding: 12px;
+      border-radius: 18px;
       border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #F8F3EA;
+      background: #FFFDF7;
     }
 
     .marketing-calendar-days {
@@ -433,10 +433,10 @@
       width: 100%;
       display: grid;
       gap: 10px;
-      padding: 16px;
-      border-radius: 20px;
+      padding: 12px;
+      border-radius: 18px;
       border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #F8F3EA;
+      background: #FFFDF7;
     }
 
     .marketing-todo-row {
@@ -489,10 +489,10 @@
       width: 100%;
       display: grid;
       gap: 0;
-      padding: 16px;
-      border-radius: 20px;
+      padding: 12px;
+      border-radius: 18px;
       border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #F8F3EA;
+      background: #FFFDF7;
       grid-template-columns: 1fr;
       overflow: hidden;
     }
@@ -532,24 +532,24 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
       min-height: 100%;
       text-align: center;
-      padding: 18px 16px;
-      border-radius: 20px;
+      padding: 12px;
+      border-radius: 18px;
       border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #F8F3EA;
+      background: #FFFDF7;
     }
 
     .marketing-countdown-title {
       font-family: "Fraunces", serif;
-      font-size: clamp(1.3rem, 2vw, 1.65rem);
-      line-height: 1.15;
+      font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+      line-height: 1.1;
     }
 
     .marketing-countdown-number {
       font-family: "Bricolage Grotesque", "Manrope", sans-serif;
-      font-size: clamp(4rem, 7vw, 5.2rem);
+      font-size: clamp(3.1rem, 5.4vw, 4.1rem);
       line-height: 0.9;
       letter-spacing: -0.05em;
       color: var(--marketing-accent);
@@ -561,6 +561,11 @@
       letter-spacing: 0.12em;
       text-transform: uppercase;
       font-weight: 800;
+    }
+
+    .marketing-pill--slate {
+      background: rgba(120, 113, 108, 0.16);
+      color: var(--marketing-text);
     }
 
     .marketing-cta-band {
@@ -725,6 +730,7 @@
                   </div>
                   <div class="marketing-calendar-day">
                     <strong>23</strong>
+                    <span class="marketing-pill marketing-pill--slate">B-Day</span>
                   </div>
                 </div>
               </div>
