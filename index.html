@@ -338,15 +338,19 @@
 
     .marketing-card-preview {
       width: 100%;
-      height: 180px;
+      height: 160px;
       flex: 1 1 auto;
       display: flex;
       align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
 
     .marketing-card-copy {
       display: grid;
       gap: 8px;
+      min-height: 92px;
+      align-content: start;
     }
 
     .marketing-card-copy h2 {
@@ -728,7 +732,7 @@
           </div>
           <div class="marketing-card-copy">
             <h2>Calendar</h2>
-            <p>Syncs with Google Calendar so everyone sees what&apos;s coming up. Color-coded by calendar, today always highlighted.</p>
+            <p>Syncs with Google Calendar so everyone sees what&apos;s coming up. Color-coded by calendar.</p>
           </div>
         </article>
 
@@ -820,7 +824,7 @@
       </section>
 
       <footer class="marketing-footer">
-        Already set up your display? Go to <a href="/display">/display</a> on your tablet.
+        Already set up? Go to <a href="/display">/display</a> on your tablet.
       </footer>
     </div>
   </main>
