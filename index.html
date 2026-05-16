@@ -18,17 +18,23 @@
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
-      var mode = pathname === "/admin" ? "admin" : "display";
-      // Auto-redirect mobile screens to admin view
-      if (mode !== "admin" && window.innerWidth <= 768) {
+      var mode = pathname === "/admin"
+        ? "admin"
+        : pathname === "/display"
+          ? "display"
+          : "marketing";
+      // Auto-redirect small screens only from the display route
+      if (mode === "display" && window.innerWidth <= 768) {
         window.location.replace("/admin");
         return;
       }
       document.documentElement.setAttribute("data-mode", mode);
-      var manifestLink = document.createElement("link");
-      manifestLink.rel = "manifest";
-      manifestLink.href = mode === "admin" ? "/manifest-admin.json" : "/manifest.json";
-      document.head.appendChild(manifestLink);
+      if (mode === "admin" || mode === "display") {
+        var manifestLink = document.createElement("link");
+        manifestLink.rel = "manifest";
+        manifestLink.href = mode === "admin" ? "/manifest-admin.json" : "/manifest.json";
+        document.head.appendChild(manifestLink);
+      }
       if (mode === "admin") {
         document.querySelector('meta[name="theme-color"]').setAttribute("content", "#B45309");
         var s = document.createElement("style");
@@ -119,12 +125,724 @@
       display: none !important;
     }
 
+    html[data-mode="marketing"] #display-app,
+    html[data-mode="marketing"] #admin-app,
+    html[data-mode="display"] #marketing-app,
+    html[data-mode="admin"] #marketing-app {
+      display: none !important;
+    }
+
+    html[data-mode="marketing"],
+    html[data-mode="marketing"] body {
+      min-height: 100%;
+      height: auto;
+      overflow: auto;
+    }
+
+    .marketing-shell {
+      --marketing-bg: #F5F0E8;
+      --marketing-surface: #FFFDF7;
+      --marketing-text: #1C1917;
+      --marketing-accent: #B45309;
+      --marketing-accent-soft: rgba(180, 83, 9, 0.12);
+      --marketing-secondary: #15803D;
+      --marketing-secondary-soft: rgba(21, 128, 61, 0.12);
+      --marketing-muted: #78716C;
+      --marketing-border: rgba(28, 25, 23, 0.10);
+      --marketing-shadow: 0 24px 60px rgba(28, 25, 23, 0.08);
+      position: relative;
+      min-height: 100dvh;
+      padding: 32px 20px 40px;
+      color: var(--marketing-text);
+      background:
+        radial-gradient(circle at top left, rgba(180, 83, 9, 0.16), transparent 30%),
+        radial-gradient(circle at top right, rgba(21, 128, 61, 0.12), transparent 28%),
+        linear-gradient(180deg, #fbf7ef 0%, var(--marketing-bg) 42%, #f1ebdf 100%);
+    }
+
+    .marketing-shell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(28, 25, 23, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(28, 25, 23, 0.02) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 78%);
+    }
+
+    .marketing-layout {
+      position: relative;
+      z-index: 1;
+      max-width: 1160px;
+      margin: 0 auto;
+      display: grid;
+      gap: 28px;
+    }
+
+    .marketing-hero {
+      display: grid;
+      gap: 18px;
+      padding-top: 12px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .marketing-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      width: fit-content;
+      padding: 12px 16px;
+      background: rgba(255, 253, 247, 0.72);
+      border: 1px solid rgba(28, 25, 23, 0.08);
+      border-radius: 999px;
+      box-shadow: 0 10px 24px rgba(28, 25, 23, 0.05);
+      backdrop-filter: blur(10px);
+    }
+
+    .marketing-brand img {
+      display: block;
+      width: 144px;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .marketing-hero-copy {
+      display: grid;
+      gap: 14px;
+      max-width: 920px;
+      justify-items: center;
+    }
+
+    .marketing-hero-copy h1 {
+      margin: 0;
+      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      font-size: clamp(2.75rem, 4.2vw, 4.2rem);
+      line-height: 1.02;
+      letter-spacing: -0.05em;
+      color: var(--marketing-text);
+      max-width: 14ch;
+    }
+
+    .marketing-hero-copy p {
+      margin: 0;
+      max-width: 64ch;
+      color: var(--marketing-muted);
+      font-size: clamp(1rem, 1.65vw, 1.15rem);
+      line-height: 1.6;
+    }
+
+    .marketing-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: center;
+    }
+
+    .marketing-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 52px;
+      padding: 0 22px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      color: var(--marketing-text);
+      font-weight: 800;
+      text-decoration: none;
+      transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease;
+    }
+
+    .marketing-button:hover,
+    .marketing-button:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(28, 25, 23, 0.10);
+    }
+
+    .marketing-button:focus-visible {
+      outline: 3px solid rgba(28, 25, 23, 0.20);
+      outline-offset: 3px;
+    }
+
+    .marketing-button--primary {
+      background: var(--marketing-accent);
+      color: #FFFDF7;
+    }
+
+    .marketing-button--secondary {
+      background: rgba(255, 253, 247, 0.72);
+      border-color: rgba(120, 113, 108, 0.40);
+      border-width: 2px;
+      color: var(--marketing-text);
+    }
+
+    .marketing-features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 24px;
+      margin-bottom: 18px;
+    }
+
+    .marketing-card {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      min-height: 340px;
+      padding: 22px;
+      background: var(--marketing-surface);
+      border: 1px solid var(--marketing-border);
+      border-radius: 24px;
+      box-shadow: var(--marketing-shadow);
+      align-items: stretch;
+      opacity: 0;
+      transform: translateY(26px);
+      animation: marketing-card-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .marketing-card:nth-child(2) {
+      animation-delay: 110ms;
+    }
+
+    .marketing-card:nth-child(3) {
+      animation-delay: 220ms;
+    }
+
+    .marketing-card:nth-child(4) {
+      animation-delay: 330ms;
+    }
+
+    .marketing-card-header {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
+      flex: 1 1 auto;
+    }
+
+    .marketing-card-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .marketing-card-label i {
+      width: 18px;
+      height: 18px;
+      color: var(--marketing-accent);
+    }
+
+    .marketing-card-preview {
+      width: 100%;
+      height: 220px;
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .marketing-card-preview--todos {
+      height: 244px;
+      padding-block: 12px;
+    }
+
+    .marketing-card-copy {
+      display: grid;
+      gap: 8px;
+      min-height: 92px;
+      align-content: start;
+    }
+
+    .marketing-card-copy h2 {
+      margin: 0;
+      font-size: 1.08rem;
+      line-height: 1.2;
+      color: var(--marketing-text);
+    }
+
+    .marketing-card-copy p {
+      margin: 0;
+      color: var(--marketing-muted);
+      font-size: 0.94rem;
+      line-height: 1.6;
+    }
+
+    .marketing-calendar {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(28, 25, 23, 0.08);
+      background: #FFFDF7;
+    }
+
+    .marketing-calendar-days {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .marketing-calendar-day {
+      display: grid;
+      gap: 6px;
+      align-content: start;
+      min-height: 58px;
+      padding: 10px 8px;
+      border-radius: 14px;
+      background: rgba(255, 253, 247, 0.84);
+      border: 1px solid rgba(28, 25, 23, 0.06);
+    }
+
+    .marketing-calendar-day strong {
+      font-size: 0.92rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .marketing-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .marketing-pill--amber {
+      background: rgba(180, 83, 9, 0.14);
+      color: var(--marketing-accent);
+    }
+
+    .marketing-pill--green {
+      background: rgba(21, 128, 61, 0.14);
+      color: var(--marketing-secondary);
+    }
+
+    .marketing-pill--ink {
+      background: rgba(28, 25, 23, 0.08);
+      color: var(--marketing-text);
+    }
+
+    .marketing-todos {
+      width: 100%;
+      display: grid;
+      gap: 10px;
+      min-height: 196px;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(28, 25, 23, 0.08);
+      background: #FFFDF7;
+    }
+
+    .marketing-todo-row {
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 253, 247, 0.84);
+      border: 1px solid rgba(28, 25, 23, 0.06);
+    }
+
+    .marketing-todo-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(180, 83, 9, 0.42);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--marketing-surface);
+      background: transparent;
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
+    .marketing-todo-row.is-done .marketing-todo-check {
+      background: var(--marketing-accent);
+      border-color: var(--marketing-accent);
+      color: #FFFDF7;
+    }
+
+    .marketing-todo-copy {
+      min-width: 0;
+    }
+
+    .marketing-todo-copy strong {
+      font-size: 0.97rem;
+      line-height: 1.3;
+    }
+
+    .marketing-todo-row.is-done .marketing-todo-copy strong {
+      color: rgba(120, 113, 108, 0.86);
+      text-decoration: line-through;
+      text-decoration-thickness: 1.5px;
+    }
+
+    .marketing-meals {
+      width: 100%;
+      display: grid;
+      gap: 0;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(28, 25, 23, 0.08);
+      background: #FFFDF7;
+      grid-template-columns: 1fr;
+      overflow: hidden;
+    }
+
+    .marketing-meal-cell {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 16px;
+      padding: 12px 10px;
+      background: rgba(255, 253, 247, 0.84);
+      border-top: 1px solid rgba(28, 25, 23, 0.08);
+    }
+
+    .marketing-meal-cell:first-child {
+      border-top: 0;
+    }
+
+    .marketing-meal-day {
+      color: var(--marketing-muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .marketing-meal-name {
+      font-size: 0.95rem;
+      line-height: 1.35;
+      color: var(--marketing-text);
+    }
+
+    .marketing-countdown {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      min-height: 100%;
+      text-align: center;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(28, 25, 23, 0.08);
+      background: #FFFDF7;
+    }
+
+    .marketing-countdown-title {
+      font-family: "Fraunces", serif;
+      font-size: clamp(0.92rem, 1.2vw, 1.1rem);
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .marketing-countdown-number {
+      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      font-size: clamp(2.7rem, 4.6vw, 3.5rem);
+      line-height: 0.9;
+      letter-spacing: -0.05em;
+      color: var(--marketing-accent);
+    }
+
+    .marketing-countdown-caption {
+      color: var(--marketing-text);
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .marketing-pill--slate {
+      background: rgba(120, 113, 108, 0.16);
+      color: var(--marketing-text);
+    }
+
+    .marketing-cta-band {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 24px 32px;
+      border-radius: 28px;
+      background: var(--marketing-accent);
+      box-shadow: 0 24px 44px rgba(180, 83, 9, 0.24);
+    }
+
+    .marketing-cta-copy {
+      max-width: 620px;
+      color: #FFFDF7;
+      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      font-size: clamp(1.6rem, 3vw, 2.3rem);
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+      font-weight: 700;
+    }
+
+    .marketing-button--inverse {
+      flex: 0 0 auto;
+      background: #FFFDF7;
+      color: var(--marketing-accent);
+      border-color: #FFFDF7;
+      min-width: 164px;
+    }
+
+    .marketing-footer {
+      color: var(--marketing-muted);
+      font-size: 0.94rem;
+      opacity: 0.72;
+      text-align: center;
+      padding: 10px 0 0;
+    }
+
+    .marketing-footer a {
+      color: var(--marketing-accent);
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .marketing-footer a:hover,
+    .marketing-footer a:focus-visible {
+      text-decoration: underline;
+    }
+
+    @keyframes marketing-card-enter {
+      from {
+        opacity: 0;
+        transform: translateY(26px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .marketing-features-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .marketing-cta-band {
+        padding: 22px 28px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .marketing-shell {
+        padding: 24px 16px 32px;
+      }
+
+      .marketing-hero-copy h1 {
+        max-width: none;
+      }
+
+      .marketing-actions {
+        display: grid;
+      }
+
+      .marketing-button {
+        width: 100%;
+      }
+
+      .marketing-features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .marketing-card {
+        min-height: 0;
+      }
+
+      .marketing-calendar-day,
+      .marketing-meal-cell,
+      .marketing-todo-row {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .marketing-cta-band {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 20px;
+        padding: 22px 22px;
+      }
+    }
+
   </style>
   <link rel="stylesheet" href="css/display.css?v=2.0.0">
   <link rel="stylesheet" href="css/admin.css?v=2.0.0">
   <link rel="stylesheet" href="js/vendor/cropper.min.css">
 </head>
 <body>
+  <main class="marketing-shell" id="marketing-app">
+    <div class="marketing-layout">
+      <section class="marketing-hero" aria-labelledby="marketing-title">
+        <div class="marketing-brand" aria-label="Homeboard">
+          <img src="homeboard_logo.svg" alt="Homeboard" width="144" decoding="async">
+        </div>
+        <div class="marketing-hero-copy">
+          <h1 id="marketing-title">A smart dashboard for your home built for the kitchen wall.</h1>
+          <p>Calendar, to-dos, meal planning, and countdowns — all on a tablet mounted where your family actually gathers.</p>
+          <div class="marketing-actions">
+            <a class="marketing-button marketing-button--primary" href="/signup">Get started</a>
+            <a class="marketing-button marketing-button--secondary" href="/admin">Already have an account?</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="marketing-features-grid" aria-label="Homeboard features preview">
+        <article class="marketing-card">
+          <div class="marketing-card-header">
+            <div class="marketing-card-label">
+              <i data-lucide="calendar-days"></i>
+            </div>
+            <div class="marketing-card-preview">
+              <div class="marketing-calendar">
+                <div class="marketing-calendar-days">
+                  <div class="marketing-calendar-day">
+                    <strong>14</strong>
+                  </div>
+                  <div class="marketing-calendar-day">
+                    <strong>15</strong>
+                    <span class="marketing-pill marketing-pill--amber">Dinner</span>
+                  </div>
+                  <div class="marketing-calendar-day">
+                    <strong>16</strong>
+                  </div>
+                </div>
+                <div class="marketing-calendar-days">
+                  <div class="marketing-calendar-day">
+                    <strong>21</strong>
+                  </div>
+                  <div class="marketing-calendar-day">
+                    <strong>22</strong>
+                    <span class="marketing-pill marketing-pill--green">Piano</span>
+                  </div>
+                  <div class="marketing-calendar-day">
+                    <strong>23</strong>
+                    <span class="marketing-pill marketing-pill--slate">B-Day</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="marketing-card-copy">
+            <h2>Calendar</h2>
+            <p>Syncs with Google Calendar so everyone sees what&apos;s coming up. Color-coded by calendar.</p>
+          </div>
+        </article>
+
+        <article class="marketing-card">
+          <div class="marketing-card-header">
+            <div class="marketing-card-label">
+              <i data-lucide="list-todo"></i>
+            </div>
+            <div class="marketing-card-preview marketing-card-preview--todos">
+              <div class="marketing-todos">
+                <div class="marketing-todo-row">
+                  <span class="marketing-todo-check" aria-hidden="true"></span>
+                  <div class="marketing-todo-copy">
+                    <strong>Pack soccer snacks</strong>
+                  </div>
+                </div>
+                <div class="marketing-todo-row is-done">
+                  <span class="marketing-todo-check" aria-hidden="true">✓</span>
+                  <div class="marketing-todo-copy">
+                    <strong>Start dishwasher</strong>
+                  </div>
+                </div>
+                <div class="marketing-todo-row">
+                  <span class="marketing-todo-check" aria-hidden="true"></span>
+                  <div class="marketing-todo-copy">
+                    <strong>Order birthday balloons</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="marketing-card-copy">
+            <h2>To-dos</h2>
+            <p>Shared household list, visible on the wall and manageable from your phone.</p>
+          </div>
+        </article>
+
+        <article class="marketing-card">
+          <div class="marketing-card-header">
+            <div class="marketing-card-label">
+              <i data-lucide="utensils-crossed"></i>
+            </div>
+            <div class="marketing-card-preview">
+              <div class="marketing-meals">
+                <div class="marketing-meal-cell">
+                  <span class="marketing-meal-day">Mon</span>
+                  <span class="marketing-meal-name">Tacos</span>
+                </div>
+                <div class="marketing-meal-cell">
+                  <span class="marketing-meal-day">Tue</span>
+                  <span class="marketing-meal-name">Pasta</span>
+                </div>
+                <div class="marketing-meal-cell">
+                  <span class="marketing-meal-day">Wed</span>
+                  <span class="marketing-meal-name">Stir fry</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="marketing-card-copy">
+            <h2>Meal plan</h2>
+            <p>Plot out the week&apos;s dinners so nobody has to ask what&apos;s for dinner.</p>
+          </div>
+        </article>
+
+        <article class="marketing-card">
+          <div class="marketing-card-header">
+            <div class="marketing-card-label">
+              <i data-lucide="timer-reset"></i>
+            </div>
+            <div class="marketing-card-preview">
+              <div class="marketing-countdown">
+                <div class="marketing-countdown-title">Summer Vacation 🌴</div>
+                <div class="marketing-countdown-number">38</div>
+                <div class="marketing-countdown-caption">DAYS</div>
+              </div>
+            </div>
+          </div>
+          <div class="marketing-card-copy">
+            <h2>Countdowns</h2>
+            <p>Add anything worth looking forward to. The whole family sees it.</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="marketing-cta-band" aria-label="Get started with Homeboard">
+        <div class="marketing-cta-copy">Control everything from your phone. See it all on your wall.</div>
+        <a class="marketing-button marketing-button--inverse" href="/signup">Get started</a>
+      </section>
+
+      <footer class="marketing-footer">
+        Already set up? Go to <a href="/display">/display</a> on your tablet.
+      </footer>
+    </div>
+  </main>
+
   <div class="app-shell" id="display-app">
     <section class="display-pairing" id="display-pairing-screen" hidden aria-labelledby="display-pairing-title">
       <div class="display-pairing-card">

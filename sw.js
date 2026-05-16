@@ -1,7 +1,8 @@
-const CACHE_NAME = "homeboard-v2.0.30";
+const CACHE_NAME = "homeboard-v2.0.40";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
+  "/display",
   "./signup.html",
   "./manifest.json",
   "./manifest-admin.json",
@@ -52,10 +53,31 @@ self.addEventListener("fetch", (event) => {
       event.request.destination === "script" ||
       event.request.destination === "style" ||
       event.request.destination === "document" ||
-      requestUrl.pathname === "/" ||
+      requestUrl.pathname === "/display" ||
+      requestUrl.pathname === "/admin" ||
       requestUrl.pathname.endsWith(".html") ||
       requestUrl.pathname.endsWith(".json")
     );
+
+  function getNavigationFallback() {
+    if (requestUrl.pathname === "/signup") {
+      return caches.match("./signup.html");
+    }
+
+    if (requestUrl.pathname === "/display") {
+      return caches.match("/display").then((response) => response || caches.match("./index.html"));
+    }
+
+    if (requestUrl.pathname === "/admin") {
+      return caches.match("./index.html");
+    }
+
+    if (requestUrl.pathname === "/") {
+      return caches.match("./").then((response) => response || caches.match("./index.html"));
+    }
+
+    return caches.match("./index.html");
+  }
 
   event.respondWith(
     isLocalAppShellRequest
@@ -77,7 +99,7 @@ self.addEventListener("fetch", (event) => {
             }
 
             if (event.request.mode === "navigate") {
-              return caches.match("./index.html");
+              return getNavigationFallback();
             }
 
             throw new Error("Network request failed");
@@ -99,7 +121,7 @@ self.addEventListener("fetch", (event) => {
             return networkResponse;
           }).catch(() => {
             if (event.request.mode === "navigate") {
-              return caches.match("./index.html");
+              return getNavigationFallback();
             }
 
             throw new Error("Network request failed");

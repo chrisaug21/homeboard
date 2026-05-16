@@ -4,6 +4,8 @@
     const UNSPLASH_ACCESS_KEY = '%%UNSPLASH_ACCESS_KEY%%';
     const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
     const isAdminMode = pathname === "/admin";
+    const isDisplayMode = pathname === "/display";
+    const isMarketingMode = !isAdminMode && !isDisplayMode;
     let sb = null;
 
     function initSupabaseClient() {
@@ -34,8 +36,9 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.30";
+    const VERSION = "2.0.40";
     const rotationIntervalMs = 30000;
+    const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
     const LAST_SYNCED_KEY = "homeboard_last_synced";
@@ -1705,8 +1708,21 @@
     function init() {
       if (isAdminMode) {
         initAdminMode();
-      } else {
+      } else if (isDisplayMode) {
         initDisplayMode();
+      } else if (isMarketingMode) {
+        if (marketingApp) {
+          marketingApp.hidden = false;
+        }
+        if (displayApp) {
+          displayApp.hidden = true;
+        }
+        if (adminApp) {
+          adminApp.hidden = true;
+        }
+        if (typeof refreshIcons === "function") {
+          refreshIcons();
+        }
       }
 
       registerServiceWorker();
