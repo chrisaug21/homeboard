@@ -2,7 +2,8 @@
 
 Homeboard is a household command-center PWA built for two surfaces:
 
-- a wall-mounted display at `/` that rotates through shared household info
+- a marketing landing page at `/`
+- a wall-mounted display at `/display` that rotates through shared household info
 - a phone-friendly admin app at `/admin` for managing that household
 - a public self-serve signup page at `/signup` for new household creation with invite codes
 
@@ -27,11 +28,12 @@ Both modes are served from a single `index.html`.
 
 | Mode | URL | Intended device | Orientation |
 |---|---|---|---|
-| Display | `/` | wall tablet | landscape |
+| Marketing | `/` | desktop or phone | responsive |
+| Display | `/display` | wall tablet | landscape |
 | Admin | `/admin` | phone | portrait |
 | Signup | `/signup` | phone | portrait |
 
-Netlify rewrites `/admin` to `index.html` and `/signup` to `signup.html`. The main app decides which mode to boot from `window.location.pathname` before the main scripts run.
+Netlify rewrites `/display` and `/admin` to `index.html` and rewrites `/signup` to `signup.html`. The main app decides which mode to boot from `window.location.pathname` before the main scripts run.
 
 ## Auth And Access
 
