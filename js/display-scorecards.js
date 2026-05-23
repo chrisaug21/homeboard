@@ -471,8 +471,10 @@
                     <div class="scorecard-bonus-entry-side">
                       <div class="scorecard-bonus-entry-controls">
                         <div class="scorecard-bonus-input-wrap${isLocked ? " is-locked" : ""}">
-                          <input class="scorecard-bonus-input${isLocked ? " is-locked" : ""}" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]*" min="0" max="${escapeHtml(currentScore)}" value="${escapeHtml(isLocked ? String(lockedWager) : String(draftWager || ""))}" data-scorecard-bonus-input="${escapeHtml(inputKey)}" data-scorecard-bonus-max="${escapeHtml(currentScore)}"${isLocked ? " disabled" : ""}>
-                          ${isLocked ? "" : `<button class="scorecard-bonus-peek-btn" type="button" data-action="scorecard-bonus-peek" data-scorecard-bonus-peek-target="${escapeHtml(inputKey)}"${draftWager ? "" : " disabled"} aria-label="Toggle wager visibility"><i data-lucide="eye"></i></button>`}
+                          ${isLocked
+                            ? '<div class="scorecard-bonus-mask" aria-label="Wager locked and hidden">Hidden</div>'
+                            : `<input class="scorecard-bonus-input" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]*" min="0" max="${escapeHtml(currentScore)}" value="${escapeHtml(String(draftWager || ""))}" data-scorecard-bonus-input="${escapeHtml(inputKey)}" data-scorecard-bonus-max="${escapeHtml(currentScore)}">
+                          <button class="scorecard-bonus-peek-btn" type="button" data-action="scorecard-bonus-peek" data-scorecard-bonus-peek-target="${escapeHtml(inputKey)}"${draftWager ? "" : " disabled"} aria-label="Toggle wager visibility"><i data-lucide="eye"></i></button>`}
                         </div>
                         <button class="scorecard-secondary-btn scorecard-bonus-lock-btn${isLocked ? " is-locked" : ""}" type="button" data-action="scorecard-bonus-lock" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}"${isLocked ? " disabled" : ""}>${isLocked ? '<i data-lucide="lock"></i><span>Locked</span>' : "Lock in"}</button>
                       </div>
