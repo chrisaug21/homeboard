@@ -48,13 +48,14 @@ netlify.toml        — build config, env var injection via sed
 - `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` support countdown photos and delayed visibility
 - `scorecards` — scorecard definitions with `name`, `increments` (JSONB number array), `players` (JSONB `{id,name,color}` array with stable player identifiers), `show_history`, `allow_negative`, and soft delete via `archived_at`
 - `scorecard_sessions` — per-game scorecard sessions with `started_at`, `ended_at`, `scores`, `wagers`, and `wager_results` JSONB objects keyed by `players[].id`, plus `score_events` JSONB audit entries, optional `winner`, and `is_final_jeopardy`
-- `rsvps` — pre-existing wedding table, do not modify schema
+- `rsvps` — pre-existing wedding table owned by the separate wedding site repo, which only ever inserts `name`, `attending`, `guest_count`. Homeboard may add its own additive, nullable-or-defaulted bookkeeping columns (existing precedent: `status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never rename, drop, or add a non-defaulted NOT NULL constraint to a column the wedding site writes
 - `invited_parties` — wedding invite list with `name`, `invited_count`, nullable `rsvp_id`, and `created_at`; this is the source of truth for matched vs pending invite parties
 
 ## Wedding RSVP Logic
 - RSVP soft delete uses `rsvps.status`, never hard delete rows
 - Status values: `active` and `superseded`
 - `rsvps.merged_into_party_id` is the explicit link from a superseded RSVP to the invited party it was merged into
+- `rsvps.excluded_from_auto_match` is set to `true` whenever an admin manually unlinks an RSVP from an invited party (via either the Review RSVPs unlink flow or the Edit Party modal's unlink-then-save flow). The shared auto-link helper (`autoLinkHighConfidenceRsvps` in `js/shared.js`) skips any RSVP with this flag set, on both admin and display, so a manually-rejected match is never silently re-established — it stays in Needs Review until a human manually links it
 - All RSVP queries used for counts, matching, or display must read `status = 'active'` only
 - Homeboard wedding counts must derive from `rsvps` + `invited_parties`, not from hardcoded totals or subtraction from `households.total_invited_guests`
 - `Attending` = matched attending people only; use the linked RSVP guest count, clamped to the invited party count if an RSVP overstates guests so totals stay consistent
@@ -177,7 +178,7 @@ This project uses ES256 asymmetric JWT signing. Supabase's built-in JWT verifier
 Functions handle JWT decoding directly in their own code using the `decodeJwtFromHeader` pattern. Do not deploy any Edge Function on this project with `verify_jwt = true`. Each function's directory should contain a `config.toml` with `verify_jwt = false`.
 
 ## Homeboard-Specific Rules
-- Never modify the `rsvps` table schema — it belongs to the wedding site
+- The `rsvps` table is owned by the wedding site, which only writes `name`, `attending`, `guest_count`. Homeboard may add its own additive, nullable-or-defaulted columns for its own bookkeeping, but must never rename, drop, or add a non-defaulted NOT NULL constraint to a column the wedding site depends on
 - Never hard-delete todos — always set `archived_at`
 - `meal_plan` rows with `user_id = null` are shared/household; never show personal rows (`user_id` set) on the display
 - sw.js cache prefix: `homeboard-v##`

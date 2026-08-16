@@ -191,7 +191,7 @@ Core tables used by Homeboard:
 | `scorecard_sessions` | active and completed scorecard sessions |
 | `display_pairings` | temporary pairing codes for display setup |
 | `invite_codes` | self-serve household signup codes with active state and usage limits |
-| `rsvps` | wedding RSVP data; schema is treated as fixed |
+| `rsvps` | wedding RSVP data owned by the wedding site repo; homeboard may add its own additive bookkeeping columns (`status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never touch columns the wedding site writes (`name`, `attending`, `guest_count`) |
 | `invited_parties` | wedding invite list and RSVP matching source of truth |
 
 ## Environment Variables
@@ -226,6 +226,6 @@ Do not use `file://` or `npx serve .` for local testing. The app depends on inje
 - keep changes small and safe
 - do not hardcode Supabase credentials
 - do not hard-delete todos
-- do not modify the `rsvps` schema
+- only add additive columns to the `rsvps` schema; never touch the columns the wedding site writes (`name`, `attending`, `guest_count`)
 - keep `js/shared.js` `VERSION` and `sw.js` `CACHE_NAME` in sync on every push
 - update this README when auth, setup, routes, pairing, environment variables, or architecture change

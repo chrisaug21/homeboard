@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.49";
+    const VERSION = "2.0.50";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -1138,7 +1138,8 @@
         guestCount: Math.max(0, parseInt(row.guest_count, 10) || 0),
         createdAt: row.created_at || null,
         status: row.status || "active",
-        mergedIntoPartyId: row.merged_into_party_id || null
+        mergedIntoPartyId: row.merged_into_party_id || null,
+        excludedFromAutoMatch: row.excluded_from_auto_match === true
       };
     }
 
@@ -1318,7 +1319,7 @@
       ] = await Promise.all([
         client
           .from("rsvps")
-          .select("id, name, attending, guest_count, created_at, status, merged_into_party_id")
+          .select("id, name, attending, guest_count, created_at, status, merged_into_party_id, excluded_from_auto_match")
           .eq("status", "active")
           .order("created_at", { ascending: false }),
         client
@@ -1354,6 +1355,10 @@
       const candidateUpdates = [];
 
       snapshot.unmatchedRsvps.forEach((rsvp) => {
+        if (rsvp.excludedFromAutoMatch) {
+          return;
+        }
+
         const bestOverallMatch = getBestInvitedPartyMatch(rsvp.name, snapshot.invitedParties);
         if (bestOverallMatch && bestOverallMatch.rsvpId && bestOverallMatch.matchScore >= RSVP_MATCH_DUPLICATE_THRESHOLD) {
           return;

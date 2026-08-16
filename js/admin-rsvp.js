@@ -506,6 +506,13 @@
       }
 
       const linkChanged = linkedRsvpId !== expectedLinkedRsvpId;
+      if (linkChanged && expectedLinkedRsvpId) {
+        await client
+          .from("rsvps")
+          .update({ excluded_from_auto_match: true })
+          .eq("id", expectedLinkedRsvpId);
+      }
+
       closeAdminModal();
       await loadAdminRsvpScreen({ skipAutoLink: linkChanged });
       showToast("Party updated.");
@@ -633,6 +640,11 @@
         showToast("That party changed since this screen loaded. Refresh and try again.");
         return;
       }
+
+      await client
+        .from("rsvps")
+        .update({ excluded_from_auto_match: true })
+        .eq("id", rsvpId);
 
       await loadAdminRsvpScreen({ skipAutoLink: true });
       openReviewModal(rsvpId);
