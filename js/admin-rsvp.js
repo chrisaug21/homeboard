@@ -501,16 +501,20 @@
         return;
       }
 
+      let excludeError = null;
       if (linkedRsvpId !== expectedLinkedRsvpId && expectedLinkedRsvpId) {
-        await client
+        const result = await client
           .from("rsvps")
           .update({ excluded_from_auto_match: true })
           .eq("id", expectedLinkedRsvpId);
+        excludeError = result.error;
       }
 
       closeAdminModal();
       await loadAdminRsvpScreen();
-      showToast("Party updated.");
+      showToast(excludeError
+        ? "Party updated, but the old RSVP link may auto-relink on refresh. Please check and unlink again if needed."
+        : "Party updated.");
     }
 
     function handleAdminRsvpUnmatchedInput(event) {
@@ -636,10 +640,13 @@
         return;
       }
 
-      await client
+      const { error: excludeError } = await client
         .from("rsvps")
         .update({ excluded_from_auto_match: true })
         .eq("id", rsvpId);
+      if (excludeError) {
+        showToast("Unlinked, but this RSVP may auto-relink on refresh. Please check and unlink again if needed.");
+      }
 
       await loadAdminRsvpScreen();
       openReviewModal(rsvpId);
