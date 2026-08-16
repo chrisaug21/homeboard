@@ -402,9 +402,7 @@
       }).join("");
     }
 
-    async function loadAdminRsvpScreen(options = {}) {
-      const skipAutoLink = Boolean(options.skipAutoLink);
-
+    async function loadAdminRsvpScreen() {
       if (!isRsvpDisplayScreenAvailable(getAdminHouseholdId())) {
         adminWeddingSnapshot = null;
         adminRsvpUnmatchedNote.textContent = "";
@@ -428,11 +426,9 @@
         return;
       }
 
-      adminWeddingSnapshot = skipAutoLink
-        ? snapshot
-        : await autoLinkHighConfidenceRsvps(snapshot, {
-          logPrefix: "[admin-rsvp-auto-match]"
-        });
+      adminWeddingSnapshot = await autoLinkHighConfidenceRsvps(snapshot, {
+        logPrefix: "[admin-rsvp-auto-match]"
+      });
       renderAdminRsvpUnmatchedList();
       renderAdminRsvpGuestList();
     }
@@ -505,8 +501,7 @@
         return;
       }
 
-      const linkChanged = linkedRsvpId !== expectedLinkedRsvpId;
-      if (linkChanged && expectedLinkedRsvpId) {
+      if (linkedRsvpId !== expectedLinkedRsvpId && expectedLinkedRsvpId) {
         await client
           .from("rsvps")
           .update({ excluded_from_auto_match: true })
@@ -514,7 +509,7 @@
       }
 
       closeAdminModal();
-      await loadAdminRsvpScreen({ skipAutoLink: linkChanged });
+      await loadAdminRsvpScreen();
       showToast("Party updated.");
     }
 
@@ -646,7 +641,7 @@
         .update({ excluded_from_auto_match: true })
         .eq("id", rsvpId);
 
-      await loadAdminRsvpScreen({ skipAutoLink: true });
+      await loadAdminRsvpScreen();
       openReviewModal(rsvpId);
     }
 
