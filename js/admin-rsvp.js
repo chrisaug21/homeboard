@@ -505,8 +505,9 @@
         return;
       }
 
+      const linkChanged = linkedRsvpId !== expectedLinkedRsvpId;
       closeAdminModal();
-      await loadAdminRsvpScreen();
+      await loadAdminRsvpScreen({ skipAutoLink: linkChanged });
       showToast("Party updated.");
     }
 
