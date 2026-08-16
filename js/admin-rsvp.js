@@ -402,7 +402,9 @@
       }).join("");
     }
 
-    async function loadAdminRsvpScreen() {
+    async function loadAdminRsvpScreen(options = {}) {
+      const skipAutoLink = Boolean(options.skipAutoLink);
+
       if (!isRsvpDisplayScreenAvailable(getAdminHouseholdId())) {
         adminWeddingSnapshot = null;
         adminRsvpUnmatchedNote.textContent = "";
@@ -426,9 +428,11 @@
         return;
       }
 
-      adminWeddingSnapshot = await autoLinkHighConfidenceRsvps(snapshot, {
-        logPrefix: "[admin-rsvp-auto-match]"
-      });
+      adminWeddingSnapshot = skipAutoLink
+        ? snapshot
+        : await autoLinkHighConfidenceRsvps(snapshot, {
+          logPrefix: "[admin-rsvp-auto-match]"
+        });
       renderAdminRsvpUnmatchedList();
       renderAdminRsvpGuestList();
     }
@@ -629,7 +633,7 @@
         return;
       }
 
-      await loadAdminRsvpScreen();
+      await loadAdminRsvpScreen({ skipAutoLink: true });
       openReviewModal(rsvpId);
     }
 
