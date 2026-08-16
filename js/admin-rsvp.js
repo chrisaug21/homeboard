@@ -446,7 +446,7 @@
       adminRsvpWritePending = true;
       const { data, error } = await client
         .from("invited_parties")
-        .update({ rsvp_id: rsvpId })
+        .update({ rsvp_id: rsvpId, low_confidence_confirmed_rsvp_id: null })
         .eq("id", partyId)
         .is("rsvp_id", null)
         .select("id");
@@ -457,7 +457,6 @@
         return;
       }
 
-      setLowConfidenceMatchConfirmed(rsvpId, partyId, false);
       closeAdminModal();
       await loadAdminRsvpScreen();
       showToast("RSVP linked.");
@@ -599,7 +598,11 @@
     }
 
     async function confirmLowConfidenceReview(rsvpId, partyId) {
-      setLowConfidenceMatchConfirmed(rsvpId, partyId, true);
+      const { error } = await setLowConfidenceMatchConfirmed(rsvpId, partyId, true);
+      if (error) {
+        showToast(friendlySaveMessage());
+        return;
+      }
       closeAdminModal();
       await loadAdminRsvpScreen();
       showToast("Match confirmed.");
@@ -615,7 +618,7 @@
       adminRsvpWritePending = true;
       const { data, error } = await client
         .from("invited_parties")
-        .update({ rsvp_id: null })
+        .update({ rsvp_id: null, low_confidence_confirmed_rsvp_id: null })
         .eq("id", partyId)
         .eq("rsvp_id", rsvpId)
         .select("id");
@@ -626,7 +629,6 @@
         return;
       }
 
-      setLowConfidenceMatchConfirmed(rsvpId, partyId, false);
       await loadAdminRsvpScreen();
       openReviewModal(rsvpId);
     }

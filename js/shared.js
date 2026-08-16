@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.0.46";
+    const VERSION = "2.0.47";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -90,7 +90,6 @@
     const RSVP_MATCH_DUPLICATE_THRESHOLD = 5.2;
     const RSVP_MATCH_LOW_CONFIDENCE_THRESHOLD = 4.6;
     const RSVP_MATCH_AUTO_LINK_THRESHOLD = 6.4;
-    const RSVP_LOW_CONFIDENCE_CONFIRM_KEY = "homeboard_rsvp_low_confidence_confirmations";
     const RSVP_GENERIC_FAMILY_TOKENS = ["family", "household", "guests", "guest", "party", "crew"];
 
     const mealTypeOptions = [
@@ -1122,34 +1121,13 @@
       return Number(score) >= RSVP_MATCH_AUTO_LINK_THRESHOLD;
     }
 
-    function readLowConfidenceConfirmations() {
-      try {
-        return JSON.parse(localStorage.getItem(RSVP_LOW_CONFIDENCE_CONFIRM_KEY) || "{}");
-      } catch {
-        return {};
-      }
-    }
-
-    function getLowConfidenceConfirmationKey(rsvpId, partyId) {
-      return `${rsvpId}:${partyId}`;
-    }
-
-    function isLowConfidenceMatchConfirmed(rsvpId, partyId) {
-      if (!rsvpId || !partyId) return false;
-      const saved = readLowConfidenceConfirmations();
-      return Boolean(saved[getLowConfidenceConfirmationKey(rsvpId, partyId)]);
-    }
-
-    function setLowConfidenceMatchConfirmed(rsvpId, partyId, confirmed = true) {
-      if (!rsvpId || !partyId) return;
-      const saved = readLowConfidenceConfirmations();
-      const key = getLowConfidenceConfirmationKey(rsvpId, partyId);
-      if (confirmed) {
-        saved[key] = true;
-      } else {
-        delete saved[key];
-      }
-      localStorage.setItem(RSVP_LOW_CONFIDENCE_CONFIRM_KEY, JSON.stringify(saved));
+    async function setLowConfidenceMatchConfirmed(rsvpId, partyId, confirmed = true) {
+      const client = getSupabaseClient();
+      if (!client || !partyId) return { error: null };
+      return client
+        .from("invited_parties")
+        .update({ low_confidence_confirmed_rsvp_id: confirmed ? rsvpId : null })
+        .eq("id", partyId);
     }
 
     function mapWeddingRsvp(row) {
@@ -1170,7 +1148,8 @@
         name: row.name || "Unnamed Party",
         invitedCount: Math.max(0, parseInt(row.invited_count, 10) || 0),
         rsvpId: row.rsvp_id || null,
-        createdAt: row.created_at || null
+        createdAt: row.created_at || null,
+        lowConfidenceConfirmedRsvpId: row.low_confidence_confirmed_rsvp_id || null
       };
     }
 
@@ -1274,7 +1253,7 @@
 
         if (
           (party.matchScore || 0) < RSVP_MATCH_LOW_CONFIDENCE_THRESHOLD
-          && !isLowConfidenceMatchConfirmed(party.linkedRsvp.id, party.id)
+          && party.lowConfidenceConfirmedRsvpId !== party.linkedRsvp.id
         ) {
           reviewItems.push({
             id: party.linkedRsvp.id,
@@ -1344,7 +1323,7 @@
           .order("created_at", { ascending: false }),
         client
           .from("invited_parties")
-          .select("id, name, invited_count, rsvp_id, created_at")
+          .select("id, name, invited_count, rsvp_id, created_at, low_confidence_confirmed_rsvp_id")
           .order("name", { ascending: true })
       ]);
 
