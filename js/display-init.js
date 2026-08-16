@@ -587,7 +587,7 @@
               };
             })
           ];
-          const subheader = `${fullDeclines.length} full decline${fullDeclines.length === 1 ? "" : "s"}, ${partialDeclines.length} partial`;
+          const subheader = `${fullDeclines.length} full decline${fullDeclines.length === 1 ? "" : "s"}, ${partialDeclines.length} partial decline${partialDeclines.length === 1 ? "" : "s"}`;
           openRsvpDetailModal("Declined Guests", declinedItems, { subheader });
         });
       }
