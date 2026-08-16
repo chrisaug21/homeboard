@@ -60,7 +60,7 @@ netlify.toml        — build config, env var injection via sed
 - Homeboard wedding counts must derive from `rsvps` + `invited_parties`, not from hardcoded totals or subtraction from `households.total_invited_guests`
 - `Attending` = matched attending people only; use the linked RSVP guest count, clamped to the invited party count if an RSVP overstates guests so totals stay consistent
 - `Declined` = full declines plus partial declines (`invited_count - guest_count` when a matched attending RSVP brings fewer guests than invited)
-- The display `Declined Parties` modal lists only full declines where the linked RSVP has `attending = false`; partial under-counts stay visible in the guest list
+- The display `Declined Guests` modal lists both full declines (`attending = false`) and partial declines (matched attending parties with `guest_count < invited_count`); each row shows a per-party declined-guest count so the rows sum to the `Declined` total, partial rows carry an amber "Partial" badge, and a subheader breaks out the full-vs-partial party counts. Partial under-counts also stay visible in the guest list
 - `Pending` = sum of `invited_parties.invited_count` where `rsvp_id` is null
 - `Responded` = count of matched `invited_parties`
 - `Review RSVPs` = count of flagged RSVP rows in `Needs Review`
