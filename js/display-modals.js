@@ -114,18 +114,35 @@
       resetAutoRotate("day-detail-close");
     }
 
-    function openRsvpDetailModal(title, names) {
+    function openRsvpDetailModal(title, items, options) {
       const titleEl = document.getElementById("rsvp-detail-title");
       const bodyEl = document.getElementById("rsvp-detail-body");
       if (!titleEl || !bodyEl) return;
 
+      const subheader = options && options.subheader;
+      const rows = Array.isArray(items)
+        ? items.map((item) => (typeof item === "string" ? { name: item } : item))
+        : [];
+
       titleEl.textContent = title;
-      if (!Array.isArray(names) || !names.length) {
-        bodyEl.innerHTML = `<p class="event-detail-text" style="color:var(--muted);">No parties to show.</p>`;
+      const subheaderHtml = subheader
+        ? `<p class="rsvp-detail-subheader">${escapeHtml(subheader)}</p>`
+        : "";
+      if (!rows.length) {
+        bodyEl.innerHTML = `${subheaderHtml}<p class="event-detail-text" style="color:var(--muted);">No parties to show.</p>`;
       } else {
         bodyEl.innerHTML = `
+          ${subheaderHtml}
           <div class="rsvp-detail-list">
-            ${names.map((name) => `<div class="rsvp-detail-item">${escapeHtml(name)}</div>`).join("")}
+            ${rows.map((row) => `
+              <div class="rsvp-detail-item">
+                <div class="rsvp-detail-item-header">
+                  <span>${escapeHtml(row.name || "")}</span>
+                  ${row.badge ? `<span class="rsvp-detail-badge rsvp-detail-badge--partial">${escapeHtml(row.badge)}</span>` : ""}
+                </div>
+                ${row.meta ? `<div class="rsvp-detail-item-meta">${escapeHtml(row.meta)}</div>` : ""}
+              </div>
+            `).join("")}
           </div>
         `;
       }

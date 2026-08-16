@@ -564,10 +564,31 @@
       const reviewTrigger = document.getElementById("rsvp-review-trigger");
       if (declinedTrigger) {
         declinedTrigger.addEventListener("click", () => {
-          const declinedNames = (cachedWeddingSnapshot?.invitedParties || [])
-            .filter((party) => party.linkedRsvp && party.linkedRsvp.attending === false)
-            .map((party) => party.name);
-          openRsvpDetailModal("Declined Parties", declinedNames);
+          const parties = cachedWeddingSnapshot?.invitedParties || [];
+          const fullDeclines = parties.filter(
+            (party) => party.linkedRsvp && party.linkedRsvp.attending === false
+          );
+          const partialDeclines = parties.filter(
+            (party) => party.linkedRsvp
+              && party.linkedRsvp.attending === true
+              && party.linkedRsvp.guestCount < party.invitedCount
+          );
+          const declinedItems = [
+            ...fullDeclines.map((party) => ({
+              name: party.name,
+              meta: `${party.invitedCount} guest${party.invitedCount === 1 ? "" : "s"} not attending`
+            })),
+            ...partialDeclines.map((party) => {
+              const declinedCount = party.invitedCount - party.linkedRsvp.guestCount;
+              return {
+                name: party.name,
+                badge: "Partial",
+                meta: `${declinedCount} of ${party.invitedCount} guest${party.invitedCount === 1 ? "" : "s"} not attending`
+              };
+            })
+          ];
+          const subheader = `${fullDeclines.length} full decline${fullDeclines.length === 1 ? "" : "s"}, ${partialDeclines.length} partial decline${partialDeclines.length === 1 ? "" : "s"}`;
+          openRsvpDetailModal("Declined Guests", declinedItems, { subheader });
         });
       }
       if (pendingTrigger) {
