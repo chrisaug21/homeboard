@@ -130,6 +130,7 @@
     async function recordAdminMealLibraryName(name, mealType) {
       const trimmed = String(name || "").trim();
       if (!trimmed) return;
+      await ensureAdminMealLibraryLoaded();
       const existing = adminMealLibraryEntries.find((entry) => entry.name.toLowerCase() === trimmed.toLowerCase());
       if (existing && existing.mealType === mealType) return;
 
@@ -579,6 +580,7 @@
 
     async function writeAdminMealDayContent(dayOfWeek, content, weekStart) {
       const client = getSupabaseClient();
+      if (!client) return { error: new Error("Supabase client unavailable"), meal: null };
       const existingMeal = getAdminMealByDay(dayOfWeek);
 
       if (!content) {
@@ -647,6 +649,16 @@
 
       if (sourceResult.error || targetResult.error) {
         showToast(friendlySaveMessage());
+        // If exactly one write succeeded, the swap is half-applied in the database.
+        // Re-fetch rather than leaving the UI showing the pre-swap state.
+        const partiallyApplied = Boolean(sourceResult.error) !== Boolean(targetResult.error);
+        if (partiallyApplied && formatDateKey(adminCurrentMonday) === savedWeekStart) {
+          const freshRows = await fetchAdminMealPlan(adminCurrentMonday);
+          if (freshRows && formatDateKey(adminCurrentMonday) === savedWeekStart) {
+            adminMealPlanRows = freshRows;
+            renderAdminMealPlan();
+          }
+        }
         return;
       }
 
