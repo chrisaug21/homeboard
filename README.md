@@ -115,7 +115,8 @@ Display screens rotate automatically using timers from `display_settings.timer_i
 ### Admin
 
 - manage to-dos
-- manage weekly meals and meal notes
+- manage weekly meals and meal notes, swap a day's meal with an adjacent day, and pick previously used meal names from a typeahead
+- manage the saved meal name library (Settings > Meal Library) to remove typos or unwanted entries
 - manage countdowns and countdown images
 - manage display settings
 - run or relaunch the onboarding intro tour from Settings
@@ -186,6 +187,7 @@ Core tables used by Homeboard:
 | `todos` | household to-dos; never hard-deleted; assignees use `assignee_member_id` with legacy text fallback in `assignee` |
 | `meal_plan` | weekly meal entries |
 | `meal_plan_notes` | one note per household per week |
+| `meal_library` | saved dinner names per household plus the meal type last used with each, used to power the Meal Plan typeahead (filtered by the selected type) and the Meal Library cleanup screen; independent of `meal_plan` rows so removing a name never touches past or current planned meals |
 | `countdowns` | countdown definitions and photo metadata |
 | `scorecards` | scorecard definitions |
 | `scorecard_sessions` | active and completed scorecard sessions |

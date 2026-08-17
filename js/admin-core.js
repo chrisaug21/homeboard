@@ -259,6 +259,10 @@
     let adminWeekOffset = 0;
     let adminCurrentMonday = null;
     let adminMealPlanRows = [];
+    let adminMealLibraryEntries = [];
+    let adminMealLibraryLoadPromise = null;
+    let pendingMealLibraryRemovalId = null;
+    let mealLibraryDeletePending = false;
     let adminCountdownWritePending = false;
     let adminCountdownEditPending = false;
     let adminModalType = null;
@@ -592,6 +596,34 @@
       }
       if (event.target.closest("[data-action='close-modal']")) {
         closeAdminModal();
+        return;
+      }
+      const mealSuggestion = event.target.closest("[data-meal-suggestion]");
+      if (mealSuggestion) {
+        const form = mealSuggestion.closest("form[data-modal-form='meal']");
+        const input = form && form.querySelector("[name='meal_name']");
+        if (input) {
+          input.value = mealSuggestion.getAttribute("data-meal-suggestion") || "";
+          hideMealTypeaheadList(form);
+          input.focus();
+        }
+        return;
+      }
+      const mealLibraryRemoveBtn = event.target.closest("[data-meal-library-remove]");
+      if (mealLibraryRemoveBtn) {
+        pendingMealLibraryRemovalId = mealLibraryRemoveBtn.getAttribute("data-meal-library-remove");
+        renderMealLibraryModalList();
+        return;
+      }
+      const mealLibraryCancelBtn = event.target.closest("[data-meal-library-cancel]");
+      if (mealLibraryCancelBtn) {
+        pendingMealLibraryRemovalId = null;
+        renderMealLibraryModalList();
+        return;
+      }
+      const mealLibraryConfirmBtn = event.target.closest("[data-meal-library-confirm]");
+      if (mealLibraryConfirmBtn) {
+        deleteAdminMealLibraryEntry(mealLibraryConfirmBtn.getAttribute("data-meal-library-confirm"));
         return;
       }
       const promptRemoveTodoBtn = event.target.closest("[data-action='prompt-remove-todo']");
@@ -950,7 +982,58 @@
       }
     }
 
+    function handleAdminModalMouseDown(event) {
+      // Prevent the suggestion button from stealing focus so the input's focusout
+      // handler doesn't hide the list before the click handler can select it.
+      if (event.target.closest("[data-meal-suggestion]")) {
+        event.preventDefault();
+      }
+    }
+
+    function handleAdminModalFocusIn(event) {
+      const input = event.target.closest("[name='meal_name']");
+      if (!input) return;
+      const form = input.closest("form[data-modal-form='meal']");
+      if (form) renderMealTypeaheadSuggestions(form, input.value);
+    }
+
+    function handleAdminModalFocusOut(event) {
+      const input = event.target.closest("[name='meal_name']");
+      if (!input) return;
+      const form = input.closest("form[data-modal-form='meal']");
+      if (form) hideMealTypeaheadList(form);
+    }
+
+    function handleAdminModalChange(event) {
+      const typeSelect = event.target.closest("[name='meal_type']");
+      if (typeSelect) {
+        const form = typeSelect.closest("form[data-modal-form='meal']");
+        const nameInput = form && form.querySelector("[name='meal_name']");
+        if (form && nameInput) {
+          renderMealTypeaheadSuggestions(form, nameInput.value);
+        }
+        return;
+      }
+
+      if (event.target.closest("[data-meal-library-type-filter]")) {
+        renderMealLibraryModalList();
+      }
+    }
+
     function handleAdminModalInput(event) {
+      const mealNameInput = event.target.closest("[name='meal_name']");
+      if (mealNameInput) {
+        const form = mealNameInput.closest("form[data-modal-form='meal']");
+        if (form) renderMealTypeaheadSuggestions(form, mealNameInput.value);
+        return;
+      }
+
+      const mealLibrarySearchInput = event.target.closest("[data-meal-library-search]");
+      if (mealLibrarySearchInput) {
+        renderMealLibraryModalList();
+        return;
+      }
+
       const countdownFileInput = event.target.closest("input[name='custom_photo_file']");
       if (countdownFileInput) {
         handleCountdownCustomPhotoSelection(countdownFileInput);
@@ -1234,6 +1317,10 @@
         adminModal.addEventListener("click", handleAdminModalClick);
         adminModal.addEventListener("input", handleAdminModalInput);
         adminModal.addEventListener("submit", handleAdminModalSubmit);
+        adminModal.addEventListener("mousedown", handleAdminModalMouseDown);
+        adminModal.addEventListener("focusin", handleAdminModalFocusIn);
+        adminModal.addEventListener("focusout", handleAdminModalFocusOut);
+        adminModal.addEventListener("change", handleAdminModalChange);
       }
       document.addEventListener("keydown", handleEscapeKey);
       const lightbox = document.getElementById("admin-lightbox");
