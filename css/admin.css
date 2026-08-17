@@ -2971,7 +2971,7 @@
     html[data-scheme="dark"] .admin-modal-close,
     html[data-scheme="dark"] .admin-settings-order-btn,
     html[data-scheme="dark"] .admin-meal-card-arrow-btn,
-    html[data-scheme="dark"] .admin-meal-slot-tab {
+    html[data-scheme="dark"] .admin-meal-slot-tab:not(.is-active) {
       background: rgba(255, 255, 255, 0.08);
       color: var(--ink);
       border-color: rgba(255, 240, 220, 0.12);
@@ -2984,7 +2984,7 @@
     html[data-scheme="dark"] .admin-settings-scheme-option:has(input:checked),
     html[data-scheme="dark"] .admin-settings-order-btn:hover:not(:disabled),
     html[data-scheme="dark"] .admin-meal-card-arrow-btn:hover:not(:disabled),
-    html[data-scheme="dark"] .admin-meal-slot-tab:hover {
+    html[data-scheme="dark"] .admin-meal-slot-tab:hover:not(.is-active) {
       background: rgba(245, 158, 11, 0.16);
     }
 
