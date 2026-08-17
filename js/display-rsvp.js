@@ -11,63 +11,57 @@
     }
 
     function stopRsvpAutoScroll() {
-      if (rsvpScrollId !== null) {
-        window.cancelAnimationFrame(rsvpScrollId);
-        rsvpScrollId = null;
+      if (rsvpScrollAnimation) {
+        rsvpScrollAnimation.cancel();
+        rsvpScrollAnimation = null;
+      }
+
+      const list = document.getElementById("rsvp-names");
+      if (list) {
+        list.style.transform = "";
       }
     }
 
+    // Driven by the Web Animations API (transform, not scrollTop) so the motion runs on
+    // the compositor thread instead of a JS rAF loop. Android WebView/kiosk browsers throttle
+    // background JS timers and rAF callbacks (see the sync-interval note in display-init.js),
+    // which silently stalled the old scrollTop-based loop on the wall tablet even though it
+    // worked fine in a desktop browser tab.
     function startRsvpAutoScroll() {
       stopRsvpAutoScroll();
 
       const container = document.querySelector(".names-list");
       const list = document.getElementById("rsvp-names");
 
-      if (!container || !list) {
+      if (!container || !list || typeof list.animate !== "function") {
         return;
       }
 
       const maxScroll = Math.max(list.scrollHeight - container.clientHeight, 0);
-      container.scrollTop = 0;
 
       if (!maxScroll) {
         return;
       }
 
-      let direction = 1;
-      let lastTimestamp = 0;
-      let pauseUntil = 0;
-      const speed = 18;
+      const speed = 18; // px/sec, matches prior loop's pace
+      const pauseMs = 1600; // pause at each end, matches prior loop's pace
+      const travelMs = (maxScroll / speed) * 1000;
+      const totalMs = pauseMs * 2 + travelMs * 2;
 
-      const step = (timestamp) => {
-        if (!lastTimestamp) {
-          lastTimestamp = timestamp;
-          pauseUntil = timestamp + 1600;
+      rsvpScrollAnimation = list.animate(
+        [
+          { transform: "translateY(0px)", offset: 0 },
+          { transform: "translateY(0px)", offset: pauseMs / totalMs },
+          { transform: `translateY(-${maxScroll}px)`, offset: (pauseMs + travelMs) / totalMs },
+          { transform: `translateY(-${maxScroll}px)`, offset: (pauseMs * 2 + travelMs) / totalMs },
+          { transform: "translateY(0px)", offset: 1 }
+        ],
+        {
+          duration: totalMs,
+          iterations: Infinity,
+          easing: "linear"
         }
-
-        const delta = timestamp - lastTimestamp;
-        lastTimestamp = timestamp;
-
-        if (timestamp >= pauseUntil) {
-          const nextScrollTop = container.scrollTop + direction * speed * (delta / 1000);
-
-          if (nextScrollTop >= maxScroll) {
-            container.scrollTop = maxScroll;
-            direction = -1;
-            pauseUntil = timestamp + 1600;
-          } else if (nextScrollTop <= 0) {
-            container.scrollTop = 0;
-            direction = 1;
-            pauseUntil = timestamp + 1600;
-          } else {
-            container.scrollTop = nextScrollTop;
-          }
-        }
-
-        rsvpScrollId = window.requestAnimationFrame(step);
-      };
-
-      rsvpScrollId = window.requestAnimationFrame(step);
+      );
     }
 
     function formatGuestCountLabel(count) {

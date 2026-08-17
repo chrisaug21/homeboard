@@ -16,7 +16,7 @@
     let pendingReconcile = false;
     let pointerStartX = null;
     let pointerDeltaX = 0;
-    let rsvpScrollId = null;
+    let rsvpScrollAnimation = null;
     // Number of days shown in the Upcoming view — read from display_settings.upcoming_days
     let UPCOMING_DAYS = 5;
     // Per-screen rotation timers in seconds (keyed by screen type, fallback 30s)
