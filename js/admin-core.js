@@ -1024,7 +1024,7 @@
         return;
       }
 
-      if (event.target.closest("[data-meal-library-type-filter]")) {
+      if (event.target.closest("[data-meal-library-type-filter], [data-meal-library-slot-filter]")) {
         renderMealLibraryModalList();
       }
     }

@@ -109,12 +109,15 @@
       `;
     }
 
-    function filterMealLibraryMatches(query, mealType) {
+    function filterMealLibraryMatches(query, mealType, mealSlot) {
       const q = String(query || "").trim().toLowerCase();
       const entries = adminMealLibraryEntries || [];
       let matches = q ? entries.filter((entry) => entry.name.toLowerCase().includes(q)) : entries;
       if (mealType) {
         matches = matches.filter((entry) => !entry.mealType || entry.mealType === mealType);
+      }
+      if (mealSlot) {
+        matches = matches.filter((entry) => !entry.mealSlot || entry.mealSlot === mealSlot);
       }
       return matches.map((entry) => entry.name).slice(0, 8);
     }
@@ -129,7 +132,7 @@
       const list = form && form.querySelector("[data-meal-typeahead-list]");
       if (!list) return;
       const mealType = form.querySelector("[name='meal_type']")?.value || "";
-      const matches = filterMealLibraryMatches(query, mealType);
+      const matches = filterMealLibraryMatches(query, mealType, adminCurrentMealSlot);
       list.innerHTML = buildMealTypeaheadListHTML(matches);
       list.hidden = matches.length === 0;
     }
@@ -146,21 +149,22 @@
         if (!client) return;
         const { data, error } = await client
           .from("meal_library")
-          .select("id, name, meal_type")
+          .select("id, name, meal_type, meal_slot")
           .eq("household_id", getAdminHouseholdId())
           .order("name", { ascending: true });
         if (!error && Array.isArray(data)) {
-          adminMealLibraryEntries = data.map((row) => ({ id: row.id, name: row.name, mealType: row.meal_type || null }));
+          adminMealLibraryEntries = data.map((row) => ({ id: row.id, name: row.name, mealType: row.meal_type || null, mealSlot: row.meal_slot || null }));
         }
       })();
       return adminMealLibraryLoadPromise;
     }
 
-    async function recordAdminMealLibraryName(name, mealType) {
+    async function recordAdminMealLibraryName(name, mealType, mealSlot) {
       const trimmed = String(name || "").trim();
       if (!trimmed) return;
       await ensureAdminMealLibraryLoaded();
-      const existing = adminMealLibraryEntries.find((entry) => entry.name.toLowerCase() === trimmed.toLowerCase());
+      const existing = adminMealLibraryEntries.find((entry) =>
+        entry.name.toLowerCase() === trimmed.toLowerCase() && entry.mealSlot === mealSlot);
       if (existing && existing.mealType === mealType) return;
 
       const client = getSupabaseClient();
@@ -179,11 +183,11 @@
 
       const { data, error } = await client
         .from("meal_library")
-        .insert({ household_id: getAdminHouseholdId(), name: trimmed, meal_type: mealType })
-        .select("id, name, meal_type")
+        .insert({ household_id: getAdminHouseholdId(), name: trimmed, meal_type: mealType, meal_slot: mealSlot })
+        .select("id, name, meal_type, meal_slot")
         .single();
       if (!error && data) {
-        adminMealLibraryEntries = [...adminMealLibraryEntries, { id: data.id, name: data.name, mealType: data.meal_type || null }]
+        adminMealLibraryEntries = [...adminMealLibraryEntries, { id: data.id, name: data.name, mealType: data.meal_type || null, mealSlot: data.meal_slot || null }]
           .sort((a, b) => a.name.localeCompare(b.name));
         renderSettingsMealLibraryHint();
       }
@@ -202,10 +206,12 @@
         `;
       }
       const typePresentation = entry.mealType ? getMealTypePresentation(entry.mealType) : null;
+      const slotLabel = entry.mealSlot ? (MEAL_SLOT_LABELS[entry.mealSlot] || entry.mealSlot) : null;
       return `
         <div class="admin-settings-member-row" data-meal-library-id="${entry.id}">
           <span class="admin-settings-member-name">${escapeHtml(entry.name)}</span>
           <div class="admin-settings-member-actions">
+            ${slotLabel ? `<span class="admin-pill admin-pill--member">${escapeHtml(slotLabel)}</span>` : ""}
             ${typePresentation ? `<span class="admin-pill admin-pill--due">${escapeHtml(typePresentation.label)}</span>` : ""}
             <button type="button" class="admin-settings-member-remove" data-meal-library-remove="${entry.id}" aria-label="Remove ${escapeHtml(entry.name)}">
               <i data-lucide="trash-2"></i>
@@ -221,17 +227,27 @@
       ).join("");
     }
 
+    function buildMealLibrarySlotFilterOptionsHTML() {
+      return `<option value="">All meals</option>` + MEAL_SLOT_ORDER.map((slot) =>
+        `<option value="${escapeHtml(slot)}">${escapeHtml(MEAL_SLOT_LABELS[slot])}</option>`
+      ).join("");
+    }
+
     function renderMealLibraryModalList() {
       const list = document.getElementById("meal-library-modal-list");
       if (!list) return;
       const q = String(document.getElementById("meal-library-modal-search")?.value || "").trim().toLowerCase();
       const typeFilter = document.getElementById("meal-library-modal-type-filter")?.value || "";
+      const slotFilter = document.getElementById("meal-library-modal-slot-filter")?.value || "";
 
       let entries = q
         ? adminMealLibraryEntries.filter((entry) => entry.name.toLowerCase().includes(q))
         : adminMealLibraryEntries;
       if (typeFilter) {
         entries = entries.filter((entry) => entry.mealType === typeFilter);
+      }
+      if (slotFilter) {
+        entries = entries.filter((entry) => entry.mealSlot === slotFilter);
       }
 
       if (!entries.length) {
@@ -247,6 +263,9 @@
         <div class="admin-settings-stack">
           <input type="text" class="admin-input" id="meal-library-modal-search"
             placeholder="Search saved meals…" autocomplete="off" data-meal-library-search>
+          <select id="meal-library-modal-slot-filter" class="admin-input" data-meal-library-slot-filter>
+            ${buildMealLibrarySlotFilterOptionsHTML()}
+          </select>
           <select id="meal-library-modal-type-filter" class="admin-input" data-meal-library-type-filter>
             ${buildMealLibraryTypeFilterOptionsHTML()}
           </select>
@@ -572,7 +591,7 @@
       closeAdminModal();
       renderAdminMealPlan();
       showToast("Saved!");
-      recordAdminMealLibraryName(mealName, mealType);
+      recordAdminMealLibraryName(mealName, mealType, savedMealSlot);
     }
 
     async function saveAdminMealNote(formData) {
