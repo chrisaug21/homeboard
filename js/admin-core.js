@@ -79,6 +79,7 @@
       }
       adminCurrentHouseholdId = userRow.household_id;
       adminCurrentUser = buildAdminCurrentUser(data.user.id, userRow);
+      resetAdminMealLibraryCache();
       return adminCurrentUser;
     }
 
@@ -94,6 +95,7 @@
       adminUiStarted = false;
       adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
       adminCurrentUser = null;
+      resetAdminMealLibraryCache();
       applyAdminTheme("warm");
       setAdminAuthView("login");
       const errorEl = document.getElementById("admin-login-error");
@@ -169,6 +171,7 @@
     const adminNavButtons = Array.from(document.querySelectorAll("[data-admin-nav]"));
     const adminSettingsButton = document.getElementById("admin-settings-button");
     const adminMealList = document.getElementById("admin-meal-list");
+    const adminMealSlotTabs = document.getElementById("admin-meal-slot-tabs");
     const adminMealNoteWrap = document.getElementById("admin-meal-note-wrap");
     const adminMealWeekLabel = document.getElementById("admin-meal-week-label");
     const adminWeekPrevBtn = document.getElementById("admin-week-prev");
@@ -259,8 +262,14 @@
     let adminWeekOffset = 0;
     let adminCurrentMonday = null;
     let adminMealPlanRows = [];
+    let adminCurrentMealSlot = "dinner";
     let adminMealLibraryEntries = [];
     let adminMealLibraryLoadPromise = null;
+
+    function resetAdminMealLibraryCache() {
+      adminMealLibraryEntries = [];
+      adminMealLibraryLoadPromise = null;
+    }
     let pendingMealLibraryRemovalId = null;
     let mealLibraryDeletePending = false;
     let adminCountdownWritePending = false;
@@ -1015,7 +1024,7 @@
         return;
       }
 
-      if (event.target.closest("[data-meal-library-type-filter]")) {
+      if (event.target.closest("[data-meal-library-type-filter], [data-meal-library-slot-filter]")) {
         renderMealLibraryModalList();
       }
     }
@@ -1292,6 +1301,7 @@
       adminActiveList.addEventListener("click", handleAdminActiveListClick);
       adminActiveList.addEventListener("keydown", handleAdminActiveListKeydown);
       adminMealList.addEventListener("click", handleAdminMealListClick);
+      if (adminMealSlotTabs) adminMealSlotTabs.addEventListener("click", handleAdminMealSlotTabClick);
       if (adminRsvpUnmatchedList) {
         adminRsvpUnmatchedList.addEventListener("click", handleAdminRsvpListClick);
         adminRsvpUnmatchedList.addEventListener("input", handleAdminRsvpUnmatchedInput);
@@ -1356,6 +1366,13 @@
           loadAdminTodos();
           if (adminScreen === "settings") {
             loadAdminSettings();
+          }
+          const enabledMealSlots = getAdminEnabledMealSlots();
+          if (!enabledMealSlots.includes(adminCurrentMealSlot)) {
+            adminCurrentMealSlot = enabledMealSlots[0];
+            loadAdminMealPlan();
+          } else {
+            renderAdminMealSlotTabs();
           }
           if (typeof maybeAutoLaunchAdminOnboarding === "function") {
             maybeAutoLaunchAdminOnboarding();

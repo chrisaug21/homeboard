@@ -712,6 +712,35 @@
       height: 13px;
     }
 
+    .admin-meal-slot-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .admin-meal-slot-tab {
+      border: 1px solid rgba(124, 96, 69, 0.16);
+      border-radius: var(--tag-radius);
+      background: rgba(255, 255, 255, 0.8);
+      color: var(--muted);
+      padding: 6px 14px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+    }
+
+    .admin-meal-slot-tab:hover {
+      border-color: var(--color-accent);
+    }
+
+    .admin-meal-slot-tab.is-active {
+      background: var(--color-accent);
+      color: var(--color-text-on-accent);
+      border-color: var(--color-accent);
+    }
+
     .admin-field select {
       width: 100%;
       min-width: 0;
@@ -2941,7 +2970,8 @@
     html[data-scheme="dark"] .admin-drawer-icon,
     html[data-scheme="dark"] .admin-modal-close,
     html[data-scheme="dark"] .admin-settings-order-btn,
-    html[data-scheme="dark"] .admin-meal-card-arrow-btn {
+    html[data-scheme="dark"] .admin-meal-card-arrow-btn,
+    html[data-scheme="dark"] .admin-meal-slot-tab:not(.is-active) {
       background: rgba(255, 255, 255, 0.08);
       color: var(--ink);
       border-color: rgba(255, 240, 220, 0.12);
@@ -2953,7 +2983,8 @@
     html[data-scheme="dark"] .admin-settings-toggle:has(input:checked),
     html[data-scheme="dark"] .admin-settings-scheme-option:has(input:checked),
     html[data-scheme="dark"] .admin-settings-order-btn:hover:not(:disabled),
-    html[data-scheme="dark"] .admin-meal-card-arrow-btn:hover:not(:disabled) {
+    html[data-scheme="dark"] .admin-meal-card-arrow-btn:hover:not(:disabled),
+    html[data-scheme="dark"] .admin-meal-slot-tab:hover:not(.is-active) {
       background: rgba(245, 158, 11, 0.16);
     }
 

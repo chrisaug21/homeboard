@@ -298,6 +298,14 @@
       });
       enforceMinOneActiveScreen();
 
+      // Meal Plan type checkboxes
+      const enabledMealSlots = normalizeMealSlots(ds.meal_slots);
+      MEAL_SLOT_ORDER.forEach((slot) => {
+        const cb = document.querySelector(`[name="meal_slot_${slot}"]`);
+        if (cb) cb.checked = enabledMealSlots.includes(slot);
+      });
+      enforceMinOneMealSlot();
+
       // Screen order
       renderSettingsScreenOrder(screenOrder);
 
@@ -515,12 +523,23 @@
         const schemeRadio = document.querySelector("[name='color_scheme']:checked");
         const colorScheme = schemeRadio ? schemeRadio.value : "warm";
 
+        // Meal Plan types
+        const mealSlots = MEAL_SLOT_ORDER.filter((slot) => {
+          const cb = document.querySelector(`[name="meal_slot_${slot}"]`);
+          return cb && cb.checked;
+        });
+        if (mealSlots.length === 0) {
+          showToast("At least one meal type must stay enabled.");
+          return;
+        }
+
         const newDs = {
           ...adminHouseholdSettings.display_settings,
           active_screens: activeScreens,
           screen_order: screenOrder,
           timer_intervals: timerIntervals,
-          upcoming_days: upcomingDays
+          upcoming_days: upcomingDays,
+          meal_slots: mealSlots
         };
 
         const { data, error } = await client
@@ -806,6 +825,14 @@
       });
     }
 
+    function enforceMinOneMealSlot() {
+      const checkboxes = Array.from(document.querySelectorAll("#settings-meal-slot-toggles [type='checkbox']"));
+      const checkedBoxes = checkboxes.filter((cb) => cb.checked);
+      checkboxes.forEach((cb) => {
+        cb.disabled = checkedBoxes.length === 1 && cb.checked;
+      });
+    }
+
     function handleSettingsScreenToggleChange() {
       // Update state so renderSettingsScreenOrder shows the right active/inactive styling
       const ds = adminHouseholdSettings.display_settings;
@@ -834,6 +861,9 @@
 
       const screenToggles = document.getElementById("settings-screen-toggles");
       if (screenToggles) screenToggles.addEventListener("change", handleSettingsScreenToggleChange);
+
+      const mealSlotToggles = document.getElementById("settings-meal-slot-toggles");
+      if (mealSlotToggles) mealSlotToggles.addEventListener("change", enforceMinOneMealSlot);
 
       const screenOrder = document.getElementById("settings-screen-order");
       if (screenOrder) screenOrder.addEventListener("click", handleSettingsScreenOrderClick);

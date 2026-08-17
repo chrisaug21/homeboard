@@ -49,7 +49,6 @@
       upcoming_calendar: track.querySelector(".screen--calendar"),
       monthly_calendar: track.querySelector(".screen--month"),
       todos: track.querySelector(".screen--todos"),
-      meals: track.querySelector(".screen--meals"),
       rsvp: track.querySelector(".rsvp-screen")
     };
 
@@ -59,6 +58,9 @@
       }
       if (screenName === "scorecards") {
         return Array.from(track.querySelectorAll(".scorecard-screen"));
+      }
+      if (screenName === "meals") {
+        return Array.from(track.querySelectorAll(".screen--meals"));
       }
 
       const screen = displayScreenRegistry[screenName];
@@ -425,7 +427,7 @@
         case "todos":
           return { icon: "list-todo", label: "To-do list" };
         case "meals":
-          return { icon: "utensils-crossed", label: "Dinner plan" };
+          return { icon: "utensils-crossed", label: "Meal plan" };
         case "upcoming_calendar":
           return { icon: "calendar-days", label: "Upcoming calendar", badge: String(getUpcomingNavDays()) };
         case "monthly_calendar":

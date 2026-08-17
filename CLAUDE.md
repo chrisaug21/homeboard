@@ -35,7 +35,7 @@ netlify.toml        — build config, env var injection via sed
 1. Upcoming Calendar (Google Cal read-only) — controlled independently by `display_settings.active_screens` and `screen_order`
 2. Monthly Calendar (Google Cal read-only) — controlled independently by `display_settings.active_screens` and `screen_order`
 3. To-Do List
-4. Meal Plan (dinner only on display)
+4. Meal Plan — one screen per enabled meal type (breakfast, lunch, dinner), controlled by `display_settings.meal_slots`; all meal screens collapse into a single footer nav button (like countdowns/scorecards) and each screen's header reads "Meal Plan - <Type>"
 5. Countdown Board (Lucide icons)
 6. RSVP Live Board (Chris & Bailey only — reads `rsvps` table, **hardcoded to this household, hidden starting Oct 11, 2026**; intentionally excluded from active-screen toggles; remove via code change after that date)
 
@@ -43,7 +43,7 @@ netlify.toml        — build config, env var injection via sed
 - `households` — `assistant_name`, `color_scheme`, `google_cal_id`, `google_cal_key`, `display_settings` (JSONB), `total_invited_guests`, admin PIN
 - `users` — linked to `auth.users`, household membership, role (admin/member)
 - `todos` — soft delete via `archived_at`, never hard delete
-- `meal_plan` — `user_id` nullable: null = shared/household, uuid = personal
+- `meal_plan` — `user_id` nullable: null = shared/household, uuid = personal; `meal_slot` is `breakfast`/`lunch`/`dinner`, gated for display by `display_settings.meal_slots`
 - `meal_plan_notes` — one note per household per week, keyed by `household_id` + `week_start`
 - `countdowns` — `icon` is a Lucide icon name string e.g. `"plane"`; optional `unsplash_image_url`, `days_before_visible`, and `photo_keyword` support countdown photos and delayed visibility
 - `scorecards` — scorecard definitions with `name`, `increments` (JSONB number array), `players` (JSONB `{id,name,color}` array with stable player identifiers), `show_history`, `allow_negative`, and soft delete via `archived_at`
@@ -84,13 +84,16 @@ netlify.toml        — build config, env var injection via sed
   "active_screens": ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards"],
   "screen_order":   ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecard_<id>"],
   "timer_intervals": { "upcoming_calendar": 30, "monthly_calendar": 60, "todos": 45, "meals": 30, "countdowns": 15, "scorecards": 30 },
-  "upcoming_days":  5
+  "upcoming_days":  5,
+  "meal_slots":     ["dinner"]
 }
 ```
 - `display_settings.members` drives the todo assignee picker and is managed via the Settings screen. **Planned migration**: move to `users` table when multi-user auth is implemented.
 - `upcoming_calendar` and `monthly_calendar` are separate screens across display rotation and admin settings. Never write the legacy `calendar` key back to Supabase.
 - The "Default calendar view" setting has been removed. Whichever calendar screen appears first in `screen_order` renders first.
 - Scorecards are toggled by the shared `scorecards` active-screen key. In the Settings UI, Scorecards appears as one screen-order row; saving expands that slot into the underlying `scorecard_<id>` entries used by display rotation.
+- `display_settings.meal_slots` (subset of `["breakfast", "lunch", "dinner"]`, defaults to `["dinner"]` when unset) controls which meal types are enabled. The Meal Plan checkbox group lives in Settings > Display, alongside the "Active screens" list — at least one meal type must stay checked. The single shared `meals` active-screen key still gates the whole Meal Plan feature on/off; `meal_slots` only controls which types render inside it. Unlike scorecards, meal screens are not expanded into `screen_order` — the display layer clones the `.screen--meals` template into one screen per enabled slot at render time (same pattern as countdowns), keyed by `dataset.mealSlot`/`dataset.screenKey = "meal_<slot>"`. Admin meal editing shows type tabs (breakfast/lunch/dinner) when more than one slot is enabled; the currently selected admin tab is `adminCurrentMealSlot` and every `meal_plan` read/write in `js/admin-meals.js` is scoped to it.
+- `meal_library.meal_slot` (nullable, `breakfast`/`lunch`/`dinner`) scopes saved meal names to the meal they were saved under, in addition to the existing `meal_type` (cooking/HelloFresh/etc). The Meal Plan typeahead and the Meal Library modal's dedupe/save logic both filter/key on name + `meal_slot` (entries with a null `meal_slot` match any slot, kept for backward compatibility). The Meal Library modal has two independent filter dropdowns — "All meals" (slot) and "All types" (meal_type) — plus a slot badge per row.
 - `display_settings.upcoming_days` drives the `UPCOMING_DAYS` variable in `display.js`. Update both together if changing upcoming-view logic.
 - Google Calendar currently reads a single calendar ID (`households.google_cal_id`). **Future enhancement**: support toggling multiple calendars from the Integrations settings.
 - **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.

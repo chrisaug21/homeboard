@@ -1,3 +1,32 @@
+    function getAdminEnabledMealSlots() {
+      return normalizeMealSlots(adminHouseholdSettings?.display_settings?.meal_slots);
+    }
+
+    function renderAdminMealSlotTabs() {
+      if (!adminMealSlotTabs) return;
+      const slots = getAdminEnabledMealSlots();
+
+      if (slots.length <= 1) {
+        adminMealSlotTabs.hidden = true;
+        adminMealSlotTabs.innerHTML = "";
+        return;
+      }
+
+      adminMealSlotTabs.hidden = false;
+      adminMealSlotTabs.innerHTML = slots.map((slot) => `
+        <button type="button" class="admin-meal-slot-tab${slot === adminCurrentMealSlot ? " is-active" : ""}" data-meal-slot-tab="${slot}">${escapeHtml(MEAL_SLOT_LABELS[slot])}</button>
+      `).join("");
+    }
+
+    function handleAdminMealSlotTabClick(event) {
+      const btn = event.target.closest("[data-meal-slot-tab]");
+      if (!btn || adminMealWritePending || adminNoteWritePending) return;
+      const slot = btn.getAttribute("data-meal-slot-tab");
+      if (!slot || slot === adminCurrentMealSlot) return;
+      adminCurrentMealSlot = slot;
+      loadAdminMealPlan();
+    }
+
     function buildAdminMealSkeletonHTML() {
       return Array.from({ length: 7 }, () => `
         <article class="admin-meal-card admin-skeleton-card" aria-hidden="true">
@@ -66,7 +95,7 @@
               <div class="admin-meal-day">${dayLabel}</div>
               <span class="admin-pill admin-pill--due">${escapeHtml(mealType ? mealType.label : "Tap to add")}</span>
             </div>
-            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : "No dinner set yet.")}</div>
+            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : `No ${(MEAL_SLOT_LABELS[adminCurrentMealSlot] || "meal").toLowerCase()} set yet.`)}</div>
           </button>
           <div class="admin-meal-card-arrows">
             <button type="button" class="admin-meal-card-arrow-btn" data-swap-dir="up" data-swap-index="${index}" aria-label="Swap with previous day"${index === 0 ? " disabled" : ""}>
@@ -80,12 +109,15 @@
       `;
     }
 
-    function filterMealLibraryMatches(query, mealType) {
+    function filterMealLibraryMatches(query, mealType, mealSlot) {
       const q = String(query || "").trim().toLowerCase();
       const entries = adminMealLibraryEntries || [];
       let matches = q ? entries.filter((entry) => entry.name.toLowerCase().includes(q)) : entries;
       if (mealType) {
         matches = matches.filter((entry) => !entry.mealType || entry.mealType === mealType);
+      }
+      if (mealSlot) {
+        matches = matches.filter((entry) => !entry.mealSlot || entry.mealSlot === mealSlot);
       }
       return matches.map((entry) => entry.name).slice(0, 8);
     }
@@ -100,7 +132,7 @@
       const list = form && form.querySelector("[data-meal-typeahead-list]");
       if (!list) return;
       const mealType = form.querySelector("[name='meal_type']")?.value || "";
-      const matches = filterMealLibraryMatches(query, mealType);
+      const matches = filterMealLibraryMatches(query, mealType, adminCurrentMealSlot);
       list.innerHTML = buildMealTypeaheadListHTML(matches);
       list.hidden = matches.length === 0;
     }
@@ -117,21 +149,22 @@
         if (!client) return;
         const { data, error } = await client
           .from("meal_library")
-          .select("id, name, meal_type")
+          .select("id, name, meal_type, meal_slot")
           .eq("household_id", getAdminHouseholdId())
           .order("name", { ascending: true });
         if (!error && Array.isArray(data)) {
-          adminMealLibraryEntries = data.map((row) => ({ id: row.id, name: row.name, mealType: row.meal_type || null }));
+          adminMealLibraryEntries = data.map((row) => ({ id: row.id, name: row.name, mealType: row.meal_type || null, mealSlot: row.meal_slot || null }));
         }
       })();
       return adminMealLibraryLoadPromise;
     }
 
-    async function recordAdminMealLibraryName(name, mealType) {
+    async function recordAdminMealLibraryName(name, mealType, mealSlot) {
       const trimmed = String(name || "").trim();
       if (!trimmed) return;
       await ensureAdminMealLibraryLoaded();
-      const existing = adminMealLibraryEntries.find((entry) => entry.name.toLowerCase() === trimmed.toLowerCase());
+      const existing = adminMealLibraryEntries.find((entry) =>
+        entry.name.toLowerCase() === trimmed.toLowerCase() && (!entry.mealSlot || entry.mealSlot === mealSlot));
       if (existing && existing.mealType === mealType) return;
 
       const client = getSupabaseClient();
@@ -150,11 +183,11 @@
 
       const { data, error } = await client
         .from("meal_library")
-        .insert({ household_id: getAdminHouseholdId(), name: trimmed, meal_type: mealType })
-        .select("id, name, meal_type")
+        .insert({ household_id: getAdminHouseholdId(), name: trimmed, meal_type: mealType, meal_slot: mealSlot })
+        .select("id, name, meal_type, meal_slot")
         .single();
       if (!error && data) {
-        adminMealLibraryEntries = [...adminMealLibraryEntries, { id: data.id, name: data.name, mealType: data.meal_type || null }]
+        adminMealLibraryEntries = [...adminMealLibraryEntries, { id: data.id, name: data.name, mealType: data.meal_type || null, mealSlot: data.meal_slot || null }]
           .sort((a, b) => a.name.localeCompare(b.name));
         renderSettingsMealLibraryHint();
       }
@@ -173,10 +206,12 @@
         `;
       }
       const typePresentation = entry.mealType ? getMealTypePresentation(entry.mealType) : null;
+      const slotLabel = entry.mealSlot ? (MEAL_SLOT_LABELS[entry.mealSlot] || entry.mealSlot) : null;
       return `
         <div class="admin-settings-member-row" data-meal-library-id="${entry.id}">
           <span class="admin-settings-member-name">${escapeHtml(entry.name)}</span>
           <div class="admin-settings-member-actions">
+            ${slotLabel ? `<span class="admin-pill admin-pill--member">${escapeHtml(slotLabel)}</span>` : ""}
             ${typePresentation ? `<span class="admin-pill admin-pill--due">${escapeHtml(typePresentation.label)}</span>` : ""}
             <button type="button" class="admin-settings-member-remove" data-meal-library-remove="${entry.id}" aria-label="Remove ${escapeHtml(entry.name)}">
               <i data-lucide="trash-2"></i>
@@ -192,17 +227,27 @@
       ).join("");
     }
 
+    function buildMealLibrarySlotFilterOptionsHTML() {
+      return `<option value="">All meals</option>` + MEAL_SLOT_ORDER.map((slot) =>
+        `<option value="${escapeHtml(slot)}">${escapeHtml(MEAL_SLOT_LABELS[slot])}</option>`
+      ).join("");
+    }
+
     function renderMealLibraryModalList() {
       const list = document.getElementById("meal-library-modal-list");
       if (!list) return;
       const q = String(document.getElementById("meal-library-modal-search")?.value || "").trim().toLowerCase();
       const typeFilter = document.getElementById("meal-library-modal-type-filter")?.value || "";
+      const slotFilter = document.getElementById("meal-library-modal-slot-filter")?.value || "";
 
       let entries = q
         ? adminMealLibraryEntries.filter((entry) => entry.name.toLowerCase().includes(q))
         : adminMealLibraryEntries;
       if (typeFilter) {
         entries = entries.filter((entry) => entry.mealType === typeFilter);
+      }
+      if (slotFilter) {
+        entries = entries.filter((entry) => entry.mealSlot === slotFilter);
       }
 
       if (!entries.length) {
@@ -218,6 +263,9 @@
         <div class="admin-settings-stack">
           <input type="text" class="admin-input" id="meal-library-modal-search"
             placeholder="Search saved meals…" autocomplete="off" data-meal-library-search>
+          <select id="meal-library-modal-slot-filter" class="admin-input" data-meal-library-slot-filter>
+            ${buildMealLibrarySlotFilterOptionsHTML()}
+          </select>
           <select id="meal-library-modal-type-filter" class="admin-input" data-meal-library-type-filter>
             ${buildMealLibraryTypeFilterOptionsHTML()}
           </select>
@@ -273,8 +321,8 @@
       if (!hint) return;
       const count = adminMealLibraryEntries.length;
       hint.textContent = count
-        ? `${count} saved dinner name${count === 1 ? "" : "s"} used for the Meal Plan typeahead.`
-        : "Saved dinner names used for the Meal Plan typeahead.";
+        ? `${count} saved meal name${count === 1 ? "" : "s"} used for the Meal Plan typeahead.`
+        : "Saved meal names used for the Meal Plan typeahead.";
     }
 
     function buildMealFormHTML(dayIndex, date, meal) {
@@ -290,9 +338,9 @@
             <select id="modal-meal-type" name="meal_type">${buildMealTypeOptionsHTML(currentType)}</select>
           </div>
           <div class="admin-field admin-typeahead-field">
-            <label for="modal-meal-name">Dinner</label>
+            <label for="modal-meal-name">${escapeHtml(MEAL_SLOT_LABELS[adminCurrentMealSlot] || "Meal")}</label>
             <input id="modal-meal-name" name="meal_name" type="text" maxlength="140"
-              placeholder="What\u2019s for dinner?" value="${currentName}" autocomplete="off">
+              placeholder="What\u2019s for ${escapeHtml((MEAL_SLOT_LABELS[adminCurrentMealSlot] || "this meal").toLowerCase())}?" value="${currentName}" autocomplete="off">
             <ul class="admin-typeahead-list" data-meal-typeahead-list hidden></ul>
           </div>
           <div class="admin-actions">
@@ -386,7 +434,7 @@
         .select("id, day_of_week, meal_name, meal_type, week_start")
         .eq("household_id", getAdminHouseholdId())
         .eq("week_start", formatDateKey(monday))
-        .eq("meal_slot", "dinner")
+        .eq("meal_slot", adminCurrentMealSlot)
         .is("user_id", null)
         .order("day_of_week", { ascending: true });
 
@@ -418,6 +466,12 @@
     }
 
     async function loadAdminMealPlan() {
+      const enabledMealSlots = getAdminEnabledMealSlots();
+      if (!enabledMealSlots.includes(adminCurrentMealSlot)) {
+        adminCurrentMealSlot = enabledMealSlots[0];
+      }
+      renderAdminMealSlotTabs();
+
       adminCurrentMonday = getAdminWeekMonday();
       adminMealWeekLabel.textContent = "Loading\u2026";
       adminWeekPrevBtn.disabled = true;
@@ -465,6 +519,7 @@
       }
 
       const savedWeekStart = formatDateKey(adminCurrentMonday);
+      const savedMealSlot = adminCurrentMealSlot;
       const weekStart = savedWeekStart;
       const existingMeal = getAdminMealByDay(dayOfWeek);
       let responseError = null;
@@ -477,7 +532,7 @@
           .eq("id", existingMeal.id)
           .eq("household_id", getAdminHouseholdId())
           .eq("week_start", weekStart)
-          .eq("meal_slot", "dinner")
+          .eq("meal_slot", savedMealSlot)
           .is("user_id", null)
           .select("id, day_of_week, meal_name, meal_type, week_start")
           .maybeSingle();
@@ -492,7 +547,7 @@
             user_id: null,
             week_start: weekStart,
             day_of_week: dayOfWeek,
-            meal_slot: "dinner",
+            meal_slot: savedMealSlot,
             meal_name: mealName,
             meal_type: mealType
           })
@@ -536,7 +591,7 @@
       closeAdminModal();
       renderAdminMealPlan();
       showToast("Saved!");
-      recordAdminMealLibraryName(mealName, mealType);
+      recordAdminMealLibraryName(mealName, mealType, savedMealSlot);
     }
 
     async function saveAdminMealNote(formData) {
@@ -578,7 +633,7 @@
       showToast("Note saved.");
     }
 
-    async function writeAdminMealDayContent(dayOfWeek, content, weekStart) {
+    async function writeAdminMealDayContent(dayOfWeek, content, weekStart, mealSlot) {
       const client = getSupabaseClient();
       if (!client) return { error: new Error("Supabase client unavailable"), meal: null };
       const existingMeal = getAdminMealByDay(dayOfWeek);
@@ -591,7 +646,7 @@
           .eq("id", existingMeal.id)
           .eq("household_id", getAdminHouseholdId())
           .eq("week_start", weekStart)
-          .eq("meal_slot", "dinner")
+          .eq("meal_slot", mealSlot)
           .is("user_id", null);
         return { error, meal: null };
       }
@@ -603,7 +658,7 @@
           .eq("id", existingMeal.id)
           .eq("household_id", getAdminHouseholdId())
           .eq("week_start", weekStart)
-          .eq("meal_slot", "dinner")
+          .eq("meal_slot", mealSlot)
           .is("user_id", null)
           .select("id, day_of_week, meal_name, meal_type, week_start")
           .maybeSingle();
@@ -617,7 +672,7 @@
           user_id: null,
           week_start: weekStart,
           day_of_week: dayOfWeek,
-          meal_slot: "dinner",
+          meal_slot: mealSlot,
           meal_name: content.mealName,
           meal_type: content.mealType
         })
@@ -639,10 +694,11 @@
 
       adminMealWritePending = true;
       const savedWeekStart = formatDateKey(adminCurrentMonday);
+      const savedMealSlot = adminCurrentMealSlot;
 
       const [sourceResult, targetResult] = await Promise.all([
-        writeAdminMealDayContent(dayIndex, targetContent, savedWeekStart),
-        writeAdminMealDayContent(targetIndex, sourceContent, savedWeekStart)
+        writeAdminMealDayContent(dayIndex, targetContent, savedWeekStart, savedMealSlot),
+        writeAdminMealDayContent(targetIndex, sourceContent, savedWeekStart, savedMealSlot)
       ]);
 
       adminMealWritePending = false;

@@ -105,7 +105,7 @@ If the code is invalid or expired, the display shows an inline error and stays o
 - upcoming calendar view
 - monthly calendar view
 - shared to-do list
-- dinner plan
+- meal plan (breakfast, lunch, and/or dinner — configurable per household, each shown as its own screen with a "Meal Plan - <Type>" header)
 - countdown rotation
 - scorecard display screens
 - wedding RSVP display screen for the wedding household only
@@ -115,7 +115,8 @@ Display screens rotate automatically using timers from `display_settings.timer_i
 ### Admin
 
 - manage to-dos
-- manage weekly meals and meal notes, swap a day's meal with an adjacent day, and pick previously used meal names from a typeahead
+- manage weekly meals and meal notes, swap a day's meal with an adjacent day, pick previously used meal names from a typeahead, and switch between breakfast/lunch/dinner tabs when more than one meal type is enabled
+- choose which meal types (breakfast, lunch, dinner) are shown on the Meal Plan screen (Settings > Display > Meal Plan types)
 - manage the saved meal name library (Settings > Meal Library) to remove typos or unwanted entries
 - manage countdowns and countdown images
 - manage display settings
@@ -187,7 +188,7 @@ Core tables used by Homeboard:
 | `todos` | household to-dos; never hard-deleted; assignees use `assignee_member_id` with legacy text fallback in `assignee` |
 | `meal_plan` | weekly meal entries |
 | `meal_plan_notes` | one note per household per week |
-| `meal_library` | saved dinner names per household plus the meal type last used with each, used to power the Meal Plan typeahead (filtered by the selected type) and the Meal Library cleanup screen; independent of `meal_plan` rows so removing a name never touches past or current planned meals |
+| `meal_library` | saved meal names per household, each tagged with the cooking-style type last used (`meal_type`) and the meal it was saved under (`meal_slot`: breakfast/lunch/dinner), used to power the Meal Plan typeahead (filtered by both) and the Meal Library cleanup screen; independent of `meal_plan` rows so removing a name never touches past or current planned meals |
 | `countdowns` | countdown definitions and photo metadata |
 | `scorecards` | scorecard definitions |
 | `scorecard_sessions` | active and completed scorecard sessions |
