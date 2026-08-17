@@ -164,7 +164,7 @@
       if (!trimmed) return;
       await ensureAdminMealLibraryLoaded();
       const existing = adminMealLibraryEntries.find((entry) =>
-        entry.name.toLowerCase() === trimmed.toLowerCase() && entry.mealSlot === mealSlot);
+        entry.name.toLowerCase() === trimmed.toLowerCase() && (!entry.mealSlot || entry.mealSlot === mealSlot));
       if (existing && existing.mealType === mealType) return;
 
       const client = getSupabaseClient();

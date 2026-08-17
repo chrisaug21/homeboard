@@ -20,7 +20,7 @@
       };
     }
 
-    async function fetchMealsForSlot(slot) {
+    async function fetchMealsForSlots(slots) {
       const client = getSupabaseClient();
 
       if (!client) {
@@ -30,10 +30,10 @@
       const monday = getMonday(new Date());
       const { data, error } = await client
         .from("meal_plan")
-        .select("day_of_week, meal_name, meal_type")
+        .select("day_of_week, meal_name, meal_type, meal_slot")
         .eq("household_id", getDisplayHouseholdId())
         .eq("week_start", formatDateKey(monday))
-        .eq("meal_slot", slot)
+        .in("meal_slot", slots)
         .is("user_id", null)
         .order("day_of_week", { ascending: true });
 
@@ -41,7 +41,15 @@
         return null;
       }
 
-      return data.map(mapSupabaseMeal);
+      const mealsBySlot = {};
+      slots.forEach((slot) => {
+        mealsBySlot[slot] = [];
+      });
+      data.forEach((row) => {
+        if (!mealsBySlot[row.meal_slot]) mealsBySlot[row.meal_slot] = [];
+        mealsBySlot[row.meal_slot].push(mapSupabaseMeal(row));
+      });
+      return mealsBySlot;
     }
 
     async function fetchWeeklyNote() {
@@ -147,22 +155,18 @@
       markPending("meals");
       renderMealSkeleton();
       const slots = await fetchEnabledMealSlots();
-      const [mealResults, weeklyNote] = await Promise.all([
-        Promise.all(slots.map((slot) => fetchMealsForSlot(slot))),
+      const [mealsBySlot, weeklyNote] = await Promise.all([
+        fetchMealsForSlots(slots),
         fetchWeeklyNote()
       ]);
 
-      if (mealResults.some((result) => result === null)) {
+      if (mealsBySlot === null) {
         renderScreenError(
           document.querySelector(".screen--meals .meals-layout") || document.getElementById("meal-grid"),
           "Something went wrong loading your data — tap to retry",
           renderMealsWithData
         );
       } else {
-        const mealsBySlot = {};
-        slots.forEach((slot, index) => {
-          mealsBySlot[slot] = mealResults[index];
-        });
         renderMealScreens(mealsBySlot, weeklyNote || "", slots);
       }
       resolveScreen("meals");
@@ -172,12 +176,12 @@
     // 5-min narrow refresh interval after the initial load has already completed.
     async function refreshMealsQuietly() {
       const slots = await fetchEnabledMealSlots();
-      const [mealResults, weeklyNote] = await Promise.all([
-        Promise.all(slots.map((slot) => fetchMealsForSlot(slot))),
+      const [mealsBySlot, weeklyNote] = await Promise.all([
+        fetchMealsForSlots(slots),
         fetchWeeklyNote()
       ]);
 
-      if (mealResults.some((result) => result === null)) {
+      if (mealsBySlot === null) {
         return;
       }
 
@@ -185,9 +189,5 @@
         lastWeeklyNote = weeklyNote;
       }
 
-      const mealsBySlot = {};
-      slots.forEach((slot, index) => {
-        mealsBySlot[slot] = mealResults[index];
-      });
       renderMealScreens(mealsBySlot, lastWeeklyNote || "", slots);
     }
