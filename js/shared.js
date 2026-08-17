@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.1.1";
+    const VERSION = "2.2.0";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -45,6 +45,15 @@
     const HOMEBOARD_HOUSEHOLD_STORAGE_KEY = "homeboard_household_id";
     const DISPLAY_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards", "rsvp"];
     const DISPLAY_PAIRING_CODE_CHARACTERS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+    const MEAL_SLOT_ORDER = ["breakfast", "lunch", "dinner"];
+    const MEAL_SLOT_LABELS = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner" };
+
+    function normalizeMealSlots(rawSlots) {
+      const slots = Array.isArray(rawSlots) ? rawSlots.filter((slot) => MEAL_SLOT_ORDER.includes(slot)) : [];
+      const ordered = MEAL_SLOT_ORDER.filter((slot) => slots.includes(slot));
+      return ordered.length ? ordered : ["dinner"];
+    }
 
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     const DISPLAY_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";

@@ -422,7 +422,7 @@
         if (!shouldHideRsvpScreen() && track.querySelector(".rsvp-screen")) {
           renderRsvpBoardWithData();
         }
-        Promise.allSettled([fetchTodos(), fetchMeals(), fetchWeeklyNote(), fetchHouseholdMembers()]).then(([todosResult, mealsResult, noteResult, membersResult]) => {
+        Promise.allSettled([fetchTodos(), fetchHouseholdMembers()]).then(([todosResult, membersResult]) => {
           if (membersResult.status === "fulfilled") {
             cachedDisplayHouseholdMembers = membersResult.value;
             if (cachedDisplayTodos !== null) {
@@ -435,9 +435,8 @@
             }
           }
           if (todosResult.status === "fulfilled" && todosResult.value !== null) renderTodoItems(todosResult.value);
-          if (noteResult.status === "fulfilled" && noteResult.value !== null) lastWeeklyNote = noteResult.value;
-          if (mealsResult.status === "fulfilled" && mealsResult.value !== null) renderMeals(mealsResult.value, lastWeeklyNote);
         });
+        refreshMealsQuietly();
       }, 5 * 60 * 1000);
 
       // Week navigation — each click resets the rotation timer

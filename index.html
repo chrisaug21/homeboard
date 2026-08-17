@@ -920,7 +920,7 @@
         <section class="screen screen--meals">
           <div class="panel">
             <div class="screen-title-row">
-              <div class="eyebrow"><i data-lucide="utensils-crossed"></i> Dinner Plan</div>
+              <div class="eyebrow"><i data-lucide="utensils-crossed"></i> Meal Plan</div>
             </div>
             <div class="meals-layout" id="meal-grid"></div>
           </div>
@@ -1169,6 +1169,7 @@
       <section class="admin-screen" id="admin-screen-meal-plan" data-admin-screen="meal-plan" hidden>
         <section class="admin-panel" aria-labelledby="admin-meal-plan-title">
           <h2 class="admin-panel-title" id="admin-meal-plan-title">Meal Plan</h2>
+          <div class="admin-meal-slot-tabs" id="admin-meal-slot-tabs" hidden></div>
           <div class="admin-week-nav admin-cal-nav">
             <button class="admin-week-nav-btn" id="admin-week-prev" type="button" aria-label="Previous week">
               <i data-lucide="chevron-left"></i>
@@ -1301,6 +1302,25 @@
                 <label class="admin-settings-toggle">
                   <input type="checkbox" name="screen_rsvp" value="rsvp">
                   <span>Wedding RSVP</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="admin-settings-subsection" id="settings-meal-slots-subsection">
+              <div class="admin-settings-subsection-label">Meal Plan types</div>
+              <p class="admin-field-hint">Choose which meals show on the Meal Plan screen. At least one must stay enabled.</p>
+              <div class="admin-settings-toggle-list" id="settings-meal-slot-toggles">
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="meal_slot_breakfast" value="breakfast">
+                  <span>Breakfast</span>
+                </label>
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="meal_slot_lunch" value="lunch">
+                  <span>Lunch</span>
+                </label>
+                <label class="admin-settings-toggle">
+                  <input type="checkbox" name="meal_slot_dinner" value="dinner">
+                  <span>Dinner</span>
                 </label>
               </div>
             </div>

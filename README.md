@@ -105,7 +105,7 @@ If the code is invalid or expired, the display shows an inline error and stays o
 - upcoming calendar view
 - monthly calendar view
 - shared to-do list
-- dinner plan
+- meal plan (breakfast, lunch, and/or dinner — configurable per household, each shown as its own screen with a "Meal Plan - <Type>" header)
 - countdown rotation
 - scorecard display screens
 - wedding RSVP display screen for the wedding household only
@@ -115,7 +115,8 @@ Display screens rotate automatically using timers from `display_settings.timer_i
 ### Admin
 
 - manage to-dos
-- manage weekly meals and meal notes, swap a day's meal with an adjacent day, and pick previously used meal names from a typeahead
+- manage weekly meals and meal notes, swap a day's meal with an adjacent day, pick previously used meal names from a typeahead, and switch between breakfast/lunch/dinner tabs when more than one meal type is enabled
+- choose which meal types (breakfast, lunch, dinner) are shown on the Meal Plan screen (Settings > Display > Meal Plan types)
 - manage the saved meal name library (Settings > Meal Library) to remove typos or unwanted entries
 - manage countdowns and countdown images
 - manage display settings

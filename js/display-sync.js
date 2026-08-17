@@ -14,14 +14,12 @@
 
       try {
         // Re-fetch all data in parallel
-        const [remoteTodos, remoteMeals, weeklyNote] = await Promise.all([
+        const [remoteTodos] = await Promise.all([
           fetchTodos(),
-          fetchMeals(),
-          fetchWeeklyNote()
+          refreshMealsQuietly()
         ]);
 
         if (remoteTodos !== null) renderTodoItems(remoteTodos);
-        if (remoteMeals !== null) renderMeals(remoteMeals, weeklyNote || "");
 
         // Re-fetch calendar (wide fetch refreshes countdowns too)
         const [newConfig, newMembers, newSupabaseCountdowns, newScorecards] = await Promise.all([

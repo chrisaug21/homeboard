@@ -1,3 +1,17 @@
+    async function fetchEnabledMealSlots() {
+      const client = getSupabaseClient();
+      if (!client) return ["dinner"];
+
+      const { data, error } = await client
+        .from("households")
+        .select("display_settings")
+        .eq("id", getDisplayHouseholdId())
+        .single();
+
+      if (error || !data) return ["dinner"];
+      return normalizeMealSlots(data.display_settings?.meal_slots);
+    }
+
     function mapSupabaseMeal(meal) {
       return {
         dayOfWeek: Number(meal.day_of_week),
@@ -6,7 +20,7 @@
       };
     }
 
-    async function fetchMeals() {
+    async function fetchMealsForSlot(slot) {
       const client = getSupabaseClient();
 
       if (!client) {
@@ -19,7 +33,7 @@
         .select("day_of_week, meal_name, meal_type")
         .eq("household_id", getDisplayHouseholdId())
         .eq("week_start", formatDateKey(monday))
-        .eq("meal_slot", "dinner")
+        .eq("meal_slot", slot)
         .is("user_id", null)
         .order("day_of_week", { ascending: true });
 
@@ -45,8 +59,7 @@
       return data.note || "";
     }
 
-    function renderMeals(mealItems, weeklyNote) {
-      const mealGrid = document.getElementById("meal-grid");
+    function buildMealScreenPanelHTML(slot, mealItems, weeklyNote) {
       const monday = getMonday(new Date());
       const todayKey = new Date().toDateString();
       const mealsByDay = new Map();
@@ -61,7 +74,7 @@
         const isToday = date.toDateString() === todayKey;
         const meal = mealsByDay.get(index);
         const mealType = meal ? getMealTypePresentation(meal.type) : null;
-        const mealName = meal ? meal.name : "\u2014";
+        const mealName = meal ? meal.name : "—";
 
         return `
           <article class="meal-card${isToday ? " today" : ""}">
@@ -87,21 +100,94 @@
           </article>
         `;
 
-      mealGrid.innerHTML = mealCards.join("") + noteCard;
+      return `
+        <div class="panel">
+          <div class="screen-title-row">
+            <div class="eyebrow"><i data-lucide="utensils-crossed"></i> Meal Plan - ${escapeHtml(MEAL_SLOT_LABELS[slot] || slot)}</div>
+          </div>
+          <div class="meals-layout">${mealCards.join("") + noteCard}</div>
+        </div>
+      `;
+    }
+
+    function renderMealScreens(mealsBySlot, weeklyNote, slots) {
+      let existingMealScreens = Array.from(track.querySelectorAll(".screen--meals"));
+      existingMealScreens.forEach((screen, index) => {
+        if (index >= slots.length) {
+          screen.remove();
+        }
+      });
+
+      existingMealScreens = Array.from(track.querySelectorAll(".screen--meals"));
+
+      slots.forEach((slot, index) => {
+        let screen = existingMealScreens[index];
+        if (!screen) {
+          screen = document.createElement("section");
+          screen.className = "screen screen--meals";
+          track.appendChild(screen);
+        }
+
+        screen.dataset.screenKey = `meal_${slot}`;
+        screen.dataset.mealSlot = slot;
+        screen.classList.remove("screen--empty-hidden");
+        if (!screen.classList.contains("screen--disabled")) {
+          screen.removeAttribute("aria-hidden");
+        }
+        screen.innerHTML = buildMealScreenPanelHTML(slot, mealsBySlot[slot] || [], weeklyNote);
+      });
+
+      const displaySettings = normalizeDisplaySettings(cachedHouseholdConfig?.display_settings);
+      const screenOrder = Array.isArray(displaySettings.screen_order) ? displaySettings.screen_order : DISPLAY_SCREEN_KEYS;
+      applyScreenOrder(screenOrder);
+      reconcileRotationState();
     }
 
     async function renderMealsWithData() {
       markPending("meals");
       renderMealSkeleton();
-      const [remoteMeals, weeklyNote] = await Promise.all([fetchMeals(), fetchWeeklyNote()]);
-      if (remoteMeals === null) {
+      const slots = await fetchEnabledMealSlots();
+      const [mealResults, weeklyNote] = await Promise.all([
+        Promise.all(slots.map((slot) => fetchMealsForSlot(slot))),
+        fetchWeeklyNote()
+      ]);
+
+      if (mealResults.some((result) => result === null)) {
         renderScreenError(
-          document.getElementById("meal-grid"),
-          "Something went wrong loading your data \u2014 tap to retry",
+          document.querySelector(".screen--meals .meals-layout") || document.getElementById("meal-grid"),
+          "Something went wrong loading your data — tap to retry",
           renderMealsWithData
         );
       } else {
-        renderMeals(remoteMeals, weeklyNote || "");
+        const mealsBySlot = {};
+        slots.forEach((slot, index) => {
+          mealsBySlot[slot] = mealResults[index];
+        });
+        renderMealScreens(mealsBySlot, weeklyNote || "", slots);
       }
       resolveScreen("meals");
+    }
+
+    // Lightweight periodic refresh (no skeleton, no pending-screen tracking) used by the
+    // 5-min narrow refresh interval after the initial load has already completed.
+    async function refreshMealsQuietly() {
+      const slots = await fetchEnabledMealSlots();
+      const [mealResults, weeklyNote] = await Promise.all([
+        Promise.all(slots.map((slot) => fetchMealsForSlot(slot))),
+        fetchWeeklyNote()
+      ]);
+
+      if (mealResults.some((result) => result === null)) {
+        return;
+      }
+
+      if (typeof weeklyNote === "string") {
+        lastWeeklyNote = weeklyNote;
+      }
+
+      const mealsBySlot = {};
+      slots.forEach((slot, index) => {
+        mealsBySlot[slot] = mealResults[index];
+      });
+      renderMealScreens(mealsBySlot, lastWeeklyNote || "", slots);
     }

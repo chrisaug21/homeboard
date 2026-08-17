@@ -1,3 +1,32 @@
+    function getAdminEnabledMealSlots() {
+      return normalizeMealSlots(adminHouseholdSettings?.display_settings?.meal_slots);
+    }
+
+    function renderAdminMealSlotTabs() {
+      if (!adminMealSlotTabs) return;
+      const slots = getAdminEnabledMealSlots();
+
+      if (slots.length <= 1) {
+        adminMealSlotTabs.hidden = true;
+        adminMealSlotTabs.innerHTML = "";
+        return;
+      }
+
+      adminMealSlotTabs.hidden = false;
+      adminMealSlotTabs.innerHTML = slots.map((slot) => `
+        <button type="button" class="admin-meal-slot-tab${slot === adminCurrentMealSlot ? " is-active" : ""}" data-meal-slot-tab="${slot}">${escapeHtml(MEAL_SLOT_LABELS[slot])}</button>
+      `).join("");
+    }
+
+    function handleAdminMealSlotTabClick(event) {
+      const btn = event.target.closest("[data-meal-slot-tab]");
+      if (!btn || adminMealWritePending || adminNoteWritePending) return;
+      const slot = btn.getAttribute("data-meal-slot-tab");
+      if (!slot || slot === adminCurrentMealSlot) return;
+      adminCurrentMealSlot = slot;
+      loadAdminMealPlan();
+    }
+
     function buildAdminMealSkeletonHTML() {
       return Array.from({ length: 7 }, () => `
         <article class="admin-meal-card admin-skeleton-card" aria-hidden="true">
@@ -66,7 +95,7 @@
               <div class="admin-meal-day">${dayLabel}</div>
               <span class="admin-pill admin-pill--due">${escapeHtml(mealType ? mealType.label : "Tap to add")}</span>
             </div>
-            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : "No dinner set yet.")}</div>
+            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : `No ${(MEAL_SLOT_LABELS[adminCurrentMealSlot] || "meal").toLowerCase()} set yet.`)}</div>
           </button>
           <div class="admin-meal-card-arrows">
             <button type="button" class="admin-meal-card-arrow-btn" data-swap-dir="up" data-swap-index="${index}" aria-label="Swap with previous day"${index === 0 ? " disabled" : ""}>
@@ -273,8 +302,8 @@
       if (!hint) return;
       const count = adminMealLibraryEntries.length;
       hint.textContent = count
-        ? `${count} saved dinner name${count === 1 ? "" : "s"} used for the Meal Plan typeahead.`
-        : "Saved dinner names used for the Meal Plan typeahead.";
+        ? `${count} saved meal name${count === 1 ? "" : "s"} used for the Meal Plan typeahead.`
+        : "Saved meal names used for the Meal Plan typeahead.";
     }
 
     function buildMealFormHTML(dayIndex, date, meal) {
@@ -290,9 +319,9 @@
             <select id="modal-meal-type" name="meal_type">${buildMealTypeOptionsHTML(currentType)}</select>
           </div>
           <div class="admin-field admin-typeahead-field">
-            <label for="modal-meal-name">Dinner</label>
+            <label for="modal-meal-name">${escapeHtml(MEAL_SLOT_LABELS[adminCurrentMealSlot] || "Meal")}</label>
             <input id="modal-meal-name" name="meal_name" type="text" maxlength="140"
-              placeholder="What\u2019s for dinner?" value="${currentName}" autocomplete="off">
+              placeholder="What\u2019s for ${escapeHtml((MEAL_SLOT_LABELS[adminCurrentMealSlot] || "this meal").toLowerCase())}?" value="${currentName}" autocomplete="off">
             <ul class="admin-typeahead-list" data-meal-typeahead-list hidden></ul>
           </div>
           <div class="admin-actions">
@@ -386,7 +415,7 @@
         .select("id, day_of_week, meal_name, meal_type, week_start")
         .eq("household_id", getAdminHouseholdId())
         .eq("week_start", formatDateKey(monday))
-        .eq("meal_slot", "dinner")
+        .eq("meal_slot", adminCurrentMealSlot)
         .is("user_id", null)
         .order("day_of_week", { ascending: true });
 
@@ -418,6 +447,12 @@
     }
 
     async function loadAdminMealPlan() {
+      const enabledMealSlots = getAdminEnabledMealSlots();
+      if (!enabledMealSlots.includes(adminCurrentMealSlot)) {
+        adminCurrentMealSlot = enabledMealSlots[0];
+      }
+      renderAdminMealSlotTabs();
+
       adminCurrentMonday = getAdminWeekMonday();
       adminMealWeekLabel.textContent = "Loading\u2026";
       adminWeekPrevBtn.disabled = true;
@@ -465,6 +500,7 @@
       }
 
       const savedWeekStart = formatDateKey(adminCurrentMonday);
+      const savedMealSlot = adminCurrentMealSlot;
       const weekStart = savedWeekStart;
       const existingMeal = getAdminMealByDay(dayOfWeek);
       let responseError = null;
@@ -477,7 +513,7 @@
           .eq("id", existingMeal.id)
           .eq("household_id", getAdminHouseholdId())
           .eq("week_start", weekStart)
-          .eq("meal_slot", "dinner")
+          .eq("meal_slot", savedMealSlot)
           .is("user_id", null)
           .select("id, day_of_week, meal_name, meal_type, week_start")
           .maybeSingle();
@@ -492,7 +528,7 @@
             user_id: null,
             week_start: weekStart,
             day_of_week: dayOfWeek,
-            meal_slot: "dinner",
+            meal_slot: savedMealSlot,
             meal_name: mealName,
             meal_type: mealType
           })
@@ -578,7 +614,7 @@
       showToast("Note saved.");
     }
 
-    async function writeAdminMealDayContent(dayOfWeek, content, weekStart) {
+    async function writeAdminMealDayContent(dayOfWeek, content, weekStart, mealSlot) {
       const client = getSupabaseClient();
       if (!client) return { error: new Error("Supabase client unavailable"), meal: null };
       const existingMeal = getAdminMealByDay(dayOfWeek);
@@ -591,7 +627,7 @@
           .eq("id", existingMeal.id)
           .eq("household_id", getAdminHouseholdId())
           .eq("week_start", weekStart)
-          .eq("meal_slot", "dinner")
+          .eq("meal_slot", mealSlot)
           .is("user_id", null);
         return { error, meal: null };
       }
@@ -603,7 +639,7 @@
           .eq("id", existingMeal.id)
           .eq("household_id", getAdminHouseholdId())
           .eq("week_start", weekStart)
-          .eq("meal_slot", "dinner")
+          .eq("meal_slot", mealSlot)
           .is("user_id", null)
           .select("id, day_of_week, meal_name, meal_type, week_start")
           .maybeSingle();
@@ -617,7 +653,7 @@
           user_id: null,
           week_start: weekStart,
           day_of_week: dayOfWeek,
-          meal_slot: "dinner",
+          meal_slot: mealSlot,
           meal_name: content.mealName,
           meal_type: content.mealType
         })
@@ -639,10 +675,11 @@
 
       adminMealWritePending = true;
       const savedWeekStart = formatDateKey(adminCurrentMonday);
+      const savedMealSlot = adminCurrentMealSlot;
 
       const [sourceResult, targetResult] = await Promise.all([
-        writeAdminMealDayContent(dayIndex, targetContent, savedWeekStart),
-        writeAdminMealDayContent(targetIndex, sourceContent, savedWeekStart)
+        writeAdminMealDayContent(dayIndex, targetContent, savedWeekStart, savedMealSlot),
+        writeAdminMealDayContent(targetIndex, sourceContent, savedWeekStart, savedMealSlot)
       ]);
 
       adminMealWritePending = false;
