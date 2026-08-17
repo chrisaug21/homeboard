@@ -2126,7 +2126,7 @@
 
     .names-list {
       min-height: 0;
-      overflow-y: auto;
+      overflow: hidden;
       position: relative;
       padding-right: 4px;
       display: grid;
