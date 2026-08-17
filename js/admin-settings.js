@@ -288,6 +288,9 @@
 
       renderSettingsMembersList(members);
 
+      // Meal Library
+      ensureAdminMealLibraryLoaded().then(renderSettingsMealLibraryHint);
+
       // Active screen checkboxes
       configurableScreens.forEach((name) => {
         const cb = document.querySelector(`[name="screen_${name}"]`);
@@ -852,6 +855,9 @@
 
       const syncBtn = document.getElementById("settings-sync-btn");
       if (syncBtn) syncBtn.addEventListener("click", runAdminSync);
+
+      const mealLibraryBtn = document.getElementById("settings-meal-library-btn");
+      if (mealLibraryBtn) mealLibraryBtn.addEventListener("click", openMealLibraryModal);
 
       const logoutBtn = document.getElementById("settings-logout-btn");
       if (logoutBtn) logoutBtn.addEventListener("click", handleSettingsLogout);

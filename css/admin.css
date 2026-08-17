@@ -312,6 +312,41 @@
       font: inherit;
     }
 
+    .admin-typeahead-list {
+      margin: 6px 0 0;
+      padding: 6px;
+      list-style: none;
+      display: grid;
+      gap: 2px;
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid rgba(124, 96, 69, 0.16);
+      border-radius: 16px;
+      background: var(--panel-strong);
+    }
+
+    .admin-typeahead-list[hidden] {
+      display: none;
+    }
+
+    .admin-typeahead-option {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.92rem;
+    }
+
+    .admin-typeahead-option:hover,
+    .admin-typeahead-option:focus-visible {
+      background: var(--color-accent-subtle);
+    }
+
     .admin-field textarea {
       width: 100%;
       min-width: 0;
@@ -622,6 +657,59 @@
 
     .admin-meal-name--empty {
       color: var(--muted);
+    }
+
+    .admin-meal-day-card {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      break-inside: avoid;
+      margin-bottom: 10px;
+    }
+
+    .admin-meal-day-card .admin-meal-card {
+      flex: 1;
+      min-width: 0;
+      margin-bottom: 0;
+    }
+
+    .admin-meal-card-arrows {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .admin-meal-card-arrow-btn {
+      width: 28px;
+      height: 28px;
+      border: 1px solid rgba(124, 96, 69, 0.16);
+      border-radius: var(--button-radius);
+      background: rgba(255, 255, 255, 0.8);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font: inherit;
+      transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+    }
+
+    .admin-meal-card-arrow-btn:hover:not(:disabled) {
+      background: var(--color-accent-subtle);
+      color: var(--color-accent);
+      border-color: var(--color-accent);
+    }
+
+    .admin-meal-card-arrow-btn:disabled {
+      opacity: 0.24;
+      cursor: default;
+    }
+
+    .admin-meal-card-arrow-btn svg {
+      width: 13px;
+      height: 13px;
     }
 
     .admin-field select {
@@ -2841,7 +2929,8 @@
     html[data-scheme="dark"] .admin-field select,
     html[data-scheme="dark"] .admin-input,
     html[data-scheme="dark"] .admin-settings-timer-input,
-    html[data-scheme="dark"] .admin-meal-note-textarea {
+    html[data-scheme="dark"] .admin-meal-note-textarea,
+    html[data-scheme="dark"] .admin-typeahead-list {
       background: rgba(255, 255, 255, 0.08);
       border-color: rgba(255, 240, 220, 0.14);
       color: var(--ink);
@@ -2851,7 +2940,8 @@
     html[data-scheme="dark"] .admin-week-nav-btn,
     html[data-scheme="dark"] .admin-drawer-icon,
     html[data-scheme="dark"] .admin-modal-close,
-    html[data-scheme="dark"] .admin-settings-order-btn {
+    html[data-scheme="dark"] .admin-settings-order-btn,
+    html[data-scheme="dark"] .admin-meal-card-arrow-btn {
       background: rgba(255, 255, 255, 0.08);
       color: var(--ink);
       border-color: rgba(255, 240, 220, 0.12);
@@ -2862,7 +2952,8 @@
     html[data-scheme="dark"] .admin-nav-button.is-active,
     html[data-scheme="dark"] .admin-settings-toggle:has(input:checked),
     html[data-scheme="dark"] .admin-settings-scheme-option:has(input:checked),
-    html[data-scheme="dark"] .admin-settings-order-btn:hover:not(:disabled) {
+    html[data-scheme="dark"] .admin-settings-order-btn:hover:not(:disabled),
+    html[data-scheme="dark"] .admin-meal-card-arrow-btn:hover:not(:disabled) {
       background: rgba(245, 158, 11, 0.16);
     }
 
