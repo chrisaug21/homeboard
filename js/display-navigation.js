@@ -29,6 +29,11 @@
 
       currentIndex = (index + screenCount) % screenCount;
       activeScreenKey = entries[currentIndex]?.key || activeScreenKey;
+      if (activeScreenKey === "rsvp" && typeof startRsvpAutoScroll === "function") {
+        // Restart so the top-of-list dwell is visible on arrival, since the RSVP
+        // screen's scroll animation otherwise keeps running while off-screen in the track.
+        startRsvpAutoScroll();
+      }
       beginScreenTransition();
       track.style.transform = "translateX(-" + (currentIndex * 100) + "%)";
       renderProgress();
