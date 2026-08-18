@@ -44,7 +44,7 @@
       }
 
       const speed = 18; // px/sec, matches prior loop's pace
-      const pauseMs = 1600; // pause at each end, matches prior loop's pace
+      const pauseMs = 3600; // pause at each end; extra dwell so top/bottom cards stay readable
       const travelMs = (maxScroll / speed) * 1000;
       const totalMs = pauseMs * 2 + travelMs * 2;
 
