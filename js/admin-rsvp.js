@@ -487,8 +487,8 @@
       return parts.join(", ");
     }
 
-    function renderAdminRsvpGuestSection(parties, listEl, noteEl, emptyLabel, summaryText) {
-      noteEl.textContent = parties.length ? summaryText : emptyLabel;
+    function renderAdminRsvpGuestSection(parties, listEl, noteEl, emptyLabel, summaryText, hasSummary = parties.length > 0) {
+      noteEl.textContent = hasSummary ? summaryText : emptyLabel;
 
       listEl.innerHTML = parties.length
         ? parties.map(buildAdminRsvpGuestRowHTML).join("")
@@ -524,7 +524,8 @@
       renderAdminRsvpGuestSection(
         declinedParties, adminRsvpDeclinedList, adminRsvpDeclinedNote,
         "No declined parties yet.",
-        buildDeclinedGuestSummary(declinedParties.length, partialDeclineGuestTotal, declinedGuestTotal)
+        buildDeclinedGuestSummary(declinedParties.length, partialDeclineGuestTotal, declinedGuestTotal),
+        declinedGuestTotal > 0
       );
       renderAdminRsvpGuestSection(
         pendingParties, adminRsvpPendingList, adminRsvpPendingNote,
