@@ -136,7 +136,7 @@
       const name = escapeHtml(reviewItem?.rsvp?.name || "this RSVP");
       return `
         <div class="admin-detail-stack">
-          <p class="admin-field-hint">Delete the RSVP from <strong>${name}</strong>? It will be hidden from Needs Review, the guest list, and RSVP counts, but not permanently removed.</p>
+          <p class="admin-field-hint">Delete the RSVP from <strong>${name}</strong>? It will be hidden from Needs Review, the guest list, and RSVP counts.</p>
           <div class="admin-actions admin-actions--split">
             <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
             <button class="admin-button admin-button--danger" type="button"
@@ -460,10 +460,21 @@
       `;
     }
 
-    function renderAdminRsvpGuestSection(parties, listEl, noteEl, emptyLabel, singularLabel, pluralLabel) {
-      noteEl.textContent = parties.length
-        ? `${parties.length} ${parties.length === 1 ? singularLabel : pluralLabel}`
-        : emptyLabel;
+    function pluralizeCount(count, singular, plural) {
+      return `${count} ${count === 1 ? singular : plural}`;
+    }
+
+    function buildFullPartialGuestSummary(fullCount, partialCount, guestTotal, guestVerb) {
+      const parts = [pluralizeCount(fullCount, "full party", "full parties")];
+      if (partialCount > 0) {
+        parts.push(pluralizeCount(partialCount, "partial party", "partial parties"));
+      }
+      parts.push(`${pluralizeCount(guestTotal, "total guest", "total guests")} ${guestVerb}`);
+      return parts.join(", ");
+    }
+
+    function renderAdminRsvpGuestSection(parties, listEl, noteEl, emptyLabel, summaryText) {
+      noteEl.textContent = parties.length ? summaryText : emptyLabel;
 
       listEl.innerHTML = parties.length
         ? parties.map(buildAdminRsvpGuestRowHTML).join("")
@@ -474,19 +485,37 @@
       const snapshot = adminWeddingSnapshot;
       const parties = [...(snapshot?.invitedParties || [])]
         .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
-      const byRank = (rank) => parties.filter((party) => getAdminRsvpStatusMeta(party).rank === rank);
+
+      const attendingParties = parties.filter((party) => party.linkedRsvp && party.linkedRsvp.attending === true);
+      const declinedParties = parties.filter((party) => party.linkedRsvp && party.linkedRsvp.attending === false);
+      const pendingParties = parties.filter((party) => !party.rsvpId);
+      const partialParties = attendingParties.filter((party) => party.linkedRsvp.guestCount < party.invitedCount);
+      const fullAttendingCount = attendingParties.length - partialParties.length;
+
+      const confirmedGuestTotal = attendingParties.reduce(
+        (sum, party) => sum + Math.min(party.linkedRsvp.guestCount, party.invitedCount), 0
+      );
+      const partialDeclineGuestTotal = partialParties.reduce(
+        (sum, party) => sum + (party.invitedCount - party.linkedRsvp.guestCount), 0
+      );
+      const declinedGuestTotal = declinedParties.reduce((sum, party) => sum + party.invitedCount, 0)
+        + partialDeclineGuestTotal;
+      const pendingGuestTotal = pendingParties.reduce((sum, party) => sum + party.invitedCount, 0);
 
       renderAdminRsvpGuestSection(
-        byRank(0), adminRsvpConfirmedList, adminRsvpConfirmedNote,
-        "No confirmed parties yet.", "confirmed party", "confirmed parties"
+        attendingParties, adminRsvpConfirmedList, adminRsvpConfirmedNote,
+        "No confirmed parties yet.",
+        buildFullPartialGuestSummary(fullAttendingCount, partialParties.length, confirmedGuestTotal, "confirmed")
       );
       renderAdminRsvpGuestSection(
-        byRank(1), adminRsvpDeclinedList, adminRsvpDeclinedNote,
-        "No declined parties yet.", "declined party", "declined parties"
+        declinedParties, adminRsvpDeclinedList, adminRsvpDeclinedNote,
+        "No declined parties yet.",
+        buildFullPartialGuestSummary(declinedParties.length, partialParties.length, declinedGuestTotal, "declined")
       );
       renderAdminRsvpGuestSection(
-        byRank(2), adminRsvpPendingList, adminRsvpPendingNote,
-        "No pending invites.", "pending party", "pending parties"
+        pendingParties, adminRsvpPendingList, adminRsvpPendingNote,
+        "No pending invites.",
+        `${pluralizeCount(pendingParties.length, "party", "parties")}, ${pluralizeCount(pendingGuestTotal, "total guest", "total guests")} pending`
       );
     }
 
