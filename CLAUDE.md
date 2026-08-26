@@ -53,7 +53,7 @@ netlify.toml        — build config, env var injection via sed
 
 ## Wedding RSVP Logic
 - RSVP soft delete uses `rsvps.status`, never hard delete rows
-- Status values: `active` and `superseded`
+- Status values: `active`, `superseded` (merged into another party as a duplicate), and `dismissed` (soft-deleted from admin Needs Review)
 - `rsvps.merged_into_party_id` is the explicit link from a superseded RSVP to the invited party it was merged into
 - `rsvps.excluded_from_auto_match` is set to `true` whenever an admin manually unlinks an RSVP from an invited party (via either the Review RSVPs unlink flow or the Edit Party modal's unlink-then-save flow). The shared auto-link helper (`autoLinkHighConfidenceRsvps` in `js/shared.js`) skips any RSVP with this flag set, on both admin and display, so a manually-rejected match is never silently re-established — it stays in Needs Review until a human manually links it
 - All RSVP queries used for counts, matching, or display must read `status = 'active'` only
