@@ -963,6 +963,13 @@
         saveAdminMeal(dayOfWeek, mealName, mealType);
       } else if (formType === "note") {
         saveAdminMealNote(formData);
+      } else if (formType === "meal-slot-labels") {
+        const mealSlotLabels = {};
+        MEAL_SLOT_ORDER.forEach((slot) => {
+          const trimmed = String(formData.get(`meal_slot_label_${slot}`) || "").trim();
+          if (trimmed && trimmed !== MEAL_SLOT_LABELS[slot]) mealSlotLabels[slot] = trimmed.slice(0, 30);
+        });
+        saveMealSlotLabels(mealSlotLabels);
       } else if (formType === "countdown") {
         if (adminModalType === "edit-countdown") {
           const id = form.getAttribute("data-countdown-id");

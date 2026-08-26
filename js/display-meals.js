@@ -1,6 +1,6 @@
-    async function fetchEnabledMealSlots() {
+    async function fetchMealSlotConfig() {
       const client = getSupabaseClient();
-      if (!client) return ["dinner"];
+      if (!client) return { slots: ["dinner"], labels: {} };
 
       const { data, error } = await client
         .from("households")
@@ -8,8 +8,11 @@
         .eq("id", getDisplayHouseholdId())
         .single();
 
-      if (error || !data) return ["dinner"];
-      return normalizeMealSlots(data.display_settings?.meal_slots);
+      if (error || !data) return { slots: ["dinner"], labels: {} };
+      return {
+        slots: normalizeMealSlots(data.display_settings?.meal_slots),
+        labels: normalizeMealSlotLabels(data.display_settings?.meal_slot_labels)
+      };
     }
 
     function mapSupabaseMeal(meal) {
@@ -67,7 +70,7 @@
       return data.note || "";
     }
 
-    function buildMealScreenPanelHTML(slot, mealItems, weeklyNote) {
+    function buildMealScreenPanelHTML(slot, mealItems, weeklyNote, mealSlotLabels) {
       const monday = getMonday(new Date());
       const todayKey = new Date().toDateString();
       const mealsByDay = new Map();
@@ -111,14 +114,14 @@
       return `
         <div class="panel">
           <div class="screen-title-row">
-            <div class="eyebrow"><i data-lucide="utensils-crossed"></i> Meal Plan - ${escapeHtml(MEAL_SLOT_LABELS[slot] || slot)}</div>
+            <div class="eyebrow"><i data-lucide="utensils-crossed"></i> Meal Plan - ${escapeHtml(resolveMealSlotLabel(slot, mealSlotLabels))}</div>
           </div>
           <div class="meals-layout">${mealCards.join("") + noteCard}</div>
         </div>
       `;
     }
 
-    function renderMealScreens(mealsBySlot, weeklyNote, slots) {
+    function renderMealScreens(mealsBySlot, weeklyNote, slots, mealSlotLabels) {
       let existingMealScreens = Array.from(track.querySelectorAll(".screen--meals"));
       existingMealScreens.forEach((screen, index) => {
         if (index >= slots.length) {
@@ -142,7 +145,7 @@
         if (!screen.classList.contains("screen--disabled")) {
           screen.removeAttribute("aria-hidden");
         }
-        screen.innerHTML = buildMealScreenPanelHTML(slot, mealsBySlot[slot] || [], weeklyNote);
+        screen.innerHTML = buildMealScreenPanelHTML(slot, mealsBySlot[slot] || [], weeklyNote, mealSlotLabels);
       });
 
       const displaySettings = normalizeDisplaySettings(cachedHouseholdConfig?.display_settings);
@@ -154,7 +157,7 @@
     async function renderMealsWithData() {
       markPending("meals");
       renderMealSkeleton();
-      const slots = await fetchEnabledMealSlots();
+      const { slots, labels } = await fetchMealSlotConfig();
       const [mealsBySlot, weeklyNote] = await Promise.all([
         fetchMealsForSlots(slots),
         fetchWeeklyNote()
@@ -167,7 +170,7 @@
           renderMealsWithData
         );
       } else {
-        renderMealScreens(mealsBySlot, weeklyNote || "", slots);
+        renderMealScreens(mealsBySlot, weeklyNote || "", slots, labels);
       }
       resolveScreen("meals");
     }
@@ -175,7 +178,7 @@
     // Lightweight periodic refresh (no skeleton, no pending-screen tracking) used by the
     // 5-min narrow refresh interval after the initial load has already completed.
     async function refreshMealsQuietly() {
-      const slots = await fetchEnabledMealSlots();
+      const { slots, labels } = await fetchMealSlotConfig();
       const [mealsBySlot, weeklyNote] = await Promise.all([
         fetchMealsForSlots(slots),
         fetchWeeklyNote()
@@ -189,5 +192,5 @@
         lastWeeklyNote = weeklyNote;
       }
 
-      renderMealScreens(mealsBySlot, lastWeeklyNote || "", slots);
+      renderMealScreens(mealsBySlot, lastWeeklyNote || "", slots, labels);
     }

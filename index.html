@@ -1312,16 +1312,20 @@
               <div class="admin-settings-toggle-list" id="settings-meal-slot-toggles">
                 <label class="admin-settings-toggle">
                   <input type="checkbox" name="meal_slot_breakfast" value="breakfast">
-                  <span>Breakfast</span>
+                  <span data-meal-slot-label="breakfast">Breakfast</span>
                 </label>
                 <label class="admin-settings-toggle">
                   <input type="checkbox" name="meal_slot_lunch" value="lunch">
-                  <span>Lunch</span>
+                  <span data-meal-slot-label="lunch">Lunch</span>
                 </label>
                 <label class="admin-settings-toggle">
                   <input type="checkbox" name="meal_slot_dinner" value="dinner">
-                  <span>Dinner</span>
+                  <span data-meal-slot-label="dinner">Dinner</span>
                 </label>
+              </div>
+              <div class="admin-actions admin-actions--end">
+                <button type="button" id="settings-meal-slot-rename-btn"
+                  class="admin-button admin-button--secondary">Rename meal types</button>
               </div>
             </div>
 

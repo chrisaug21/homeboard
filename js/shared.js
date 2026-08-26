@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.2.10";
+    const VERSION = "2.3.0";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -53,6 +53,22 @@
       const slots = Array.isArray(rawSlots) ? rawSlots.filter((slot) => MEAL_SLOT_ORDER.includes(slot)) : [];
       const ordered = MEAL_SLOT_ORDER.filter((slot) => slots.includes(slot));
       return ordered.length ? ordered : ["dinner"];
+    }
+
+    function normalizeMealSlotLabels(rawLabels) {
+      const out = {};
+      if (rawLabels && typeof rawLabels === "object") {
+        MEAL_SLOT_ORDER.forEach((slot) => {
+          const trimmed = typeof rawLabels[slot] === "string" ? rawLabels[slot].trim() : "";
+          if (trimmed) out[slot] = trimmed.slice(0, 30);
+        });
+      }
+      return out;
+    }
+
+    function resolveMealSlotLabel(slot, mealSlotLabels) {
+      const custom = mealSlotLabels && typeof mealSlotLabels === "object" ? mealSlotLabels[slot] : "";
+      return custom || MEAL_SLOT_LABELS[slot] || slot;
     }
 
     const TODO_HOUSEHOLD_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
@@ -483,6 +499,7 @@
         allowScorecardScreens: true
       }).filter((key) => configurableDisplayScreenKeys.includes(key) || isScorecardScreenKey(key));
       settings.timer_intervals = normalizeTimerIntervals(settings.timer_intervals);
+      settings.meal_slot_labels = normalizeMealSlotLabels(settings.meal_slot_labels);
       delete settings.calendar_view;
 
       return settings;
