@@ -137,7 +137,7 @@
       list.classList.remove("names-scroll--empty");
       list.innerHTML = attendingRows.map((row) => `
         <div class="name-pill name-pill--attending${row.isUnderCount ? " name-pill--undercount" : ""}">
-          <span>${escapeHtml(row.name)}</span>
+          <span class="name-pill-label">${escapeHtml(row.name)}</span>
           <span class="name-status">${escapeHtml(formatGuestCountLabel(row.guestCount))}</span>
         </div>
       `).join("");
