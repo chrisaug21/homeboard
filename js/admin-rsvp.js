@@ -122,6 +122,79 @@
       `;
     }
 
+    function buildReviewDismissRowHTML(rsvp) {
+      return `
+        <div class="admin-actions admin-actions--end admin-rsvp-dismiss-row">
+          <button class="admin-button admin-button--danger admin-button--small" type="button"
+            data-action="prompt-dismiss-review-rsvp"
+            data-rsvp-id="${escapeHtml(rsvp.id)}">Delete RSVP</button>
+        </div>
+      `;
+    }
+
+    function buildDismissReviewModalHTML(reviewItem) {
+      const name = escapeHtml(reviewItem?.rsvp?.name || "this RSVP");
+      return `
+        <div class="admin-detail-stack">
+          <p class="admin-field-hint">Delete the RSVP from <strong>${name}</strong>? It will be hidden from Needs Review, the guest list, and RSVP counts, but not permanently removed.</p>
+          <div class="admin-actions admin-actions--split">
+            <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            <button class="admin-button admin-button--danger" type="button"
+                    data-action="confirm-dismiss-review-rsvp" data-rsvp-id="${escapeHtml(reviewItem.rsvp.id)}">
+              Delete
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function promptDismissReviewRsvp(rsvpId) {
+      const reviewItem = getReviewItemByRsvpId(rsvpId);
+      if (!reviewItem) return;
+      openAdminModal("Delete RSVP", buildDismissReviewModalHTML(reviewItem));
+    }
+
+    async function dismissReviewRsvp(rsvpId) {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+      if (adminRsvpWritePending) {
+        return;
+      }
+
+      adminRsvpWritePending = true;
+      const linkedParty = adminWeddingSnapshot?.invitedParties?.find((party) => party.rsvpId === rsvpId) || null;
+      const { error } = await client
+        .from("rsvps")
+        .update({ status: "dismissed" })
+        .eq("id", rsvpId)
+        .eq("status", "active");
+
+      let unlinkError = null;
+      if (!error && linkedParty) {
+        const result = await client
+          .from("invited_parties")
+          .update({ rsvp_id: null, low_confidence_confirmed_rsvp_id: null })
+          .eq("id", linkedParty.id)
+          .eq("rsvp_id", rsvpId);
+        unlinkError = result.error;
+      }
+      adminRsvpWritePending = false;
+
+      if (error) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+
+      closeAdminModal();
+      await loadAdminRsvpScreen();
+      showToast(unlinkError
+        ? "RSVP deleted, but the linked party may need a manual check."
+        : "RSVP deleted.");
+    }
+
     function buildReviewModalHTML(reviewItem) {
       if (!reviewItem) {
         return `<div class="admin-empty">That RSVP no longer needs review.</div>`;
@@ -136,6 +209,7 @@
               <div class="admin-rsvp-card-meta">${escapeHtml(getReviewResponseLabel(reviewItem.rsvp))}</div>
             </div>
             ${buildReviewPartySearchSection(reviewItem.rsvp)}
+            ${buildReviewDismissRowHTML(reviewItem.rsvp)}
           </div>
         `;
       }
@@ -184,6 +258,7 @@
             <div class="admin-actions admin-actions--end">
               <button class="admin-button admin-button--primary" type="submit">Confirm</button>
             </div>
+            ${buildReviewDismissRowHTML(reviewItem.rsvp)}
           </div>
           </form>
         `;
@@ -207,6 +282,7 @@
                 <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
                 <button class="admin-button admin-button--primary" type="submit">Save</button>
               </div>
+              ${buildReviewDismissRowHTML(reviewItem.rsvp)}
             </div>
           </form>
         `;
@@ -234,6 +310,7 @@
               data-rsvp-id="${escapeHtml(reviewItem.rsvp.id)}"
               data-party-id="${escapeHtml(reviewItem.matchedParty?.id || "")}">Re-link</button>
           </div>
+          ${buildReviewDismissRowHTML(reviewItem.rsvp)}
         </div>
       `;
     }
@@ -370,59 +447,82 @@
       openAdminModal("Edit Party", buildInvitedPartyFormHTML(party));
     }
 
+    function buildAdminRsvpGuestRowHTML(party) {
+      const status = getAdminRsvpStatusMeta(party);
+      return `
+        <button class="admin-rsvp-guest-row" type="button" data-party-id="${escapeHtml(party.id)}">
+          <div class="admin-rsvp-guest-main">
+            <div class="admin-rsvp-guest-title">${escapeHtml(party.name)}</div>
+            <div class="admin-rsvp-guest-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))}</div>
+          </div>
+          <span class="admin-rsvp-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
+        </button>
+      `;
+    }
+
+    function renderAdminRsvpGuestSection(parties, listEl, noteEl, emptyLabel, singularLabel, pluralLabel) {
+      noteEl.textContent = parties.length
+        ? `${parties.length} ${parties.length === 1 ? singularLabel : pluralLabel}`
+        : emptyLabel;
+
+      listEl.innerHTML = parties.length
+        ? parties.map(buildAdminRsvpGuestRowHTML).join("")
+        : `<div class="admin-empty">${emptyLabel}</div>`;
+    }
+
     function renderAdminRsvpGuestList() {
       const snapshot = adminWeddingSnapshot;
       const parties = [...(snapshot?.invitedParties || [])]
-        .sort((a, b) => {
-          const statusDiff = getAdminRsvpStatusMeta(a).rank - getAdminRsvpStatusMeta(b).rank;
-          if (statusDiff !== 0) return statusDiff;
-          return String(a.name || "").localeCompare(String(b.name || ""));
-        });
+        .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+      const byRank = (rank) => parties.filter((party) => getAdminRsvpStatusMeta(party).rank === rank);
 
-      adminRsvpGuestListNote.textContent = parties.length
-        ? `${parties.length} invited part${parties.length === 1 ? "y" : "ies"} total.`
-        : "No invited parties found.";
-
-      if (!parties.length) {
-        adminRsvpGuestList.innerHTML = '<div class="admin-empty">No invited parties found.</div>';
-        return;
-      }
-
-      adminRsvpGuestList.innerHTML = parties.map((party) => {
-        const status = getAdminRsvpStatusMeta(party);
-        return `
-          <button class="admin-rsvp-guest-row" type="button" data-party-id="${escapeHtml(party.id)}">
-            <div class="admin-rsvp-guest-main">
-              <div class="admin-rsvp-guest-title">${escapeHtml(party.name)}</div>
-              <div class="admin-rsvp-guest-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))}</div>
-            </div>
-            <span class="admin-rsvp-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
-          </button>
-        `;
-      }).join("");
+      renderAdminRsvpGuestSection(
+        byRank(0), adminRsvpConfirmedList, adminRsvpConfirmedNote,
+        "No confirmed parties yet.", "confirmed party", "confirmed parties"
+      );
+      renderAdminRsvpGuestSection(
+        byRank(1), adminRsvpDeclinedList, adminRsvpDeclinedNote,
+        "No declined parties yet.", "declined party", "declined parties"
+      );
+      renderAdminRsvpGuestSection(
+        byRank(2), adminRsvpPendingList, adminRsvpPendingNote,
+        "No pending invites.", "pending party", "pending parties"
+      );
     }
 
     async function loadAdminRsvpScreen() {
       if (!isRsvpDisplayScreenAvailable(getAdminHouseholdId())) {
         adminWeddingSnapshot = null;
         adminRsvpUnmatchedNote.textContent = "";
-        adminRsvpGuestListNote.textContent = "";
+        adminRsvpConfirmedNote.textContent = "";
+        adminRsvpDeclinedNote.textContent = "";
+        adminRsvpPendingNote.textContent = "";
         adminRsvpUnmatchedList.innerHTML = "";
-        adminRsvpGuestList.innerHTML = "";
+        adminRsvpConfirmedList.innerHTML = "";
+        adminRsvpDeclinedList.innerHTML = "";
+        adminRsvpPendingList.innerHTML = "";
         return;
       }
 
       adminRsvpUnmatchedNote.textContent = "Loading RSVP matches\u2026";
-      adminRsvpGuestListNote.textContent = "Loading invited parties\u2026";
+      adminRsvpConfirmedNote.textContent = "Loading invited parties\u2026";
+      adminRsvpDeclinedNote.textContent = "Loading invited parties\u2026";
+      adminRsvpPendingNote.textContent = "Loading invited parties\u2026";
       adminRsvpUnmatchedList.innerHTML = buildAdminRsvpReviewSkeletonHTML();
-      adminRsvpGuestList.innerHTML = buildAdminRsvpGuestSkeletonHTML();
+      adminRsvpConfirmedList.innerHTML = buildAdminRsvpGuestSkeletonHTML();
+      adminRsvpDeclinedList.innerHTML = buildAdminRsvpGuestSkeletonHTML();
+      adminRsvpPendingList.innerHTML = buildAdminRsvpGuestSkeletonHTML();
 
       const snapshot = await fetchWeddingRsvpSnapshot();
       if (!snapshot) {
         adminRsvpUnmatchedNote.textContent = "Couldn't load RSVP matches.";
-        adminRsvpGuestListNote.textContent = "Couldn't load invited parties.";
+        adminRsvpConfirmedNote.textContent = "Couldn't load invited parties.";
+        adminRsvpDeclinedNote.textContent = "Couldn't load invited parties.";
+        adminRsvpPendingNote.textContent = "Couldn't load invited parties.";
         adminRsvpUnmatchedList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
-        adminRsvpGuestList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+        adminRsvpConfirmedList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+        adminRsvpDeclinedList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
+        adminRsvpPendingList.innerHTML = `<div class="admin-empty">${friendlyLoadMessage()}</div>`;
         return;
       }
 

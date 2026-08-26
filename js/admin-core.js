@@ -186,8 +186,12 @@
     const adminCountdownAddButton = document.getElementById("admin-countdown-add-button");
     const adminRsvpUnmatchedList = document.getElementById("admin-rsvp-unmatched-list");
     const adminRsvpUnmatchedNote = document.getElementById("admin-rsvp-unmatched-note");
-    const adminRsvpGuestList = document.getElementById("admin-rsvp-guest-list");
-    const adminRsvpGuestListNote = document.getElementById("admin-rsvp-guest-list-note");
+    const adminRsvpConfirmedList = document.getElementById("admin-rsvp-confirmed-list");
+    const adminRsvpConfirmedNote = document.getElementById("admin-rsvp-confirmed-note");
+    const adminRsvpDeclinedList = document.getElementById("admin-rsvp-declined-list");
+    const adminRsvpDeclinedNote = document.getElementById("admin-rsvp-declined-note");
+    const adminRsvpPendingList = document.getElementById("admin-rsvp-pending-list");
+    const adminRsvpPendingNote = document.getElementById("admin-rsvp-pending-note");
     const adminScorecardList = document.getElementById("admin-scorecard-list");
     const adminScorecardsNote = document.getElementById("admin-scorecards-note");
     const adminScorecardAddButton = document.getElementById("admin-scorecard-add-button");
@@ -710,6 +714,22 @@
         const partyId = relinkBtn.getAttribute("data-party-id");
         if (rsvpId && partyId) {
           unlinkPartyAndReopenReview(partyId, rsvpId);
+        }
+        return;
+      }
+      const promptDismissReviewBtn = event.target.closest("[data-action='prompt-dismiss-review-rsvp']");
+      if (promptDismissReviewBtn) {
+        const rsvpId = promptDismissReviewBtn.getAttribute("data-rsvp-id");
+        if (rsvpId) {
+          promptDismissReviewRsvp(rsvpId);
+        }
+        return;
+      }
+      const confirmDismissReviewBtn = event.target.closest("[data-action='confirm-dismiss-review-rsvp']");
+      if (confirmDismissReviewBtn) {
+        const rsvpId = confirmDismissReviewBtn.getAttribute("data-rsvp-id");
+        if (rsvpId) {
+          dismissReviewRsvp(rsvpId);
         }
         return;
       }
@@ -1306,7 +1326,9 @@
         adminRsvpUnmatchedList.addEventListener("click", handleAdminRsvpListClick);
         adminRsvpUnmatchedList.addEventListener("input", handleAdminRsvpUnmatchedInput);
       }
-      if (adminRsvpGuestList) adminRsvpGuestList.addEventListener("click", handleAdminRsvpListClick);
+      if (adminRsvpConfirmedList) adminRsvpConfirmedList.addEventListener("click", handleAdminRsvpListClick);
+      if (adminRsvpDeclinedList) adminRsvpDeclinedList.addEventListener("click", handleAdminRsvpListClick);
+      if (adminRsvpPendingList) adminRsvpPendingList.addEventListener("click", handleAdminRsvpListClick);
       if (adminScorecardList) adminScorecardList.addEventListener("click", handleAdminScorecardListClick);
       if (adminSettingsButton) adminSettingsButton.addEventListener("click", openAdminSettings);
       if (adminMealNoteWrap) adminMealNoteWrap.addEventListener("click", handleAdminMealNoteClick);

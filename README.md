@@ -122,7 +122,7 @@ Display screens rotate automatically using timers from `display_settings.timer_i
 - manage display settings
 - run or relaunch the onboarding intro tour from Settings
 - generate display pairing codes
-- manage RSVP review and guest list workflows
+- manage RSVP review (with an option to soft-delete a reviewed RSVP) and browse the guest list split into Confirmed, Declined, and Pending sections
 - create and run scorecards
 
 Settings are opened from the gear icon in the admin header, not a bottom-nav tab.
@@ -194,7 +194,7 @@ Core tables used by Homeboard:
 | `scorecard_sessions` | active and completed scorecard sessions |
 | `display_pairings` | temporary pairing codes for display setup |
 | `invite_codes` | self-serve household signup codes with active state and usage limits |
-| `rsvps` | wedding RSVP data owned by the wedding site repo; homeboard may add its own additive bookkeeping columns that are nullable or have a default (`status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never touch columns the wedding site writes (`name`, `attending`, `guest_count`) |
+| `rsvps` | wedding RSVP data owned by the wedding site repo; homeboard may add its own additive bookkeeping columns that are nullable or have a default (`status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never touch columns the wedding site writes (`name`, `attending`, `guest_count`); `status` values are `active`, `superseded` (merged into another party as a duplicate), and `dismissed` (soft-deleted from admin Needs Review) — all RSVP reads filter to `status = 'active'` |
 | `invited_parties` | wedding invite list and RSVP matching source of truth |
 
 ## Environment Variables
