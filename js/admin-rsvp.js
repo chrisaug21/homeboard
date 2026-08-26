@@ -166,33 +166,38 @@
 
       adminRsvpWritePending = true;
       const linkedParty = adminWeddingSnapshot?.invitedParties?.find((party) => party.rsvpId === rsvpId) || null;
+
+      if (linkedParty) {
+        const { error: unlinkError } = await client
+          .from("invited_parties")
+          .update({ rsvp_id: null, low_confidence_confirmed_rsvp_id: null })
+          .eq("id", linkedParty.id)
+          .eq("rsvp_id", rsvpId);
+        if (unlinkError) {
+          adminRsvpWritePending = false;
+          showToast(friendlySaveMessage());
+          return;
+        }
+      }
+
       const { error } = await client
         .from("rsvps")
         .update({ status: "dismissed" })
         .eq("id", rsvpId)
         .eq("status", "active");
-
-      let unlinkError = null;
-      if (!error && linkedParty) {
-        const result = await client
-          .from("invited_parties")
-          .update({ rsvp_id: null, low_confidence_confirmed_rsvp_id: null })
-          .eq("id", linkedParty.id)
-          .eq("rsvp_id", rsvpId);
-        unlinkError = result.error;
-      }
       adminRsvpWritePending = false;
 
       if (error) {
-        showToast(friendlySaveMessage());
+        await loadAdminRsvpScreen();
+        showToast(linkedParty
+          ? "Party unlinked, but the RSVP still needs to be deleted. Please try again."
+          : friendlySaveMessage());
         return;
       }
 
       closeAdminModal();
       await loadAdminRsvpScreen();
-      showToast(unlinkError
-        ? "RSVP deleted, but the linked party may need a manual check."
-        : "RSVP deleted.");
+      showToast("RSVP deleted.");
     }
 
     function buildReviewModalHTML(reviewItem) {
@@ -464,12 +469,21 @@
       return `${count} ${count === 1 ? singular : plural}`;
     }
 
-    function buildFullPartialGuestSummary(fullCount, partialCount, guestTotal, guestVerb) {
+    function buildConfirmedGuestSummary(fullCount, partialCount, guestTotal) {
       const parts = [pluralizeCount(fullCount, "full party", "full parties")];
       if (partialCount > 0) {
         parts.push(pluralizeCount(partialCount, "partial party", "partial parties"));
       }
-      parts.push(`${pluralizeCount(guestTotal, "total guest", "total guests")} ${guestVerb}`);
+      parts.push(`${pluralizeCount(guestTotal, "total guest", "total guests")} confirmed`);
+      return parts.join(", ");
+    }
+
+    function buildDeclinedGuestSummary(fullPartyCount, partialGuestTotal, guestTotal) {
+      const parts = [pluralizeCount(fullPartyCount, "full party", "full parties")];
+      if (partialGuestTotal > 0) {
+        parts.push(`${pluralizeCount(partialGuestTotal, "guest", "guests")} from partial declines`);
+      }
+      parts.push(`${pluralizeCount(guestTotal, "total guest", "total guests")} declined`);
       return parts.join(", ");
     }
 
@@ -505,12 +519,12 @@
       renderAdminRsvpGuestSection(
         attendingParties, adminRsvpConfirmedList, adminRsvpConfirmedNote,
         "No confirmed parties yet.",
-        buildFullPartialGuestSummary(fullAttendingCount, partialParties.length, confirmedGuestTotal, "confirmed")
+        buildConfirmedGuestSummary(fullAttendingCount, partialParties.length, confirmedGuestTotal)
       );
       renderAdminRsvpGuestSection(
         declinedParties, adminRsvpDeclinedList, adminRsvpDeclinedNote,
         "No declined parties yet.",
-        buildFullPartialGuestSummary(declinedParties.length, partialParties.length, declinedGuestTotal, "declined")
+        buildDeclinedGuestSummary(declinedParties.length, partialDeclineGuestTotal, declinedGuestTotal)
       );
       renderAdminRsvpGuestSection(
         pendingParties, adminRsvpPendingList, adminRsvpPendingNote,
