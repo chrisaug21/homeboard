@@ -89,7 +89,7 @@
       return adminMealPlanRows.find((meal) => meal.dayOfWeek === dayOfWeek) || null;
     }
 
-    function renderAdminMealCard(index, date, meal) {
+    function renderAdminMealCard(index, date, meal, mealSlotLabels) {
       const dayLabel = escapeHtml(formatAdminMealCardDayLabel(date));
       const mealType = meal ? getMealTypePresentation(meal.mealType) : null;
 
@@ -100,7 +100,7 @@
               <div class="admin-meal-day">${dayLabel}</div>
               <span class="admin-pill admin-pill--due">${escapeHtml(mealType ? mealType.label : "Tap to add")}</span>
             </div>
-            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : `No ${resolveMealSlotLabel(adminCurrentMealSlot, getAdminMealSlotLabels()).toLowerCase()} set yet.`)}</div>
+            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : `No ${resolveMealSlotLabel(adminCurrentMealSlot, mealSlotLabels).toLowerCase()} set yet.`)}</div>
           </button>
           <div class="admin-meal-card-arrows">
             <button type="button" class="admin-meal-card-arrow-btn" data-swap-dir="up" data-swap-index="${index}" aria-label="Swap with previous day"${index === 0 ? " disabled" : ""}>
@@ -198,7 +198,7 @@
       }
     }
 
-    function buildMealLibraryModalRowHTML(entry) {
+    function buildMealLibraryModalRowHTML(entry, mealSlotLabels) {
       if (pendingMealLibraryRemovalId === entry.id) {
         return `
           <div class="admin-settings-member-row admin-settings-member-row--confirm" data-meal-library-id="${entry.id}">
@@ -211,7 +211,7 @@
         `;
       }
       const typePresentation = entry.mealType ? getMealTypePresentation(entry.mealType) : null;
-      const slotLabel = entry.mealSlot ? resolveMealSlotLabel(entry.mealSlot, getAdminMealSlotLabels()) : null;
+      const slotLabel = entry.mealSlot ? resolveMealSlotLabel(entry.mealSlot, mealSlotLabels) : null;
       return `
         <div class="admin-settings-member-row" data-meal-library-id="${entry.id}">
           <span class="admin-settings-member-name">${escapeHtml(entry.name)}</span>
@@ -259,7 +259,8 @@
       if (!entries.length) {
         list.innerHTML = `<p class="admin-panel-note" style="margin:0">${adminMealLibraryEntries.length ? "No matches." : "No saved meals yet."}</p>`;
       } else {
-        list.innerHTML = entries.map(buildMealLibraryModalRowHTML).join("");
+        const mealSlotLabels = getAdminMealSlotLabels();
+        list.innerHTML = entries.map((entry) => buildMealLibraryModalRowHTML(entry, mealSlotLabels)).join("");
       }
       refreshIcons();
     }
@@ -409,10 +410,11 @@
       adminWeekNextBtn.disabled = adminWeekOffset >= 1;
       if (adminWeekTodayBtn) adminWeekTodayBtn.disabled = adminWeekOffset === 0;
 
+      const mealSlotLabels = getAdminMealSlotLabels();
       adminMealList.innerHTML = Array.from({ length: 7 }, (_, index) => {
         const date = new Date(adminCurrentMonday);
         date.setDate(adminCurrentMonday.getDate() + index);
-        return renderAdminMealCard(index, date, getAdminMealByDay(index));
+        return renderAdminMealCard(index, date, getAdminMealByDay(index), mealSlotLabels);
       }).join("");
 
       refreshIcons();
