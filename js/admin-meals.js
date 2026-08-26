@@ -2,9 +2,14 @@
       return normalizeMealSlots(adminHouseholdSettings?.display_settings?.meal_slots);
     }
 
+    function getAdminMealSlotLabels() {
+      return normalizeMealSlotLabels(adminHouseholdSettings?.display_settings?.meal_slot_labels);
+    }
+
     function renderAdminMealSlotTabs() {
       if (!adminMealSlotTabs) return;
       const slots = getAdminEnabledMealSlots();
+      const labels = getAdminMealSlotLabels();
 
       if (slots.length <= 1) {
         adminMealSlotTabs.hidden = true;
@@ -14,7 +19,7 @@
 
       adminMealSlotTabs.hidden = false;
       adminMealSlotTabs.innerHTML = slots.map((slot) => `
-        <button type="button" class="admin-meal-slot-tab${slot === adminCurrentMealSlot ? " is-active" : ""}" data-meal-slot-tab="${slot}">${escapeHtml(MEAL_SLOT_LABELS[slot])}</button>
+        <button type="button" class="admin-meal-slot-tab${slot === adminCurrentMealSlot ? " is-active" : ""}" data-meal-slot-tab="${slot}">${escapeHtml(resolveMealSlotLabel(slot, labels))}</button>
       `).join("");
     }
 
@@ -95,7 +100,7 @@
               <div class="admin-meal-day">${dayLabel}</div>
               <span class="admin-pill admin-pill--due">${escapeHtml(mealType ? mealType.label : "Tap to add")}</span>
             </div>
-            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : `No ${(MEAL_SLOT_LABELS[adminCurrentMealSlot] || "meal").toLowerCase()} set yet.`)}</div>
+            <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : `No ${resolveMealSlotLabel(adminCurrentMealSlot, getAdminMealSlotLabels()).toLowerCase()} set yet.`)}</div>
           </button>
           <div class="admin-meal-card-arrows">
             <button type="button" class="admin-meal-card-arrow-btn" data-swap-dir="up" data-swap-index="${index}" aria-label="Swap with previous day"${index === 0 ? " disabled" : ""}>
@@ -206,7 +211,7 @@
         `;
       }
       const typePresentation = entry.mealType ? getMealTypePresentation(entry.mealType) : null;
-      const slotLabel = entry.mealSlot ? (MEAL_SLOT_LABELS[entry.mealSlot] || entry.mealSlot) : null;
+      const slotLabel = entry.mealSlot ? resolveMealSlotLabel(entry.mealSlot, getAdminMealSlotLabels()) : null;
       return `
         <div class="admin-settings-member-row" data-meal-library-id="${entry.id}">
           <span class="admin-settings-member-name">${escapeHtml(entry.name)}</span>
@@ -228,8 +233,9 @@
     }
 
     function buildMealLibrarySlotFilterOptionsHTML() {
+      const labels = getAdminMealSlotLabels();
       return `<option value="">All meals</option>` + MEAL_SLOT_ORDER.map((slot) =>
-        `<option value="${escapeHtml(slot)}">${escapeHtml(MEAL_SLOT_LABELS[slot])}</option>`
+        `<option value="${escapeHtml(slot)}">${escapeHtml(resolveMealSlotLabel(slot, labels))}</option>`
       ).join("");
     }
 
@@ -329,6 +335,7 @@
       const dayLabel = escapeHtml(formatAdminDayLabel(date));
       const currentName = meal ? escapeHtml(meal.mealName) : "";
       const currentType = meal ? meal.mealType : "cooking";
+      const slotLabel = resolveMealSlotLabel(adminCurrentMealSlot, getAdminMealSlotLabels());
 
       return `
         <form data-modal-form="meal" data-meal-day="${dayIndex}" novalidate>
@@ -338,9 +345,9 @@
             <select id="modal-meal-type" name="meal_type">${buildMealTypeOptionsHTML(currentType)}</select>
           </div>
           <div class="admin-field admin-typeahead-field">
-            <label for="modal-meal-name">${escapeHtml(MEAL_SLOT_LABELS[adminCurrentMealSlot] || "Meal")}</label>
+            <label for="modal-meal-name">${escapeHtml(slotLabel)}</label>
             <input id="modal-meal-name" name="meal_name" type="text" maxlength="140"
-              placeholder="What\u2019s for ${escapeHtml((MEAL_SLOT_LABELS[adminCurrentMealSlot] || "this meal").toLowerCase())}?" value="${currentName}" autocomplete="off">
+              placeholder="What\u2019s for ${escapeHtml(slotLabel.toLowerCase())}?" value="${currentName}" autocomplete="off">
             <ul class="admin-typeahead-list" data-meal-typeahead-list hidden></ul>
           </div>
           <div class="admin-actions">

@@ -305,6 +305,7 @@
         if (cb) cb.checked = enabledMealSlots.includes(slot);
       });
       enforceMinOneMealSlot();
+      renderSettingsMealSlotToggleLabels();
 
       // Screen order
       renderSettingsScreenOrder(screenOrder);
@@ -833,6 +834,70 @@
       });
     }
 
+    function renderSettingsMealSlotToggleLabels() {
+      const labels = getAdminMealSlotLabels();
+      MEAL_SLOT_ORDER.forEach((slot) => {
+        const span = document.querySelector(`#settings-meal-slot-toggles [data-meal-slot-label="${slot}"]`);
+        if (span) span.textContent = resolveMealSlotLabel(slot, labels);
+      });
+    }
+
+    function buildRenameMealSlotsModalHTML() {
+      const labels = getAdminMealSlotLabels();
+      return `
+        <form data-modal-form="meal-slot-labels" novalidate>
+          <p class="admin-panel-note" style="margin-top:0">Rename the meal types shown across admin and display. Clear a field to reset it to the default name.</p>
+          ${MEAL_SLOT_ORDER.map((slot) => `
+            <div class="admin-field">
+              <label for="modal-meal-slot-label-${slot}">${escapeHtml(MEAL_SLOT_LABELS[slot])}</label>
+              <input id="modal-meal-slot-label-${slot}" name="meal_slot_label_${slot}" type="text" maxlength="30"
+                placeholder="${escapeHtml(MEAL_SLOT_LABELS[slot])}" value="${escapeHtml(resolveMealSlotLabel(slot, labels))}" autocomplete="off">
+            </div>
+          `).join("")}
+          <div class="admin-actions">
+            <button class="admin-button admin-button--secondary" type="button" data-action="close-modal">Cancel</button>
+            <button class="admin-button admin-button--primary" type="submit">Save</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function openRenameMealSlotsModal() {
+      adminModalType = "meal-slot-labels";
+      adminModalContext = null;
+      openAdminModal("Rename Meal Types", buildRenameMealSlotsModalHTML());
+    }
+
+    async function saveMealSlotLabels(mealSlotLabels) {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+
+      const newDs = {
+        ...adminHouseholdSettings.display_settings,
+        meal_slot_labels: mealSlotLabels
+      };
+
+      const { data, error } = await client
+        .from("households")
+        .update({ display_settings: newDs })
+        .eq("id", getAdminHouseholdId())
+        .select();
+
+      if (error || !data || data.length === 0) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+
+      adminHouseholdSettings.display_settings = newDs;
+      closeAdminModal();
+      renderSettingsMealSlotToggleLabels();
+      renderAdminMealSlotTabs();
+      showToast("Meal names saved.");
+    }
+
     function handleSettingsScreenToggleChange() {
       // Update state so renderSettingsScreenOrder shows the right active/inactive styling
       const ds = adminHouseholdSettings.display_settings;
@@ -885,6 +950,9 @@
 
       const syncBtn = document.getElementById("settings-sync-btn");
       if (syncBtn) syncBtn.addEventListener("click", runAdminSync);
+
+      const mealSlotRenameBtn = document.getElementById("settings-meal-slot-rename-btn");
+      if (mealSlotRenameBtn) mealSlotRenameBtn.addEventListener("click", openRenameMealSlotsModal);
 
       const mealLibraryBtn = document.getElementById("settings-meal-library-btn");
       if (mealLibraryBtn) mealLibraryBtn.addEventListener("click", openMealLibraryModal);
