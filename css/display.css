@@ -304,6 +304,7 @@
 
     /* ── Dark color scheme ── */
     html[data-scheme="dark"] {
+      color-scheme: dark;
       --bg: #1c1917;
       --bg-soft: #231f1c;
       --panel: rgba(30, 26, 24, 0.94);
