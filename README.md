@@ -98,6 +98,10 @@ If `homeboard_household_id` is not present in local storage:
 
 If the code is invalid or expired, the display shows an inline error and stays on the pairing screen.
 
+### Forcing a re-pair on a kiosk-locked tablet
+
+A display that can't reach its browser's settings (e.g. Fully Kiosk Browser in locked kiosk mode) can be forced back to the pairing screen without any OS-level storage clearing: load the display URL with `?repair=1` once (e.g. by temporarily setting the kiosk's start URL to `https://<your-domain>/display?repair=1`, then switching it back afterward). This clears `homeboard_household_id` and `homeboard_device_token` from `localStorage` and shows the pairing screen in place.
+
 ### Google Calendar (private calendars)
 
 Homeboard supports two ways to show a Google Calendar, tried in this order:
