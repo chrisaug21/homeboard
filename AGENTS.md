@@ -42,6 +42,8 @@ netlify.toml        — build + env var injection via sed
 | `scorecard_sessions` | Scorecard game sessions. Columns: `id`, `scorecard_id`, `household_id`, `started_at`, `ended_at`, `scores` (JSONB `{player_id: score}`), nullable `wagers`, nullable `wager_results`, `score_events` (JSONB audit log array), nullable `winner`, `is_final_jeopardy`, `created_at` |
 | `rsvps` | Wedding table — **do not modify schema** |
 | `invited_parties` | Wedding invite list. `rsvp_id` null = pending; set = matched to an RSVP row |
+| `google_calendar_connections` | One row per household's connected Google account. RLS on, no policies (service-role only via edge functions). Refresh token lives in Supabase Vault, referenced by `refresh_token_secret_id` — never stored here |
+| `display_devices` | One row per paired wall display. RLS on, no policies. Stores only `token_hash` (SHA-256 of the display's own secret token) — this, not `household_id`, is what proves a display may read a private Google Calendar |
 
 ## RSVP Matching
 - RSVP soft delete uses `rsvps.status`, never hard delete rows
@@ -84,7 +86,7 @@ netlify.toml        — build + env var injection via sed
 - Scorecards are toggleable via the shared `scorecards` active-screen key. In the Settings UI, Scorecards appears as one screen-order row; saving expands that slot into the underlying `scorecard_<id>` entries used by display rotation and nav grouping.
 - `upcoming_days` → drives the `UPCOMING_DAYS` variable in `display.js`. Update both together.
 - RSVP screen is **hardcoded to this household** and excluded from `active_screens` and `screen_order`. It is hidden starting Oct 11, 2026 — remove via code change after that date.
-- Google Calendar: single calendar ID in `households.google_cal_id`. **Future**: support toggling multiple calendars.
+- Google Calendar: `fetchCalendarEvents()` (`js/shared.js`) tries Google OAuth first (`google_calendar_connections`, one account per household, several calendars selectable via Settings > Integrations, fetched server-side by the `google-calendar-events` edge function so tokens never reach the browser), then falls back to the legacy public calendar ID (`households.google_cal_id`) if OAuth isn't connected.
 - Recurring to-dos: planned future PR, requires schema change to `todos`.
 
 ## Privacy Policy Compliance (CRITICAL)

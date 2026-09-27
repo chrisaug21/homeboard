@@ -322,6 +322,7 @@
 
       // Google Cal ID
       if (calIdInput) calIdInput.value = adminHouseholdSettings.google_cal_id || "";
+      loadGoogleCalendarConnectionStatus();
 
       renderDisplayPairingCard();
       loadActiveDisplayPairing();
@@ -562,6 +563,228 @@
         if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
       }
     }
+
+    // ── Google Calendar (OAuth) ─────────────────────────────────────────
+    let adminGoogleCalendarStatus = null;
+
+    async function callGoogleCalendarConnect(action, payload = {}) {
+      const client = getSupabaseClient();
+      if (!client) return { error: friendlySaveMessage() };
+
+      const { data: sessionData } = await client.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) return { error: friendlySaveMessage() };
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/google-calendar-connect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ action, ...payload })
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          return { error: data?.error || friendlySaveMessage() };
+        }
+        return data || {};
+      } catch {
+        return { error: friendlySaveMessage() };
+      }
+    }
+
+    async function loadGoogleCalendarConnectionStatus() {
+      const result = await callGoogleCalendarConnect("status");
+      adminGoogleCalendarStatus = result.error ? null : result;
+      renderGoogleCalendarSection();
+    }
+
+    function renderGoogleCalendarSection() {
+      const statusEl = document.getElementById("settings-gcal-status");
+      if (!statusEl) return;
+
+      const connectBtn = document.getElementById("settings-gcal-connect");
+      const reconnectBtn = document.getElementById("settings-gcal-reconnect");
+      const disconnectBtn = document.getElementById("settings-gcal-disconnect");
+      const manageBtn = document.getElementById("settings-gcal-manage");
+      const privacyField = document.getElementById("settings-gcal-privacy-field");
+      const privacySelect = document.getElementById("settings-gcal-privacy");
+      const calendarsSummary = document.getElementById("settings-gcal-calendars-summary");
+      const status = adminGoogleCalendarStatus;
+
+      if (!status || !status.connected) {
+        statusEl.textContent = "Not connected. You can use a public calendar below instead.";
+        if (connectBtn) connectBtn.hidden = false;
+        if (reconnectBtn) reconnectBtn.hidden = true;
+        if (disconnectBtn) disconnectBtn.hidden = true;
+        if (manageBtn) manageBtn.hidden = true;
+        if (privacyField) privacyField.hidden = true;
+        if (calendarsSummary) calendarsSummary.hidden = true;
+        return;
+      }
+
+      if (status.status === "needs_reauth") {
+        statusEl.textContent = `Connection to ${status.google_account_email || "your Google account"} needs to be renewed.`;
+        if (connectBtn) connectBtn.hidden = true;
+        if (reconnectBtn) reconnectBtn.hidden = false;
+        if (disconnectBtn) disconnectBtn.hidden = false;
+        if (manageBtn) manageBtn.hidden = true;
+        if (privacyField) privacyField.hidden = true;
+        if (calendarsSummary) calendarsSummary.hidden = true;
+        return;
+      }
+
+      statusEl.textContent = `Connected as ${status.google_account_email || "your Google account"}.`;
+      if (connectBtn) connectBtn.hidden = true;
+      if (reconnectBtn) reconnectBtn.hidden = true;
+      if (disconnectBtn) disconnectBtn.hidden = false;
+      if (manageBtn) manageBtn.hidden = false;
+      if (privacyField) privacyField.hidden = false;
+      if (privacySelect) privacySelect.value = status.private_events_mode || "busy";
+
+      const calendars = Array.isArray(status.selected_calendars) ? status.selected_calendars : [];
+      if (calendarsSummary) {
+        calendarsSummary.hidden = false;
+        calendarsSummary.textContent = calendars.length
+          ? `Showing: ${calendars.map((cal) => cal.summary || cal.id).join(", ")}`
+          : "Connected, but no calendars picked yet.";
+      }
+    }
+
+    async function handleGoogleCalendarConnectClick(event) {
+      const btn = event.currentTarget;
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Connecting…";
+
+      const result = await callGoogleCalendarConnect("start");
+
+      if (result.error || !result.url) {
+        showToast(friendlySaveMessage());
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
+      }
+
+      // Full-page navigation to Google's consent screen. Google redirects
+      // back to /admin?gcal=... when the flow finishes (see startAdminUI()).
+      window.location.href = result.url;
+    }
+
+    function openGoogleCalendarDisconnectConfirm() {
+      openAdminModal("Disconnect Google Calendar?", `
+        <p class="admin-field-hint">Homeboard will stop showing events from this account on your display. You can reconnect any time.</p>
+        <div class="admin-actions admin-actions--end">
+          <button type="button" class="admin-button admin-button--secondary" id="gcal-disconnect-cancel">Cancel</button>
+          <button type="button" class="admin-button admin-button--danger" id="gcal-disconnect-confirm">Disconnect</button>
+        </div>
+      `);
+
+      document.getElementById("gcal-disconnect-cancel")?.addEventListener("click", closeAdminModal);
+      document.getElementById("gcal-disconnect-confirm")?.addEventListener("click", async (event) => {
+        const btn = event.currentTarget;
+        btn.disabled = true;
+        btn.textContent = "Disconnecting…";
+        const result = await callGoogleCalendarConnect("disconnect");
+        closeAdminModal();
+        if (result.error) {
+          showToast(friendlySaveMessage());
+          return;
+        }
+        showToast("Google Calendar disconnected.");
+        await loadGoogleCalendarConnectionStatus();
+      });
+    }
+
+    async function openGoogleCalendarPickerModal() {
+      openAdminModal("Choose calendars", `<p class="admin-panel-note">Loading your calendars…</p>`);
+
+      const result = await callGoogleCalendarConnect("list_calendars");
+      const modalBody = document.getElementById("admin-modal-body");
+      if (!modalBody) return;
+
+      if (result.error === "needs_reauth") {
+        modalBody.innerHTML = `
+          <p class="admin-field-hint">Your Google connection needs to be renewed before you can pick calendars.</p>
+          <div class="admin-actions admin-actions--end">
+            <button type="button" class="admin-button admin-button--primary" id="gcal-picker-close">Close</button>
+          </div>`;
+        document.getElementById("gcal-picker-close")?.addEventListener("click", closeAdminModal);
+        await loadGoogleCalendarConnectionStatus();
+        return;
+      }
+
+      const calendars = Array.isArray(result.calendars) ? result.calendars : [];
+      if (!calendars.length) {
+        modalBody.innerHTML = `<p class="admin-field-hint">${friendlyLoadMessage()}</p>`;
+        return;
+      }
+
+      const selectedIds = new Set((adminGoogleCalendarStatus?.selected_calendars || []).map((cal) => cal.id));
+
+      modalBody.innerHTML = `
+        <div class="admin-settings-toggle-list">
+          ${calendars.map((cal) => `
+            <label class="admin-settings-toggle">
+              <input type="checkbox" name="gcal_pick" value="${escapeHtml(cal.id)}" data-summary="${escapeHtml(cal.summary || cal.id)}"${selectedIds.has(cal.id) ? " checked" : ""}>
+              <span>${escapeHtml(cal.summary || cal.id)}${cal.primary ? " (primary)" : ""}</span>
+            </label>
+          `).join("")}
+        </div>
+        <div class="admin-actions admin-actions--end">
+          <button type="button" class="admin-button admin-button--secondary" id="gcal-picker-cancel">Cancel</button>
+          <button type="button" class="admin-button admin-button--primary" id="gcal-picker-save">Save</button>
+        </div>
+      `;
+
+      document.getElementById("gcal-picker-cancel")?.addEventListener("click", closeAdminModal);
+      document.getElementById("gcal-picker-save")?.addEventListener("click", async (event) => {
+        const saveBtn = event.currentTarget;
+        const checked = Array.from(modalBody.querySelectorAll("[name='gcal_pick']:checked"));
+
+        if (!checked.length) {
+          showToast("Pick at least one calendar.");
+          return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving…";
+
+        const result = await callGoogleCalendarConnect("select_calendars", {
+          calendars: checked.map((el) => ({ id: el.value, summary: el.dataset.summary || el.value }))
+        });
+
+        if (result.error) {
+          showToast(friendlySaveMessage());
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save";
+          return;
+        }
+
+        closeAdminModal();
+        showToast("Calendars saved.");
+        await loadGoogleCalendarConnectionStatus();
+      });
+
+      refreshIcons();
+    }
+
+    async function handleGoogleCalendarPrivacyChange(event) {
+      const mode = event.currentTarget.value === "full" ? "full" : "busy";
+      const result = await callGoogleCalendarConnect("update_settings", { private_events_mode: mode });
+      if (result.error) {
+        showToast(friendlySaveMessage());
+        return;
+      }
+      if (adminGoogleCalendarStatus) adminGoogleCalendarStatus.private_events_mode = mode;
+    }
+
+    function initGoogleCalendarSettingsListeners() {
+      document.getElementById("settings-gcal-connect")?.addEventListener("click", handleGoogleCalendarConnectClick);
+      document.getElementById("settings-gcal-reconnect")?.addEventListener("click", handleGoogleCalendarConnectClick);
+      document.getElementById("settings-gcal-disconnect")?.addEventListener("click", openGoogleCalendarDisconnectConfirm);
+      document.getElementById("settings-gcal-manage")?.addEventListener("click", openGoogleCalendarPickerModal);
+      document.getElementById("settings-gcal-privacy")?.addEventListener("change", handleGoogleCalendarPrivacyChange);
+    }
+    // ── End Google Calendar (OAuth) ──────────────────────────────────────
 
     async function saveIntegrationsSection() {
       const client = getSupabaseClient();
@@ -941,6 +1164,8 @@
 
       const integrationsSave = document.getElementById("settings-integrations-save");
       if (integrationsSave) integrationsSave.addEventListener("click", saveIntegrationsSection);
+
+      initGoogleCalendarSettingsListeners();
 
       const accountSave = document.getElementById("settings-account-save");
       if (accountSave) accountSave.addEventListener("click", saveAccountSection);

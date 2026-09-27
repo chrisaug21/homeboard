@@ -1408,12 +1408,31 @@
           <h2 class="admin-panel-title" id="settings-integrations-title">Integrations</h2>
           <div class="admin-settings-stack">
             <div class="admin-field">
-              <label for="settings-google-cal-id">Google Calendar ID</label>
-              <!-- Future enhancement: support toggling multiple calendars -->
+              <label>Google Calendar</label>
+              <p class="admin-field-hint" id="settings-gcal-status">Checking connection&hellip;</p>
+              <p class="admin-field-hint" id="settings-gcal-calendars-summary" hidden></p>
+            </div>
+            <div class="admin-actions">
+              <button type="button" id="settings-gcal-connect" class="admin-button admin-button--primary" hidden>Connect Google Calendar</button>
+              <button type="button" id="settings-gcal-reconnect" class="admin-button admin-button--primary" hidden>Reconnect</button>
+              <button type="button" id="settings-gcal-manage" class="admin-button admin-button--secondary" hidden>Manage calendars</button>
+              <button type="button" id="settings-gcal-disconnect" class="admin-button admin-button--danger" hidden>Disconnect</button>
+            </div>
+            <div class="admin-field" id="settings-gcal-privacy-field" hidden>
+              <label for="settings-gcal-privacy">Private events</label>
+              <select id="settings-gcal-privacy" class="admin-input">
+                <option value="busy">Show as &ldquo;Busy&rdquo; (recommended)</option>
+                <option value="full">Show full details</option>
+              </select>
+              <p class="admin-field-hint">For events you've marked private in Google Calendar. &ldquo;Busy&rdquo; hides the title and details on your wall display.</p>
+            </div>
+
+            <div class="admin-field">
+              <label for="settings-google-cal-id">Public calendar ID (fallback)</label>
               <input id="settings-google-cal-id" type="text" maxlength="200"
                 placeholder="example@group.calendar.google.com"
                 autocomplete="off" spellcheck="false">
-              <p class="admin-field-hint">The calendar ID to pull events from. Found in Google Calendar &rsaquo; Settings &rsaquo; Integrate calendar.</p>
+              <p class="admin-field-hint">Only used if Google Calendar isn't connected above, and the calendar must be public. Found in Google Calendar &rsaquo; Settings &rsaquo; Integrate calendar.</p>
             </div>
           </div>
           <div class="admin-actions admin-actions--end">

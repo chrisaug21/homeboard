@@ -93,10 +93,19 @@ If `homeboard_household_id` is not present in local storage:
 - the display shows a pairing screen
 - the user enters the 4-character code
 - the app calls the public Supabase Edge Function at `${SUPABASE_URL}/functions/v1/validate-pairing-code`
-- on success, the returned `household_id` is written to `localStorage`
+- on success, the returned `household_id` and a one-time `device_token` are written to `localStorage`
 - the display immediately boots into the normal display experience
 
 If the code is invalid or expired, the display shows an inline error and stays on the pairing screen.
+
+### Google Calendar (private calendars)
+
+Homeboard supports two ways to show a Google Calendar, tried in this order:
+
+1. **Connected via Google OAuth** (Settings → Integrations → Connect Google Calendar). The admin signs in with Google, picks one or more calendars, and Homeboard reads them read-only. Three Edge Functions handle this — `google-calendar-connect` (admin actions: start/status/list_calendars/select_calendars/update_settings/disconnect), `google-calendar-callback` (handles Google's redirect), and `google-calendar-events` (fetches events for either an authenticated admin or a paired display, using its `device_token`). The refresh token is stored in Supabase Vault, never in a regular table or sent to the browser. Requires `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `OAUTH_STATE_SECRET` set as Supabase Edge Function secrets (not Netlify env vars). Events a user has marked private in Google show as "Busy" on the display by default (`private_events_mode`); this can be changed to show full details in Settings.
+2. **Public calendar ID** (`households.google_cal_id`), the original approach — the calendar must be shared as public. This is only used as a fallback when Google Calendar isn't connected via OAuth.
+
+A paired display only gets a `device_token` (and therefore only sees a private calendar) if it was paired after this feature shipped; displays paired earlier need to be re-paired once.
 
 ## Main Features
 
@@ -194,6 +203,8 @@ Core tables used by Homeboard:
 | `scorecards` | scorecard definitions |
 | `scorecard_sessions` | active and completed scorecard sessions |
 | `display_pairings` | temporary pairing codes for display setup |
+| `display_devices` | one row per paired wall display; stores only a hash of its device token, used to prove a display belongs to a household when reading a private Google Calendar |
+| `google_calendar_connections` | one row per household's connected Google account: account email, selected calendars, private-events display mode, connection status; the refresh token itself lives in Supabase Vault, referenced by id, never in this table |
 | `invite_codes` | self-serve household signup codes with active state and usage limits |
 | `rsvps` | wedding RSVP data owned by the wedding site repo; homeboard may add its own additive bookkeeping columns that are nullable or have a default (`status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never touch columns the wedding site writes (`name`, `attending`, `guest_count`); `status` values are `active`, `superseded` (merged into another party as a duplicate), and `dismissed` (soft-deleted from admin Needs Review) — all RSVP reads filter to `status = 'active'` |
 | `invited_parties` | wedding invite list and RSVP matching source of truth |

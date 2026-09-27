@@ -278,13 +278,7 @@
     }
 
     async function refreshCalendarData(wide = false) {
-      if (!cachedHouseholdConfig || !cachedHouseholdConfig.google_cal_id) {
-        return false;
-      }
-
-      const apiKey = cachedHouseholdConfig.google_cal_key || GOOGLE_CAL_KEY;
-
-      if (!apiKey || apiKey.startsWith("%%")) {
+      if (!cachedHouseholdConfig) {
         return false;
       }
 
@@ -307,7 +301,7 @@
         maxResults = "500";
       }
 
-      const items = await fetchGoogleCalendarEvents(cachedHouseholdConfig.google_cal_id, apiKey, timeMin, timeMax, maxResults);
+      const items = await fetchCalendarEvents(cachedHouseholdConfig, timeMin, timeMax, maxResults);
 
       if (!items) {
         return false;

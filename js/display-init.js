@@ -100,6 +100,9 @@
         }
 
         localStorage.setItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY, data.household_id);
+        if (data.device_token) {
+          setDisplayDeviceToken(data.device_token);
+        }
 
         if (codeInput) {
           codeInput.value = "";
