@@ -150,6 +150,22 @@
       if (pairingVersionEl) pairingVersionEl.textContent = `v${VERSION}`;
       initDisplayPairingListeners();
 
+      // Manual escape hatch for a kiosk-locked tablet with no reachable way
+      // to clear browser storage: temporarily set the kiosk's start URL to
+      // include ?repair=1, let it load once, then switch the start URL back.
+      // Clears this device's saved pairing so it drops into the pairing
+      // screen right here in the kiosk, with no OS-level storage clearing.
+      if (new URLSearchParams(window.location.search).get("repair") === "1") {
+        try {
+          localStorage.removeItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY);
+          localStorage.removeItem(HOMEBOARD_DEVICE_TOKEN_STORAGE_KEY);
+        } catch {
+          // localStorage unavailable — nothing to clear.
+        }
+        showDisplayPairingUi();
+        return;
+      }
+
       if (!getDisplayHouseholdId()) {
         showDisplayPairingUi();
         return;
