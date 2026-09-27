@@ -87,7 +87,7 @@ Deno.serve(async (req: Request) => {
         redirect_uri: CALLBACK_URL,
         response_type: "code",
         access_type: "offline",
-        prompt: "consent",
+        prompt: "consent select_account",
         include_granted_scopes: "true",
         scope: GOOGLE_SCOPES,
         state,
