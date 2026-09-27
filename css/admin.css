@@ -2480,6 +2480,19 @@
       flex-shrink: 0;
     }
 
+    .admin-settings-footer-links {
+      text-align: center;
+      margin: 6px 2px 0;
+    }
+
+    .admin-settings-footer-links a {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      opacity: 0.66;
+      text-decoration: underline;
+    }
+
     .admin-settings-account-actions {
       margin-top: 10px;
     }
