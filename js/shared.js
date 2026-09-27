@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.4.2";
+    const VERSION = "2.4.3";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -1792,8 +1792,17 @@
         return proxyResult;
       }
 
+      // null means the proxy call itself failed (network error, edge function
+      // error, Google API error) rather than "OAuth isn't set up" for this
+      // household. Report that as a failure instead of silently swapping in
+      // the legacy public calendar's events for what's actually a transient
+      // failure of the connected one.
+      if (proxyResult === null) {
+        return null;
+      }
+
       if (!householdConfig || !householdConfig.google_cal_id) {
-        return proxyResult === null ? null : null;
+        return null;
       }
 
       const apiKey = householdConfig.google_cal_key || GOOGLE_CAL_KEY;

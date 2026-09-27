@@ -83,11 +83,18 @@ Deno.serve(async (req: Request) => {
 
     if (deviceError) {
       console.error('validate-pairing-code: failed to create display device', deviceError);
+      // The pairing code is already consumed above, so don't report success —
+      // this display has no device token and can't authenticate for private
+      // calendars. Surface a real error so the admin knows to generate a new code.
+      return new Response(JSON.stringify({ error: 'Something went wrong pairing this display. Please generate a new code and try again.' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
     }
 
     return new Response(JSON.stringify({
       household_id: data.household_id,
-      device_token: deviceError ? null : deviceToken,
+      device_token: deviceToken,
     }), {
       headers: {
         'Content-Type': 'application/json',

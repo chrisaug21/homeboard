@@ -59,7 +59,7 @@ async function fetchOneCalendar(
   timeMin: string,
   timeMax: string,
   maxResults: string,
-): Promise<Record<string, unknown>[]> {
+): Promise<{ items: Record<string, unknown>[]; ok: boolean }> {
   const items: Record<string, unknown>[] = [];
   let pageToken: string | null = null;
 
@@ -78,14 +78,17 @@ async function fetchOneCalendar(
       { headers: { Authorization: `Bearer ${accessToken}` } },
     );
 
-    if (!response.ok) break; // skip a calendar that errors rather than failing the whole request
+    // Report a failed calendar instead of silently treating the request as
+    // fully successful — the caller decides whether to still return the
+    // other calendars' events, but now knows this one is incomplete.
+    if (!response.ok) return { items, ok: false };
 
     const json = await response.json();
     if (Array.isArray(json.items)) items.push(...json.items);
     pageToken = json.nextPageToken ?? null;
   } while (pageToken);
 
-  return items;
+  return { items, ok: true };
 }
 
 function trimEvent(raw: Record<string, unknown>, maskPrivate: boolean): TrimmedEvent {
@@ -182,15 +185,17 @@ Deno.serve(async (req: Request) => {
     const maskPrivate = connection.private_events_mode !== "full";
     const seen = new Set<string>();
     const merged: TrimmedEvent[] = [];
+    const incompleteCalendarIds: string[] = [];
 
-    for (const rawItems of perCalendarResults) {
-      for (const raw of rawItems) {
+    perCalendarResults.forEach((result, i) => {
+      if (!result.ok) incompleteCalendarIds.push(selectedCalendars[i].id);
+      for (const raw of result.items) {
         const id = String(raw.id ?? "");
         if (!id || seen.has(id)) continue;
         seen.add(id);
         merged.push(trimEvent(raw, maskPrivate));
       }
-    }
+    });
 
     merged.sort((a, b) => {
       const aTime = a.start.dateTime || a.start.date || "";
@@ -198,12 +203,20 @@ Deno.serve(async (req: Request) => {
       return aTime.localeCompare(bTime);
     });
 
-    await supabaseAdmin
-      .from("google_calendar_connections")
-      .update({ last_success_at: new Date().toISOString() })
-      .eq("household_id", householdId);
+    // Only mark the connection "healthy" if every selected calendar actually
+    // loaded — a partial result (e.g. one calendar unshared/revoked) shouldn't
+    // reset the success timestamp as if nothing were wrong.
+    if (incompleteCalendarIds.length === 0) {
+      await supabaseAdmin
+        .from("google_calendar_connections")
+        .update({ last_success_at: new Date().toISOString() })
+        .eq("household_id", householdId);
+    }
 
-    return jsonResponse(200, { items: merged });
+    return jsonResponse(200, {
+      items: merged,
+      ...(incompleteCalendarIds.length > 0 ? { incompleteCalendarIds } : {}),
+    });
   } catch (_err) {
     return jsonResponse(502, { error: "Something went wrong loading your calendar. Please try again." });
   }
