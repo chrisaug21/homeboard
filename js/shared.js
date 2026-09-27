@@ -36,13 +36,14 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.3.4";
+    const VERSION = "2.4.0";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
     const adminApp = document.getElementById("admin-app");
     const LAST_SYNCED_KEY = "homeboard_last_synced";
     const HOMEBOARD_HOUSEHOLD_STORAGE_KEY = "homeboard_household_id";
+    const HOMEBOARD_DEVICE_TOKEN_STORAGE_KEY = "homeboard_device_token";
     const DISPLAY_SCREEN_KEYS = ["upcoming_calendar", "monthly_calendar", "todos", "meals", "countdowns", "scorecards", "rsvp"];
     const DISPLAY_PAIRING_CODE_CHARACTERS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
@@ -80,6 +81,26 @@
         return localStorage.getItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY) || "";
       } catch {
         return "";
+      }
+    }
+
+    // A paired display's only credential. Needed to read a household's
+    // private Google Calendar — a household id alone isn't proof of
+    // anything, since anyone holding the app's public key can read it.
+    function getDisplayDeviceToken() {
+      try {
+        return localStorage.getItem(HOMEBOARD_DEVICE_TOKEN_STORAGE_KEY) || "";
+      } catch {
+        return "";
+      }
+    }
+
+    function setDisplayDeviceToken(token) {
+      try {
+        if (token) localStorage.setItem(HOMEBOARD_DEVICE_TOKEN_STORAGE_KEY, token);
+      } catch {
+        // localStorage unavailable — display will just fall back to the
+        // public-calendar-ID path until it's re-paired.
       }
     }
 
@@ -1712,6 +1733,75 @@
       } catch {
         return null;
       }
+    }
+
+    // Tries the private-calendar path (Google OAuth, via our own edge
+    // function) first, then falls back to the legacy public-calendar-ID path
+    // so households that never connected Google keep working exactly as
+    // before. Returns the same trimmed event array both fetchGoogleCalendarEvents
+    // and the render code already expect, or null if nothing could be loaded.
+    async function fetchCalendarEventsViaProxy(timeMin, timeMax, maxResults) {
+      const headers = { "Content-Type": "application/json" };
+
+      if (isAdminMode) {
+        const client = getSupabaseClient();
+        let accessToken = null;
+        if (client) {
+          const { data: sessionData } = await client.auth.getSession();
+          accessToken = sessionData?.session?.access_token || null;
+        }
+        if (!accessToken) return { connected: false };
+        headers.Authorization = `Bearer ${accessToken}`;
+      } else {
+        const deviceToken = getDisplayDeviceToken();
+        if (!deviceToken) return { connected: false };
+        headers["x-device-token"] = deviceToken;
+      }
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/google-calendar-events`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            timeMin: timeMin.toISOString(),
+            timeMax: timeMax.toISOString(),
+            maxResults
+          })
+        });
+
+        // 404 = household never connected Google (or disconnected). 409 =
+        // connected but needs reauth, or no calendars picked yet. Either way,
+        // this isn't a network failure — fall back to the public-ID path.
+        if (response.status === 404 || response.status === 409) {
+          return { connected: false };
+        }
+        if (!response.ok) {
+          return null;
+        }
+
+        const json = await response.json();
+        return Array.isArray(json.items) ? json.items : null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function fetchCalendarEvents(householdConfig, timeMin, timeMax, maxResults = "250") {
+      const proxyResult = await fetchCalendarEventsViaProxy(timeMin, timeMax, maxResults);
+      if (Array.isArray(proxyResult)) {
+        return proxyResult;
+      }
+
+      if (!householdConfig || !householdConfig.google_cal_id) {
+        return proxyResult === null ? null : null;
+      }
+
+      const apiKey = householdConfig.google_cal_key || GOOGLE_CAL_KEY;
+      if (!apiKey || apiKey.startsWith("%%")) {
+        return null;
+      }
+
+      return fetchGoogleCalendarEvents(householdConfig.google_cal_id, apiKey, timeMin, timeMax, maxResults);
     }
 
     function registerServiceWorker() {

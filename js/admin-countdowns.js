@@ -733,13 +733,7 @@
     async function fetchAdminCalendarEvents() {
       const config = await fetchHouseholdConfig();
 
-      if (!config || !config.google_cal_id) {
-        return null;
-      }
-
-      const apiKey = config.google_cal_key || GOOGLE_CAL_KEY;
-
-      if (!apiKey || apiKey.startsWith("%%")) {
+      if (!config) {
         return null;
       }
 
@@ -748,7 +742,7 @@
       const end = new Date(adminCalMonthDate.getFullYear(), adminCalMonthDate.getMonth() + 1, 0);
       end.setHours(23, 59, 59, 999);
 
-      return fetchGoogleCalendarEvents(config.google_cal_id, apiKey, start, end);
+      return fetchCalendarEvents(config, start, end);
     }
 
     function updateAdminCalMonthLabel() {

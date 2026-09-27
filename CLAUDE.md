@@ -51,6 +51,8 @@ netlify.toml        — build config, env var injection via sed
 - `scorecard_sessions` — per-game scorecard sessions with `started_at`, `ended_at`, `scores`, `wagers`, and `wager_results` JSONB objects keyed by `players[].id`, plus `score_events` JSONB audit entries, optional `winner`, and `is_final_jeopardy`
 - `rsvps` — pre-existing wedding table owned by the separate wedding site repo, which only ever inserts `name`, `attending`, `guest_count`. Homeboard may add its own additive, nullable-or-defaulted bookkeeping columns (existing precedent: `status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never rename, drop, or add a non-defaulted NOT NULL constraint to a column the wedding site writes
 - `invited_parties` — wedding invite list with `name`, `invited_count`, nullable `rsvp_id`, and `created_at`; this is the source of truth for matched vs pending invite parties
+- `google_calendar_connections` — one row per household's connected Google account (RLS on, no policies — service-role only, via edge functions): `google_account_email`, `refresh_token_secret_id` (a Supabase Vault secret id, never the token itself), `status` (`active`/`needs_reauth`), `selected_calendars` (JSONB `{id,summary}` array), `private_events_mode` (`busy` default/`full`)
+- `display_devices` — one row per paired wall display (RLS on, no policies — service-role only): `household_id`, `token_hash` (SHA-256 of the device's own secret token, never the raw token), `revoked_at`. The device token is a paired display's only credential and is what proves it may read a private Google Calendar — a bare `household_id` isn't proof of anything, since `households` is readable with just the app's public key
 
 ## Wedding RSVP Logic
 - RSVP soft delete uses `rsvps.status`, never hard delete rows
@@ -98,7 +100,7 @@ netlify.toml        — build config, env var injection via sed
 - `display_settings.meal_slot_labels` (object keyed by `breakfast`/`lunch`/`dinner`, values are trimmed custom display names up to 30 chars, entries omitted when blank or unset) overrides the default "Breakfast"/"Lunch"/"Dinner" labels everywhere they're user-facing: the admin meal-slot tabs, the meal edit sheet's field label/placeholder, the "No `<label>` set yet" empty state, the Meal Library modal's slot filter/badges, the Settings > Meal Plan types checkbox labels, and the display Meal Plan screen header ("Meal Plan - `<label>`"). Renamed via Settings > Display > Meal Plan types > "Rename meal types", which opens a bottom-sheet with one text input per slot; clearing a field reverts that slot to its default name. Resolve a slot's effective label with `resolveMealSlotLabel(slot, mealSlotLabels)` (shared.js) rather than reading `MEAL_SLOT_LABELS[slot]` directly in new user-facing code — the slot key itself (`breakfast`/`lunch`/`dinner`) never changes, only its display text.
 - `meal_library.meal_slot` (nullable, `breakfast`/`lunch`/`dinner`) scopes saved meal names to the meal they were saved under, in addition to the existing `meal_type` (cooking/HelloFresh/etc). The Meal Plan typeahead and the Meal Library modal's dedupe/save logic both filter/key on name + `meal_slot` (entries with a null `meal_slot` match any slot, kept for backward compatibility). The Meal Library modal has two independent filter dropdowns — "All meals" (slot) and "All types" (meal_type) — plus a slot badge per row.
 - `display_settings.upcoming_days` drives the `UPCOMING_DAYS` variable in `display.js`. Update both together if changing upcoming-view logic.
-- Google Calendar currently reads a single calendar ID (`households.google_cal_id`). **Future enhancement**: support toggling multiple calendars from the Integrations settings.
+- Google Calendar supports two paths, tried in this order by `fetchCalendarEvents()` in `js/shared.js`: (1) Google OAuth — admin connects via Settings > Integrations, picks one or more calendars (`google_calendar_connections.selected_calendars`), events are fetched server-side by the `google-calendar-events` edge function so the refresh token never reaches the browser; (2) the legacy public calendar ID (`households.google_cal_id`), used only as a fallback when OAuth isn't connected. One Google account per household in v1 — a partner's calendar is added by sharing it into the connected account inside Google, not by connecting a second account.
 - **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.
 - Countdown admin supports optional Unsplash photos plus `days_before_visible` timing. Past calendar events are filtered out of the countdown source-event picker, but saved countdown rows are not mutated.
 
@@ -165,10 +167,15 @@ netlify.toml        — build config, env var injection via sed
 - User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
 
 ## Env Vars (never hardcode)
+Netlify build env vars (injected into `js/shared.js`/`signup.html` via `sed`):
 - `SUPABASE_URL`
 - `SUPABASE_KEY`
 - `GOOGLE_CAL_KEY`
 - `UNSPLASH_ACCESS_KEY`
+
+Supabase Edge Function secrets (set in the Supabase dashboard, not Netlify — never in the repo or client bundle):
+- `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` — Google OAuth client for the Calendar-connect flow
+- `OAUTH_STATE_SECRET` — signs the OAuth `state` param (see `google-calendar-connect`/`google-calendar-callback`); an app-invented secret, not something Google issues
 
 ## Local Dev
 Use `netlify dev` — injects env vars correctly.

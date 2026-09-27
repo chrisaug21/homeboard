@@ -1406,7 +1406,31 @@
           if (typeof maybeAutoLaunchAdminOnboarding === "function") {
             maybeAutoLaunchAdminOnboarding();
           }
+          handleGoogleCalendarRedirectParam();
         })
         .catch(() => showToast(friendlyLoadMessage()));
       refreshIcons();
+    }
+
+    // Google redirects back to /admin?gcal=connected|denied|error after the
+    // OAuth consent flow. Show the result, clean the URL so a refresh doesn't
+    // re-trigger it, and jump straight to Settings so it's visible.
+    function handleGoogleCalendarRedirectParam() {
+      const params = new URLSearchParams(window.location.search);
+      const gcalParam = params.get("gcal");
+      if (!gcalParam) return;
+
+      window.history.replaceState(null, "", window.location.pathname);
+
+      const messages = {
+        connected: "Google Calendar connected.",
+        denied: "Google Calendar connection was cancelled.",
+        error: "Something went wrong connecting Google Calendar. Please try again."
+      };
+      showToast(messages[gcalParam] || messages.error);
+
+      openAdminSettings();
+      if (gcalParam === "connected" && typeof openGoogleCalendarPickerModal === "function") {
+        openGoogleCalendarPickerModal();
+      }
     }
