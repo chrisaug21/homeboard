@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.4.4";
+    const VERSION = "2.4.5";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -1773,6 +1773,14 @@
         // connected but needs reauth, or no calendars picked yet. Either way,
         // this isn't a network failure — fall back to the public-ID path.
         if (response.status === 404 || response.status === 409) {
+          return { connected: false };
+        }
+        // A display's device token was rejected — it was revoked (admin
+        // unpaired this display) or the row never existed. Reset local
+        // pairing state so the kiosk falls back to its pairing screen on
+        // its own, instead of silently failing to load calendar data.
+        if (!isAdminMode && response.status === 401) {
+          handleDisplayDeviceRevoked();
           return { connected: false };
         }
         if (!response.ok) {

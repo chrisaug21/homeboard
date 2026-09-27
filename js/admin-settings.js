@@ -1,5 +1,7 @@
     let activeDisplayPairing = null;
     let displayPairingCountdownId = null;
+    let adminDisplayDeviceStatus = null;
+    let displayUnpairPending = false;
 
     async function loadAdminHouseholdConfig() {
       const client = getSupabaseClient();
@@ -137,6 +139,85 @@
       }
 
       setActiveDisplayPairing(data);
+    }
+
+    async function callManageDisplayDevices(action) {
+      const client = getSupabaseClient();
+      if (!client) return { error: friendlySaveMessage() };
+
+      const { data: sessionData } = await client.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) return { error: friendlySaveMessage() };
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-display-devices`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ action })
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          return { error: data?.error || friendlySaveMessage() };
+        }
+        return data || {};
+      } catch {
+        return { error: friendlySaveMessage() };
+      }
+    }
+
+    function renderDisplayDeviceCard() {
+      const statusEl = document.getElementById("settings-display-device-status");
+      const unpairBtn = document.getElementById("settings-display-device-unpair");
+      if (!statusEl || !unpairBtn) return;
+
+      const status = adminDisplayDeviceStatus;
+
+      if (!status || !status.paired) {
+        statusEl.textContent = "No display is currently paired.";
+        unpairBtn.hidden = true;
+        return;
+      }
+
+      const lastSeen = formatRelativeTimestamp(status.lastSeenAt, "not yet");
+      statusEl.textContent = `A display is paired. Last seen: ${lastSeen}.`;
+      unpairBtn.hidden = false;
+      unpairBtn.disabled = displayUnpairPending;
+      unpairBtn.textContent = displayUnpairPending ? "Unpairing…" : "Unpair this display";
+    }
+
+    async function loadDisplayDeviceStatus() {
+      const result = await callManageDisplayDevices("status");
+      adminDisplayDeviceStatus = result.error ? null : result;
+      renderDisplayDeviceCard();
+    }
+
+    function openUnpairDisplayConfirm() {
+      openAdminModal("Unpair this display?", `
+        <p class="admin-field-hint">The tablet will show its pairing screen next time it checks in (usually within a few minutes, or as soon as you wake it). You'll need a fresh pairing code to reconnect it.</p>
+        <div class="admin-actions admin-actions--end">
+          <button type="button" class="admin-button admin-button--secondary" id="display-unpair-cancel">Cancel</button>
+          <button type="button" class="admin-button admin-button--danger" id="display-unpair-confirm">Unpair</button>
+        </div>
+      `);
+
+      document.getElementById("display-unpair-cancel")?.addEventListener("click", closeAdminModal);
+      document.getElementById("display-unpair-confirm")?.addEventListener("click", async (event) => {
+        const btn = event.currentTarget;
+        btn.disabled = true;
+        btn.textContent = "Unpairing…";
+        displayUnpairPending = true;
+        renderDisplayDeviceCard();
+        const result = await callManageDisplayDevices("unpair");
+        displayUnpairPending = false;
+        closeAdminModal();
+        if (result.error) {
+          showToast(friendlySaveMessage());
+          renderDisplayDeviceCard();
+          return;
+        }
+        showToast("Display unpaired.");
+        await loadDisplayDeviceStatus();
+      });
     }
 
     function renderSettingsMembersList(members) {
@@ -326,6 +407,8 @@
 
       renderDisplayPairingCard();
       loadActiveDisplayPairing();
+      renderDisplayDeviceCard();
+      loadDisplayDeviceStatus();
     }
 
     function updateAdminLastSyncedLabel() {
@@ -1172,6 +1255,9 @@
 
       const pairingGenerate = document.getElementById("settings-display-pairing-generate");
       if (pairingGenerate) pairingGenerate.addEventListener("click", generateDisplayPairing);
+
+      const displayUnpairBtn = document.getElementById("settings-display-device-unpair");
+      if (displayUnpairBtn) displayUnpairBtn.addEventListener("click", openUnpairDisplayConfirm);
 
       const syncBtn = document.getElementById("settings-sync-btn");
       if (syncBtn) syncBtn.addEventListener("click", runAdminSync);

@@ -98,6 +98,16 @@ If `homeboard_household_id` is not present in local storage:
 
 If the code is invalid or expired, the display shows an inline error and stays on the pairing screen.
 
+### Unpairing a display
+
+In Settings → Display Setup, an admin can see whether a display is currently paired (and when it was last seen) and unpair it via the `manage-display-devices` Edge Function, which sets `revoked_at` on that household's `display_devices` row(s). This never touches the kiosk tablet directly — the running display notices on its own:
+
+- the next time it fetches calendar events via `google-calendar-events` (its normal 5-minute refresh, or on waking from sleep), the request comes back `401` because its device token no longer matches a live, unrevoked row
+- `fetchCalendarEventsViaProxy` (`js/shared.js`) treats that as "this display was unpaired," clears `homeboard_household_id` and `homeboard_device_token` from `localStorage`, and shows the pairing screen right there on the kiosk
+- entering a fresh pairing code reloads the page, so display state re-initializes cleanly instead of trying to patch a running session
+
+A display that never had a device token (paired before that feature shipped, and never re-paired since) never calls `google-calendar-events` at all, so it can't detect a revoke this way — see "displays paired earlier need to be re-paired once" below. Households on the legacy public-calendar-only path are unaffected either way.
+
 ### Google Calendar (private calendars)
 
 Homeboard supports two ways to show a Google Calendar, tried in this order:
@@ -131,7 +141,7 @@ Display screens rotate automatically using timers from `display_settings.timer_i
 - manage countdowns and countdown images
 - manage display settings
 - run or relaunch the onboarding intro tour from Settings
-- generate display pairing codes
+- generate display pairing codes, see whether a display is currently paired, and unpair it
 - manage RSVP review (with an option to soft-delete a reviewed RSVP) and browse the guest list split into Confirmed, Declined, and Pending sections
 - create and run scorecards
 
@@ -143,7 +153,7 @@ Settings are opened from the gear icon in the admin header, not a bottom-nav tab
 - Supabase
   - Auth for admin login
   - Postgres tables for app data
-  - Edge Functions for pairing-code generation and validation
+  - Edge Functions for pairing-code generation/validation and display unpairing
   - Storage for custom countdown photos
 - Netlify
 - Google Calendar API
@@ -203,7 +213,7 @@ Core tables used by Homeboard:
 | `scorecards` | scorecard definitions |
 | `scorecard_sessions` | active and completed scorecard sessions |
 | `display_pairings` | temporary pairing codes for display setup |
-| `display_devices` | one row per paired wall display; stores only a hash of its device token, used to prove a display belongs to a household when reading a private Google Calendar |
+| `display_devices` | one row per paired wall display; stores only a hash of its device token, used to prove a display belongs to a household when reading a private Google Calendar. `revoked_at` marks it unpaired (see `manage-display-devices`) |
 | `google_calendar_connections` | one row per household's connected Google account: account email, selected calendars, private-events display mode, connection status; the refresh token itself lives in Supabase Vault, referenced by id, never in this table |
 | `invite_codes` | self-serve household signup codes with active state and usage limits |
 | `rsvps` | wedding RSVP data owned by the wedding site repo; homeboard may add its own additive bookkeeping columns that are nullable or have a default (`status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never touch columns the wedding site writes (`name`, `attending`, `guest_count`); `status` values are `active`, `superseded` (merged into another party as a duplicate), and `dismissed` (soft-deleted from admin Needs Review) — all RSVP reads filter to `status = 'active'` |

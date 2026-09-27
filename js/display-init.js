@@ -38,6 +38,21 @@
       }
     }
 
+    // Called when a calendar fetch comes back with a rejected device token
+    // (see fetchCalendarEventsViaProxy in shared.js). Clears this tablet's
+    // saved pairing so it drops back to the pairing screen on its own —
+    // the whole point of "unpair" is that this never requires touching the
+    // kiosk browser's own settings or storage.
+    function handleDisplayDeviceRevoked() {
+      try {
+        localStorage.removeItem(HOMEBOARD_HOUSEHOLD_STORAGE_KEY);
+        localStorage.removeItem(HOMEBOARD_DEVICE_TOKEN_STORAGE_KEY);
+      } catch {
+        // localStorage unavailable — nothing to clear.
+      }
+      showDisplayPairingUi();
+    }
+
     function hideDisplayPairingUi() {
       const pairingScreen = document.getElementById("display-pairing-screen");
       const footer = document.getElementById("display-footer");
@@ -108,6 +123,17 @@
           codeInput.value = "";
         }
         hideDisplayPairingUi();
+
+        if (displayModeStarted) {
+          // Recovering from a mid-session unpair: startDisplayMode() no-ops
+          // once already started, and re-running its setup by hand would
+          // mean auditing every piece of in-memory display state (cached
+          // events, timers, screen offsets, etc.) for reset-safety. A full
+          // reload re-initializes everything cleanly, same as a fresh load.
+          window.location.reload();
+          return;
+        }
+
         startDisplayMode();
       } catch {
         setDisplayPairingError("Something went wrong. Please try again.");
