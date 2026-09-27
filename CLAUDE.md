@@ -12,6 +12,7 @@ Household command center PWA. Runs on a wall-mounted Android tablet in landscape
 ## File Structure
 ```text
 index.html          — single HTML file, both display + admin shells
+privacy.html        — standalone public privacy policy at /privacy (linked from the marketing footer; update it if data handling changes)
 css/
   display.css       — display mode styles only
   admin.css         — admin mode styles only
@@ -181,6 +182,32 @@ All Edge Functions on this project must be deployed with `verify_jwt = false`.
 This project uses ES256 asymmetric JWT signing. Supabase's built-in JWT verifier only supports HS256 and will reject all requests with `UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM` if `verify_jwt = true`.
 
 Functions handle JWT decoding directly in their own code using the `decodeJwtFromHeader` pattern. Do not deploy any Edge Function on this project with `verify_jwt = true`. Each function's directory should contain a `config.toml` with `verify_jwt = false`.
+
+## Privacy Policy Compliance (CRITICAL)
+
+The public privacy policy lives at `privacy.html` (served at `/privacy`, linked from the marketing footer). It is a legal-style promise to users AND a Google requirement: Homeboard's Google OAuth consent screen points at it, and Google can pull API access if the app stops matching what it says. **Code must never drift from that policy.**
+
+**Every LLM/agent working in this repo MUST, before writing code and again before opening or updating a PR, check whether the change touches anything below. If it does, STOP and tell the user plainly ("this change needs a privacy policy update because ..."), then update `privacy.html` (and bump its "Last updated" date) in the same PR. Never silently ship a change that makes the policy inaccurate, and never skip this because the change seems small.**
+
+Changes that REQUIRE a policy review/update:
+- Collecting, storing, or logging any new kind of personal data (new columns/tables holding names, emails, locations, photos, device IDs, IP addresses, or free-text users type in)
+- Adding or changing any third-party service, SDK, script, font, CDN, analytics/tracking tool, or API that receives user data or the visitor's IP (current list in the policy: Supabase, Netlify, Google Calendar + Google Analytics + Google Fonts, jsDelivr CDN, Unsplash)
+- Sending user data to a new place, or using existing data for a new purpose (especially advertising, profiling, AI/LLM processing, or sharing/selling)
+- Any change to Google OAuth scopes, or to what we do with Google data
+- Changing how long data is kept or how users can delete it or disconnect
+- Adding user-facing accounts, roles, or sharing between households
+- Adding children-oriented features (policy says Homeboard is not directed at children under 13)
+
+Standing commitments the code must keep (each one is stated in the policy):
+- **Google Calendar is read-only.** Only the scopes `calendar.readonly`, `openid`, and `userinfo.email`. Never write to a user's calendar. Adding any scope requires a policy update AND a Google consent-screen/verification change (tell the user).
+- **Google Calendar event data is never persisted server-side.** No copies of events in Supabase tables, edge function caches, or logs. Fetch on demand and pass through. Never log event titles, descriptions, locations, or attendee data. (Client-side in-memory use for rendering is fine.)
+- **Google refresh/access tokens live only in Supabase Vault / edge function memory.** Never in `households`, never in the browser, never in localStorage, logs, error messages, or URLs.
+- **Google data is used only to display the user's own events** on their household's display/admin. No advertising, no selling, no sharing, no analytics on event contents, no feeding it to AI models.
+- **Private-event masking is enforced server-side** (`private_events_mode`, default `busy`), so private details never reach the tablet when masked.
+- **Disconnect must actually delete** the stored token (Vault secret) and revoke it at Google. "Delete my data" requests are handled via the contact email in the policy.
+- **We do not sell personal information or share it for advertising.**
+
+When in doubt whether something needs a policy update, assume it does and ask the user. Also keep the "Third parties" list in `privacy.html` and the list above in sync.
 
 ## Homeboard-Specific Rules
 - The `rsvps` table is owned by the wedding site, which only writes `name`, `attending`, `guest_count`. Homeboard may add its own additive, nullable-or-defaulted columns for its own bookkeeping, but must never rename, drop, or add a non-defaulted NOT NULL constraint to a column the wedding site depends on

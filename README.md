@@ -33,7 +33,7 @@ Both modes are served from a single `index.html`.
 | Admin | `/admin` | phone | portrait |
 | Signup | `/signup` | phone | portrait |
 
-Netlify rewrites `/display` and `/admin` to `index.html` and rewrites `/signup` to `signup.html`. The main app decides which mode to boot from `window.location.pathname` before the main scripts run.
+Netlify rewrites `/display` and `/admin` to `index.html`, `/signup` to `signup.html`, and `/privacy` to `privacy.html` (the public privacy policy, linked from the marketing footer and required for Google OAuth consent-screen publishing). The main app decides which mode to boot from `window.location.pathname` before the main scripts run.
 
 ## Auth And Access
 
