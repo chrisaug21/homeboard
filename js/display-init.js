@@ -176,6 +176,15 @@
       if (pairingVersionEl) pairingVersionEl.textContent = `v${VERSION}`;
       initDisplayPairingListeners();
 
+      // Manual escape hatch for a kiosk-locked tablet with no reachable way
+      // to clear browser storage: temporarily set the kiosk's start URL to
+      // include ?repair=1, let it load once, then switch the start URL back.
+      // Same effect as an admin-triggered unpair, just user-triggered.
+      if (new URLSearchParams(window.location.search).get("repair") === "1") {
+        handleDisplayDeviceRevoked();
+        return;
+      }
+
       if (!getDisplayHouseholdId()) {
         showDisplayPairingUi();
         return;
