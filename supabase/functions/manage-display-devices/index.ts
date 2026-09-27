@@ -54,6 +54,52 @@ async function requireAdmin(
   return { userId: userData.user.id, householdId: userRow.household_id };
 }
 
+async function handleStatus(supabaseAdmin: SupabaseClient, householdId: string): Promise<Response> {
+  const { data, error } = await supabaseAdmin
+    .from("display_devices")
+    .select("created_at, last_seen_at")
+    .eq("household_id", householdId)
+    .is("revoked_at", null)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return jsonResponse(500, { error: "Something went wrong loading your data. Please try refreshing." });
+  }
+
+  const rows = data ?? [];
+  if (rows.length === 0) {
+    return jsonResponse(200, { paired: false });
+  }
+
+  const lastSeenAt = rows.reduce<string | null>((latest, row) => {
+    if (!row.last_seen_at) return latest;
+    if (!latest || row.last_seen_at > latest) return row.last_seen_at;
+    return latest;
+  }, null);
+
+  return jsonResponse(200, {
+    paired: true,
+    pairedAt: rows[0].created_at,
+    lastSeenAt,
+    deviceCount: rows.length,
+  });
+}
+
+async function handleUnpair(supabaseAdmin: SupabaseClient, householdId: string): Promise<Response> {
+  const { data, error } = await supabaseAdmin
+    .from("display_devices")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("household_id", householdId)
+    .is("revoked_at", null)
+    .select("id");
+
+  if (error) {
+    return jsonResponse(500, { error: "Something went wrong saving your changes. Please try again." });
+  }
+
+  return jsonResponse(200, { ok: true, unpaired: data?.length ?? 0 });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -78,52 +124,8 @@ Deno.serve(async (req: Request) => {
   const action = typeof body.action === "string" ? body.action : "";
 
   try {
-    if (action === "status") {
-      const { data, error } = await supabaseAdmin
-        .from("display_devices")
-        .select("created_at, last_seen_at")
-        .eq("household_id", admin.householdId)
-        .is("revoked_at", null)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        return jsonResponse(500, { error: "Something went wrong loading your data. Please try refreshing." });
-      }
-
-      const rows = data ?? [];
-      if (rows.length === 0) {
-        return jsonResponse(200, { paired: false });
-      }
-
-      const lastSeenAt = rows.reduce<string | null>((latest, row) => {
-        if (!row.last_seen_at) return latest;
-        if (!latest || row.last_seen_at > latest) return row.last_seen_at;
-        return latest;
-      }, null);
-
-      return jsonResponse(200, {
-        paired: true,
-        pairedAt: rows[0].created_at,
-        lastSeenAt,
-        deviceCount: rows.length,
-      });
-    }
-
-    if (action === "unpair") {
-      const { data, error } = await supabaseAdmin
-        .from("display_devices")
-        .update({ revoked_at: new Date().toISOString() })
-        .eq("household_id", admin.householdId)
-        .is("revoked_at", null)
-        .select("id");
-
-      if (error) {
-        return jsonResponse(500, { error: "Something went wrong saving your changes. Please try again." });
-      }
-
-      return jsonResponse(200, { ok: true, unpaired: data?.length ?? 0 });
-    }
-
+    if (action === "status") return await handleStatus(supabaseAdmin, admin.householdId);
+    if (action === "unpair") return await handleUnpair(supabaseAdmin, admin.householdId);
     return jsonResponse(400, { error: "Unknown action" });
   } catch (_err) {
     return jsonResponse(500, { error: "Something went wrong. Please try again." });
