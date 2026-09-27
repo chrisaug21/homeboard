@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#F5F0E8">
+  <title>Homeboard Privacy Policy</title>
+  <meta name="description" content="How Homeboard collects, uses, and protects your information, including optional Google Calendar access.">
+  <link rel="icon" type="image/svg+xml" href="homeboard-brandmark-favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f0e8;
+      --ink: #30261d;
+      --muted: #796a5e;
+      --border: rgba(124, 96, 69, 0.18);
+      --panel: rgba(255, 252, 246, 0.86);
+      --color-accent: #b45309;
+      --radius-lg: 28px;
+      --shadow: 0 18px 44px rgba(98, 73, 46, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Manrope", sans-serif;
+      line-height: 1.65;
+    }
+
+    body {
+      background-image:
+        radial-gradient(circle at top left, rgba(244, 196, 125, 0.26), transparent 28%),
+        radial-gradient(circle at top right, rgba(21, 128, 61, 0.12), transparent 30%),
+        linear-gradient(135deg, #f8f4ed 0%, #f5f0e8 44%, #efe7db 100%);
+    }
+
+    .privacy-page {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 32px 16px 56px;
+    }
+
+    .privacy-logo {
+      display: block;
+      width: 140px;
+      height: auto;
+      margin: 0 0 24px;
+    }
+
+    .privacy-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 32px 28px;
+    }
+
+    h1,
+    h2 {
+      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      line-height: 1.2;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 5vw, 2.4rem);
+      font-weight: 800;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-top: 32px;
+    }
+
+    p,
+    ul {
+      margin: 12px 0 0;
+    }
+
+    ul {
+      padding-left: 22px;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    .privacy-updated {
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    a {
+      color: var(--color-accent);
+      font-weight: 700;
+    }
+
+    .privacy-back {
+      display: inline-block;
+      margin-top: 24px;
+    }
+
+    @media (max-width: 480px) {
+      .privacy-card {
+        padding: 24px 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="privacy-page">
+    <a href="/"><img class="privacy-logo" src="homeboard_logo.svg" alt="Homeboard" width="140" decoding="async"></a>
+
+    <article class="privacy-card">
+      <h1>Privacy Policy</h1>
+      <p class="privacy-updated">Last updated: September 27, 2026</p>
+
+      <p>Homeboard is a household command center: a wall-mounted display for your calendar, to-dos, meals, and countdowns, managed from your phone. This page explains what information Homeboard handles and what we do with it. The short version: we only use your information to run Homeboard for your household, and we never sell it.</p>
+
+      <h2>What we collect</h2>
+      <ul>
+        <li><strong>Account details.</strong> Your email address and the display name you choose when you sign up.</li>
+        <li><strong>Household content you add.</strong> To-dos, meal plans, countdowns, scorecards, household member names and colors, and display settings.</li>
+        <li><strong>Google Calendar access (optional).</strong> If you choose to connect a Google account, we receive your Google account email address and read-only access to the calendars you allow. See the section below.</li>
+        <li><strong>Basic usage data.</strong> Homeboard uses Google Analytics to measure how the site and app are used. Like most websites, the fonts and code libraries Homeboard loads come from Google Fonts and a public content delivery network (jsDelivr), which can see your IP address when your browser requests them.</li>
+      </ul>
+
+      <h2>How we use Google Calendar data</h2>
+      <p>When you connect Google Calendar, Homeboard asks for read-only access. We use it for one purpose: showing your calendar events on your Homeboard display and in the countdown picker in your admin view.</p>
+      <ul>
+        <li>We cannot create, edit, or delete anything in your Google Calendar.</li>
+        <li>You pick which of your calendars appear. Events are fetched when your display or admin view needs them, and Homeboard does not save copies of your calendar events in its database.</li>
+        <li>You can choose to show events you have marked private in Google Calendar as just &ldquo;Busy&rdquo; on your display. This is the default.</li>
+        <li>The access token that lets Homeboard read your calendar is stored in encrypted storage and is never sent to your browser or your display.</li>
+        <li>We do not use Google Calendar data for advertising, sell it, or share it with anyone else, and no person reads it except as needed to keep the service working, for security, or to follow the law.</li>
+      </ul>
+      <p>Homeboard&rsquo;s use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+
+      <h2>Who else handles your information</h2>
+      <p>We use a small number of service providers to run Homeboard. They process data only on our behalf:</p>
+      <ul>
+        <li><strong>Supabase</strong> for sign-in and for storing your household data.</li>
+        <li><strong>Netlify</strong> for hosting the Homeboard website and app.</li>
+        <li><strong>Google</strong> for Google Calendar and Google Analytics.</li>
+        <li><strong>Unsplash</strong> for countdown photos. If you search for a photo, your search words are sent to Unsplash.</li>
+      </ul>
+      <p>We do not sell your personal information or share it for advertising.</p>
+
+      <h2>Your choices and how to delete your data</h2>
+      <ul>
+        <li><strong>Disconnect Google Calendar</strong> any time in Homeboard under Settings &rsaquo; Integrations. Disconnecting deletes the stored access token. You can also remove Homeboard&rsquo;s access from your Google account at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>.</li>
+        <li><strong>Delete your data.</strong> Email us at the address below and we will delete your account and your household&rsquo;s data.</li>
+      </ul>
+
+      <h2>Security and children</h2>
+      <p>We use reasonable safeguards to protect your information, including encrypted storage for Google access tokens. No online service can promise perfect security. Homeboard is meant for adults setting up a household display and is not directed at children under 13.</p>
+
+      <h2>Changes to this policy</h2>
+      <p>If we change this policy we will update the date at the top of this page. If a change affects how we use Google Calendar data, we will ask for your permission again where required.</p>
+
+      <h2>Contact</h2>
+      <p>Questions or deletion requests: <a href="mailto:chris@chrisaug.com">chris@chrisaug.com</a></p>
+
+      <a class="privacy-back" href="/">&larr; Back to Homeboard</a>
+    </article>
+  </main>
+</body>
+</html>
