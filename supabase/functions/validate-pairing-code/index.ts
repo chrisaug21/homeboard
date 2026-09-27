@@ -63,11 +63,21 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Delete the used code
-    await supabaseAdmin
+    // Consume the code atomically: delete-and-return so two concurrent
+    // requests for the same code can't both pass this check and both walk
+    // away with a valid device token.
+    const { data: consumed, error: consumeError } = await supabaseAdmin
       .from('display_pairings')
       .delete()
-      .eq('id', data.id);
+      .eq('id', data.id)
+      .select('id');
+
+    if (consumeError || !consumed || consumed.length === 0) {
+      return new Response(JSON.stringify({ error: 'Invalid or expired code' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
 
     // Issue this display its own device token. It's the only credential a
     // paired tablet has, and google-calendar-events requires it to read a

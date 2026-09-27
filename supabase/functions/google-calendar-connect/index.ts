@@ -226,8 +226,12 @@ Deno.serve(async (req: Request) => {
         if (tokenRow) {
           // Best-effort: also revoke at Google so it disappears from the
           // user's "Third-party access" list, not just from our database.
-          await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(tokenRow as string)}`, {
+          // Token goes in the form-encoded body, never the URL — query
+          // strings can end up in proxy/access logs.
+          await fetch(GOOGLE_REVOKE_URL, {
             method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ token: tokenRow as string }),
           }).catch(() => {
             // Best-effort revoke; the local disconnect below still proceeds either way.
           });
