@@ -74,7 +74,7 @@ async function fetchOneCalendar(
     if (pageToken) params.set("pageToken", pageToken);
 
     const response = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`,
       { headers: { Authorization: `Bearer ${accessToken}` } },
     );
 
@@ -97,8 +97,8 @@ function trimEvent(raw: Record<string, unknown>, maskPrivate: boolean): TrimmedE
     summary: shouldMask ? "Busy" : String(raw.summary ?? ""),
     description: shouldMask ? undefined : (raw.description as string | undefined),
     location: shouldMask ? undefined : (raw.location as string | undefined),
-    start: (raw.start as Record<string, string>) ?? {},
-    end: (raw.end as Record<string, string>) ?? {},
+    start: (raw.start as Record<string, string> | undefined) ?? {},
+    end: (raw.end as Record<string, string> | undefined) ?? {},
   };
 }
 

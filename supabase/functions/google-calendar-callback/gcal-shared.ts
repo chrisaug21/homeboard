@@ -165,7 +165,9 @@ export async function requireDisplayDevice(
     .from("display_devices")
     .update({ last_seen_at: new Date().toISOString() })
     .eq("id", data.id)
-    .then(() => {});
+    .then(() => {
+      // Fire-and-forget: don't block the caller on this bookkeeping write.
+    });
 
   return { householdId: data.household_id, deviceId: data.id };
 }

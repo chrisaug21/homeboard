@@ -93,7 +93,7 @@ Deno.serve(async (req: Request) => {
         state,
       });
 
-      return jsonResponse(200, { url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
+      return jsonResponse(200, { url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
     }
 
     if (action === "status") {
@@ -228,7 +228,9 @@ Deno.serve(async (req: Request) => {
           // user's "Third-party access" list, not just from our database.
           await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(tokenRow as string)}`, {
             method: "POST",
-          }).catch(() => {});
+          }).catch(() => {
+            // Best-effort revoke; the local disconnect below still proceeds either way.
+          });
         }
 
         await supabaseAdmin.rpc("gcal_delete_refresh_token", {
