@@ -98,9 +98,21 @@ If `homeboard_household_id` is not present in local storage:
 
 If the code is invalid or expired, the display shows an inline error and stays on the pairing screen.
 
+### Unpairing a display
+
+In Settings → Display Setup, an admin can see whether a display is currently paired (and when it was last seen) and unpair it via the `manage-display-devices` Edge Function, which sets `revoked_at` on that household's `display_devices` row(s). This never touches the kiosk tablet directly — the running display notices on its own:
+
+- the next time it fetches calendar events via `google-calendar-events` (its normal 5-minute refresh, or on waking from sleep), the request comes back `401` because its device token no longer matches a live, unrevoked row
+- `fetchCalendarEventsViaProxy` (`js/shared.js`) treats that as "this display was unpaired," clears `homeboard_household_id` and `homeboard_device_token` from `localStorage`, and shows the pairing screen right there on the kiosk
+- entering a fresh pairing code reloads the page, so display state re-initializes cleanly instead of trying to patch a running session
+
+A display that never had a device token (paired before that feature shipped, and never re-paired since) never calls `google-calendar-events` at all, so it can't detect a revoke this way — see "Forcing a re-pair on a kiosk-locked tablet" below. Households on the legacy public-calendar-only path are unaffected either way.
+
 ### Forcing a re-pair on a kiosk-locked tablet
 
-A display that can't reach its browser's settings (e.g. Fully Kiosk Browser in locked kiosk mode) can be forced back to the pairing screen without any OS-level storage clearing: load the display URL with `?repair=1` once (e.g. by temporarily setting the kiosk's start URL to `https://<your-domain>/display?repair=1`, then switching it back afterward). This clears `homeboard_household_id` and `homeboard_device_token` from `localStorage` and shows the pairing screen in place.
+The admin-triggered unpair above only works once a display can actually reach `google-calendar-events` and see the `401` — it doesn't help a display that never had a device token to begin with (paired before this feature shipped), since that display never makes the call in the first place. It also doesn't help if the tablet is stuck for some other reason the automatic detection doesn't cover.
+
+For those cases — or any tablet running in a fully locked-down kiosk browser (e.g. Fully Kiosk Browser) with no reachable "clear browser storage" option — load the display URL once with `?repair=1` appended (e.g. temporarily set the kiosk's start URL to `https://<your-domain>/display?repair=1`, then switch it back afterward). This clears `homeboard_household_id` and `homeboard_device_token` from `localStorage` and shows the pairing screen right there in the kiosk — no OS-level storage clearing, no exiting kiosk mode, just normal touch interaction with the page that's already on screen. Enter a fresh pairing code from Settings → Display Setup to finish. This is a permanent manual fallback, independent of the admin-unpair flow above; it stays useful even after every display has a device token, for whenever the automatic self-heal path doesn't fire.
 
 ### Google Calendar (private calendars)
 
@@ -109,7 +121,7 @@ Homeboard supports two ways to show a Google Calendar, tried in this order:
 1. **Connected via Google OAuth** (Settings → Integrations → Connect Google Calendar). The admin signs in with Google, picks one or more calendars, and Homeboard reads them read-only. Three Edge Functions handle this — `google-calendar-connect` (admin actions: start/status/list_calendars/select_calendars/update_settings/disconnect), `google-calendar-callback` (handles Google's redirect), and `google-calendar-events` (fetches events for either an authenticated admin or a paired display, using its `device_token`). The refresh token is stored in Supabase Vault, never in a regular table or sent to the browser. Requires `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `OAUTH_STATE_SECRET` set as Supabase Edge Function secrets (not Netlify env vars). Events a user has marked private in Google show as "Busy" on the display by default (`private_events_mode`); this can be changed to show full details in Settings.
 2. **Public calendar ID** (`households.google_cal_id`), the original approach — the calendar must be shared as public. This is only used as a fallback when Google Calendar isn't connected via OAuth.
 
-A paired display only gets a `device_token` (and therefore only sees a private calendar) if it was paired after this feature shipped; displays paired earlier need to be re-paired once.
+A paired display only gets a `device_token` (and therefore only sees a private calendar) if it was paired after this feature shipped; displays paired earlier need to be re-paired once (see "Forcing a re-pair on a kiosk-locked tablet" above if the tablet can't reach its own pairing screen on its own).
 
 ## Main Features
 
@@ -135,7 +147,7 @@ Display screens rotate automatically using timers from `display_settings.timer_i
 - manage countdowns and countdown images
 - manage display settings
 - run or relaunch the onboarding intro tour from Settings
-- generate display pairing codes
+- generate display pairing codes, see whether a display is currently paired, and unpair it
 - manage RSVP review (with an option to soft-delete a reviewed RSVP) and browse the guest list split into Confirmed, Declined, and Pending sections
 - create and run scorecards
 
@@ -147,7 +159,7 @@ Settings are opened from the gear icon in the admin header, not a bottom-nav tab
 - Supabase
   - Auth for admin login
   - Postgres tables for app data
-  - Edge Functions for pairing-code generation and validation
+  - Edge Functions for pairing-code generation/validation and display unpairing
   - Storage for custom countdown photos
 - Netlify
 - Google Calendar API
@@ -207,7 +219,7 @@ Core tables used by Homeboard:
 | `scorecards` | scorecard definitions |
 | `scorecard_sessions` | active and completed scorecard sessions |
 | `display_pairings` | temporary pairing codes for display setup |
-| `display_devices` | one row per paired wall display; stores only a hash of its device token, used to prove a display belongs to a household when reading a private Google Calendar |
+| `display_devices` | one row per paired wall display; stores only a hash of its device token, used to prove a display belongs to a household when reading a private Google Calendar. `revoked_at` marks it unpaired (see `manage-display-devices`) |
 | `google_calendar_connections` | one row per household's connected Google account: account email, selected calendars, private-events display mode, connection status; the refresh token itself lives in Supabase Vault, referenced by id, never in this table |
 | `invite_codes` | self-serve household signup codes with active state and usage limits |
 | `rsvps` | wedding RSVP data owned by the wedding site repo; homeboard may add its own additive bookkeeping columns that are nullable or have a default (`status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never touch columns the wedding site writes (`name`, `attending`, `guest_count`); `status` values are `active`, `superseded` (merged into another party as a duplicate), and `dismissed` (soft-deleted from admin Needs Review) — all RSVP reads filter to `status = 'active'` |
