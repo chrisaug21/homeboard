@@ -1416,31 +1416,54 @@
           <h2 class="admin-panel-title" id="settings-integrations-title">Integrations</h2>
           <div class="admin-settings-stack">
             <div class="admin-field">
-              <label>Google Calendar</label>
-              <p class="admin-field-hint" id="settings-gcal-status">Checking connection&hellip;</p>
-              <p class="admin-field-hint" id="settings-gcal-calendars-summary" hidden></p>
-            </div>
-            <div class="admin-actions">
-              <button type="button" id="settings-gcal-connect" class="admin-button admin-button--primary" hidden>Connect Google Calendar</button>
-              <button type="button" id="settings-gcal-reconnect" class="admin-button admin-button--primary" hidden>Reconnect</button>
-              <button type="button" id="settings-gcal-manage" class="admin-button admin-button--secondary" hidden>Manage calendars</button>
-              <button type="button" id="settings-gcal-disconnect" class="admin-button admin-button--danger" hidden>Disconnect</button>
-            </div>
-            <div class="admin-field" id="settings-gcal-privacy-field" hidden>
-              <label for="settings-gcal-privacy">Private events</label>
-              <select id="settings-gcal-privacy" class="admin-input">
-                <option value="busy">Show as &ldquo;Busy&rdquo; (recommended)</option>
-                <option value="full">Show full details</option>
-              </select>
-              <p class="admin-field-hint">For events you've marked private in Google Calendar. &ldquo;Busy&rdquo; hides the title and details on your wall display.</p>
+              <label>Calendar source</label>
+              <p class="admin-field-hint">Choose one way for Homeboard to read your calendar. Switching is reversible any time.</p>
+              <div class="admin-settings-source-list" id="settings-calendar-source">
+                <label class="admin-settings-source-option">
+                  <input type="radio" name="calendar_source" value="public">
+                  <span>
+                    <span class="admin-settings-source-title">Public calendar</span>
+                    <span class="admin-field-hint">A calendar ID you've shared publicly.</span>
+                  </span>
+                </label>
+                <label class="admin-settings-source-option">
+                  <input type="radio" name="calendar_source" value="private">
+                  <span>
+                    <span class="admin-settings-source-title">Private (Google) calendar</span>
+                    <span class="admin-field-hint">Connect your Google account &mdash; nothing needs to be public.</span>
+                  </span>
+                </label>
+              </div>
             </div>
 
-            <div class="admin-field">
-              <label for="settings-google-cal-id">Public calendar ID (fallback)</label>
+            <div id="settings-calendar-private-section" class="admin-settings-stack">
+              <div class="admin-field">
+                <label>Google Calendar</label>
+                <p class="admin-field-hint" id="settings-gcal-status">Checking connection&hellip;</p>
+                <p class="admin-field-hint" id="settings-gcal-calendars-summary" hidden></p>
+              </div>
+              <div class="admin-actions">
+                <button type="button" id="settings-gcal-connect" class="admin-button admin-button--primary" hidden>Connect Google Calendar</button>
+                <button type="button" id="settings-gcal-reconnect" class="admin-button admin-button--primary" hidden>Reconnect</button>
+                <button type="button" id="settings-gcal-manage" class="admin-button admin-button--secondary" hidden>Manage calendars</button>
+                <button type="button" id="settings-gcal-disconnect" class="admin-button admin-button--danger" hidden>Disconnect</button>
+              </div>
+              <div class="admin-field" id="settings-gcal-privacy-field" hidden>
+                <label for="settings-gcal-privacy">Private events</label>
+                <select id="settings-gcal-privacy" class="admin-input">
+                  <option value="busy">Show as &ldquo;Busy&rdquo; (recommended)</option>
+                  <option value="full">Show full details</option>
+                </select>
+                <p class="admin-field-hint">For events you've marked private in Google Calendar. &ldquo;Busy&rdquo; hides the title and details on your wall display.</p>
+              </div>
+            </div>
+
+            <div class="admin-field" id="settings-calendar-public-section">
+              <label for="settings-google-cal-id">Public calendar ID</label>
               <input id="settings-google-cal-id" type="text" maxlength="200"
                 placeholder="example@group.calendar.google.com"
                 autocomplete="off" spellcheck="false">
-              <p class="admin-field-hint">Only used if Google Calendar isn't connected above, and the calendar must be public. Found in Google Calendar &rsaquo; Settings &rsaquo; Integrate calendar.</p>
+              <p class="admin-field-hint">Must be shared as public. Found in Google Calendar &rsaquo; Settings &rsaquo; Integrate calendar.</p>
             </div>
           </div>
           <div class="admin-actions admin-actions--end">

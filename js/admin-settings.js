@@ -403,6 +403,7 @@
 
       // Google Cal ID
       if (calIdInput) calIdInput.value = adminHouseholdSettings.google_cal_id || "";
+      adminCalendarSourceOverride = null;
       loadGoogleCalendarConnectionStatus();
 
       renderDisplayPairingCard();
@@ -649,6 +650,11 @@
 
     // ── Google Calendar (OAuth) ─────────────────────────────────────────
     let adminGoogleCalendarStatus = null;
+    // Tracks a source the admin just picked in this visit to Settings, for
+    // cases where the underlying data (connection row / public cal ID)
+    // doesn't yet disambiguate which option should show as selected. Reset
+    // whenever Settings is freshly loaded so it never outlives the session.
+    let adminCalendarSourceOverride = null;
 
     async function callGoogleCalendarConnect(action, payload = {}) {
       const client = getSupabaseClient();
@@ -693,8 +699,20 @@
       const calendarsSummary = document.getElementById("settings-gcal-calendars-summary");
       const status = adminGoogleCalendarStatus;
 
+      const activeSource = adminCalendarSourceOverride || (status && status.connected ? "private" : "public");
+      const publicRadio = document.querySelector('[name="calendar_source"][value="public"]');
+      const privateRadio = document.querySelector('[name="calendar_source"][value="private"]');
+      if (publicRadio) publicRadio.checked = activeSource === "public";
+      if (privateRadio) privateRadio.checked = activeSource === "private";
+      const publicSection = document.getElementById("settings-calendar-public-section");
+      const privateSection = document.getElementById("settings-calendar-private-section");
+      const integrationsSaveBtn = document.getElementById("settings-integrations-save");
+      if (publicSection) publicSection.hidden = activeSource !== "public";
+      if (privateSection) privateSection.hidden = activeSource !== "private";
+      if (integrationsSaveBtn) integrationsSaveBtn.hidden = activeSource !== "public";
+
       if (!status || !status.connected) {
-        statusEl.textContent = "Not connected. You can use a public calendar below instead.";
+        statusEl.textContent = "Not connected.";
         if (connectBtn) connectBtn.hidden = false;
         if (reconnectBtn) reconnectBtn.hidden = true;
         if (disconnectBtn) disconnectBtn.hidden = true;
@@ -715,7 +733,7 @@
         return;
       }
 
-      statusEl.textContent = `Connected as ${status.google_account_email || "your Google account"}.`;
+      statusEl.textContent = `Account: ${status.google_account_email || "your Google account"}`;
       if (connectBtn) connectBtn.hidden = true;
       if (reconnectBtn) reconnectBtn.hidden = true;
       if (disconnectBtn) disconnectBtn.hidden = false;
@@ -727,7 +745,7 @@
       if (calendarsSummary) {
         calendarsSummary.hidden = false;
         calendarsSummary.textContent = calendars.length
-          ? `Showing: ${calendars.map((cal) => cal.summary || cal.id).join(", ")}`
+          ? `Calendars: ${calendars.map((cal) => cal.summary || cal.id).join(", ")}`
           : "Connected, but no calendars picked yet.";
       }
     }
@@ -860,12 +878,106 @@
       if (adminGoogleCalendarStatus) adminGoogleCalendarStatus.private_events_mode = mode;
     }
 
+    // Switching sources only needs a confirm step when it would actually
+    // discard something: disconnecting a real Google connection, or clearing
+    // a saved public calendar ID. If there's nothing there yet, just flip.
+    function handleCalendarSourceChange(event) {
+      const newSource = event.currentTarget.value;
+
+      if (newSource === "public") {
+        const hasConnection = Boolean(adminGoogleCalendarStatus && adminGoogleCalendarStatus.connected);
+        if (!hasConnection) {
+          adminCalendarSourceOverride = "public";
+          renderGoogleCalendarSection();
+          return;
+        }
+        // The radio's native click already flipped it to "public" — put it back
+        // until the switch is actually confirmed, so closing the modal any way
+        // (Cancel, the X button, clicking outside) leaves nothing changed.
+        renderGoogleCalendarSection();
+        openCalendarSourceSwitchConfirm("public");
+      } else {
+        const hasPublicId = Boolean(adminHouseholdSettings.google_cal_id && adminHouseholdSettings.google_cal_id.trim());
+        if (!hasPublicId) {
+          adminCalendarSourceOverride = "private";
+          renderGoogleCalendarSection();
+          return;
+        }
+        renderGoogleCalendarSection();
+        openCalendarSourceSwitchConfirm("private");
+      }
+    }
+
+    function openCalendarSourceSwitchConfirm(newSource) {
+      if (newSource === "public") {
+        openAdminModal("Switch to public calendar?", `
+          <p class="admin-field-hint">This disconnects your Google account and stops using it on your display. You can reconnect any time.</p>
+          <div class="admin-actions admin-actions--end">
+            <button type="button" class="admin-button admin-button--secondary" id="calsource-switch-cancel">Cancel</button>
+            <button type="button" class="admin-button admin-button--danger" id="calsource-switch-confirm">Disconnect</button>
+          </div>
+        `);
+
+        document.getElementById("calsource-switch-cancel")?.addEventListener("click", closeAdminModal);
+        document.getElementById("calsource-switch-confirm")?.addEventListener("click", async (event) => {
+          const btn = event.currentTarget;
+          btn.disabled = true;
+          btn.textContent = "Switching…";
+          const result = await callGoogleCalendarConnect("disconnect");
+          closeAdminModal();
+          if (result.error) {
+            showToast(friendlySaveMessage());
+            renderGoogleCalendarSection();
+            return;
+          }
+          adminCalendarSourceOverride = "public";
+          showToast("Switched to public calendar.");
+          await loadGoogleCalendarConnectionStatus();
+        });
+      } else {
+        openAdminModal("Switch to private calendar?", `
+          <p class="admin-field-hint">This clears your saved public calendar ID. You can add it back any time.</p>
+          <div class="admin-actions admin-actions--end">
+            <button type="button" class="admin-button admin-button--secondary" id="calsource-switch-cancel">Cancel</button>
+            <button type="button" class="admin-button admin-button--primary" id="calsource-switch-confirm">Clear</button>
+          </div>
+        `);
+
+        document.getElementById("calsource-switch-cancel")?.addEventListener("click", closeAdminModal);
+        document.getElementById("calsource-switch-confirm")?.addEventListener("click", async (event) => {
+          const btn = event.currentTarget;
+          btn.disabled = true;
+          btn.textContent = "Switching…";
+          const client = getSupabaseClient();
+          const { error } = await client
+            .from("households")
+            .update({ google_cal_id: null })
+            .eq("id", getAdminHouseholdId());
+          closeAdminModal();
+          if (error) {
+            showToast(friendlySaveMessage());
+            renderGoogleCalendarSection();
+            return;
+          }
+          adminHouseholdSettings.google_cal_id = "";
+          const calIdInput = document.getElementById("settings-google-cal-id");
+          if (calIdInput) calIdInput.value = "";
+          adminCalendarSourceOverride = "private";
+          showToast("Switched to private calendar.");
+          renderGoogleCalendarSection();
+        });
+      }
+    }
+
     function initGoogleCalendarSettingsListeners() {
       document.getElementById("settings-gcal-connect")?.addEventListener("click", handleGoogleCalendarConnectClick);
       document.getElementById("settings-gcal-reconnect")?.addEventListener("click", handleGoogleCalendarConnectClick);
       document.getElementById("settings-gcal-disconnect")?.addEventListener("click", openGoogleCalendarDisconnectConfirm);
       document.getElementById("settings-gcal-manage")?.addEventListener("click", openGoogleCalendarPickerModal);
       document.getElementById("settings-gcal-privacy")?.addEventListener("change", handleGoogleCalendarPrivacyChange);
+      document.querySelectorAll('[name="calendar_source"]').forEach((radio) => {
+        radio.addEventListener("change", handleCalendarSourceChange);
+      });
     }
     // ── End Google Calendar (OAuth) ──────────────────────────────────────
 
