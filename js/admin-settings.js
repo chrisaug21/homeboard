@@ -733,7 +733,7 @@
         return;
       }
 
-      statusEl.textContent = `Connected as ${status.google_account_email || "your Google account"}.`;
+      statusEl.textContent = `Account: ${status.google_account_email || "your Google account"}`;
       if (connectBtn) connectBtn.hidden = true;
       if (reconnectBtn) reconnectBtn.hidden = true;
       if (disconnectBtn) disconnectBtn.hidden = false;
@@ -745,7 +745,7 @@
       if (calendarsSummary) {
         calendarsSummary.hidden = false;
         calendarsSummary.textContent = calendars.length
-          ? `Showing: ${calendars.map((cal) => cal.summary || cal.id).join(", ")}`
+          ? `Calendars: ${calendars.map((cal) => cal.summary || cal.id).join(", ")}`
           : "Connected, but no calendars picked yet.";
       }
     }
@@ -891,6 +891,10 @@
           renderGoogleCalendarSection();
           return;
         }
+        // The radio's native click already flipped it to "public" — put it back
+        // until the switch is actually confirmed, so closing the modal any way
+        // (Cancel, the X button, clicking outside) leaves nothing changed.
+        renderGoogleCalendarSection();
         openCalendarSourceSwitchConfirm("public");
       } else {
         const hasPublicId = Boolean(adminHouseholdSettings.google_cal_id && adminHouseholdSettings.google_cal_id.trim());
@@ -899,6 +903,7 @@
           renderGoogleCalendarSection();
           return;
         }
+        renderGoogleCalendarSection();
         openCalendarSourceSwitchConfirm("private");
       }
     }
@@ -909,14 +914,11 @@
           <p class="admin-field-hint">This disconnects your Google account and stops using it on your display. You can reconnect any time.</p>
           <div class="admin-actions admin-actions--end">
             <button type="button" class="admin-button admin-button--secondary" id="calsource-switch-cancel">Cancel</button>
-            <button type="button" class="admin-button admin-button--danger" id="calsource-switch-confirm">Disconnect &amp; switch</button>
+            <button type="button" class="admin-button admin-button--danger" id="calsource-switch-confirm">Disconnect</button>
           </div>
         `);
 
-        document.getElementById("calsource-switch-cancel")?.addEventListener("click", () => {
-          closeAdminModal();
-          renderGoogleCalendarSection();
-        });
+        document.getElementById("calsource-switch-cancel")?.addEventListener("click", closeAdminModal);
         document.getElementById("calsource-switch-confirm")?.addEventListener("click", async (event) => {
           const btn = event.currentTarget;
           btn.disabled = true;
@@ -937,14 +939,11 @@
           <p class="admin-field-hint">This clears your saved public calendar ID. You can add it back any time.</p>
           <div class="admin-actions admin-actions--end">
             <button type="button" class="admin-button admin-button--secondary" id="calsource-switch-cancel">Cancel</button>
-            <button type="button" class="admin-button admin-button--primary" id="calsource-switch-confirm">Clear &amp; switch</button>
+            <button type="button" class="admin-button admin-button--primary" id="calsource-switch-confirm">Clear</button>
           </div>
         `);
 
-        document.getElementById("calsource-switch-cancel")?.addEventListener("click", () => {
-          closeAdminModal();
-          renderGoogleCalendarSection();
-        });
+        document.getElementById("calsource-switch-cancel")?.addEventListener("click", closeAdminModal);
         document.getElementById("calsource-switch-confirm")?.addEventListener("click", async (event) => {
           const btn = event.currentTarget;
           btn.disabled = true;

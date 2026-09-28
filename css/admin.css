@@ -2092,6 +2092,18 @@
       margin-top: 14px;
     }
 
+    .admin-settings-stack .admin-settings-stack {
+      margin-top: 0;
+    }
+
+    /* .admin-field/.admin-settings-stack set their own `display`, which beats
+       the browser's default [hidden] rule — these need an explicit override
+       so JS-toggled hidden actually hides them. */
+    #settings-calendar-public-section[hidden],
+    #settings-gcal-privacy-field[hidden] {
+      display: none;
+    }
+
     .admin-settings-account-status {
       margin: 0;
     }
