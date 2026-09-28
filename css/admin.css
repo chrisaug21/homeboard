@@ -2274,6 +2274,54 @@
       user-select: none;
     }
 
+    /* Calendar source picker */
+    .admin-settings-source-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .admin-settings-source-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+      padding: 11px 14px;
+      border-radius: var(--tag-radius);
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(124, 96, 69, 0.12);
+      transition: background-color 120ms ease;
+    }
+
+    .admin-settings-source-option:has(input:checked) {
+      background: var(--color-accent-subtle);
+      border-color: var(--color-accent);
+    }
+
+    .admin-settings-source-option input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      accent-color: var(--color-accent);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .admin-settings-source-option > span {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      user-select: none;
+    }
+
+    .admin-settings-source-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .admin-settings-source-option .admin-field-hint {
+      margin: 0;
+    }
+
     /* Screen order list */
     .admin-settings-order-list {
       list-style: none;
@@ -2945,6 +2993,7 @@
     html[data-scheme="dark"] .admin-settings-order-item-name,
     html[data-scheme="dark"] .admin-settings-timer-label,
     html[data-scheme="dark"] .admin-settings-toggle span,
+    html[data-scheme="dark"] .admin-settings-source-title,
     html[data-scheme="dark"] .admin-settings-scheme-option span:last-child,
     html[data-scheme="dark"] .admin-version-label {
       color: var(--ink);
@@ -2994,6 +3043,7 @@
     html[data-scheme="dark"] .admin-button--ghost-danger:focus-visible,
     html[data-scheme="dark"] .admin-nav-button.is-active,
     html[data-scheme="dark"] .admin-settings-toggle:has(input:checked),
+    html[data-scheme="dark"] .admin-settings-source-option:has(input:checked),
     html[data-scheme="dark"] .admin-settings-scheme-option:has(input:checked),
     html[data-scheme="dark"] .admin-settings-order-btn:hover:not(:disabled),
     html[data-scheme="dark"] .admin-meal-card-arrow-btn:hover:not(:disabled),
@@ -3007,6 +3057,7 @@
     html[data-scheme="dark"] .admin-saved-countdown-card,
     html[data-scheme="dark"] .admin-settings-member-row,
     html[data-scheme="dark"] .admin-settings-toggle,
+    html[data-scheme="dark"] .admin-settings-source-option,
     html[data-scheme="dark"] .admin-settings-order-item,
     html[data-scheme="dark"] .admin-settings-timer-row,
     html[data-scheme="dark"] .admin-settings-scheme-option,
