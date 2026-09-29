@@ -74,8 +74,8 @@
     }
 
     function buildMealTypeOptionsHTML(selectedType) {
-      return mealTypeOptions.map((option) =>
-        `<option value="${escapeHtml(option.value)}"${option.value === selectedType ? " selected" : ""}>${escapeHtml(option.adminLabel)}</option>`
+      return getMealTypeOptions(selectedType).map((option) =>
+        `<option value="${escapeHtml(option.value)}"${option.value === selectedType ? " selected" : ""}>${escapeHtml(option.label)}</option>`
       ).join("");
     }
 
@@ -98,7 +98,7 @@
           <button class="admin-meal-card" type="button" data-admin-meal-day="${index}">
             <div class="admin-meal-card-top">
               <div class="admin-meal-day">${dayLabel}</div>
-              <span class="admin-pill admin-pill--due">${escapeHtml(mealType ? mealType.label : "Tap to add")}</span>
+              <span class="admin-pill admin-pill--due admin-pill--icon">${mealType ? buildMealTypeLabelHTML(mealType) : "Tap to add"}</span>
             </div>
             <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : `No ${resolveMealSlotLabel(adminCurrentMealSlot, mealSlotLabels).toLowerCase()} set yet.`)}</div>
           </button>
@@ -217,7 +217,7 @@
           <span class="admin-settings-member-name">${escapeHtml(entry.name)}</span>
           <div class="admin-settings-member-actions">
             ${slotLabel ? `<span class="admin-pill admin-pill--member">${escapeHtml(slotLabel)}</span>` : ""}
-            ${typePresentation ? `<span class="admin-pill admin-pill--due">${escapeHtml(typePresentation.label)}</span>` : ""}
+            ${typePresentation ? `<span class="admin-pill admin-pill--due admin-pill--icon">${buildMealTypeLabelHTML(typePresentation)}</span>` : ""}
             <button type="button" class="admin-settings-member-remove" data-meal-library-remove="${entry.id}" aria-label="Remove ${escapeHtml(entry.name)}">
               <i data-lucide="trash-2"></i>
             </button>
@@ -227,8 +227,8 @@
     }
 
     function buildMealLibraryTypeFilterOptionsHTML() {
-      return `<option value="">All types</option>` + mealTypeOptions.map((option) =>
-        `<option value="${escapeHtml(option.value)}">${escapeHtml(option.adminLabel)}</option>`
+      return `<option value="">All types</option>` + getMealTypeOptions().map((option) =>
+        `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`
       ).join("");
     }
 

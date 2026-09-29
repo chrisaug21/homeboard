@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.4.8";
+    const VERSION = "2.5.0";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -138,59 +138,99 @@
     const RSVP_MATCH_AUTO_LINK_THRESHOLD = 6.4;
     const RSVP_GENERIC_FAMILY_TOKENS = ["family", "household", "guests", "guest", "party", "crew"];
 
-    const mealTypeOptions = [
-      {
-        value: "cooking",
-        adminLabel: "Cooking",
-        label: "Cooking 🍳",
-        className: "meal-type--cooking"
-      },
-      {
-        value: "hellofresh",
-        adminLabel: "HelloFresh",
-        label: "HelloFresh 📦",
-        className: "meal-type--hellofresh"
-      },
-      {
-        value: "going_out",
-        adminLabel: "Going Out",
-        label: "Going Out 🍽️",
-        className: "meal-type--going-out"
-      },
-      {
-        value: "delivery",
-        adminLabel: "Delivery",
-        label: "Delivery 🛵",
-        className: "meal-type--delivery"
-      },
-      {
-        value: "pick_up",
-        adminLabel: "Pick Up",
-        label: "Pick Up 🥡",
-        className: "meal-type--pick-up"
-      },
-      {
-        value: "fend_for_yourself",
-        adminLabel: "Fend for Yourself",
-        label: "Fend for Yourself 😅",
-        className: "meal-type--fend-for-yourself"
-      },
-      {
-        value: "date_night",
-        adminLabel: "Date Night",
-        label: "Date Night 💫",
-        className: "meal-type--date-night"
-      }
+    // Standard meal types every household can toggle on/off. `value` is the key stored in
+    // meal_plan.meal_type / meal_library.meal_type and must never change. `icon` is an
+    // Iconify name ("prefix:name") that a household may override per type.
+    const STANDARD_MEAL_TYPES = [
+      { value: "cooking", label: "Cooking", icon: "lucide:chef-hat", className: "meal-type--cooking", defaultEnabled: true },
+      { value: "hellofresh", label: "HelloFresh", icon: "lucide:package", className: "meal-type--hellofresh", defaultEnabled: false },
+      { value: "going_out", label: "Going Out", icon: "lucide:utensils", className: "meal-type--going-out", defaultEnabled: true },
+      { value: "delivery", label: "Delivery", icon: "lucide:bike", className: "meal-type--delivery", defaultEnabled: true },
+      { value: "pick_up", label: "Pick Up", icon: "lucide:shopping-bag", className: "meal-type--pick-up", defaultEnabled: true },
+      { value: "fend_for_yourself", label: "Fend for Yourself", icon: "lucide:sandwich", className: "meal-type--fend-for-yourself", defaultEnabled: true },
+      { value: "date_night", label: "Date Night", icon: "lucide:sparkles", className: "meal-type--date-night", defaultEnabled: true }
     ];
-    const mealTypeConfig = Object.fromEntries(
-      mealTypeOptions.map((option) => [
-        option.value,
-        {
-          label: option.label,
-          className: option.className
-        }
-      ])
-    );
+    const MEAL_TYPE_CUSTOM_PREFIX = "custom_";
+    const MEAL_TYPE_CUSTOM_LABEL_MAX = 24;
+    const MEAL_TYPE_CUSTOM_MAX = 12;
+    const MEAL_TYPE_FALLBACK_ICON = "lucide:utensils-crossed";
+    const MEAL_TYPE_ICON_PATTERN = /^[a-z0-9][a-z0-9-]*:[a-z0-9][a-z0-9-]*$/;
+
+    function sanitizeMealTypeIcon(icon, fallback = "") {
+      const value = String(icon || "").trim().toLowerCase();
+      return MEAL_TYPE_ICON_PATTERN.test(value) && value.length <= 80 ? value : fallback;
+    }
+
+    // Shape stored at display_settings.meal_types:
+    //   { enabled: ["cooking", ...], icons: { cooking: "mdi:pot-steam" }, custom: [{ key, label, icon }] }
+    // When unset, the household gets every standard type flagged defaultEnabled.
+    function normalizeMealTypeSettings(raw) {
+      const hasRaw = raw && typeof raw === "object";
+      const standardKeys = STANDARD_MEAL_TYPES.map((type) => type.value);
+      const enabled = hasRaw && Array.isArray(raw.enabled)
+        ? standardKeys.filter((key) => raw.enabled.includes(key))
+        : STANDARD_MEAL_TYPES.filter((type) => type.defaultEnabled).map((type) => type.value);
+
+      const icons = {};
+      if (hasRaw && raw.icons && typeof raw.icons === "object") {
+        standardKeys.forEach((key) => {
+          const icon = sanitizeMealTypeIcon(raw.icons[key]);
+          if (icon) icons[key] = icon;
+        });
+      }
+
+      const custom = [];
+      const seen = new Set();
+      if (hasRaw && Array.isArray(raw.custom)) {
+        raw.custom.forEach((entry) => {
+          const key = String(entry && entry.key || "");
+          const label = String(entry && entry.label || "").trim().slice(0, MEAL_TYPE_CUSTOM_LABEL_MAX);
+          if (!key.startsWith(MEAL_TYPE_CUSTOM_PREFIX) || !label || seen.has(key)) return;
+          seen.add(key);
+          custom.push({ key, label, icon: sanitizeMealTypeIcon(entry.icon, MEAL_TYPE_FALLBACK_ICON) });
+        });
+      }
+
+      return { enabled, icons, custom };
+    }
+
+    function buildCustomMealTypeKey(label, existingKeys) {
+      const slug = String(label || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 24) || "type";
+      let key = MEAL_TYPE_CUSTOM_PREFIX + slug;
+      let suffix = 2;
+      while (existingKeys.includes(key)) {
+        key = `${MEAL_TYPE_CUSTOM_PREFIX}${slug}_${suffix}`;
+        suffix += 1;
+      }
+      return key;
+    }
+
+    let activeMealTypeSettings = normalizeMealTypeSettings(null);
+
+    function setActiveMealTypeSettings(rawMealTypes) {
+      activeMealTypeSettings = normalizeMealTypeSettings(rawMealTypes);
+      return activeMealTypeSettings;
+    }
+
+    function getStandardMealTypePresentation(type, settings) {
+      return { value: type.value, label: type.label, icon: settings.icons[type.value] || type.icon, className: type.className };
+    }
+
+    // Enabled types (standard first, then custom) for pickers. `includeValue` keeps a
+    // legacy/disabled type selectable so editing an existing meal never silently changes it.
+    function getMealTypeOptions(includeValue = "", settings = activeMealTypeSettings) {
+      const options = STANDARD_MEAL_TYPES
+        .filter((type) => settings.enabled.includes(type.value))
+        .map((type) => getStandardMealTypePresentation(type, settings));
+      settings.custom.forEach((entry) => {
+        options.push({ value: entry.key, label: entry.label, icon: entry.icon, className: "meal-type--custom" });
+      });
+      const wanted = normalizeMealType(includeValue);
+      if (wanted && !options.some((option) => option.value === wanted)) {
+        options.push(getMealTypePresentation(wanted, settings));
+      }
+      return options;
+    }
 
     function getMonday(date) {
       const next = new Date(date);
@@ -1640,12 +1680,25 @@
         .replaceAll(" ", "_");
     }
 
-    function getMealTypePresentation(type) {
+    function getMealTypePresentation(type, settings = activeMealTypeSettings) {
       const normalizedType = normalizeMealType(type);
-      return mealTypeConfig[normalizedType] || {
-        label: type || "Dinner",
-        className: "meal-type--fend-for-yourself"
-      };
+      const standard = STANDARD_MEAL_TYPES.find((entry) => entry.value === normalizedType);
+      if (standard) return getStandardMealTypePresentation(standard, settings);
+      const custom = settings.custom.find((entry) => entry.key === normalizedType);
+      if (custom) return { value: custom.key, label: custom.label, icon: custom.icon, className: "meal-type--custom" };
+      // Removed custom type or unrecognised legacy value: keep the meal readable.
+      const readable = normalizedType.replace(new RegExp(`^${MEAL_TYPE_CUSTOM_PREFIX}`), "").split("_").filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+      return { value: normalizedType, label: readable || "Dinner", icon: MEAL_TYPE_FALLBACK_ICON, className: "meal-type--custom" };
+    }
+
+    function buildMealTypeIconHTML(icon) {
+      const safeIcon = sanitizeMealTypeIcon(icon, MEAL_TYPE_FALLBACK_ICON);
+      return `<iconify-icon class="meal-type-icon" icon="${escapeHtml(safeIcon)}" aria-hidden="true"></iconify-icon>`;
+    }
+
+    function buildMealTypeLabelHTML(presentation) {
+      return `${buildMealTypeIconHTML(presentation.icon)}<span>${escapeHtml(presentation.label)}</span>`;
     }
 
     async function fetchHouseholdConfig() {

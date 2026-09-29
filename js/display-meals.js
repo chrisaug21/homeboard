@@ -9,6 +9,7 @@
         .single();
 
       if (error || !data) return { slots: ["dinner"], labels: {} };
+      setActiveMealTypeSettings(data.display_settings?.meal_types);
       return {
         slots: normalizeMealSlots(data.display_settings?.meal_slots),
         labels: normalizeMealSlotLabels(data.display_settings?.meal_slot_labels)
@@ -91,7 +92,7 @@
           <article class="meal-card${isToday ? " today" : ""}">
             <div class="meal-day">${escapeHtml(formatCalendarLabel(date))}</div>
             <div class="meal-name">${escapeHtml(mealName)}</div>
-            <div class="meal-type ${mealType ? mealType.className : "meal-type--fend-for-yourself"}">${escapeHtml(mealType ? mealType.label : "Open")}</div>
+            <div class="meal-type ${mealType ? mealType.className : "meal-type--fend-for-yourself"}">${mealType ? buildMealTypeLabelHTML(mealType) : "Open"}</div>
           </article>
         `;
       });

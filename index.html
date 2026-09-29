@@ -1255,6 +1255,15 @@
             </div>
 
             <div class="admin-settings-subsection">
+              <div class="admin-settings-subsection-label">Meal types</div>
+              <p class="admin-field-hint">Choose which kinds of meals you can pick (Cooking, Delivery, and so on), add your own, and change their icons.</p>
+              <div class="admin-actions admin-actions--end">
+                <button type="button" id="settings-meal-types-btn"
+                  class="admin-button admin-button--secondary">Customize meal types</button>
+              </div>
+            </div>
+
+            <div class="admin-settings-subsection">
               <div class="admin-settings-subsection-label">Meal Library</div>
               <p class="admin-field-hint" id="settings-meal-library-hint">Saved dinner names used for the Meal Plan typeahead.</p>
               <div class="admin-actions admin-actions--end">
@@ -1653,6 +1662,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.3.0/dist/iconify-icon.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer crossorigin="anonymous"></script>
   <script src="js/vendor/confetti.min.js" defer></script>
   <script src="js/vendor/gsap.min.js" defer></script>
@@ -1671,6 +1681,7 @@
   <script src="js/display-init.js" defer></script>
   <script src="js/admin-todos.js" defer></script>
   <script src="js/admin-meals.js" defer></script>
+  <script src="js/admin-meal-types.js" defer></script>
   <script src="js/admin-countdowns.js" defer></script>
   <script src="js/admin-scorecard.js" defer></script>
   <script src="js/admin-rsvp.js" defer></script>

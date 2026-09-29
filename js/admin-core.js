@@ -963,6 +963,8 @@
         saveAdminMeal(dayOfWeek, mealName, mealType);
       } else if (formType === "note") {
         saveAdminMealNote(formData);
+      } else if (formType === "meal-types") {
+        saveMealTypeSettings();
       } else if (formType === "meal-slot-labels") {
         const mealSlotLabels = {};
         MEAL_SLOT_ORDER.forEach((slot) => {
