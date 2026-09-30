@@ -1457,9 +1457,8 @@
     }
 
     .todo-meta-sep {
-      margin: 0 6px;
+      margin: 0 6px 0 0;
       color: var(--muted);
-      opacity: 0.6;
     }
 
     .todo-due-text {

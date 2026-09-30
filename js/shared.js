@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.0";
+    const VERSION = "2.5.1";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -392,7 +392,7 @@
         return color
           ? `<span class="todo-assignee-name" style="color:${escapeHtml(color)}">${escapeHtml(assignee.name)}</span>`
           : `<span class="todo-assignee-name todo-assignee-name--plain">${escapeHtml(assignee.name)}</span>`;
-      }).join('<span class="todo-meta-sep" aria-hidden="true">·</span>');
+      }).join('<span class="todo-meta-sep" aria-hidden="true">,</span>');
 
       let dueMarkup = "";
       if (duePill) {
