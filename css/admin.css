@@ -874,6 +874,54 @@
       gap: 6px;
     }
 
+    .admin-assignee-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .admin-assignee-chip {
+      --chip-color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .admin-assignee-chip input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .admin-assignee-chip span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--button-radius);
+      background: transparent;
+      color: var(--chip-color);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .admin-assignee-chip input:checked + span {
+      border-color: var(--chip-color);
+      background: color-mix(in srgb, var(--chip-color) 16%, transparent);
+    }
+
+    .admin-assignee-chip input:checked + span::before {
+      content: "✓";
+      font-weight: 800;
+    }
+
+    .admin-assignee-chip input:focus-visible + span {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+
     .admin-todo-remove-btn {
       display: inline-flex;
       align-items: center;

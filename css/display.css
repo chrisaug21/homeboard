@@ -485,25 +485,19 @@
       border-left-color: #fb7185;
       box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.08);
     }
-    html[data-scheme="dark"] .todo-assignee--other {
-      background: rgba(255, 255, 255, 0.1);
+    html[data-scheme="dark"] .todo-assignee-name--plain,
+    html[data-scheme="dark"] .todo-due-text--future,
+    html[data-scheme="dark"] .todo-due-text--plain {
       color: #e7ddd5;
     }
-    html[data-scheme="dark"] .todo-due-pill--overdue {
-      background: rgba(251, 113, 133, 0.18);
-      color: #fecdd3;
+    html[data-scheme="dark"] .todo-due-text--overdue {
+      color: #fda4af;
     }
-    html[data-scheme="dark"] .todo-due-pill--today {
-      background: rgba(34, 197, 94, 0.18);
-      color: #bbf7d0;
+    html[data-scheme="dark"] .todo-due-text--today {
+      color: #86efac;
     }
-    html[data-scheme="dark"] .todo-due-pill--soon {
-      background: rgba(251, 146, 60, 0.18);
-      color: #fed7aa;
-    }
-    html[data-scheme="dark"] .todo-due-pill--future {
-      background: rgba(255, 255, 255, 0.1);
-      color: #e7ddd5;
+    html[data-scheme="dark"] .todo-due-text--soon {
+      color: #fdba74;
     }
 
     /* Meal cards */
@@ -1435,54 +1429,67 @@
       color: var(--muted);
     }
 
-    .todo-pills {
+    /* Plain-text meta line: assignee names (in member colors) then due date */
+    .todo-meta-line {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 7px;
+      align-items: baseline;
+      gap: 2px 0;
+      margin-top: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.35;
     }
 
-    /* Person-color assignee pills — distinct from status colors (no amber/green/red) */
-    .todo-assignee {
-      padding: 5px 10px;
-      border-radius: var(--tag-radius);
-      font-size: 0.88rem;
+    .todo-assignees {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+    }
+
+    .todo-assignee-name {
       font-weight: 700;
       white-space: nowrap;
     }
 
-    .todo-assignee--other {
-      background: rgba(121, 106, 94, 0.12);
+    .todo-assignee-name--plain {
       color: var(--muted);
     }
 
-    /* Urgency-coded due date pills */
-    .todo-due-pill {
-      padding: 5px 10px;
-      border-radius: var(--tag-radius);
-      font-size: 0.88rem;
-      font-weight: 700;
+    .todo-meta-sep {
+      margin: 0 6px 0 0;
+      color: var(--muted);
+    }
+
+    .todo-due-text {
       white-space: nowrap;
     }
 
-    .todo-due-pill--overdue {
-      background: rgba(190, 18, 60, 0.12);
-      color: #be123c;
+    .todo-assignees + .todo-due-text::before {
+      content: "•";
+      margin: 0 8px;
+      color: var(--muted);
+      opacity: 0.6;
+      font-weight: 400;
     }
 
-    .todo-due-pill--today {
-      background: rgba(21, 128, 61, 0.13);
+    /* Urgency-coded due date text */
+    .todo-due-text--overdue {
+      color: #be123c;
+      font-weight: 700;
+    }
+
+    .todo-due-text--today {
       color: var(--sage);
     }
 
-    .todo-due-pill--soon {
+    .todo-due-text--soon {
       /* distinctly orange — warmer and brighter than the amber used for "today" */
-      background: rgba(234, 88, 12, 0.13);
       color: #ea580c;
     }
 
-    .todo-due-pill--future {
-      background: rgba(121, 106, 94, 0.1);
+    .todo-due-text--future,
+    .todo-due-text--plain {
       color: var(--muted);
     }
 

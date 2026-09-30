@@ -147,7 +147,8 @@ netlify.toml        — build config, env var injection via sed
 - The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
 - The Settings screen sync row should keep visible spacing below its helper copy so the sync button/timestamp do not crowd the paragraph above
 - Admin tabs should use skeleton loaders that approximate the final layout while data is loading, especially on the RSVP screen
-- Todo assignee pills in both admin and display should use one shared member-color lookup helper sourced from `display_settings.members`; never duplicate the lookup logic, never hardcode per-person colors, and use the neutral fallback only when no configured color exists
+- Todo cards in both admin and display show assignees and due date as plain text (no pills) via the shared `buildTodoMetaLineHTML` / `resolveTodoAssignees` helpers in `js/shared.js`; assignee names are colored from `display_settings.members`. Never duplicate the lookup logic, never hardcode per-person colors, and use the neutral fallback only when no configured color exists
+- Todos support multiple assignees via `todos.assignee_member_ids` (uuid[]); `assignee_member_id` / `assignee` mirror the first assignee for legacy fallback. Admin picks them with multi-select chips
 - The admin to-do screen must not fail just because household settings fail; render the todo data first, then re-render for member colors if `display_settings.members` arrives afterward
 - Active incomplete todos with `due_date < today` should show the overdue treatment on both display and admin: red left border, subtle red card tint, and red overdue date-pill text
 - Todo completion celebration animations are display-view only and must fully clean up any temporary DOM they create

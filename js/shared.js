@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.6";
+    const VERSION = "2.5.7";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -396,6 +396,54 @@
         color: "",
         hasLinkedLogin: false
       };
+    }
+
+    // Returns every assignee on a to-do as [{id, name, color}], preferring the
+    // multi-assignee list and falling back to the legacy single-assignee columns.
+    function resolveTodoAssignees(members, memberIds, legacyMemberId = "", legacyName = "") {
+      const ids = Array.isArray(memberIds)
+        ? memberIds.map((id) => String(id || "").trim()).filter(Boolean)
+        : [];
+      const seen = new Set();
+      const result = [];
+
+      const addAssignee = (assignee) => {
+        if (!assignee?.name) return;
+        const key = assignee.id || assignee.name.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        result.push(assignee);
+      };
+
+      if (ids.length) {
+        ids.forEach((id) => addAssignee(resolveTodoAssignee(members, id, "")
+          || { id, name: "Former member", color: "" }));
+      } else {
+        addAssignee(resolveTodoAssignee(members, legacyMemberId, legacyName));
+      }
+
+      return result;
+    }
+
+    // Shared "Sarah · Mike   Due Tomorrow" meta line used on display + admin cards.
+    function buildTodoMetaLineHTML(assignees, duePill, dueText = "") {
+      const names = (assignees || []).map((assignee) => {
+        const color = String(assignee.color || "").trim();
+        return color
+          ? `<span class="todo-assignee-name" style="color:${escapeHtml(color)}">${escapeHtml(assignee.name)}</span>`
+          : `<span class="todo-assignee-name todo-assignee-name--plain">${escapeHtml(assignee.name)}</span>`;
+      }).join('<span class="todo-meta-sep" aria-hidden="true">,</span>');
+
+      let dueMarkup = "";
+      if (duePill) {
+        const label = duePill.label === "Overdue" ? "Overdue" : `Due ${duePill.label}`;
+        dueMarkup = `<span class="todo-due-text ${escapeHtml(duePill.cssClass)}">${escapeHtml(label)}</span>`;
+      } else if (dueText) {
+        dueMarkup = `<span class="todo-due-text todo-due-text--plain">${escapeHtml(dueText)}</span>`;
+      }
+
+      if (!names && !dueMarkup) return "";
+      return `<div class="todo-meta-line">${names ? `<span class="todo-assignees">${names}</span>` : ""}${dueMarkup}</div>`;
     }
 
     function formatLongDate(dateString) {
@@ -1537,19 +1585,19 @@
       const diff = Math.round((parsed - today) / 86400000);
 
       if (isTodoOverdue(dueDate)) {
-        return { cssClass: "todo-due-pill--overdue", label: "Overdue" };
+        return { cssClass: "todo-due-text--overdue", label: "Overdue" };
       }
       if (diff === 0) {
-        return { cssClass: "todo-due-pill--today", label: "Today" };
+        return { cssClass: "todo-due-text--today", label: "Today" };
       }
       if (diff <= 3) {
         const label = diff === 1
           ? "Tomorrow"
           : new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed);
-        return { cssClass: "todo-due-pill--soon", label };
+        return { cssClass: "todo-due-text--soon", label };
       }
       return {
-        cssClass: "todo-due-pill--future",
+        cssClass: "todo-due-text--future",
         label: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed)
       };
     }

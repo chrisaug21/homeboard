@@ -408,22 +408,6 @@
       return PERSON_COLOR_PALETTE[normalizedMembers.length % PERSON_COLOR_PALETTE.length];
     }
 
-    function buildAdminAssigneePill(name, memberId = "") {
-      const assignee = resolveTodoAssignee(getAdminHouseholdMembers(), memberId, name);
-      const memberColor = String(assignee?.color || "").trim();
-      const label = assignee?.name || String(name || "").trim() || "Unassigned";
-
-      if (!memberColor) {
-        return `<span class="admin-pill">${escapeHtml(label)}</span>`;
-      }
-
-      return `
-        <span class="admin-pill admin-pill--member" style="background:${escapeHtml(hexToRgba(memberColor, 0.16))};color:${escapeHtml(memberColor)}">
-          ${escapeHtml(label)}
-        </span>
-      `;
-    }
-
     function buildAdminRsvpReviewSkeletonHTML() {
       return Array.from({ length: 4 }, () => `
         <article class="admin-rsvp-review-row admin-skeleton-card" aria-hidden="true">

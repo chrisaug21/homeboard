@@ -541,25 +541,6 @@
       return normalizeHouseholdMembers(cachedHouseholdConfig?.display_settings?.members || []);
     }
 
-    function getAssigneeMarkup(assignee, assigneeMemberId = "") {
-      const resolvedAssignee = resolveTodoAssignee(getDisplayHouseholdMembers(), assigneeMemberId, assignee);
-      if (!resolvedAssignee?.name) {
-        return "";
-      }
-
-      const memberColor = String(resolvedAssignee.color || "").trim();
-
-      if (!memberColor) {
-        return `<span class="todo-assignee todo-assignee--other">${escapeHtml(resolvedAssignee.name)}</span>`;
-      }
-
-      return `
-        <span class="todo-assignee todo-assignee--custom" style="background:${escapeHtml(hexToRgba(memberColor, 0.16))};color:${escapeHtml(memberColor)}">
-          ${escapeHtml(resolvedAssignee.name)}
-        </span>
-      `;
-    }
-
     let displayToastTimeoutId = null;
     function showDisplayToast(message) {
       const el = document.getElementById("toast");

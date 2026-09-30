@@ -121,12 +121,69 @@
       }).format(completedDate)}`;
     }
 
-    function getAdminTodoAssigneeDisplay(todo) {
-      return resolveTodoAssignee(
+    function getAdminTodoAssignees(todo) {
+      return resolveTodoAssignees(
         getAdminHouseholdMembers(),
+        todo?.assignee_member_ids,
         todo?.assignee_member_id,
         todo?.assignee || ""
       );
+    }
+
+    // Turns the form's checked assignee chips into the columns saved on a todo.
+    // assignee / assignee_member_id mirror the first pick so older readers still work.
+    function readTodoAssigneeFieldsFromFormData(formData, existingTodo) {
+      const members = getAdminHouseholdMembers();
+      const picked = formData.getAll("assignee").map((value) => String(value || "").trim());
+      const ids = [];
+      picked.forEach((value) => {
+        if (value && value !== "__legacy__" && !ids.includes(value) && getHouseholdMemberById(members, value)) {
+          ids.push(value);
+        }
+      });
+
+      const first = ids.length ? getHouseholdMemberById(members, ids[0]) : null;
+      const keepLegacy = !ids.length && picked.includes("__legacy__");
+      return {
+        assignee_member_ids: ids,
+        assignee_member_id: first ? first.id : null,
+        assignee: first ? first.display_name : (keepLegacy ? (existingTodo?.assignee || null) : null)
+      };
+    }
+
+    function buildTodoAssigneeChipsHTML(todo) {
+      const members = getAdminHouseholdMembers();
+      const isEdit = !!todo;
+      const selectedIds = new Set(isEdit && Array.isArray(todo.assignee_member_ids) && todo.assignee_member_ids.length
+        ? todo.assignee_member_ids.map((id) => String(id))
+        : (isEdit && todo.assignee_member_id ? [String(todo.assignee_member_id)] : []));
+
+      const chip = (value, label, color, checked) => `
+        <label class="admin-assignee-chip"${color ? ` style="--chip-color:${escapeHtml(color)}"` : ""}>
+          <input type="checkbox" name="assignee" value="${escapeHtml(value)}"${checked ? " checked" : ""}>
+          <span>${escapeHtml(label)}</span>
+        </label>
+      `;
+
+      const chips = members
+        .filter((member) => member.is_active !== false || selectedIds.has(member.id))
+        .map((member) => chip(
+          member.id,
+          member.is_active === false ? `${member.display_name} (inactive)` : member.display_name,
+          member.color,
+          selectedIds.has(member.id)
+        ));
+
+      // Old free-text assignee that doesn't match any current member.
+      const legacyName = isEdit && !selectedIds.size ? String(todo.assignee || "").trim() : "";
+      if (legacyName && !getHouseholdMemberByName(members, legacyName)) {
+        chips.push(chip("__legacy__", `${legacyName} (legacy)`, "", true));
+      }
+
+      if (!chips.length) {
+        return `<p class="admin-field-hint">Add household members in Settings to assign to-dos.</p>`;
+      }
+      return `<div class="admin-assignee-chips" role="group" aria-label="Assignees">${chips.join("")}</div>`;
     }
 
     function buildArchivedTodoDetailModalHTML(todo) {
@@ -151,12 +208,12 @@
         `);
       }
 
-      const assignee = getAdminTodoAssigneeDisplay(todo);
-      if (assignee?.name) {
+      const assignees = getAdminTodoAssignees(todo);
+      if (assignees.length) {
         rows.push(`
           <div class="admin-detail-row">
-            <span class="admin-detail-label">Assignee</span>
-            <span class="admin-detail-value">${escapeHtml(assignee.name)}</span>
+            <span class="admin-detail-label">${assignees.length > 1 ? "Assignees" : "Assignee"}</span>
+            <span class="admin-detail-value">${escapeHtml(assignees.map((a) => a.name).join(", "))}</span>
           </div>
         `);
       }
@@ -232,23 +289,16 @@
 
     function renderAdminTodoCard(todo, options) {
       const title = escapeHtml(todo.title || "Untitled task");
-      const assignee = getAdminTodoAssigneeDisplay(todo);
-      const assigneeLabel = assignee?.name || "Unassigned";
+      const assignees = getAdminTodoAssignees(todo);
       const hasDescription = !!String(todo.description || "").trim();
       const overdueClass = options.showComplete && isTodoOverdue(todo.due_date)
         ? " admin-todo-card--overdue"
         : "";
 
-      // Active cards use the urgency-coded pill from display view; archived use plain date.
-      let dueMarkup = "";
-      if (options.showComplete) {
-        const duePill = getTodoDuePill(todo.due_date);
-        if (duePill) {
-          dueMarkup = `<span class="todo-due-pill ${escapeHtml(duePill.cssClass)}">${escapeHtml(duePill.label)}</span>`;
-        }
-      } else if (todo.due_date) {
-        dueMarkup = `<span class="admin-pill admin-pill--due">${escapeHtml(formatAdminTodoDate(todo.due_date))}</span>`;
-      }
+      // Active cards use urgency-coded due text; archived use the plain date.
+      const metaLine = options.showComplete
+        ? buildTodoMetaLineHTML(assignees, getTodoDuePill(todo.due_date))
+        : buildTodoMetaLineHTML(assignees, null, todo.due_date ? `Due ${formatAdminTodoDate(todo.due_date)}` : "");
 
       const completionLabel = !options.showComplete
         ? formatAdminTodoCompletionLabel(todo)
@@ -264,12 +314,7 @@
           </button>
         </div>
       ` : "";
-      const meta = `
-        <div class="admin-todo-meta">
-          ${buildAdminAssigneePill(assigneeLabel, assignee?.id || todo.assignee_member_id || "")}
-          ${dueMarkup}
-        </div>
-      `;
+      const meta = metaLine;
       const infoIcon = hasDescription
         ? `<span class="admin-todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>`
         : "";
@@ -432,20 +477,8 @@
 
       const title = String(formData.get("title") || "").trim();
       const description = String(formData.get("description") || "").trim();
-      const selectedAssigneeId = String(formData.get("assignee") || "").trim();
       const dueDate = String(formData.get("due_date") || "").trim();
-      let assigneeMemberId = null;
-      let assignee = null;
-      if (selectedAssigneeId === "") {
-        assigneeMemberId = null;
-        assignee = null;
-      } else {
-        const assigneeMember = getHouseholdMemberById(getAdminHouseholdMembers(), selectedAssigneeId);
-        if (assigneeMember) {
-          assigneeMemberId = assigneeMember.id;
-          assignee = assigneeMember.display_name;
-        }
-      }
+      const assigneeFields = readTodoAssigneeFieldsFromFormData(formData, null);
 
       if (!title || adminTodoWritePending) {
         return;
@@ -465,8 +498,7 @@
           household_id: getAdminHouseholdId(),
           title,
           description: description || null,
-          assignee_member_id: assigneeMemberId,
-          assignee: assignee || null,
+          ...assigneeFields,
           due_date: dueDate || null,
           recurrence_type: recurrenceData.recurrence_type,
           recurrence_config: recurrenceData.recurrence_config
@@ -493,20 +525,8 @@
 
       const title = String(formData.get("title") || "").trim();
       const description = String(formData.get("description") || "").trim();
-      const selectedAssigneeId = String(formData.get("assignee") || "").trim();
       const dueDate = String(formData.get("due_date") || "").trim();
-      let assigneeMemberId = null;
-      let assignee = null;
-      if (selectedAssigneeId === "") {
-        assigneeMemberId = null;
-        assignee = null;
-      } else {
-        const assigneeMember = getHouseholdMemberById(getAdminHouseholdMembers(), selectedAssigneeId);
-        if (assigneeMember) {
-          assigneeMemberId = assigneeMember.id;
-          assignee = assigneeMember.display_name;
-        }
-      }
+      const assigneeFields = readTodoAssigneeFieldsFromFormData(formData, adminTodos.find((item) => item.id === id));
 
       if (!title || adminTodoWritePending) return;
 
@@ -523,8 +543,7 @@
         .update({
           title,
           description: description || null,
-          assignee_member_id: assigneeMemberId,
-          assignee: assignee || null,
+          ...assigneeFields,
           due_date: dueDate || null,
           recurrence_type: recurrenceData.recurrence_type,
           recurrence_config: recurrenceData.recurrence_config
@@ -548,23 +567,6 @@
 
     function buildTodoFormHTML(todo) {
       const isEdit = !!todo;
-      const currentAssignee = getAdminTodoAssigneeDisplay(todo);
-      const currentAssigneeId = isEdit ? String(todo.assignee_member_id || "").trim() : "";
-      const members = getAdminHouseholdMembers();
-      const selectedMemberStillActive = currentAssigneeId && getHouseholdMemberById(members, currentAssigneeId);
-      const needsLegacyOption = isEdit && !currentAssigneeId && currentAssignee?.name && !getHouseholdMemberByName(members, currentAssignee.name);
-      const needsInactiveMemberOption = isEdit && currentAssigneeId && !selectedMemberStillActive && currentAssignee?.name;
-      const assigneeOptions = [
-        `<option value="">Unassigned</option>`,
-        ...members.map((member) => `<option value="${escapeHtml(member.id)}"${member.id === currentAssigneeId ? " selected" : ""}>${escapeHtml(member.display_name)}</option>`),
-        needsInactiveMemberOption
-          ? `<option value="${escapeHtml(currentAssigneeId)}" selected>${escapeHtml(`${currentAssignee.name} (inactive)`)}</option>`
-          : "",
-        needsLegacyOption
-          ? `<option value="__legacy__" selected>${escapeHtml(`${currentAssignee.name} (legacy)`)}</option>`
-          : ""
-      ].filter(Boolean).join("");
-
       // Recurrence pre-population
       const recurrenceEnabled = isEdit && !!todo.recurrence_type;
       const recurrenceType = (isEdit && todo.recurrence_type) || "offset";
@@ -615,14 +617,11 @@
             <label for="modal-todo-description">Notes</label>
             <textarea id="modal-todo-description" name="description" rows="3" maxlength="2000" placeholder="Add details if this task needs context...">${isEdit ? escapeHtml(todo.description || "") : ""}</textarea>
           </div>
+          <div class="admin-field">
+            <label id="modal-todo-assignee-label">Assignees</label>
+            ${buildTodoAssigneeChipsHTML(todo)}
+          </div>
           <div class="admin-form-row">
-            <div class="admin-field">
-              <label for="modal-todo-assignee">Assignee</label>
-              <select id="modal-todo-assignee" name="assignee">
-                ${assigneeOptions}
-              </select>
-              ${(needsLegacyOption || needsInactiveMemberOption) ? `<input type="hidden" name="legacy_assignee" value="${escapeHtml(currentAssignee?.name || "")}">` : ""}
-            </div>
             <div class="admin-field">
               <label for="modal-todo-due" id="modal-todo-due-label">${recurrenceEnabled ? "First due date" : "Due date"}</label>
               <input id="modal-todo-due" name="due_date" type="date"
@@ -967,6 +966,8 @@
             title: todo.title,
             description: todo.description || null,
             assignee_member_id: todo.assignee_member_id || null,
+          assignee_member_ids: todo.assignee_member_ids || [],
+            assignee_member_ids: todo.assignee_member_ids || [],
             assignee: todo.assignee || null,
             recurrence_type: todo.recurrence_type,
             recurrence_config: todo.recurrence_config,
@@ -1101,7 +1102,7 @@
 
       const { data, error } = await client
         .from("todos")
-        .select("id, title, description, assignee, assignee_member_id, due_date, archived_at, completed_at, deleted_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
+        .select("id, title, description, assignee, assignee_member_id, assignee_member_ids, due_date, archived_at, completed_at, deleted_at, created_at, recurrence_type, recurrence_config, recurrence_template_id")
         .eq("household_id", getAdminHouseholdId())
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
