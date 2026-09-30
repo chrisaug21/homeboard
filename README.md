@@ -144,6 +144,7 @@ Display screens rotate automatically using timers from `display_settings.timer_i
 - manage to-dos
 - manage weekly meals and meal notes, swap a day's meal with an adjacent day, pick previously used meal names from a typeahead, and switch between breakfast/lunch/dinner tabs when more than one meal type is enabled
 - choose which meal types (breakfast, lunch, dinner) are shown on the Meal Plan screen (Settings > Display > Meal Plan types)
+- customize meal types (Cooking, HelloFresh, Delivery, etc.): toggle the standard set on/off, add custom types, and pick an Iconify icon for any of them via search-and-select (Settings > Display > Meal types), stored in `display_settings.meal_types`
 - rename any meal type's display name across admin and display (Settings > Display > Meal Plan types > Rename meal types), stored in `display_settings.meal_slot_labels`
 - manage the saved meal name library (Settings > Meal Library) to remove typos or unwanted entries
 - manage countdowns and countdown images

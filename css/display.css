@@ -1700,6 +1700,9 @@
     }
 
     .meal-type {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       padding: 5px 10px;
       border-radius: var(--tag-radius);
       font-size: 0.72rem;
@@ -1738,6 +1741,21 @@
     .meal-type--fend-for-yourself {
       background: rgba(107, 114, 128, 0.15);
       color: #6b7280;
+    }
+
+    /* Larger than the label text. The icon's inner SVG is sized in em, so scale it via
+       font-size (width/height on the host only grow an empty box). Negative block margins
+       (-(1.45 - 1) / 2 / 1.45 em) keep its layout box at the label's 1em, so the pill height
+       and text size are unchanged. */
+    .meal-type-icon {
+      font-size: 1.45em;
+      margin-block: -0.155em;
+      flex-shrink: 0;
+    }
+
+    .meal-type--custom {
+      background: rgba(13, 148, 136, 0.15);
+      color: #0f766e;
     }
 
     .meal-type--date-night {
