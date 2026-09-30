@@ -213,7 +213,7 @@ Core tables used by Homeboard:
 | `households` | household-level settings such as assistant name, color scheme, Google Calendar ID, and `display_settings` (member data here is legacy fallback only) |
 | `household_members` | canonical list of household people, including `display_name`, `color`, and active status |
 | `users` | maps authenticated Supabase users to a household and role, and stores personal admin settings such as `display_name` and `preferences.admin_theme` |
-| `todos` | household to-dos; never hard-deleted; assignees use `assignee_member_id` with legacy text fallback in `assignee` |
+| `todos` | household to-dos; never hard-deleted; assignees use the `assignee_member_ids` uuid array (multi-assignee); `assignee_member_id` / `assignee` are kept in sync with the first assignee and used as a legacy fallback |
 | `meal_plan` | weekly meal entries |
 | `meal_plan_notes` | one note per household per week |
 | `meal_library` | saved meal names per household, each tagged with the cooking-style type last used (`meal_type`) and the meal it was saved under (`meal_slot`: breakfast/lunch/dinner), used to power the Meal Plan typeahead (filtered by both) and the Meal Library cleanup screen; independent of `meal_plan` rows so removing a name never touches past or current planned meals |
