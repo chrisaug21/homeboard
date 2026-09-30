@@ -34,6 +34,7 @@
       const ds = normalizeDisplaySettings(data.display_settings);
       ds.members = Array.isArray(data.display_settings?.members) ? data.display_settings.members : [];
       const householdMembers = normalizeHouseholdMembers(memberRows);
+      setActiveMealTypeSettings(ds.meal_types);
 
       adminHouseholdSettings = {
         assistant_name: data.assistant_name || "",
@@ -1376,6 +1377,8 @@
 
       const mealSlotRenameBtn = document.getElementById("settings-meal-slot-rename-btn");
       if (mealSlotRenameBtn) mealSlotRenameBtn.addEventListener("click", openRenameMealSlotsModal);
+
+      initMealTypeListeners();
 
       const mealLibraryBtn = document.getElementById("settings-meal-library-btn");
       if (mealLibraryBtn) mealLibraryBtn.addEventListener("click", openMealLibraryModal);
