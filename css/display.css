@@ -1743,9 +1743,12 @@
       color: #6b7280;
     }
 
+    /* Larger than the label text, but negative block margins keep its layout box at 1em
+       so the pill height and text size are unchanged. */
     .meal-type-icon {
-      width: 1em;
-      height: 1em;
+      width: 1.45em;
+      height: 1.45em;
+      margin-block: -0.225em;
       flex-shrink: 0;
     }
 
