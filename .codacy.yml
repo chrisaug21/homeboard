@@ -1,0 +1,7 @@
+---
+# Skip docs and notes; nothing to analyze.
+exclude_paths:
+  - "docs/**"
+  - "**/*.md"
+  - "Claude outputs/**"
+  - "js/vendor/**"
