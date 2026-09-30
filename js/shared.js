@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.4";
+    const VERSION = "2.5.5";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -1687,7 +1687,10 @@
       const custom = settings.custom.find((entry) => entry.key === normalizedType);
       if (custom) return { value: custom.key, label: custom.label, icon: custom.icon, className: "meal-type--custom" };
       // Removed custom type or unrecognised legacy value: keep the meal readable.
-      const readable = normalizedType.replace(new RegExp(`^${MEAL_TYPE_CUSTOM_PREFIX}`), "").split("_").filter(Boolean)
+      const unprefixed = normalizedType.startsWith(MEAL_TYPE_CUSTOM_PREFIX)
+        ? normalizedType.slice(MEAL_TYPE_CUSTOM_PREFIX.length)
+        : normalizedType;
+      const readable = unprefixed.split("_").filter(Boolean)
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
       return { value: normalizedType, label: readable || "Dinner", icon: MEAL_TYPE_FALLBACK_ICON, className: "meal-type--custom" };
     }
