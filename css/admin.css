@@ -3869,6 +3869,12 @@
       border: 1px solid rgba(124, 96, 69, 0.12);
     }
 
+    .admin-meal-type-row--input {
+      padding: 0;
+      background: none;
+      border: 0;
+    }
+
     .admin-meal-type-toggle {
       flex: 1;
       min-width: 0;

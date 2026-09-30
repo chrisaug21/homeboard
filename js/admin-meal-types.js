@@ -39,8 +39,8 @@
       }).join("");
 
       const customRows = editor.custom.map((entry) => `
-        <div class="admin-meal-type-row">
-          <input type="text" class="admin-meal-type-label-input" data-mt-custom-label="${escapeHtml(entry.key)}" maxlength="${MEAL_TYPE_CUSTOM_LABEL_MAX}" value="${escapeHtml(entry.label)}" aria-label="Custom meal type name" autocomplete="off">
+        <div class="admin-meal-type-row admin-meal-type-row--input">
+          <input type="text" class="admin-input admin-meal-type-label-input" data-mt-custom-label="${escapeHtml(entry.key)}" maxlength="${MEAL_TYPE_CUSTOM_LABEL_MAX}" value="${escapeHtml(entry.label)}" aria-label="Custom meal type name" autocomplete="off">
           ${buildMealTypeIconButtonHTML(`custom:${entry.key}`, entry.icon, entry.label)}
           <button type="button" class="admin-settings-member-remove" data-mt-remove="${escapeHtml(entry.key)}" aria-label="Remove ${escapeHtml(entry.label)}"><i data-lucide="trash-2"></i></button>
         </div>`).join("");
@@ -55,8 +55,8 @@
           <div class="admin-meal-type-list">
             ${customRows || `<p class="admin-field-hint" style="margin:0">No custom types yet.</p>`}
             ${canAdd ? `
-              <div class="admin-meal-type-row">
-                <input type="text" class="admin-meal-type-label-input" data-mt-new-label maxlength="${MEAL_TYPE_CUSTOM_LABEL_MAX}" placeholder="New type, e.g. Meal Prep" value="${escapeHtml(editor.newLabel)}" aria-label="New custom meal type name" autocomplete="off">
+              <div class="admin-meal-type-row admin-meal-type-row--input">
+                <input type="text" class="admin-input admin-meal-type-label-input" data-mt-new-label maxlength="${MEAL_TYPE_CUSTOM_LABEL_MAX}" placeholder="New type, e.g. Meal Prep" value="${escapeHtml(editor.newLabel)}" aria-label="New custom meal type name" autocomplete="off">
                 ${buildMealTypeIconButtonHTML("new", editor.newIcon, "new type")}
                 <button type="button" class="admin-button admin-button--secondary admin-button--small" data-mt-add>Add</button>
               </div>` : `<p class="admin-field-hint" style="margin:0">Custom type limit reached.</p>`}
