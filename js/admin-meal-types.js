@@ -49,7 +49,7 @@
       return `
         <form data-modal-form="meal-types" novalidate>
           <p class="admin-panel-note" style="margin-top:0">Choose which meal types appear when planning meals. Tap an icon to change it.</p>
-          <div class="admin-settings-subsection-label">Standard</div>
+          <div class="admin-settings-subsection-label">Default</div>
           <div class="admin-meal-type-list">${standardRows}</div>
           <div class="admin-settings-subsection-label">Custom</div>
           <div class="admin-meal-type-list">
