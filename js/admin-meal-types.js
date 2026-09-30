@@ -11,6 +11,13 @@
       "mdi:food-drumstick", "mdi:taco", "mdi:soup", "mdi:carrot", "mdi:glass-wine", "mdi:heart"
     ];
 
+    // Parses trusted, already-escaped markup into real nodes (scripts never run) and swaps it in,
+    // instead of assigning to innerHTML directly.
+    function setMealTypeMarkup(element, markup) {
+      const parsed = new DOMParser().parseFromString(markup, "text/html");
+      element.replaceChildren(...parsed.body.childNodes);
+    }
+
     let mealTypeEditor = null;
     let mealTypeSearchTimer = null;
     let mealTypeSearchRequestId = 0;
@@ -98,7 +105,7 @@
       if (!body || !mealTypeEditor) return;
       const picking = mealTypeEditor.view === "picker";
       if (title) title.textContent = picking ? "Choose Icon" : "Meal Types";
-      body.innerHTML = picking ? buildMealTypeIconPickerHTML() : buildMealTypeEditorListHTML();
+      setMealTypeMarkup(body, picking ? buildMealTypeIconPickerHTML() : buildMealTypeEditorListHTML());
       if (typeof refreshIcons === "function") refreshIcons();
       if (picking) {
         const search = body.querySelector("[data-mt-search]");
@@ -166,10 +173,10 @@
       const trimmed = query.trim();
       const requestId = ++mealTypeSearchRequestId;
       if (trimmed.length < 2) {
-        results.innerHTML = buildMealTypeIconResultsHTML(MEAL_TYPE_ICON_SUGGESTIONS);
+        setMealTypeMarkup(results, buildMealTypeIconResultsHTML(MEAL_TYPE_ICON_SUGGESTIONS));
         return;
       }
-      results.innerHTML = buildMealTypeIconResultsHTML([], "Searching…");
+      setMealTypeMarkup(results, buildMealTypeIconResultsHTML([], "Searching…"));
       try {
         const url = `${ICONIFY_SEARCH_URL}?query=${encodeURIComponent(trimmed)}&limit=${ICONIFY_SEARCH_LIMIT}&prefixes=${ICONIFY_SEARCH_PREFIXES}`;
         const response = await fetch(url);
@@ -177,10 +184,10 @@
         const payload = await response.json();
         if (requestId !== mealTypeSearchRequestId) return;
         const icons = (Array.isArray(payload.icons) ? payload.icons : []).map((icon) => sanitizeMealTypeIcon(icon)).filter(Boolean);
-        results.innerHTML = buildMealTypeIconResultsHTML(icons, icons.length ? "" : "No icons found. Try another word.");
+        setMealTypeMarkup(results, buildMealTypeIconResultsHTML(icons, icons.length ? "" : "No icons found. Try another word."));
       } catch {
         if (requestId !== mealTypeSearchRequestId) return;
-        results.innerHTML = buildMealTypeIconResultsHTML([], "Couldn't search icons right now. Please try again.");
+        setMealTypeMarkup(results, buildMealTypeIconResultsHTML([], "Couldn't search icons right now. Please try again."));
       }
     }
 
