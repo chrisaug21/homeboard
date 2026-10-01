@@ -223,18 +223,10 @@ When in doubt whether something needs a policy update, assume it does and ask th
 - Never hard-delete todos — always set `archived_at`
 - `meal_plan` rows with `user_id = null` are shared/household; never show personal rows (`user_id` set) on the display
 - sw.js cache prefix: `homeboard-v##`
-- VERSION BUMPS ARE REQUIRED ON EVERY SINGLE PUSH WITHOUT EXCEPTION, except a push that changes only non-shipped files (`server/`, `docs/`, or review-tool config). Shipped files are `index.html`, `signup.html`, `privacy.html`, `css/`, `js/`, `sw.js`, and the manifests. If a push touches any shipped file, the bump is required.
-- Before any push that touches shipped files, always increment `VERSION` in `js/shared.js`, update `CACHE_NAME` in `sw.js` to the exact same version, and verify both files are included in the push.
+- VERSION BUMPS ARE REQUIRED ON EVERY SINGLE PUSH WITHOUT EXCEPTION.
+- Before any push, always increment `VERSION` in `js/shared.js`, update `CACHE_NAME` in `sw.js` to the exact same version, and verify both files are included in the push.
 - If code is otherwise ready but the version has not changed yet, stop and add the version bump before pushing.
 - When pushing any change, also keep `README.md` accurate — add new tables, env vars, or screens as they are introduced.
-
-## Backend migration (in progress)
-Homeboard is being migrated off Supabase to a self-hosted backend. Before working on it, read `docs/backend-migration-spec.md` (the plan) and `docs/migration-progress.md` (current state).
-- New backend code lives in `server/`. It is never served by Netlify (the build command deletes `server/` and `docs/` before publishing).
-- Until cutover, every schema change is applied to BOTH live Supabase and the new Postgres (Drizzle migration in `server/`).
-- Migration PRs are small and merge to `main` quickly; no long-lived migration branch or worktree. Frontend changes stay behind `BACKEND=supabase` (default) vs `BACKEND=api`.
-- Update `docs/migration-progress.md` in every migration PR.
-- Phase 9 of the spec deletes the migration docs after decommission.
 
 ## Planned future work
 - **Household members → users table**: `display_settings.members` currently stores the member list. Migrate to the `users` table when multi-user auth is implemented.

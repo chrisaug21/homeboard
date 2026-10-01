@@ -1,6 +1,0 @@
-# Skip docs and notes; nothing to review.
-ignore:
-  - docs/
-  - "*.md"
-  - "Claude outputs/"
-  - js/vendor/
