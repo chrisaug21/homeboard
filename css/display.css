@@ -523,9 +523,10 @@
       border-top: 5px solid var(--time-soon-edge);
     }
 
-    /* Days 4-7: a faint lilac wash, with clearly lilac event chips. */
+    /* Days 4-7: a soft lilac cell, with a stronger lilac chip (mixed from the
+       purple edge color so it lifts off the cell in both Light and Dark). */
     .day-column--week {
-      background: color-mix(in srgb, var(--time-week) 45%, var(--card));
+      background: var(--time-week);
     }
 
     .day-column--past {
@@ -594,7 +595,7 @@
     }
 
     .day-column--week .event-card {
-      background: var(--time-week);
+      background: color-mix(in srgb, var(--time-week-edge) 30%, var(--card));
       border-color: transparent;
       border-left: 4px solid var(--time-week-edge);
     }
@@ -693,7 +694,7 @@
     }
 
     .month-day--week {
-      background: color-mix(in srgb, var(--time-week) 45%, var(--card));
+      background: var(--time-week);
     }
 
     .month-date {
@@ -741,7 +742,7 @@
     }
 
     .month-day--week .month-event {
-      background: var(--time-week);
+      background: color-mix(in srgb, var(--time-week-edge) 30%, var(--card));
     }
 
     .month-event:hover {
