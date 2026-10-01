@@ -623,17 +623,24 @@
     function renderFooterBrandLogo() {
       if (!householdNameEl) return;
 
-      const img = document.createElement("img");
-      img.className = "household-logo";
-      img.src = "homeboard_logo.svg";
-      img.alt = "Homeboard";
-      img.width = 120;
-      img.decoding = "async";
-      img.onerror = () => {
-        renderFooterBrandText("Homeboard");
+      // Two files, one per theme (CSS shows the right one); no filters needed.
+      const buildLogo = (src, themeClass, alt) => {
+        const img = document.createElement("img");
+        img.className = `brand-logo ${themeClass} household-logo`;
+        img.src = src;
+        img.alt = alt;
+        img.height = 22;
+        img.decoding = "async";
+        img.onerror = () => {
+          renderFooterBrandText("Homeboard");
+        };
+        return img;
       };
 
-      householdNameEl.replaceChildren(img);
+      householdNameEl.replaceChildren(
+        buildLogo("brand/logo.svg", "brand-logo--light", "Homeboard"),
+        buildLogo("brand/logo-on-dark.svg", "brand-logo--dark", "")
+      );
     }
 
     function updateHouseholdName(config) {
