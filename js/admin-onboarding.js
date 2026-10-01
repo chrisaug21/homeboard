@@ -35,7 +35,7 @@
       mode: "signup",
       step: 1,
       canDismiss: false,
-      selectedTheme: "warm",
+      selectedTheme: "light",
       memberRows: [],
       error: ""
     };
@@ -172,9 +172,9 @@
 
     function renderAdminOnboardingStep2() {
       const options = [
-        { value: "warm", label: "Warm" },
+        { value: "light", label: "Light" },
         { value: "dark", label: "Dark" },
-        { value: "slate", label: "Slate" }
+        { value: "auto", label: "Match device" }
       ];
 
       return `
@@ -189,7 +189,7 @@
               class="admin-onboarding-theme-card${adminOnboardingState.selectedTheme === option.value ? " is-selected" : ""}"
               type="button"
               data-onboarding-theme="${option.value}"
-              data-theme="${option.value}"
+              data-swatch="${option.value}"
               role="radio"
               aria-checked="${adminOnboardingState.selectedTheme === option.value ? "true" : "false"}"
             >
@@ -298,7 +298,7 @@
       const initialTheme = normalizeAdminTheme(
         adminCurrentUser?.preferences?.admin_theme
           || adminHouseholdSettings?.color_scheme
-          || "warm"
+          || "light"
       );
       adminOnboardingState = {
         isOpen: true,

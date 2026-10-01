@@ -13,9 +13,8 @@
     gtag('config', 'G-CCSFWZBLDH');
   </script>
   <title>Homeboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=Righteous&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css?v=2.5.9">
+  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.9">
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -30,6 +29,9 @@
         return;
       }
       document.documentElement.setAttribute("data-mode", mode);
+      if (mode === "marketing") {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
       if (mode === "admin" || mode === "display") {
         var manifestLink = document.createElement("link");
         manifestLink.rel = "manifest";
@@ -47,50 +49,21 @@
   <style>
     :root {
       color-scheme: light;
-      --bg: #f5f0e8;
-      --bg-soft: #fbf7f1;
-      --panel: rgba(255, 252, 246, 0.86);
-      --panel-strong: rgba(255, 250, 242, 0.96);
-      --ink: #30261d;
-      --muted: #796a5e;
-      --border: rgba(124, 96, 69, 0.18);
-      /* Legacy color tokens — being migrated to --color-accent and --color-accent-subtle. Do not use for new components. */
-      --amber: #b45309;
-      --amber-soft: #f7d9aa;
-      /* Semantic interaction tokens — use these for any new interactive/active states. See design token audit ticket for full migration plan. */
-      --color-accent: #b45309;
-      --color-accent-subtle: #f7d9aa;
-      --color-text-on-accent: #ffffff;
-      --sage: #15803d;
-      --sage-soft: #dcefdc;
-      --rsvp-clear: #15803d;
-      --rsvp-flagged: #b45309;
-      --rsvp-pending-bg: rgba(191, 219, 254, 0.42);
-      --rsvp-review-bg-clear: rgba(220, 239, 220, 0.72);
-      --rsvp-review-bg-flagged: rgba(247, 217, 170, 0.45);
-      --rsvp-attending-pill-bg: rgba(21, 128, 61, 0.16);
-      --rsvp-attending-pill-color: #15803d;
-      --rsvp-undercount-pill-bg: rgba(245, 158, 11, 0.18);
-      --rsvp-undercount-pill-color: #b45309;
-      --rose: #a64c63;
-      --rose-soft: #f8dce3;
-      --shadow: 0 18px 44px rgba(98, 73, 46, 0.12);
-      --radius-lg: 28px;
-      --radius-md: 22px;
-      --radius-sm: 16px;
-      --button-radius: 8px;
-      --tag-radius: 12px;
+      --screen-gap: 28px;
       --display-nav-button-width: 60px;
       --display-nav-button-active-width: 72px;
       --display-nav-button-height: 38px;
       --display-nav-button-gap: 12px;
-      --display-nav-icon-size: 24px;
-      --display-nav-active-bg: var(--color-accent);
-      --display-nav-active-border: transparent;
-      --header-height: 72px;
-      --footer-height: 34px;
-      --screen-gap: 28px;
-      --transition: 560ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme="light"]) {
+        color-scheme: dark;
+      }
     }
 
     * {
@@ -105,7 +78,7 @@
       overflow: hidden;
       background: var(--bg);
       color: var(--ink);
-      font-family: "Manrope", sans-serif;
+      font-family: var(--font-ui);
     }
 
     body {
@@ -142,16 +115,16 @@
     }
 
     .marketing-shell {
-      --marketing-bg: #F5F0E8;
-      --marketing-surface: #FFFDF7;
-      --marketing-text: #1C1917;
-      --marketing-accent: #B45309;
-      --marketing-accent-soft: rgba(180, 83, 9, 0.12);
-      --marketing-secondary: #15803D;
-      --marketing-secondary-soft: rgba(21, 128, 61, 0.12);
-      --marketing-muted: #78716C;
-      --marketing-border: rgba(28, 25, 23, 0.10);
-      --marketing-shadow: 0 24px 60px rgba(28, 25, 23, 0.08);
+      --marketing-bg: var(--bg);
+      --marketing-surface: var(--surface);
+      --marketing-text: var(--ink);
+      --marketing-accent: var(--primary);
+      --marketing-accent-soft: var(--card-sunken);
+      --marketing-secondary: var(--brand-fern);
+      --marketing-secondary-soft: var(--time-soon);
+      --marketing-muted: var(--muted);
+      --marketing-border: var(--border);
+      --marketing-shadow: var(--shadow);
       position: relative;
       min-height: 100dvh;
       padding: 32px 20px 40px;
@@ -220,7 +193,7 @@
 
     .marketing-hero-copy h1 {
       margin: 0;
-      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      font-family: var(--font-display);
       font-size: clamp(2.75rem, 4.2vw, 4.2rem);
       line-height: 1.02;
       letter-spacing: -0.05em;
@@ -551,14 +524,14 @@
     }
 
     .marketing-countdown-title {
-      font-family: "Fraunces", serif;
+      font-family: var(--font-display);
       font-size: clamp(0.92rem, 1.2vw, 1.1rem);
       line-height: 1.1;
       white-space: nowrap;
     }
 
     .marketing-countdown-number {
-      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      font-family: var(--font-display);
       font-size: clamp(2.7rem, 4.6vw, 3.5rem);
       line-height: 0.9;
       letter-spacing: -0.05em;
@@ -592,7 +565,7 @@
     .marketing-cta-copy {
       max-width: 620px;
       color: #FFFDF7;
-      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      font-family: var(--font-display);
       font-size: clamp(1.6rem, 3vw, 2.3rem);
       line-height: 1.08;
       letter-spacing: -0.04em;
@@ -1372,9 +1345,9 @@
               <label>Display color scheme</label>
               <div class="admin-settings-scheme-list" id="settings-color-scheme">
                 <label class="admin-settings-scheme-option">
-                  <input type="radio" name="color_scheme" value="warm">
-                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--warm"></span>
-                  <span>Warm</span>
+                  <input type="radio" name="color_scheme" value="light">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--light"></span>
+                  <span>Light</span>
                 </label>
                 <label class="admin-settings-scheme-option">
                   <input type="radio" name="color_scheme" value="dark">
@@ -1382,9 +1355,9 @@
                   <span>Dark</span>
                 </label>
                 <label class="admin-settings-scheme-option">
-                  <input type="radio" name="color_scheme" value="slate">
-                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--slate"></span>
-                  <span>Slate</span>
+                  <input type="radio" name="color_scheme" value="auto">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--auto"></span>
+                  <span>Match device</span>
                 </label>
               </div>
             </div>
@@ -1499,9 +1472,9 @@
               <p class="admin-field-hint">This only changes the look of your admin app.</p>
               <div class="admin-settings-scheme-list" id="settings-admin-theme">
                 <label class="admin-settings-scheme-option">
-                  <input type="radio" name="admin_theme" value="warm">
-                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--warm"></span>
-                  <span>Warm</span>
+                  <input type="radio" name="admin_theme" value="light">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--light"></span>
+                  <span>Light</span>
                 </label>
                 <label class="admin-settings-scheme-option">
                   <input type="radio" name="admin_theme" value="dark">
@@ -1509,9 +1482,9 @@
                   <span>Dark</span>
                 </label>
                 <label class="admin-settings-scheme-option">
-                  <input type="radio" name="admin_theme" value="slate">
-                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--slate"></span>
-                  <span>Slate</span>
+                  <input type="radio" name="admin_theme" value="auto">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--auto"></span>
+                  <span>Match device</span>
                 </label>
               </div>
             </div>
