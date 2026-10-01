@@ -152,7 +152,7 @@
         leaders,
         isTie,
         heroLabel: isTie ? "It's a tie!" : `${leaders[0] || session?.winner || "Winner"} wins!`,
-        accentColor: accentPlayer?.color || "var(--color-accent)"
+        accentColor: accentPlayer?.color || "var(--primary)"
       };
     }
 

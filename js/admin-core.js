@@ -498,7 +498,7 @@
       if (!input) return;
       clearFieldError(input);
       input.setAttribute("aria-invalid", "true");
-      input.style.borderColor = "var(--rose)";
+      input.style.borderColor = "var(--danger)";
       const field = input.closest(".admin-field");
       if (!field) return;
       const errorEl = document.createElement("div");
@@ -924,7 +924,7 @@
         if (!todoTitle) {
           const titleInput = form.querySelector("[name='title']");
           if (titleInput) {
-            titleInput.style.borderColor = "var(--rose)";
+            titleInput.style.borderColor = "var(--danger)";
             titleInput.focus();
             titleInput.addEventListener("input", () => { titleInput.style.borderColor = ""; }, { once: true });
           }
