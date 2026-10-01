@@ -3,23 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#F5F0E8">
+  <meta name="theme-color" content="#f6f5f0">
   <title>Homeboard Privacy Policy</title>
   <meta name="description" content="How Homeboard collects, uses, and protects your information, including optional Google Calendar access.">
-  <link rel="icon" type="image/svg+xml" href="homeboard-brandmark-favicon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="brand/app-icon.svg">
+  <link rel="stylesheet" href="css/tokens.css?v=2.5.30">
   <style>
     :root {
-      --bg: #f5f0e8;
-      --ink: #30261d;
-      --muted: #796a5e;
-      --border: rgba(124, 96, 69, 0.18);
-      --panel: rgba(255, 252, 246, 0.86);
-      --color-accent: #b45309;
+      --panel: var(--surface);
       --radius-lg: 28px;
-      --shadow: 0 18px 44px rgba(98, 73, 46, 0.12);
+    }
+
+    img.brand-logo--dark { display: none; }
+    @media (prefers-color-scheme: dark) {
+      img.brand-logo--light { display: none; }
+      img.brand-logo--dark { display: block; }
     }
 
     * {
@@ -32,15 +30,8 @@
       min-height: 100%;
       background: var(--bg);
       color: var(--ink);
-      font-family: "Manrope", sans-serif;
+      font-family: var(--font-ui);
       line-height: 1.65;
-    }
-
-    body {
-      background-image:
-        radial-gradient(circle at top left, rgba(244, 196, 125, 0.26), transparent 28%),
-        radial-gradient(circle at top right, rgba(21, 128, 61, 0.12), transparent 30%),
-        linear-gradient(135deg, #f8f4ed 0%, #f5f0e8 44%, #efe7db 100%);
     }
 
     .privacy-page {
@@ -66,7 +57,7 @@
 
     h1,
     h2 {
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-family: var(--font-display);
       line-height: 1.2;
       margin: 0;
     }
@@ -101,7 +92,7 @@
     }
 
     a {
-      color: var(--color-accent);
+      color: var(--primary);
       font-weight: 700;
     }
 
@@ -119,11 +110,11 @@
 </head>
 <body>
   <main class="privacy-page">
-    <a href="/"><img class="privacy-logo" src="homeboard_logo.svg" alt="Homeboard" width="140" decoding="async"></a>
+    <a href="/"><img class="brand-logo brand-logo--light privacy-logo" src="brand/logo.svg" alt="Homeboard" width="140" decoding="async"><img class="brand-logo brand-logo--dark privacy-logo" src="brand/logo-on-dark.svg" alt="" width="140" decoding="async"></a>
 
     <article class="privacy-card">
       <h1>Privacy Policy</h1>
-      <p class="privacy-updated">Last updated: September 29, 2026</p>
+      <p class="privacy-updated">Last updated: October 1, 2026</p>
 
       <p>Homeboard is a household command center: a wall-mounted display for your calendar, to-dos, meals, and countdowns, managed from your phone. This page explains what information Homeboard handles and what we do with it. The short version: we only use your information to run Homeboard for your household, and we never sell it.</p>
 
@@ -132,7 +123,7 @@
         <li><strong>Account details.</strong> Your email address and the display name you choose when you sign up.</li>
         <li><strong>Household content you add.</strong> To-dos, meal plans, countdowns, scorecards, household member names and colors, and display settings.</li>
         <li><strong>Google Calendar access (optional).</strong> If you choose to connect a Google account, we receive your Google account email address and read-only access to the calendars you allow. See the section below.</li>
-        <li><strong>Basic usage data.</strong> Homeboard uses Google Analytics to measure how the site and app are used. Like most websites, the fonts and code libraries Homeboard loads come from Google Fonts and a public content delivery network (jsDelivr), which can see your IP address when your browser requests them.</li>
+        <li><strong>Basic usage data.</strong> Homeboard uses Google Analytics to measure how the site and app are used. Like most websites, some of the code libraries Homeboard loads come from a public content delivery network (jsDelivr), which can see your IP address when your browser requests them. Homeboard's fonts are hosted by Homeboard itself, not loaded from Google Fonts.</li>
       </ul>
 
       <h2>How we use Google Calendar data</h2>
