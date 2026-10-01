@@ -95,6 +95,7 @@
         .map((party) => ({
           name: party.linkedRsvp.name,
           guestCount: Math.min(party.linkedRsvp.guestCount, party.invitedCount),
+          invitedCount: party.invitedCount,
           isUnderCount: party.linkedRsvp.guestCount < party.invitedCount,
           createdAt: party.linkedRsvp.createdAt || null
         }))
@@ -138,7 +139,7 @@
       list.innerHTML = attendingRows.map((row) => `
         <div class="name-pill name-pill--attending${row.isUnderCount ? " name-pill--undercount" : ""}">
           <span class="name-pill-label">${escapeHtml(row.name)}</span>
-          <span class="name-status">${escapeHtml(formatGuestCountLabel(row.guestCount))}</span>
+          <span class="name-status">${escapeHtml(row.isUnderCount ? `\u26A0 ${row.guestCount} of ${row.invitedCount}` : formatGuestCountLabel(row.guestCount))}</span>
         </div>
       `).join("");
 
