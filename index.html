@@ -14,8 +14,8 @@
   </script>
   <title>Homeboard</title>
   <link rel="icon" type="image/svg+xml" href="/brand/app-icon.svg">
-  <link rel="stylesheet" href="css/tokens.css?v=2.5.30">
-  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.30">
+  <link rel="stylesheet" href="css/tokens.css?v=2.5.31">
+  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.31">
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -30,9 +30,6 @@
         return;
       }
       document.documentElement.setAttribute("data-mode", mode);
-      if (mode === "marketing") {
-        document.documentElement.setAttribute("data-theme", "light");
-      }
       if (mode === "admin" || mode === "display") {
         var manifestLink = document.createElement("link");
         manifestLink.rel = "manifest";
@@ -148,12 +145,7 @@
       align-items: center;
       gap: 14px;
       width: fit-content;
-      padding: 12px 16px;
-      background: color-mix(in srgb, var(--surface) 72%, transparent);
-      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
-      border-radius: 999px;
-      box-shadow: 0 10px 24px color-mix(in srgb, var(--ink) 5%, transparent);
-      backdrop-filter: blur(10px);
+      padding: 4px 0;
     }
 
     .marketing-brand img {
@@ -646,8 +638,8 @@
     }
 
   </style>
-  <link rel="stylesheet" href="css/display.css?v=2.5.30">
-  <link rel="stylesheet" href="css/admin.css?v=2.5.30">
+  <link rel="stylesheet" href="css/display.css?v=2.5.31">
+  <link rel="stylesheet" href="css/admin.css?v=2.5.31">
   <link rel="stylesheet" href="js/vendor/cropper.min.css">
 </head>
 <body>
