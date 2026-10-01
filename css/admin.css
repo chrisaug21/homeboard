@@ -875,11 +875,6 @@
       --person: currentColor;
     }
 
-    /* No bullet between the people and the date. */
-    .admin-todo-card .todo-assignees + .todo-due-text::before {
-      content: none;
-    }
-
     /* Active cards: checkbox on the left, body on the right */
     .admin-todo-card--active {
       display: grid;

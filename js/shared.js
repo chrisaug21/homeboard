@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.28";
+    const VERSION = "2.5.29";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -1703,7 +1703,7 @@
       const people = (assignees || []).map((assignee) => {
         const token = resolvePersonColorToken(assignee.color);
         const style = token ? ` style="--person-color: var(--${token})"` : "";
-        return `<span class="todo-person"${style}><span class="todo-person-dot" aria-hidden="true"></span><span class="todo-person-name">${escapeHtml(assignee.name)}</span></span>`;
+        return `<span class="todo-person"${style}><span class="todo-person-name">${escapeHtml(assignee.name)}</span></span>`;
       }).join("");
 
       const due = dueInfo

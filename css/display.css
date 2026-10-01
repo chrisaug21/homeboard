@@ -394,7 +394,7 @@
     }
 
     .cal-nav-btn {
-      background: rgba(255, 250, 243, 0.88);
+      background: var(--card-sunken);
       border: 1px solid var(--border);
       border-radius: 999px;
       padding: 5px 10px;
@@ -413,8 +413,8 @@
 
     .cal-nav-btn:hover,
     .cal-nav-btn:focus-visible {
-      background: var(--amber-soft);
-      color: var(--amber);
+      background: var(--primary);
+      color: var(--on-primary);
       outline: none;
     }
 
@@ -1192,29 +1192,29 @@
       color: var(--muted);
     }
 
-    /* Display to-do meta: person dot + name, then tier-colored due text. */
+    /* To-do meta: names in person colors, comma-separated, then a bullet and the tier-colored due text. */
     .todo-person {
       --person: var(--person-color, var(--muted));
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-right: 12px;
       font-weight: 700;
       color: var(--person);
       white-space: nowrap;
     }
 
-    .todo-person-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--person);
-      flex-shrink: 0;
+    .todo-person:not(:last-child)::after {
+      content: ",";
+      margin-right: 0.3em;
     }
 
     .todo-card--overdue .todo-person,
     .todo-card--today .todo-person {
       --person: currentColor;
+    }
+
+    .todo-card--overdue .todo-assignees + .todo-due-text::before,
+    .todo-card--today .todo-assignees + .todo-due-text::before,
+    .admin-todo-card--overdue .todo-assignees + .todo-due-text::before,
+    .admin-todo-card--today .todo-assignees + .todo-due-text::before {
+      color: currentColor;
     }
 
     .todo-card .todo-due-text {
@@ -1239,10 +1239,6 @@
       color: inherit;
     }
 
-    /* The legacy bullet separator before due text isn't used with person dots. */
-    .todo-card .todo-assignees + .todo-due-text::before {
-      content: none;
-    }
 
     .todo-detail-text {
       font-size: 1rem;
