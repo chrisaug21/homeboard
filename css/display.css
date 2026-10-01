@@ -546,7 +546,8 @@
       border-bottom-color: color-mix(in srgb, var(--on-time-today) 22%, transparent);
     }
 
-    .day-today-tag {
+    .day-today-tag,
+    .meal-today-tag {
       flex-shrink: 0;
       padding: 3px 8px;
       border-radius: var(--tag-radius);
@@ -1419,8 +1420,10 @@
     .meal-card {
       padding: 12px 10px;
       border-radius: var(--radius-md);
-      background: color-mix(in srgb, var(--card) 56%, transparent);
+      background: var(--card);
+      color: var(--ink);
       border: 1px solid var(--border);
+      border-left: var(--time-edge) solid transparent;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1430,9 +1433,20 @@
       overflow: hidden;
     }
 
+    /* Time scale: tonight solid marigold, next 3 days soft sage with an edge. */
     .meal-card.today {
-      background: var(--card-sunken);
-      border-color: color-mix(in srgb, var(--primary) 22%, transparent);
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .meal-card--soon {
+      background: var(--time-soon);
+      border-left-color: var(--time-soon-edge);
+    }
+
+    .meal-card--past {
+      opacity: 0.7;
     }
 
     .meal-day {
@@ -1441,6 +1455,22 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--muted);
+    }
+
+    .meal-card.today .meal-day {
+      color: inherit;
+    }
+
+    .meal-today-tag {
+      margin-left: 8px;
+      padding: 3px 8px;
+      border-radius: var(--tag-radius);
+      background: var(--on-time-today);
+      color: var(--time-today);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      line-height: 1;
+      vertical-align: middle;
     }
 
     .meal-name {
@@ -1452,52 +1482,30 @@
       display: -webkit-box;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
-      color: var(--ink);
+      color: inherit;
       padding: 4px 0;
     }
 
+    /* Meal type is an icon + a word in the card's tier color, not a colored pill. */
     .meal-type {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 5px 10px;
-      border-radius: var(--tag-radius);
-      font-size: 0.72rem;
+      gap: 6px;
+      font-size: 0.78rem;
       font-weight: 800;
+      color: var(--muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 100%;
     }
 
-    .meal-type--cooking {
-      background: color-mix(in srgb, var(--primary) 15%, transparent);
-      color: #b45309;
+    .meal-card--soon .meal-type {
+      color: var(--time-soon-fg);
     }
 
-    .meal-type--hellofresh {
-      background: color-mix(in srgb, var(--success) 15%, transparent);
-      color: #15803d;
-    }
-
-    .meal-type--going-out {
-      background: rgba(79, 70, 229, 0.15);
-      color: #4338ca;
-    }
-
-    .meal-type--delivery {
-      background: rgba(234, 88, 12, 0.15);
-      color: #ea580c;
-    }
-
-    .meal-type--pick-up {
-      background: rgba(217, 119, 6, 0.15);
-      color: #d97706;
-    }
-
-    .meal-type--fend-for-yourself {
-      background: rgba(107, 114, 128, 0.15);
-      color: #6b7280;
+    .meal-card.today .meal-type {
+      color: inherit;
     }
 
     /* Larger than the label text. The icon's inner SVG is sized in em, so scale it via
@@ -1510,20 +1518,11 @@
       flex-shrink: 0;
     }
 
-    .meal-type--custom {
-      background: color-mix(in srgb, var(--success) 15%, transparent);
-      color: #0f766e;
-    }
-
-    .meal-type--date-night {
-      background: rgba(190, 24, 93, 0.15);
-      color: #be185d;
-    }
-
     .meal-note-card {
-      border-radius: var(--tag-radius);
-      background: var(--card-sunken);
-      border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+      border-radius: var(--radius-md);
+      background: var(--time-week);
+      border: 1px solid var(--border);
+      border-left: var(--time-edge) solid var(--time-week-edge);
       padding: 12px 12px 10px;
       display: flex;
       flex-direction: column;
@@ -1543,7 +1542,7 @@
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: var(--amber);
+      color: var(--time-week-fg);
     }
 
     .meal-note-card--empty .meal-note-label {

@@ -88,11 +88,22 @@
         const mealType = meal ? getMealTypePresentation(meal.type) : null;
         const mealName = meal ? meal.name : "—";
 
+        // Time scale: today solid marigold ("Tonight" for dinner), next 3 days
+        // soft sage, past days dim. Meal type is an icon + word in the tier's color.
+        const tier = getTimeTier(formatDateKey(date));
+        const tierClass = isToday ? " today"
+          : tier === "soon" ? " meal-card--soon"
+          : tier === "overdue" ? " meal-card--past"
+          : "";
+        const todayTag = isToday
+          ? `<span class="meal-today-tag">${slot === "dinner" ? "Tonight" : "Today"}</span>`
+          : "";
+
         return `
-          <article class="meal-card${isToday ? " today" : ""}">
-            <div class="meal-day">${escapeHtml(formatCalendarLabel(date))}</div>
+          <article class="meal-card${tierClass}">
+            <div class="meal-day">${escapeHtml(formatCalendarLabel(date))}${todayTag}</div>
             <div class="meal-name">${escapeHtml(mealName)}</div>
-            <div class="meal-type ${mealType ? mealType.className : "meal-type--fend-for-yourself"}">${mealType ? buildMealTypeLabelHTML(mealType) : "Open"}</div>
+            <div class="meal-type">${mealType ? buildMealTypeLabelHTML(mealType) : "Open"}</div>
           </article>
         `;
       });
