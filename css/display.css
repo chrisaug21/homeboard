@@ -503,25 +503,64 @@
       min-width: 0;
       padding: 16px 14px 14px;
       border-radius: var(--radius-md);
-      background: color-mix(in srgb, var(--card) 52%, transparent);
+      background: var(--card);
+      color: var(--ink);
       border: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       gap: 14px;
     }
 
+    /* Time scale: today solid marigold, next 3 days soft sage with a top edge. */
     .day-column.today {
-      background: var(--card-sunken);
-      border-color: color-mix(in srgb, var(--primary) 22%, transparent);
-      box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .day-column--soon {
+      background: var(--time-soon);
+      border-top: 5px solid var(--time-soon-edge);
+    }
+
+    /* Days 4-7: a soft lilac cell, with a stronger lilac chip (mixed from the
+       purple edge color so it lifts off the cell in both Light and Dark). */
+    .day-column--week {
+      background: var(--time-week);
+    }
+
+    .day-column--past {
+      opacity: 0.7;
     }
 
     .day-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
       padding-bottom: 10px;
       border-bottom: 1px solid var(--border);
     }
 
+    .day-column.today .day-header {
+      border-bottom-color: color-mix(in srgb, var(--on-time-today) 22%, transparent);
+    }
+
+    .day-today-tag {
+      flex-shrink: 0;
+      padding: 3px 8px;
+      border-radius: var(--tag-radius);
+      background: var(--on-time-today);
+      color: var(--time-today);
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
     .day-name {
+      min-width: 0;
       font-size: 1.12rem;
       font-weight: 800;
       white-space: nowrap;
@@ -540,9 +579,31 @@
     .event-card {
       padding: 12px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 250, 243, 0.94);
+      background: var(--card-sunken);
       border: 1px solid var(--border);
       min-height: 88px;
+    }
+
+    .day-column.today .event-card {
+      background: rgba(255, 255, 255, 0.55);
+      border-color: transparent;
+    }
+
+    .day-column--soon .event-card {
+      background: color-mix(in srgb, var(--time-soon-edge) 30%, var(--time-soon));
+      border-color: transparent;
+    }
+
+    .day-column--week .event-card {
+      background: color-mix(in srgb, var(--time-week-edge) 30%, var(--card));
+      border-color: transparent;
+      border-left: 4px solid var(--time-week-edge);
+    }
+
+    .day-column.today .event-time,
+    .day-column.today .event-empty {
+      color: var(--on-time-today);
+      opacity: 0.75;
     }
 
     .event-time {
@@ -605,7 +666,7 @@
       min-height: 0;
       padding: 8px 10px;
       border-radius: 16px;
-      background: color-mix(in srgb, var(--card) 56%, transparent);
+      background: var(--card);
       border: 1px solid var(--border);
       display: flex;
       flex-direction: column;
@@ -614,19 +675,32 @@
     }
 
     .month-day--outside {
-      opacity: 0.48;
+      opacity: 0.45;
+    }
+
+    .month-day--past {
+      opacity: 0.7;
     }
 
     .month-day--today {
-      background: var(--card-sunken);
-      border-color: color-mix(in srgb, var(--primary) 22%, transparent);
-      box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .month-day--soon {
+      background: var(--time-soon);
+      border-top: 5px solid var(--time-soon-edge);
+    }
+
+    .month-day--week {
+      background: var(--time-week);
     }
 
     .month-date {
       font-size: 0.88rem;
       font-weight: 800;
-      color: var(--ink);
+      color: inherit;
       line-height: 1;
     }
 
@@ -640,7 +714,7 @@
     .month-event {
       padding: 2px 4px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 250, 243, 0.96);
+      background: var(--card-sunken);
       font-size: 0.7rem;
       line-height: 1.15;
       color: var(--ink);
@@ -658,17 +732,34 @@
       overflow-wrap: anywhere;
     }
 
+    .month-day--today .month-event {
+      background: rgba(255, 255, 255, 0.55);
+      color: var(--on-time-today);
+    }
+
+    .month-day--soon .month-event {
+      background: color-mix(in srgb, var(--time-soon-edge) 30%, var(--time-soon));
+    }
+
+    .month-day--week .month-event {
+      background: color-mix(in srgb, var(--time-week-edge) 30%, var(--card));
+    }
+
     .month-event:hover {
-      background: color-mix(in srgb, var(--primary) 14%, transparent);
+      background: color-mix(in srgb, var(--ink) 10%, var(--card-sunken));
+    }
+
+    .month-day--today .month-event:hover {
+      background: rgba(255, 255, 255, 0.8);
     }
 
     .month-more-pill {
       padding: 2px 6px;
       border-radius: var(--tag-radius);
-      background: color-mix(in srgb, var(--primary) 10%, transparent);
+      background: var(--time-today);
       font-size: 0.65rem;
       font-weight: 800;
-      color: var(--amber);
+      color: var(--on-time-today);
       cursor: pointer;
       white-space: nowrap;
       align-self: flex-start;
@@ -676,7 +767,13 @@
     }
 
     .month-more-pill:hover {
-      background: color-mix(in srgb, var(--primary) 20%, transparent);
+      filter: brightness(0.95);
+    }
+
+    /* Never two yellows side by side: on today's marigold cell, flip the pill. */
+    .month-day--today .month-more-pill {
+      background: var(--on-time-today);
+      color: var(--time-today);
     }
 
     .event-card[role="button"] {
@@ -685,7 +782,7 @@
     }
 
     .event-card[role="button"]:hover {
-      background: var(--card-sunken);
+      filter: brightness(0.96);
     }
 
     /* ── Display-mode modals ── */

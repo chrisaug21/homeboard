@@ -126,8 +126,16 @@
         const events = calendarEventsMap.get(formatDateKey(date)) || [];
         const dateKey = formatDateKey(date);
 
+        // Time scale: today is solid marigold, the next 3 days are soft sage,
+        // days 4-7 get a faint lilac tint with lilac event chips, past days dim.
+        const tier = getTimeTier(dateKey);
+        const isToday = date.toDateString() === todayKey;
         const column = document.createElement("article");
-        column.className = "day-column" + (date.toDateString() === todayKey ? " today" : "");
+        column.className = "day-column"
+          + (isToday ? " today" : "")
+          + (tier === "soon" ? " day-column--soon" : "")
+          + (tier === "week" ? " day-column--week" : "")
+          + (tier === "overdue" ? " day-column--past" : "");
 
         const eventsMarkup = events.length
           ? events.map((event) => `
@@ -147,6 +155,7 @@
         column.innerHTML = `
           <div class="day-header">
             <div class="day-name">${formatCalendarLabel(date)}</div>
+            ${isToday ? '<span class="day-today-tag">Today</span>' : ""}
           </div>
           <div class="event-list">${eventsMarkup}</div>
         `;
@@ -197,14 +206,38 @@
       return { maxFull, maxWithPill };
     }
 
+    // Days from today through 7 days ahead carry the time-scale colors. That
+    // window can spill into the neighbouring month's cells (a partial week), so
+    // those cells are filled in and colored too, instead of staying faded/empty.
+    function isMonthCellInColorWindow(dateKey) {
+      const tier = getTimeTier(dateKey);
+      return tier === "today" || tier === "soon" || tier === "week";
+    }
+
+    // Month cells use the time scale too: today solid marigold, next 3 days
+    // soft sage, days 4-7 faint lilac, past days dimmed, other-month days outside
+    // the window faded further.
+    function getMonthDayClasses(dateKey, isToday, isOutsideMonth) {
+      const tier = getTimeTier(dateKey);
+      const inWindow = isMonthCellInColorWindow(dateKey);
+      const isFaded = isOutsideMonth && !inWindow;
+      return "month-day"
+        + (isToday ? " month-day--today" : "")
+        + (tier === "soon" ? " month-day--soon" : "")
+        + (tier === "week" ? " month-day--week" : "")
+        + (!isOutsideMonth && tier === "overdue" ? " month-day--past" : "")
+        + (isFaded ? " month-day--outside" : "");
+    }
+
     function renderMonthCalendarCells(monthGridEl, displayedMonth, start, cellsNeeded, capacity, today) {
       const cells = Array.from({ length: cellsNeeded }, (_, index) => {
         const date = new Date(start);
         date.setDate(start.getDate() + index);
         const isToday = date.toDateString() === today.toDateString();
         const isOutsideMonth = date.getMonth() !== displayedMonth.getMonth();
-        const allEvents = isOutsideMonth ? [] : (calendarEventsMap.get(formatDateKey(date)) || []);
         const dateKey = formatDateKey(date);
+        const showEvents = !isOutsideMonth || isMonthCellInColorWindow(dateKey);
+        const allEvents = showEvents ? (calendarEventsMap.get(dateKey) || []) : [];
 
         // Determine how many events to show
         const hasOverflow = allEvents.length > capacity.maxFull;
@@ -231,7 +264,7 @@
           : "";
 
         return `
-          <article class="month-day${isToday ? " month-day--today" : ""}${isOutsideMonth ? " month-day--outside" : ""}">
+          <article class="${getMonthDayClasses(dateKey, isToday, isOutsideMonth)}">
             <div class="month-date">${date.getDate()}</div>
             <div class="month-events">${eventChips}${overflowPill}</div>
           </article>
@@ -263,7 +296,7 @@
         date.setDate(start.getDate() + i);
         const isToday = date.toDateString() === today.toDateString();
         const isOutside = date.getMonth() !== displayedMonth.getMonth();
-        return `<article class="month-day${isToday ? " month-day--today" : ""}${isOutside ? " month-day--outside" : ""}">
+        return `<article class="${getMonthDayClasses(formatDateKey(date), isToday, isOutside)}">
           <div class="month-date">${date.getDate()}</div>
           <div class="month-events"></div>
         </article>`;
