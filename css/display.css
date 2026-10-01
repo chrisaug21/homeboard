@@ -590,7 +590,7 @@
     }
 
     .day-column--soon .event-card {
-      background: var(--time-soon-chip);
+      background: color-mix(in srgb, var(--time-soon-edge) 30%, var(--time-soon));
       border-color: transparent;
     }
 
@@ -738,7 +738,7 @@
     }
 
     .month-day--soon .month-event {
-      background: var(--time-soon-chip);
+      background: color-mix(in srgb, var(--time-soon-edge) 30%, var(--time-soon));
     }
 
     .month-day--week .month-event {
