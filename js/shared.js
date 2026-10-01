@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.20";
+    const VERSION = "2.5.21";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -1657,7 +1657,9 @@
       ["person-moss", [74, 107, 42]]
     ];
 
-    function resolvePersonColorToken(color) {
+    // `limit` restricts the match to the first N person colors (scorecard
+    // players use the first six).
+    function resolvePersonColorToken(color, limit = PERSON_COLOR_TOKENS.length) {
       let hex = String(color || "").trim().replace(/^#/, "");
       if (/^[0-9a-f]{3}$/i.test(hex)) {
         hex = hex.split("").map((ch) => ch + ch).join("");
@@ -1667,7 +1669,7 @@
       const rgb = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
       let best = "";
       let bestDistance = Infinity;
-      PERSON_COLOR_TOKENS.forEach(([token, ref]) => {
+      PERSON_COLOR_TOKENS.slice(0, limit).forEach(([token, ref]) => {
         const distance = ref.reduce((sum, value, i) => sum + (value - rgb[i]) ** 2, 0);
         if (distance < bestDistance) {
           bestDistance = distance;

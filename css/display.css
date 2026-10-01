@@ -2409,7 +2409,7 @@
     .scorecard-history-item {
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      background: var(--panel);
+      background: var(--card);
       color: var(--ink);
     }
 
@@ -2419,19 +2419,49 @@
       gap: 14px;
     }
 
-    .scorecard-player-card.is-leading,
-    .scorecard-player-row.is-selected {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
+    /* The leader gets a 2px marigold border (1px border + 1px ring) and a tag. */
+    .scorecard-player-card.is-leading {
+      border-color: var(--time-today);
+      box-shadow: 0 0 0 1px var(--time-today);
     }
 
+    /* Selected row: primary border + ring, never a tinted fill. */
+    .scorecard-player-row.is-selected {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    /* Players are a dot + name in their person color. */
     .scorecard-player-name,
-    .scorecard-player-row-name {
+    .scorecard-player-row-name,
+    .scorecard-celebration-score-name {
+      --person: var(--person-color, var(--muted));
+      color: var(--person);
       font-size: 1rem;
       font-weight: 800;
       display: inline-flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .scorecard-person-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--person);
+      flex-shrink: 0;
+    }
+
+    .scorecard-leading-tag {
+      padding: 3px 8px;
+      border-radius: var(--tag-radius);
+      background: var(--time-today);
+      color: var(--on-time-today);
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .scorecard-player-score {
@@ -2452,11 +2482,13 @@
     }
 
     .scorecard-player-score.is-score-positive {
-      background: var(--sage-soft);
+      background: color-mix(in srgb, var(--success) 22%, transparent);
+      color: var(--success);
     }
 
     .scorecard-player-score.is-score-negative {
-      background: var(--rose-soft);
+      background: var(--danger-soft);
+      color: var(--danger);
     }
 
     .scorecard-button-grid,
@@ -2478,7 +2510,7 @@
       border-radius: var(--button-radius);
       border: 1px solid var(--border);
       padding: 10px 14px;
-      background: var(--panel-strong);
+      background: var(--card);
       color: var(--ink);
       font-weight: 800;
       white-space: nowrap;
@@ -2495,8 +2527,7 @@
 
     .scorecard-action-btn:hover,
     .scorecard-action-btn:focus-visible {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
+      background: var(--card-sunken);
     }
 
     .scorecard-increment-row,
@@ -2619,7 +2650,7 @@
       width: 100%;
       padding: 10px 12px;
       border-radius: 16px;
-      background: color-mix(in srgb, var(--panel-strong) 78%, transparent);
+      background: var(--card);
       color: var(--ink);
       border: 1px solid var(--border);
       font-size: 0.82rem;
@@ -2630,7 +2661,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: var(--amber);
+      color: inherit;
     }
 
     .scorecard-history-pill-icon svg {
@@ -2648,8 +2679,9 @@
     }
 
     .scorecard-history-pill.is-winner {
-      background: color-mix(in srgb, var(--amber-soft) 92%, var(--panel));
-      border-color: color-mix(in srgb, var(--amber) 52%, var(--border));
+      background: var(--time-today);
+      border-color: var(--time-today);
+      color: var(--on-time-today);
     }
 
     .scorecard-bonus-row {
@@ -2782,9 +2814,9 @@
     }
 
     .scorecard-bonus-lock-btn.is-locked {
-      background: var(--sage-soft);
-      border-color: var(--sage);
-      color: var(--sage);
+      background: color-mix(in srgb, var(--success) 18%, var(--card));
+      border-color: var(--success);
+      color: var(--success);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -2793,7 +2825,7 @@
     }
 
     .scorecard-bonus-error {
-      color: var(--rose);
+      color: var(--danger);
       font-size: 0.82rem;
       font-weight: 700;
       line-height: 1.2;
@@ -2831,11 +2863,11 @@
     }
 
     .scorecard-bonus-reveal-card.is-correct .scorecard-bonus-reveal-value {
-      color: var(--sage);
+      color: var(--success);
     }
 
     .scorecard-bonus-reveal-card.is-incorrect .scorecard-bonus-reveal-value {
-      color: var(--rose);
+      color: var(--danger);
     }
 
     .scorecard-bonus-before {
@@ -2850,11 +2882,11 @@
     }
 
     .scorecard-bonus-result-label.is-correct {
-      color: var(--sage);
+      color: var(--success);
     }
 
     .scorecard-bonus-result-label.is-incorrect {
-      color: var(--rose);
+      color: var(--danger);
     }
 
     .scorecard-bonus-result-row {
@@ -2898,10 +2930,10 @@
       gap: 22px;
       padding: 30px;
       border-radius: 28px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: rgba(20, 16, 14, 0.82);
-      color: #fffaf3;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: var(--shadow);
     }
 
     .scorecard-celebration-layout {
@@ -2925,7 +2957,7 @@
     }
 
     .scorecard-celebration-icon {
-      color: var(--scorecard-celebration-accent, var(--color-accent));
+      color: var(--brand-marigold);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -2940,7 +2972,7 @@
     .scorecard-celebration-kicker {
       display: inline-flex;
       align-items: center;
-      color: rgba(255, 250, 243, 0.72);
+      color: var(--muted);
       font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0.08em;
@@ -2964,12 +2996,22 @@
       justify-content: space-between;
       gap: 14px;
       padding: 12px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      border-bottom: 1px solid var(--border);
     }
 
+    /* The winner is a marigold row (name and score take its dark text). */
     .scorecard-celebration-score-row.is-winner {
+      padding: 12px 14px;
+      border-radius: var(--tag-radius);
+      border-bottom-color: transparent;
+      background: var(--time-today);
+      color: var(--on-time-today);
       font-size: 1.04rem;
       font-weight: 800;
+    }
+
+    .scorecard-celebration-score-row.is-winner .scorecard-celebration-score-name {
+      --person: currentColor;
     }
 
     .scorecard-celebration-score-name {
@@ -2983,11 +3025,11 @@
 
     .scorecard-celebration-button {
       width: 100%;
-      border: 1px solid var(--scorecard-celebration-accent, var(--color-accent));
+      border: 1px solid var(--time-today);
       border-radius: var(--button-radius);
       padding: 12px 18px;
-      background: var(--scorecard-celebration-accent, var(--color-accent));
-      color: var(--color-text-on-accent);
+      background: var(--time-today);
+      color: var(--on-time-today);
       font: inherit;
       font-weight: 800;
       cursor: pointer;
@@ -2995,8 +3037,8 @@
 
     .scorecard-celebration-button--secondary {
       background: transparent;
-      color: #fffaf3;
-      border-color: rgba(255, 255, 255, 0.28);
+      color: var(--ink);
+      border-color: var(--border);
     }
 
     @keyframes scorecard-reveal-in {
@@ -3037,15 +3079,15 @@
     }
 
     .scorecard-bonus-toggle-pill.is-correct input:checked + span {
-      background: var(--sage);
-      border-color: var(--sage);
-      color: #fff;
+      background: color-mix(in srgb, var(--success) 18%, var(--card));
+      border-color: var(--success);
+      color: var(--success);
     }
 
     .scorecard-bonus-toggle-pill.is-incorrect input:checked + span {
-      background: var(--rose);
-      border-color: var(--rose);
-      color: #fff;
+      background: var(--danger-soft);
+      border-color: var(--danger);
+      color: var(--danger);
     }
 
     @media (max-width: 1120px) {

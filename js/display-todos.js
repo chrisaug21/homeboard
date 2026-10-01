@@ -114,7 +114,7 @@
 
     // Celebration colors: marigold, sage, fern, aubergine and the assignee's
     // person color (set while a celebration plays). No red.
-    let celebrationPersonColorToken = "";
+    let celebrationPersonColorTokens = [];
 
     function getCelebrationPalette() {
       const styles = getComputedStyle(document.documentElement);
@@ -125,9 +125,9 @@
         read("--brand-fern", "#6f9460"),
         read("--brand-aubergine-lift", "#5a2d55")
       ];
-      if (celebrationPersonColorToken) {
-        palette.push(read(`--${celebrationPersonColorToken}`, palette[0]));
-      }
+      celebrationPersonColorTokens.filter(Boolean).forEach((token) => {
+        palette.push(read(`--${token}`, palette[0]));
+      });
       return palette;
     }
 
@@ -619,7 +619,7 @@
         todo?.assigneeMemberId,
         todo?.assignee
       );
-      celebrationPersonColorToken = resolvePersonColorToken(celebrationAssignees[0]?.color);
+      celebrationPersonColorTokens = [resolvePersonColorToken(celebrationAssignees[0]?.color)];
 
       cardEl.classList.add("is-completing");
       resetAutoRotate("todo-complete");
