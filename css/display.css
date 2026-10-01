@@ -8,24 +8,6 @@
       gap: 10px;
     }
 
-    .app-shell::before,
-    .app-shell::after {
-      content: "";
-      position: absolute;
-      inset: auto auto 14% -5%;
-      width: 320px;
-      height: 320px;
-      border-radius: 50%;
-      background: rgba(180, 83, 9, 0.08);
-      filter: blur(12px);
-      pointer-events: none;
-    }
-
-    .app-shell::after {
-      inset: 10% -4% auto auto;
-      background: rgba(21, 128, 61, 0.08);
-    }
-
     .display-pairing {
       position: relative;
       z-index: 1;
@@ -61,14 +43,8 @@
       filter: brightness(0.97);
     }
 
-    html[data-scheme="slate"] .display-pairing-logo {
-      filter: none;
-    }
-
-    html[data-scheme="dark"] .display-pairing-logo {
-      filter: saturate(0) brightness(0) invert(0.93) sepia(0.22) saturate(0.7) brightness(1.02);
-    }
-
+    
+    
     .display-pairing-title {
       margin: 0;
       font-size: clamp(2rem, 4vw, 2.8rem);
@@ -208,14 +184,8 @@
       filter: brightness(0.97);
     }
 
-    html[data-scheme="slate"] .household-logo {
-      filter: none;
-    }
-
-    html[data-scheme="dark"] .household-logo {
-      filter: saturate(0) brightness(0) invert(0.93) sepia(0.22) saturate(0.7) brightness(1.02);
-    }
-
+    
+    
     .version-label {
       text-align: right;
       font-size: 0.58rem;
@@ -281,7 +251,7 @@
     .sync-btn:hover,
     .sync-btn:focus-visible {
       opacity: 0.9;
-      background: rgba(124, 96, 69, 0.1);
+      background: color-mix(in srgb, var(--ink) 10%, transparent);
       border-color: var(--border);
     }
 
@@ -300,359 +270,6 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
-    }
-
-
-    html[data-scheme="dark"] body {
-      background-image:
-        radial-gradient(circle at top left, rgba(180, 83, 9, 0.14), transparent 28%),
-        radial-gradient(circle at top right, rgba(21, 128, 61, 0.07), transparent 30%),
-        linear-gradient(135deg, #221e1b 0%, #1c1917 44%, #17140f 100%);
-    }
-
-
-    html[data-scheme="slate"] body {
-      background-image:
-        radial-gradient(circle at top left, rgba(3, 105, 161, 0.14), transparent 28%),
-        radial-gradient(circle at top right, rgba(13, 148, 136, 0.09), transparent 30%),
-        linear-gradient(135deg, #edf2f7 0%, #e2e8f0 44%, #cbd5e1 100%);
-    }
-
-    /* ── Dark scheme component overrides ──────────────────────────────────────
-       Purpose: fix white-on-white text — card surfaces that use hardcoded
-       rgba(255,255,255,...) become invisible in dark mode because --ink is
-       light (#f2ede6). Replace with dark semi-transparent surfaces.
-    ── */
-
-    /* Glow orbs */
-    html[data-scheme="dark"] .app-shell::before {
-      background: rgba(245, 158, 11, 0.07);
-    }
-
-    /* Nav arrows */
-    html[data-scheme="dark"] .nav-arrow {
-      background: rgba(255, 255, 255, 0.07);
-      color: var(--ink);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
-    }
-    html[data-scheme="dark"] .nav-arrow:hover,
-    html[data-scheme="dark"] .nav-arrow:focus-visible {
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    /* Cal nav button */
-    html[data-scheme="dark"] .cal-nav-btn {
-      background: rgba(255, 255, 255, 0.07);
-    }
-
-    /* Eyebrow badge */
-    html[data-scheme="dark"] .eyebrow {
-      background: rgba(245, 158, 11, 0.14);
-    }
-
-    /* Calendar day columns */
-    html[data-scheme="dark"] .day-column {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: var(--border);
-    }
-    html[data-scheme="dark"] .day-column.today {
-      background: rgba(245, 158, 11, 0.14);
-      border-color: rgba(245, 158, 11, 0.28);
-      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.08);
-    }
-    html[data-scheme="dark"] .day-header {
-      border-bottom-color: var(--border);
-    }
-
-    /* Event cards */
-    html[data-scheme="dark"] .event-card {
-      background: rgba(255, 255, 255, 0.07);
-      border-color: var(--border);
-    }
-    html[data-scheme="dark"] .event-card[role="button"]:hover {
-      background: rgba(245, 158, 11, 0.12);
-    }
-
-    /* Month grid */
-    html[data-scheme="dark"] .month-day {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: var(--border);
-    }
-    html[data-scheme="dark"] .month-day--today {
-      background: rgba(245, 158, 11, 0.14);
-      border-color: rgba(245, 158, 11, 0.28);
-      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.08);
-    }
-    html[data-scheme="dark"] .month-event {
-      background: rgba(255, 255, 255, 0.09);
-    }
-    html[data-scheme="dark"] .month-event:hover {
-      background: rgba(245, 158, 11, 0.16);
-    }
-    html[data-scheme="dark"] .month-more-pill {
-      background: rgba(245, 158, 11, 0.14);
-    }
-    html[data-scheme="dark"] .month-more-pill:hover {
-      background: rgba(245, 158, 11, 0.24);
-    }
-
-    /* Modal */
-    html[data-scheme="dark"] .display-modal-backdrop {
-      background: rgba(0, 0, 0, 0.62);
-    }
-    html[data-scheme="dark"] .day-event-item {
-      background: rgba(255, 255, 255, 0.07);
-      border-color: var(--border);
-    }
-    html[data-scheme="dark"] .day-event-item:hover {
-      background: rgba(245, 158, 11, 0.12);
-    }
-
-    /* To-do cards */
-    html[data-scheme="dark"] .todo-card {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: var(--border);
-    }
-    html[data-scheme="dark"] .todo-card--overdue {
-      background: rgba(251, 113, 133, 0.12);
-      border-left-color: #fb7185;
-      box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.08);
-    }
-    html[data-scheme="dark"] .todo-assignee-name--plain,
-    html[data-scheme="dark"] .todo-due-text--future,
-    html[data-scheme="dark"] .todo-due-text--plain {
-      color: #e7ddd5;
-    }
-    html[data-scheme="dark"] .todo-due-text--overdue {
-      color: #fda4af;
-    }
-    html[data-scheme="dark"] .todo-due-text--today {
-      color: #86efac;
-    }
-    html[data-scheme="dark"] .todo-due-text--soon {
-      color: #fdba74;
-    }
-
-    /* Meal cards */
-    html[data-scheme="dark"] .meal-card {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: var(--border);
-    }
-    html[data-scheme="dark"] .meal-card.today {
-      background: rgba(245, 158, 11, 0.18);
-      border-color: rgba(245, 158, 11, 0.3);
-    }
-    html[data-scheme="dark"] .meal-note-card {
-      background: rgba(245, 158, 11, 0.12);
-      border-color: rgba(245, 158, 11, 0.22);
-    }
-
-    /* Countdown cards */
-    html[data-scheme="dark"] .countdown-card {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
-      border-color: var(--border);
-      box-shadow: 0 20px 36px rgba(0, 0, 0, 0.32);
-    }
-    html[data-scheme="dark"] .countdown-card--variant-2 {
-      background: linear-gradient(180deg, rgba(34, 197, 94, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
-      border-color: rgba(34, 197, 94, 0.18);
-    }
-    html[data-scheme="dark"] .countdown-card--variant-3 {
-      background: linear-gradient(180deg, rgba(251, 113, 133, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
-      border-color: rgba(251, 113, 133, 0.18);
-    }
-    html[data-scheme="dark"] .countdown-card--variant-4 {
-      background: linear-gradient(180deg, rgba(139, 92, 246, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
-      border-color: rgba(139, 92, 246, 0.18);
-    }
-    html[data-scheme="dark"] .countdown-icon {
-      background: rgba(255, 255, 255, 0.10);
-    }
-    html[data-scheme="dark"] .countdown-photo-wrap {
-      background: rgba(245, 158, 11, 0.16);
-    }
-
-    /* Display nav */
-    html[data-scheme="dark"] .progress-bar > .display-nav {
-      background: transparent;
-      border-color: transparent;
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-    html[data-scheme="dark"] .progress-bar > .display-nav > .display-nav-button {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: rgba(255, 255, 255, 0.14);
-      color: rgba(255, 255, 255, 0.78);
-    }
-    html[data-scheme="dark"] .progress-bar > .display-nav > .display-nav-button.is-active {
-      background: var(--display-nav-active-bg);
-      border-color: var(--display-nav-active-border);
-      color: #fff7ed;
-    }
-    html[data-scheme="dark"] .progress-bar > .display-nav .display-nav-badge {
-      color: #fff7ed;
-    }
-
-    /* RSVP screen */
-    html[data-scheme="dark"] .rsvp-screen .panel {
-      background: var(--panel-strong);
-      border-color: var(--border);
-    }
-    html[data-scheme="dark"] .rsvp-screen .eyebrow {
-      background: rgba(251, 113, 133, 0.14);
-    }
-    html[data-scheme="dark"] .hero-card,
-    html[data-scheme="dark"] .names-card {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: var(--border);
-    }
-    html[data-scheme="dark"] .breakdown-row {
-      background: rgba(59, 130, 246, 0.14);
-      border-color: rgba(96, 165, 250, 0.18);
-    }
-    html[data-scheme="dark"] .breakdown-row:nth-child(2) {
-      background: rgba(239, 68, 68, 0.14);
-      border-color: rgba(248, 113, 113, 0.18);
-    }
-    html[data-scheme="dark"] .breakdown-row:nth-child(3) {
-      background: rgba(255, 255, 255, 0.07);
-      border-color: rgba(255, 240, 220, 0.11);
-    }
-    html[data-scheme="dark"] .name-pill {
-      background: rgba(255, 255, 255, 0.07);
-    }
-    html[data-scheme="dark"] .name-pill--attending {
-      background: rgba(34, 197, 94, 0.12);
-    }
-    html[data-scheme="dark"] .name-pill--declined {
-      background: rgba(239, 68, 68, 0.12);
-    }
-    html[data-scheme="dark"] .name-pill--pending {
-      background: rgba(255, 255, 255, 0.08);
-    }
-    html[data-scheme="dark"] .name-pill--more {
-      background: rgba(251, 113, 133, 0.12);
-    }
-    html[data-scheme="dark"] .name-status {
-      background: rgba(255, 255, 255, 0.10);
-    }
-    html[data-scheme="dark"] .name-pill--attending .name-status {
-      background: var(--rsvp-attending-pill-bg);
-      color: var(--rsvp-attending-pill-color);
-    }
-    html[data-scheme="dark"] .name-pill--undercount .name-status {
-      background: var(--rsvp-undercount-pill-bg);
-      color: var(--rsvp-undercount-pill-color);
-    }
-    html[data-scheme="dark"] .name-pill--declined .name-status {
-      background: rgba(239, 68, 68, 0.2);
-      color: #fecaca;
-    }
-    html[data-scheme="dark"] .name-pill--pending .name-status {
-      background: rgba(255, 255, 255, 0.14);
-      color: #e7ddd5;
-    }
-    html[data-scheme="dark"] .rsvp-detail-item {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 240, 220, 0.11);
-      color: var(--ink);
-    }
-
-    /* ── Slate scheme component overrides ─────────────────────────────────────
-       Purpose: replace hardcoded amber/warm rgba() values with slate-blue
-       equivalents so warm palette doesn't bleed through. CSS variable
-       overrides already handle --amber / --amber-soft, but many surfaces
-       use literal rgba(180,83,9,...) or rgba(247,217,170,...) directly.
-    ── */
-
-    /* Glow orbs */
-    html[data-scheme="slate"] .app-shell::before {
-      background: rgba(3, 105, 161, 0.08);
-    }
-
-    /* Eyebrow badge */
-    html[data-scheme="slate"] .eyebrow {
-      background: rgba(3, 105, 161, 0.10);
-    }
-
-    /* Calendar today */
-    html[data-scheme="slate"] .day-column.today {
-      background: rgba(3, 105, 161, 0.10);
-      border-color: rgba(3, 105, 161, 0.22);
-      box-shadow: inset 0 0 0 1px rgba(3, 105, 161, 0.06);
-    }
-    html[data-scheme="slate"] .month-day--today {
-      background: rgba(3, 105, 161, 0.10);
-      border-color: rgba(3, 105, 161, 0.22);
-      box-shadow: inset 0 0 0 1px rgba(3, 105, 161, 0.06);
-    }
-
-    /* Month event hover / pill */
-    html[data-scheme="slate"] .month-event:hover {
-      background: rgba(3, 105, 161, 0.10);
-    }
-    html[data-scheme="slate"] .month-more-pill {
-      background: rgba(3, 105, 161, 0.10);
-    }
-    html[data-scheme="slate"] .month-more-pill:hover {
-      background: rgba(3, 105, 161, 0.18);
-    }
-
-    /* Event card hover */
-    html[data-scheme="slate"] .event-card[role="button"]:hover {
-      background: rgba(3, 105, 161, 0.07);
-    }
-    html[data-scheme="slate"] .day-event-item:hover {
-      background: rgba(3, 105, 161, 0.07);
-    }
-
-    /* Nav arrow hover */
-    html[data-scheme="slate"] .nav-arrow:hover,
-    html[data-scheme="slate"] .nav-arrow:focus-visible {
-      color: var(--amber);
-    }
-
-    /* Meal today + note */
-    html[data-scheme="slate"] .meal-card.today {
-      background: rgba(3, 105, 161, 0.14);
-      border-color: rgba(3, 105, 161, 0.24);
-    }
-    html[data-scheme="slate"] .meal-note-card {
-      background: rgba(3, 105, 161, 0.08);
-      border-color: rgba(3, 105, 161, 0.16);
-    }
-
-    /* Countdown card — replace warm amber gradient with neutral */
-    html[data-scheme="slate"] .countdown-card {
-      background: linear-gradient(180deg, rgba(3, 105, 161, 0.10) 0%, rgba(248, 250, 252, 0.92) 100%);
-      border-color: rgba(3, 105, 161, 0.14);
-      box-shadow: 0 20px 36px rgba(15, 23, 42, 0.08);
-    }
-    html[data-scheme="slate"] .countdown-photo-wrap {
-      background: rgba(3, 105, 161, 0.12);
-    }
-
-    /* RSVP screen */
-    html[data-scheme="slate"] .rsvp-screen .panel {
-      background: var(--panel-strong);
-      border-color: var(--border);
-    }
-    html[data-scheme="slate"] .breakdown-row {
-      background: rgba(3, 105, 161, 0.08);
-      border-color: rgba(3, 105, 161, 0.14);
-    }
-    html[data-scheme="slate"] .breakdown-row:nth-child(2) {
-      background: rgba(190, 24, 93, 0.08);
-    }
-    html[data-scheme="slate"] .breakdown-row:nth-child(3) {
-      background: rgba(148, 163, 184, 0.18);
-    }
-    html[data-scheme="slate"] .name-pill--more {
-      background: rgba(190, 18, 60, 0.08);
-    }
-    html[data-scheme="slate"] .name-pill--undercount .name-status {
-      background: var(--rsvp-undercount-pill-bg);
-      color: var(--rsvp-undercount-pill-color);
     }
 
     .viewport {
@@ -803,7 +420,7 @@
       gap: 8px;
       padding: 6px 12px;
       border-radius: var(--tag-radius);
-      background: rgba(180, 83, 9, 0.10);
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
       color: var(--amber);
       font-family: var(--font-display);
       font-size: 0.8rem;
@@ -864,8 +481,8 @@
       min-width: 0;
       padding: 16px 14px 14px;
       border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.52);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: color-mix(in srgb, var(--card) 52%, transparent);
+      border: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       gap: 14px;
@@ -873,13 +490,13 @@
 
     .day-column.today {
       background: rgba(247, 217, 170, 0.6);
-      border-color: rgba(180, 83, 9, 0.22);
+      border-color: color-mix(in srgb, var(--primary) 22%, transparent);
       box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
     }
 
     .day-header {
       padding-bottom: 10px;
-      border-bottom: 1px solid rgba(124, 96, 69, 0.12);
+      border-bottom: 1px solid var(--border);
     }
 
     .day-name {
@@ -902,7 +519,7 @@
       padding: 12px;
       border-radius: var(--tag-radius);
       background: rgba(255, 250, 243, 0.94);
-      border: 1px solid rgba(124, 96, 69, 0.1);
+      border: 1px solid var(--border);
       min-height: 88px;
     }
 
@@ -966,8 +583,8 @@
       min-height: 0;
       padding: 8px 10px;
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.56);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: color-mix(in srgb, var(--card) 56%, transparent);
+      border: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -980,7 +597,7 @@
 
     .month-day--today {
       background: rgba(247, 217, 170, 0.58);
-      border-color: rgba(180, 83, 9, 0.22);
+      border-color: color-mix(in srgb, var(--primary) 22%, transparent);
       box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
     }
 
@@ -1020,13 +637,13 @@
     }
 
     .month-event:hover {
-      background: rgba(180, 83, 9, 0.14);
+      background: color-mix(in srgb, var(--primary) 14%, transparent);
     }
 
     .month-more-pill {
       padding: 2px 6px;
       border-radius: var(--tag-radius);
-      background: rgba(180, 83, 9, 0.10);
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
       font-size: 0.65rem;
       font-weight: 800;
       color: var(--amber);
@@ -1037,7 +654,7 @@
     }
 
     .month-more-pill:hover {
-      background: rgba(180, 83, 9, 0.20);
+      background: color-mix(in srgb, var(--primary) 20%, transparent);
     }
 
     .event-card[role="button"] {
@@ -1106,7 +723,7 @@
     }
 
     .display-modal-close {
-      background: rgba(124, 96, 69, 0.10);
+      background: color-mix(in srgb, var(--ink) 10%, transparent);
       border: none;
       border-radius: var(--button-radius);
       width: 30px;
@@ -1121,7 +738,7 @@
     }
 
     .display-modal-close:hover {
-      background: rgba(124, 96, 69, 0.18);
+      background: color-mix(in srgb, var(--ink) 18%, transparent);
     }
 
     .display-modal-close svg {
@@ -1164,8 +781,8 @@
       gap: 2px;
       padding: 12px 14px;
       border-radius: 14px;
-      background: rgba(255, 255, 255, 0.56);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: color-mix(in srgb, var(--card) 56%, transparent);
+      border: 1px solid var(--border);
       cursor: pointer;
       transition: background 150ms ease;
     }
@@ -1216,8 +833,8 @@
       gap: 12px;
       padding: 16px 18px;
       border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.56);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: color-mix(in srgb, var(--card) 56%, transparent);
+      border: 1px solid var(--border);
       border-left: 5px solid transparent;
       min-width: 0;
       transition: opacity 0.2s, transform 0.2s;
@@ -1225,7 +842,7 @@
     }
 
     .todo-card--overdue {
-      background: rgba(190, 18, 60, 0.08);
+      background: color-mix(in srgb, var(--danger) 8%, transparent);
       border-left-color: #be123c;
       box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.06);
     }
@@ -1602,8 +1219,8 @@
     .meal-card {
       padding: 12px 10px;
       border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.56);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: color-mix(in srgb, var(--card) 56%, transparent);
+      border: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1615,7 +1232,7 @@
 
     .meal-card.today {
       background: rgba(247, 217, 170, 0.38);
-      border-color: rgba(180, 83, 9, 0.22);
+      border-color: color-mix(in srgb, var(--primary) 22%, transparent);
     }
 
     .meal-day {
@@ -1654,12 +1271,12 @@
     }
 
     .meal-type--cooking {
-      background: rgba(180, 83, 9, 0.15);
+      background: color-mix(in srgb, var(--primary) 15%, transparent);
       color: #b45309;
     }
 
     .meal-type--hellofresh {
-      background: rgba(21, 128, 61, 0.15);
+      background: color-mix(in srgb, var(--success) 15%, transparent);
       color: #15803d;
     }
 
@@ -1694,7 +1311,7 @@
     }
 
     .meal-type--custom {
-      background: rgba(13, 148, 136, 0.15);
+      background: color-mix(in srgb, var(--success) 15%, transparent);
       color: #0f766e;
     }
 
@@ -1706,7 +1323,7 @@
     .meal-note-card {
       border-radius: var(--tag-radius);
       background: rgba(247, 217, 170, 0.18);
-      border: 1px solid rgba(180, 83, 9, 0.16);
+      border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
       padding: 12px 12px 10px;
       display: flex;
       flex-direction: column;
@@ -1718,7 +1335,7 @@
     .meal-note-card--empty {
       background: transparent;
       border-style: dashed;
-      border-color: rgba(124, 96, 69, 0.14);
+      border-color: var(--border);
     }
 
     .meal-note-label {
@@ -1766,10 +1383,8 @@
       padding: 28px 36px;
       border-radius: var(--radius-lg);
       overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(255, 255, 255, 0.75), transparent 30%),
-        linear-gradient(180deg, rgba(255, 244, 227, 0.96), rgba(255, 251, 245, 0.94));
-      border: 1px solid rgba(180, 83, 9, 0.14);
+      background: var(--card);
+      border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
       box-shadow: 0 20px 36px rgba(153, 104, 48, 0.12);
       display: flex;
       flex-direction: column;
@@ -1793,7 +1408,7 @@
     .countdown-photo-wrap {
       position: relative;
       overflow: hidden;
-      background: rgba(180, 83, 9, 0.12);
+      background: color-mix(in srgb, var(--primary) 12%, transparent);
     }
 
     .countdown-photo {
@@ -1841,17 +1456,17 @@
     }
 
     .countdown-card--variant-2 {
-      background: linear-gradient(180deg, rgba(220, 239, 220, 0.94), rgba(247, 252, 245, 0.94));
-      border-color: rgba(21, 128, 61, 0.14);
+      background: var(--time-soon);
+      border-color: color-mix(in srgb, var(--success) 14%, transparent);
     }
 
     .countdown-card--variant-3 {
-      background: linear-gradient(180deg, rgba(248, 220, 227, 0.94), rgba(255, 247, 249, 0.94));
-      border-color: rgba(166, 76, 99, 0.14);
+      background: var(--danger-soft);
+      border-color: color-mix(in srgb, var(--danger) 14%, transparent);
     }
 
     .countdown-card--variant-4 {
-      background: linear-gradient(180deg, rgba(235, 229, 250, 0.94), rgba(251, 249, 255, 0.94));
+      background: var(--time-week);
       border-color: rgba(88, 84, 154, 0.14);
     }
 
@@ -1862,7 +1477,7 @@
       align-items: center;
       justify-content: center;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.62);
+      background: color-mix(in srgb, var(--card) 62%, transparent);
     }
 
     .countdown-icon svg {
@@ -1919,11 +1534,11 @@
 
     .rsvp-screen .panel {
       background: rgba(255, 248, 250, 0.96);
-      border-color: rgba(166, 76, 99, 0.16);
+      border-color: color-mix(in srgb, var(--danger) 16%, transparent);
     }
 
     .rsvp-screen .eyebrow {
-      background: rgba(166, 76, 99, 0.12);
+      background: color-mix(in srgb, var(--danger) 12%, transparent);
       color: var(--rose);
     }
 
@@ -1939,8 +1554,8 @@
     .breakdown-card,
     .names-card {
       border-radius: var(--radius-md);
-      border: 1px solid rgba(166, 76, 99, 0.14);
-      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid color-mix(in srgb, var(--danger) 14%, transparent);
+      background: color-mix(in srgb, var(--card) 58%, transparent);
     }
 
     .hero-card {
@@ -2012,7 +1627,7 @@
       background: rgba(248, 220, 227, 0.3);
       font-size: 1rem;
       font-weight: 700;
-      border: 1px solid rgba(166, 76, 99, 0.14);
+      border: 1px solid color-mix(in srgb, var(--danger) 14%, transparent);
     }
 
     .breakdown-row small {
@@ -2031,7 +1646,7 @@
 
     .breakdown-row--button {
       width: 100%;
-      border: 1px solid rgba(166, 76, 99, 0.14);
+      border: 1px solid color-mix(in srgb, var(--danger) 14%, transparent);
       cursor: pointer;
       text-align: left;
       font: inherit;
@@ -2042,11 +1657,11 @@
     .breakdown-row--button:hover,
     .breakdown-row--button:focus-visible {
       transform: translateY(-1px);
-      border-color: rgba(166, 76, 99, 0.28);
+      border-color: color-mix(in srgb, var(--danger) 28%, transparent);
     }
 
     .breakdown-row--button:focus-visible {
-      outline: 3px solid rgba(166, 76, 99, 0.28);
+      outline: 3px solid color-mix(in srgb, var(--danger) 28%, transparent);
       outline-offset: 2px;
     }
 
@@ -2057,7 +1672,7 @@
     .breakdown-row--disabled:hover,
     .breakdown-row--disabled:focus-visible {
       transform: none;
-      border-color: rgba(166, 76, 99, 0.14);
+      border-color: color-mix(in srgb, var(--danger) 14%, transparent);
       outline: none;
     }
 
@@ -2114,7 +1729,7 @@
       gap: 10px;
       padding: 12px 14px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.74);
+      background: color-mix(in srgb, var(--card) 74%, transparent);
       font-size: 1rem;
       font-weight: 700;
       min-height: 56px;
@@ -2207,7 +1822,7 @@
       padding: 12px 14px;
       border-radius: 16px;
       background: rgba(255, 248, 250, 0.92);
-      border: 1px solid rgba(166, 76, 99, 0.12);
+      border: 1px solid color-mix(in srgb, var(--danger) 12%, transparent);
       font-weight: 700;
       display: grid;
       gap: 6px;
@@ -2368,7 +1983,7 @@
       height: var(--display-nav-button-height);
       padding: 0;
       border-radius: var(--button-radius);
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       background: rgba(255, 253, 247, 0.82);
       color: var(--muted);
       display: inline-flex;
@@ -2449,7 +2064,7 @@
 
     .sk {
       display: block;
-      background: rgba(124, 96, 69, 0.14);
+      background: color-mix(in srgb, var(--ink) 14%, transparent);
       border-radius: 6px;
       animation: skeleton-pulse 1.6s ease-in-out infinite;
     }
@@ -3042,9 +2657,7 @@
       display: grid;
       place-items: center;
       padding: 28px;
-      background:
-        radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 42%),
-        rgba(12, 10, 9, 0.72);
+      background: rgba(12, 10, 9, 0.72);
       backdrop-filter: blur(8px);
     }
 
