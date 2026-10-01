@@ -1389,7 +1389,7 @@
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: var(--amber);
+      color: var(--love);
     }
 
     .summary-value {
@@ -1757,11 +1757,6 @@
       white-space: nowrap;
     }
 
-    .rsvp-screen .panel {
-      background: rgba(255, 248, 250, 0.96);
-      border-color: color-mix(in srgb, var(--danger) 16%, transparent);
-    }
-
     .rsvp-layout {
       display: grid;
       grid-template-rows: auto auto 1fr;
@@ -1774,8 +1769,8 @@
     .breakdown-card,
     .names-card {
       border-radius: var(--radius-md);
-      border: 1px solid color-mix(in srgb, var(--danger) 14%, transparent);
-      background: color-mix(in srgb, var(--card) 58%, transparent);
+      border: 1px solid var(--border);
+      background: var(--card);
     }
 
     .hero-card {
@@ -1811,15 +1806,15 @@
       font-size: 5.8rem;
       font-weight: 800;
       line-height: 0.92;
-      color: var(--rose);
+      color: var(--love);
     }
 
     .hero-number--empty {
-      color: #6b8fb8;
+      color: var(--muted);
     }
 
     .hero-number--active {
-      color: var(--rose);
+      color: var(--love);
     }
 
     .hero-label {
@@ -1844,10 +1839,10 @@
       justify-content: center;
       padding: 14px 16px;
       border-radius: 18px;
-      background: rgba(248, 220, 227, 0.3);
+      background: var(--card);
       font-size: 1rem;
       font-weight: 700;
-      border: 1px solid color-mix(in srgb, var(--danger) 14%, transparent);
+      border: 1px solid var(--border);
     }
 
     .breakdown-row small {
@@ -1866,7 +1861,7 @@
 
     .breakdown-row--button {
       width: 100%;
-      border: 1px solid color-mix(in srgb, var(--danger) 14%, transparent);
+      border: 1px solid var(--border);
       cursor: pointer;
       text-align: left;
       font: inherit;
@@ -1877,11 +1872,11 @@
     .breakdown-row--button:hover,
     .breakdown-row--button:focus-visible {
       transform: translateY(-1px);
-      border-color: color-mix(in srgb, var(--danger) 28%, transparent);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
     }
 
     .breakdown-row--button:focus-visible {
-      outline: 3px solid color-mix(in srgb, var(--danger) 28%, transparent);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
     }
 
@@ -1892,16 +1887,8 @@
     .breakdown-row--disabled:hover,
     .breakdown-row--disabled:focus-visible {
       transform: none;
-      border-color: color-mix(in srgb, var(--danger) 14%, transparent);
+      border-color: var(--border);
       outline: none;
-    }
-
-    .breakdown-row:nth-child(2) {
-      background: var(--rsvp-pending-bg);
-    }
-
-    .breakdown-row:nth-child(3) {
-      background: var(--rsvp-review-bg-clear);
     }
 
     .names-card {
@@ -1915,7 +1902,7 @@
     .names-title {
       font-size: 1.2rem;
       font-weight: 800;
-      color: var(--rose);
+      color: var(--love);
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
@@ -1949,7 +1936,9 @@
       gap: 10px;
       padding: 12px 14px;
       border-radius: var(--tag-radius);
-      background: color-mix(in srgb, var(--card) 74%, transparent);
+      border-left: var(--time-edge) solid transparent;
+      background: var(--card);
+      color: var(--ink);
       font-size: 1rem;
       font-weight: 700;
       min-height: 56px;
@@ -1968,23 +1957,22 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 4px 8px;
-      border-radius: var(--tag-radius);
+      padding: 4px 0;
       font-size: 0.78rem;
       font-weight: 800;
       white-space: nowrap;
-      background: rgba(28, 25, 23, 0.08);
-      color: var(--ink);
+      color: var(--muted);
     }
 
     .name-pill--more {
       justify-content: center;
-      color: var(--rose);
-      background: rgba(248, 220, 227, 0.4);
+      color: var(--love);
+      background: var(--card-sunken);
     }
 
+    /* Attending guests are sage tiles; an under-count adds a marigold left edge. */
     .name-pill--attending {
-      background: rgba(229, 246, 234, 0.92);
+      background: var(--countdown-later);
     }
 
     .rsvp-empty-state {
@@ -1996,7 +1984,7 @@
       min-height: 100%;
       text-align: center;
       padding: 24px;
-      color: #6b8fb8;
+      color: var(--muted);
     }
 
     .rsvp-empty-icon {
@@ -2006,9 +1994,9 @@
       align-items: center;
       justify-content: center;
       border-radius: 50%;
-      border: 1px solid rgba(107, 143, 184, 0.28);
-      background: rgba(191, 219, 254, 0.24);
-      color: #6b8fb8;
+      border: 1px solid var(--border);
+      background: var(--card-sunken);
+      color: var(--muted);
     }
 
     .rsvp-empty-icon svg {
@@ -2020,14 +2008,14 @@
     .rsvp-empty-headline {
       font-size: 1.15rem;
       font-weight: 800;
-      color: #6b8fb8;
+      color: var(--ink);
     }
 
     .rsvp-empty-copy {
       max-width: 24rem;
       font-size: 0.98rem;
       line-height: 1.45;
-      color: #6b8fb8;
+      color: var(--muted);
     }
 
     .rsvp-detail-list {
@@ -2041,8 +2029,8 @@
     .rsvp-detail-item {
       padding: 12px 14px;
       border-radius: 16px;
-      background: rgba(255, 248, 250, 0.92);
-      border: 1px solid color-mix(in srgb, var(--danger) 12%, transparent);
+      background: var(--card-sunken);
+      border: 1px solid var(--border);
       font-weight: 700;
       display: grid;
       gap: 6px;
@@ -2075,8 +2063,8 @@
     }
 
     .rsvp-detail-badge--partial {
-      background: var(--rsvp-undercount-pill-bg);
-      color: var(--rsvp-undercount-pill-color);
+      background: var(--time-today);
+      color: var(--on-time-today);
     }
 
     .rsvp-detail-subheader {
@@ -2120,8 +2108,8 @@
       justify-content: center;
       padding: 4px 9px;
       border-radius: var(--tag-radius);
-      background: var(--rsvp-review-bg-flagged);
-      color: var(--rsvp-flagged);
+      background: var(--time-today);
+      color: var(--on-time-today);
       font-size: 0.72rem;
       font-weight: 800;
       text-transform: uppercase;
@@ -2135,51 +2123,51 @@
 
     .rsvp-review-cta {
       font-weight: 700;
-      color: var(--rsvp-flagged);
+      color: var(--ink);
     }
 
     .rsvp-stat-value--clear {
-      color: var(--rsvp-clear);
+      color: var(--success);
     }
 
-    .rsvp-stat-value--flagged {
-      color: var(--rsvp-flagged);
-    }
-
-    #rsvp-review-trigger.breakdown-row--disabled {
-      background: var(--rsvp-review-bg-clear);
-    }
-
+    /* The one tile that needs your action goes solid marigold with an arrow. */
     #rsvp-review-trigger:not(.breakdown-row--disabled) {
-      background: var(--rsvp-review-bg-flagged);
+      position: relative;
+      background: var(--time-today);
+      border-color: var(--time-today);
+      color: var(--on-time-today);
     }
 
-    .name-pill--attending .name-status {
-      background: var(--rsvp-attending-pill-bg);
-      color: var(--rsvp-attending-pill-color);
+    #rsvp-review-trigger:not(.breakdown-row--disabled) small,
+    .rsvp-stat-value--flagged {
+      color: inherit;
     }
 
-    .name-pill--undercount .name-status {
-      background: var(--rsvp-undercount-pill-bg);
-      color: var(--rsvp-undercount-pill-color);
+    #rsvp-review-trigger:not(.breakdown-row--disabled)::after {
+      content: "\2192";
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      font-size: 1.5rem;
+      font-weight: 800;
+      line-height: 1;
     }
 
+    /* Attending with fewer guests than invited: sage tile + marigold edge. */
+    .name-pill--undercount {
+      border-left-color: var(--time-today);
+    }
+
+    /* Declined: faded and struck through. Pending: plain with a dashed border. */
     .name-pill--declined {
-      background: rgba(255, 243, 232, 0.92);
-    }
-
-    .name-pill--declined .name-status {
-      background: rgba(234, 88, 12, 0.16);
-      color: #c2410c;
+      opacity: 0.6;
+      text-decoration: line-through;
     }
 
     .name-pill--pending {
-      background: rgba(244, 232, 236, 0.92);
-    }
-
-    .name-pill--pending .name-status {
-      background: rgba(107, 114, 128, 0.16);
-      color: #6b7280;
+      background: transparent;
+      border: 1px dashed var(--border);
+      border-left: var(--time-edge) dashed var(--border);
     }
 
     .progress-bar > .display-nav {
