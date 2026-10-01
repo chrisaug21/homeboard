@@ -199,10 +199,11 @@
     const adminCropperImage = document.getElementById("admin-cropper-image");
     const adminCropperConfirmButton = document.getElementById("admin-cropper-confirm");
 
-    // Person color palette — distinct from status colors (amber, sage, rose)
+    // Person color palette: the eight design-system person colors (light values).
+    // Anything saved with an older color maps to the nearest one when it is shown.
     const PERSON_COLOR_PALETTE = [
-      "#2563eb", "#9333ea", "#0891b2", "#be123c",
-      "#c2410c", "#0f766e", "#6d28d9", "#16a34a"
+      "#3656a8", "#a2306e", "#136670", "#9a4a26",
+      "#6848b0", "#63600f", "#7a4f36", "#4a6b2a"
     ];
     const SCORECARD_PLAYER_COLOR_PALETTE = [
       "#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c", "#0891b2"
