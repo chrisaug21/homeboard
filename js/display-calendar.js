@@ -100,6 +100,7 @@
           days,
           caption: formatLongDate(eventDate),
           location: String(item.location || "").trim(),
+          calendarEventId: String(item.id || "").trim(),
           screenKey: item.id
             ? `countdown_calendar_${String(item.id).trim()}`
             : `countdown_calendar_${eventDate}_${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "event"}`
@@ -369,7 +370,11 @@
       renderMonthCalendar();
 
       const base = cachedSupabaseCountdowns !== null ? cachedSupabaseCountdowns : [];
-      const merged = [...base, ...cachedCalendarCountdowns]
+      // A calendar event already saved as a countdown (linked by event id) is
+      // shown from the saved copy, so its #countdown tag doesn't duplicate it.
+      const savedEventIds = new Set(base.map((item) => item.calendarEventId).filter(Boolean));
+      const calendarOnly = cachedCalendarCountdowns.filter((item) => !item.calendarEventId || !savedEventIds.has(item.calendarEventId));
+      const merged = [...base, ...calendarOnly]
         .sort((a, b) => (a.days ?? Infinity) - (b.days ?? Infinity));
 
       if (merged.length > 0) {

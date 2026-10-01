@@ -966,11 +966,13 @@
           const daysBeforeRaw = String(formData.get("days_before_visible") || "").trim();
           const daysBeforeVisible = daysBeforeRaw !== "" ? parseInt(daysBeforeRaw, 10) || null : null;
           const photoKeyword = String(formData.get("photo_keyword") || "").trim();
+          const location = String(formData.get("location") || "").trim();
           const removeUnsplashPhoto = formData.get("remove_unsplash_photo") === "1";
           const removeCustomPhoto = formData.get("remove_custom_photo") === "1";
           const hadUnsplashPhoto = form.getAttribute("data-had-unsplash-photo") === "1";
           if (!name || !eventDate || adminCountdownEditPending) return;
           updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, {
+            location,
             removeUnsplashPhoto,
             removeCustomPhoto,
             hadUnsplashPhoto

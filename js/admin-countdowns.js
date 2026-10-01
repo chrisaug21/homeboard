@@ -538,13 +538,15 @@
       const daysBeforeRaw = String(formData.get("days_before_visible") || "").trim();
       const daysBeforeVisible = daysBeforeRaw !== "" ? parseInt(daysBeforeRaw, 10) || null : null;
       const photoKeyword = String(formData.get("photo_keyword") || "").trim();
+      const location = String(formData.get("location") || "").trim();
+      const calendarEventId = String(formData.get("calendar_event_id") || "").trim();
       const pendingPhotos = adminPendingPhotos.get("modal-create") || {};
 
       if (!name || !eventDate || adminCountdownWritePending) {
         return;
       }
 
-      if (isCountdownAlreadySaved(name, eventDate)) {
+      if (isCountdownAlreadySaved(name, eventDate, calendarEventId)) {
         showToast("Already saved.");
         return;
       }
@@ -561,7 +563,9 @@
           icon,
           event_date: eventDate,
           days_before_visible: daysBeforeVisible,
-          photo_keyword: photoKeyword || null
+          photo_keyword: photoKeyword || null,
+          location: location || null,
+          calendar_event_id: calendarEventId || null
         })
         .select("id")
         .single();
@@ -627,7 +631,7 @@
         submitBtn.textContent = "Saving\u2026";
       }
 
-      const updatePayload = { name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null };
+      const updatePayload = { name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null, location: options.location || null };
       if (options.removeUnsplashPhoto) updatePayload.unsplash_image_url = null;
       if (options.removeCustomPhoto) updatePayload.custom_image_url = null;
 
@@ -778,11 +782,17 @@
       loadAdminCalendarMonth();
     }
 
-    function isCountdownAlreadySaved(name, date) {
+    // A calendar event counts as saved when a countdown holds its event id (this
+    // survives renaming the countdown). Countdowns made before ids were stored
+    // fall back to the old name + date match.
+    function isCountdownAlreadySaved(name, date, calendarEventId) {
+      const eventId = String(calendarEventId || "").trim();
       const normalizedName = String(name).toLowerCase().trim();
-      return adminSavedCountdowns.some(
-        (c) => c.name.toLowerCase().trim() === normalizedName && c.event_date === date
-      );
+      return adminSavedCountdowns.some((c) => {
+        if (eventId && c.calendar_event_id === eventId) return true;
+        if (c.calendar_event_id) return false;
+        return c.name.toLowerCase().trim() === normalizedName && c.event_date === date;
+      });
     }
 
     function getVisibleAdminCalendarEvents() {
@@ -810,7 +820,8 @@
           ? item.start.date
           : (startRaw ? startRaw.slice(0, 10) : "");
         const name = item.summary || "Untitled event";
-        const saved = isCountdownAlreadySaved(name, eventDate);
+        const eventId = String(item.id || "").trim();
+        const saved = isCountdownAlreadySaved(name, eventDate, eventId);
         // Rows are tinted by the time scale, with a relative date in the tier's color.
         const tier = getTimeTier(eventDate);
         const tierClass = tier && tier !== "later" && tier !== "overdue" ? ` admin-cal-event-card--${tier}` : "";
@@ -822,6 +833,8 @@
             type="button"
             data-cal-name="${escapeHtml(name)}"
             data-cal-date="${escapeHtml(eventDate)}"
+            data-cal-id="${escapeHtml(eventId)}"
+            data-cal-location="${escapeHtml(String(item.location || "").trim())}"
             aria-pressed="${saved ? "true" : "false"}"
           >
             <div class="admin-cal-event-name">${escapeHtml(name)}</div>
@@ -846,7 +859,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible, photo_keyword")
+        .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible, photo_keyword, location, calendar_event_id")
         .eq("household_id", getAdminHouseholdId())
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
@@ -1039,6 +1052,10 @@
       const eventDate = isEdit ? escapeHtml(countdown.event_date || "") : escapeHtml(p.date || "");
       const daysBeforeValue = isEdit && countdown.days_before_visible != null ? String(countdown.days_before_visible) : "";
       const photoKeyword = isEdit ? escapeHtml(countdown.photo_keyword || "") : "";
+      const location = isEdit ? escapeHtml(countdown.location || "") : escapeHtml(p.location || "");
+      const calendarEventIdField = !isEdit && p.calendarEventId
+        ? `<input type="hidden" name="calendar_event_id" value="${escapeHtml(p.calendarEventId)}">`
+        : "";
       const icon = isEdit ? escapeHtml(countdown.icon || "") : "";
 
       let existingUnsplashPhotoHTML = "";
@@ -1092,10 +1109,17 @@
 
       return `
         <form data-modal-form="countdown" ${formAttrs} novalidate>
+          ${calendarEventIdField}
           <div class="admin-field">
             <label for="modal-cd-name">Name</label>
             <input id="modal-cd-name" name="name" type="text" maxlength="140" required
               value="${name}" placeholder="e.g. Portugal trip" autocomplete="off">
+          </div>
+          <div class="admin-field">
+            <label for="modal-cd-location">Location</label>
+            <input id="modal-cd-location" name="location" type="text" maxlength="200"
+              value="${location}" placeholder="e.g. Sonoma, California" autocomplete="off">
+            <p class="admin-field-hint">Optional. Only changes how it looks in Homeboard &mdash; your Google Calendar event isn't touched.</p>
           </div>
           <div class="admin-form-row">
             <div class="admin-field">
@@ -1180,7 +1204,9 @@
       if (!card) return;
       openAddCountdownModal({
         name: card.getAttribute("data-cal-name"),
-        date: card.getAttribute("data-cal-date")
+        date: card.getAttribute("data-cal-date"),
+        calendarEventId: card.getAttribute("data-cal-id"),
+        location: card.getAttribute("data-cal-location")
       });
     }
 
