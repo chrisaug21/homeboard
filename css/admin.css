@@ -561,8 +561,8 @@
       padding: 12px 14px;
       border-radius: 16px;
       border: 1px solid var(--border);
-      background: color-mix(in srgb, var(--card) 90%, transparent);
-      font-family: Manrope, sans-serif;
+      background: var(--card);
+      font-family: var(--font-ui);
       font-size: 0.95rem;
       font-weight: 500;
       color: var(--ink);
@@ -571,16 +571,18 @@
     }
 
     .admin-meal-note-textarea:focus {
-      outline: none;
-      border-color: var(--amber);
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+      border-color: var(--focus);
     }
 
     .admin-meal-card {
       width: 100%;
       border: 1px solid var(--border);
       border-radius: 20px;
+      border-left: var(--time-edge) solid transparent;
       padding: 16px;
-      background: color-mix(in srgb, var(--card) 78%, transparent);
+      background: var(--card);
       color: var(--ink);
       text-align: left;
       cursor: pointer;
@@ -591,22 +593,48 @@
       margin-bottom: 10px;
     }
 
+    /* Time scale: today solid marigold, next 3 days soft sage with an edge. */
+    .admin-meal-card--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .admin-meal-card--soon {
+      background: var(--time-soon);
+      border-left-color: var(--time-soon-edge);
+    }
+
+    .admin-meal-card--past {
+      opacity: 0.7;
+    }
+
+    /* The weekly note matches the display's lilac note card. */
+    .admin-meal-card--note {
+      background: var(--time-week);
+      border-left-color: var(--time-week-edge);
+    }
+
     .admin-meal-card:hover,
     .admin-meal-card:focus-visible {
       transform: translateY(-1px);
-      border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
+    }
+
+    .admin-meal-card--today:hover,
+    .admin-meal-card--today:focus-visible {
+      border-color: var(--time-today);
+      filter: brightness(0.97);
     }
 
     .admin-meal-card:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
-      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-meal-card.is-selected {
-      background: var(--card-sunken);
-      border-color: color-mix(in srgb, var(--primary) 24%, transparent);
-      box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
     }
 
     .admin-meal-card-top {
@@ -624,10 +652,42 @@
       color: var(--muted);
     }
 
+    .admin-meal-card--today .admin-meal-day {
+      color: inherit;
+    }
+
+    .admin-meal-card--note .admin-meal-day {
+      color: var(--time-week-fg);
+    }
+
     .admin-meal-name {
       font-size: 1.05rem;
       font-weight: 700;
       line-height: 1.35;
+    }
+
+    /* Meal type: an icon + a word in the card's tier color, not a pill. */
+    .admin-meal-type {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .admin-meal-type .meal-type-icon {
+      font-size: 1.3em;
+      flex-shrink: 0;
+    }
+
+    .admin-meal-card--soon .admin-meal-type {
+      color: var(--time-soon-fg);
+    }
+
+    .admin-meal-card--today .admin-meal-type {
+      color: inherit;
     }
 
     .admin-meal-name--empty {
@@ -672,9 +732,8 @@
     }
 
     .admin-meal-card-arrow-btn:hover:not(:disabled) {
-      background: var(--color-accent-subtle);
-      color: var(--color-accent);
-      border-color: var(--color-accent);
+      background: var(--card-sunken);
+      color: var(--ink);
     }
 
     .admin-meal-card-arrow-btn:disabled {
@@ -697,7 +756,7 @@
     .admin-meal-slot-tab {
       border: 1px solid var(--border);
       border-radius: var(--tag-radius);
-      background: color-mix(in srgb, var(--card) 80%, transparent);
+      background: var(--card);
       color: var(--muted);
       padding: 6px 14px;
       font: inherit;
@@ -707,13 +766,13 @@
     }
 
     .admin-meal-slot-tab:hover {
-      border-color: var(--color-accent);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
     }
 
     .admin-meal-slot-tab.is-active {
-      background: var(--color-accent);
-      color: var(--color-text-on-accent);
-      border-color: var(--color-accent);
+      background: var(--primary);
+      color: var(--on-primary);
+      border-color: var(--primary);
     }
 
     .admin-field select {
