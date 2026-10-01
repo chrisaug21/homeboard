@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.18";
+    const VERSION = "2.5.19";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -142,13 +142,13 @@
     // meal_plan.meal_type / meal_library.meal_type and must never change. `icon` is an
     // Iconify name ("prefix:name") that a household may override per type.
     const STANDARD_MEAL_TYPES = [
-      { value: "cooking", label: "Cooking", icon: "lucide:chef-hat", className: "meal-type--cooking", defaultEnabled: true },
+      { value: "cooking", label: "Cooking", icon: "lucide:cooking-pot", className: "meal-type--cooking", defaultEnabled: true },
       { value: "hellofresh", label: "HelloFresh", icon: "lucide:package", className: "meal-type--hellofresh", defaultEnabled: false },
-      { value: "going_out", label: "Going Out", icon: "lucide:utensils", className: "meal-type--going-out", defaultEnabled: true },
+      { value: "going_out", label: "Going Out", icon: "lucide:store", className: "meal-type--going-out", defaultEnabled: true },
       { value: "delivery", label: "Delivery", icon: "lucide:bike", className: "meal-type--delivery", defaultEnabled: true },
       { value: "pick_up", label: "Pick Up", icon: "lucide:shopping-bag", className: "meal-type--pick-up", defaultEnabled: true },
-      { value: "fend_for_yourself", label: "Fend for Yourself", icon: "lucide:sandwich", className: "meal-type--fend-for-yourself", defaultEnabled: true },
-      { value: "date_night", label: "Date Night", icon: "lucide:sparkles", className: "meal-type--date-night", defaultEnabled: true }
+      { value: "fend_for_yourself", label: "Fend for Yourself", icon: "lucide:leaf", className: "meal-type--fend-for-yourself", defaultEnabled: true },
+      { value: "date_night", label: "Date Night", icon: "lucide:heart", className: "meal-type--date-night", defaultEnabled: true }
     ];
     const MEAL_TYPE_CUSTOM_PREFIX = "custom_";
     const MEAL_TYPE_CUSTOM_LABEL_MAX = 24;
