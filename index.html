@@ -13,8 +13,8 @@
     gtag('config', 'G-CCSFWZBLDH');
   </script>
   <title>Homeboard</title>
-  <link rel="stylesheet" href="css/tokens.css?v=2.5.9">
-  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.9">
+  <link rel="stylesheet" href="css/tokens.css?v=2.5.10">
+  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.10">
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -79,13 +79,6 @@
       background: var(--bg);
       color: var(--ink);
       font-family: var(--font-ui);
-    }
-
-    body {
-      background-image:
-        radial-gradient(circle at top left, rgba(244, 196, 125, 0.26), transparent 28%),
-        radial-gradient(circle at top right, rgba(21, 128, 61, 0.12), transparent 30%),
-        linear-gradient(135deg, #f8f4ed 0%, #f5f0e8 44%, #efe7db 100%);
     }
 
     body.admin-mode {
@@ -356,7 +349,7 @@
       padding: 12px;
       border-radius: 18px;
       border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #FFFDF7;
+      background: var(--card);
     }
 
     .marketing-calendar-days {
@@ -396,12 +389,12 @@
     }
 
     .marketing-pill--amber {
-      background: rgba(180, 83, 9, 0.14);
+      background: color-mix(in srgb, var(--primary) 14%, transparent);
       color: var(--marketing-accent);
     }
 
     .marketing-pill--green {
-      background: rgba(21, 128, 61, 0.14);
+      background: color-mix(in srgb, var(--success) 14%, transparent);
       color: var(--marketing-secondary);
     }
 
@@ -418,7 +411,7 @@
       padding: 12px;
       border-radius: 18px;
       border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #FFFDF7;
+      background: var(--card);
     }
 
     .marketing-todo-row {
@@ -436,7 +429,7 @@
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      border: 2px solid rgba(180, 83, 9, 0.42);
+      border: 2px solid color-mix(in srgb, var(--primary) 42%, transparent);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -474,7 +467,7 @@
       padding: 12px;
       border-radius: 18px;
       border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #FFFDF7;
+      background: var(--card);
       grid-template-columns: 1fr;
       overflow: hidden;
     }
@@ -520,7 +513,7 @@
       padding: 12px;
       border-radius: 18px;
       border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #FFFDF7;
+      background: var(--card);
     }
 
     .marketing-countdown-title {
@@ -574,7 +567,7 @@
 
     .marketing-button--inverse {
       flex: 0 0 auto;
-      background: #FFFDF7;
+      background: var(--card);
       color: var(--marketing-accent);
       border-color: #FFFDF7;
       min-width: 164px;
@@ -667,8 +660,8 @@
     }
 
   </style>
-  <link rel="stylesheet" href="css/display.css?v=2.3.1">
-  <link rel="stylesheet" href="css/admin.css?v=2.3.1">
+  <link rel="stylesheet" href="css/display.css?v=2.5.10">
+  <link rel="stylesheet" href="css/admin.css?v=2.5.10">
   <link rel="stylesheet" href="js/vendor/cropper.min.css">
 </head>
 <body>
