@@ -1313,8 +1313,9 @@
       width: 100%;
       border: 1px solid var(--border);
       border-radius: 20px;
+      border-left: var(--time-edge) solid transparent;
       padding: 16px;
-      background: color-mix(in srgb, var(--card) 78%, transparent);
+      background: var(--card);
       color: var(--ink);
       text-align: left;
       cursor: pointer;
@@ -1326,22 +1327,69 @@
       font: inherit;
     }
 
+    /* Rows are tinted by the time scale; the date is relative text. */
+    .admin-cal-event-card--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .admin-cal-event-card--soon {
+      background: var(--time-soon);
+      border-left-color: var(--time-soon-edge);
+    }
+
+    .admin-cal-event-card--week {
+      background: var(--time-week);
+      border-left-color: var(--time-week-edge);
+    }
+
     .admin-cal-event-card:hover,
     .admin-cal-event-card:focus-visible {
       transform: translateY(-1px);
-      border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
+    }
+
+    .admin-cal-event-card--today:hover,
+    .admin-cal-event-card--today:focus-visible {
+      border-color: var(--time-today);
+      filter: brightness(0.97);
     }
 
     .admin-cal-event-card:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
-      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
+    /* Saved (selected) = a primary border, never a tinted fill. */
     .admin-cal-event-card.is-saved {
-      background: var(--card-sunken);
-      border-color: color-mix(in srgb, var(--primary) 24%, transparent);
-      box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
+    }
+
+    .admin-cal-event-date,
+    .admin-cal-saved {
+      font-size: 0.82rem;
+      font-weight: 800;
+      white-space: nowrap;
+      color: var(--muted);
+    }
+
+    .admin-cal-saved {
+      color: var(--ink);
+    }
+
+    .admin-cal-event-card--soon .admin-cal-event-date {
+      color: var(--time-soon-fg);
+    }
+
+    .admin-cal-event-card--week .admin-cal-event-date {
+      color: var(--time-week-fg);
+    }
+
+    .admin-cal-event-card--today .admin-cal-event-date,
+    .admin-cal-event-card--today .admin-cal-saved {
+      color: inherit;
     }
 
     .admin-cal-event-name {
@@ -1418,13 +1466,44 @@
       gap: 12px;
       padding: 16px;
       border-radius: var(--tag-radius);
-      background: color-mix(in srgb, var(--card) 78%, transparent);
+      background: var(--card);
       border: 1px solid var(--border);
     }
 
     .admin-saved-countdown-card--editing {
-      background: var(--card-sunken);
-      border-color: color-mix(in srgb, var(--primary) 22%, transparent);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
+    }
+
+    /* Distance tag in the countdown ramp color (plain text past 30 days). */
+    .admin-countdown-distance {
+      align-self: flex-start;
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--muted);
+    }
+
+    .admin-countdown-distance--later,
+    .admin-countdown-distance--soon,
+    .admin-countdown-distance--today {
+      padding: 5px 9px;
+      border-radius: var(--tag-radius);
+    }
+
+    .admin-countdown-distance--later {
+      background: var(--countdown-later);
+      color: var(--ink);
+    }
+
+    .admin-countdown-distance--soon {
+      background: var(--countdown-soon);
+      color: #ffffff;
+    }
+
+    .admin-countdown-distance--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
     }
 
     .admin-countdown-card-main {
