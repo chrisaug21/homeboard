@@ -1,0 +1,24 @@
+<!-- @dsCard group="Time scale" height=330 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--font-ui)}
+.wrap{padding:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+</style></head><body><style>.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:18px}
+.tc{display:flex;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);padding:13px 15px}
+.cb{width:17px;height:17px;border:2px solid currentColor;border-radius:5px;flex:none;margin-top:2px;box-sizing:border-box}
+.tt{font:700 17px/1.3 var(--font-ui)}.meta{display:flex;gap:14px;margin-top:5px;font:800 13px var(--font-ui);align-items:center}
+.who{display:inline-flex;gap:6px;align-items:center;font-weight:700}.who i{width:9px;height:9px;border-radius:50%}
+.over{background:var(--time-overdue);color:var(--on-time-overdue);border-color:transparent}
+.today{background:var(--time-today);color:var(--on-time-today);border-color:transparent}
+.soon{background:var(--time-soon);border-color:transparent;border-left:var(--time-edge) solid var(--time-soon-edge)}.soon .d{color:var(--time-soon-fg)}
+.week{background:var(--time-week);border-color:transparent;border-left:var(--time-edge) solid var(--time-week-edge)}.week .d{color:var(--time-week-fg)}
+.later .d{color:var(--muted)}.later .cb{color:var(--primary)}
+.over .who i,.today .who i{background:currentColor!important}</style>
+<div class=grid>
+<div class="tc over"><span class=cb></span><div><div class=tt>Passports entries for this weekend!</div><div class=meta><span>⚠ 2 days overdue</span></div></div></div>
+<div class="tc today"><span class=cb></span><div><div class=tt>Confirm HelloFresh for next week</div><div class=meta><span>Due today</span><span class=who><i></i>Bailey</span></div></div></div>
+<div class="tc soon"><span class=cb style="color:var(--time-soon-fg)"></span><div><div class=tt>Survivor Pool picks!</div><div class=meta><span class=d>Wed · in 2 days</span></div></div></div>
+<div class="tc week"><span class=cb style="color:var(--time-week-fg)"></span><div><div class=tt>Take trash cans to road</div><div class=meta><span class=d>Sunday</span><span class=who style="color:var(--person-blueberry)"><i style="background:var(--person-blueberry)"></i>Chris</span></div></div></div>
+<div class="tc later"><span class=cb></span><div><div class=tt>Take Roxy downstairs</div><div class=meta><span class=d>Oct 11</span><span class=who style="color:var(--person-blueberry)"><i style="background:var(--person-blueberry)"></i>Chris</span></div></div></div>
+<div class="tc later"><span class=cb></span><div><div class=tt>Honeydue</div><div class=meta><span class=d>Oct 14</span></div></div></div>
+</div></body></html>

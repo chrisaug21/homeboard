@@ -3,4 +3,5 @@ ignore:
   - docs/
   - "*.md"
   - "Claude outputs/"
+  - design-system/
   - js/vendor/

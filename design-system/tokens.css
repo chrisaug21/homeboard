@@ -1,0 +1,168 @@
+/* Homeboard design tokens. Generated from tokens.json; edit tokens.json, not this file. */
+
+@font-face{font-family:"Rubik";font-weight:500;src:url("fonts/Rubik-500.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Rubik";font-weight:700;src:url("fonts/Rubik-700.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Rubik";font-weight:800;src:url("fonts/Rubik-800.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Manrope";font-weight:400;src:url("fonts/Manrope-400.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Manrope";font-weight:500;src:url("fonts/Manrope-500.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Manrope";font-weight:600;src:url("fonts/Manrope-600.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Manrope";font-weight:700;src:url("fonts/Manrope-700.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Manrope";font-weight:800;src:url("fonts/Manrope-800.woff2") format("woff2");font-display:swap}
+
+:root, [data-theme="light"] {
+  --brand-aubergine: #3d1f3a;
+  --brand-aubergine-lift: #5a2d55;
+  --brand-marigold: #f2b22e;
+  --brand-sage: #d3dec7;
+  --brand-fern: #6f9460;
+  --brand-leaf: #245c43;
+  --brand-red: #d12b2b;
+  --brand-linen: #f6f5f0;
+  --brand-night: #1c1320;
+  --bg: var(--brand-linen);
+  --surface: #fbfaf7;
+  --card: #ffffff;
+  --card-sunken: var(--brand-linen);
+  --ink: #2a1a28;
+  --muted: #6b6070;
+  --border: rgba(61, 31, 58, 0.11);
+  --primary: var(--brand-aubergine);
+  --on-primary: #ffffff;
+  --eyebrow-bg: var(--brand-aubergine);
+  --eyebrow-fg: var(--brand-marigold);
+  --love: var(--brand-aubergine);
+  --focus: var(--primary);
+  --time-overdue: var(--brand-red);
+  --on-time-overdue: #ffffff;
+  --time-today: var(--brand-marigold);
+  --on-time-today: #2a1a28;
+  --time-soon: #e3ead9;
+  --time-soon-chip: #ffffff;
+  --time-soon-edge: var(--brand-fern);
+  --time-soon-fg: var(--brand-leaf);
+  --time-week: #f1eaf0;
+  --time-week-edge: #8a5a84;
+  --time-week-fg: var(--brand-aubergine);
+  --countdown-soon: var(--brand-fern);
+  --countdown-later: var(--brand-sage);
+  --countdown-far: var(--card);
+  --done: var(--brand-leaf);
+  --danger: var(--brand-red);
+  --danger-soft: #fbe4e2;
+  --success: var(--brand-leaf);
+  --person-blueberry: #3656a8;
+  --person-berry: #a2306e;
+  --person-lagoon: #136670;
+  --person-clay: #9a4a26;
+  --person-iris: #6848b0;
+  --person-olive: #63600f;
+  --person-cocoa: #7a4f36;
+  --person-moss: #4a6b2a;
+  --shadow: 0 14px 34px rgba(61, 31, 58, 0.08);
+}
+
+[data-theme="dark"] {
+  --bg: var(--brand-night);
+  --surface: #1f1523;
+  --card: #2a1e2d;
+  --card-sunken: #33263a;
+  --ink: #f3eef2;
+  --muted: #b3a6b3;
+  --border: rgba(243, 238, 242, 0.09);
+  --primary: var(--brand-marigold);
+  --on-primary: var(--brand-night);
+  --eyebrow-bg: var(--brand-aubergine-lift);
+  --love: var(--brand-marigold);
+  --time-soon: #2e3f31;
+  --time-soon-chip: #3d5341;
+  --time-soon-edge: #8fb07a;
+  --time-soon-fg: #a9d487;
+  --time-week: #33233a;
+  --time-week-edge: #a877a0;
+  --time-week-fg: #e3c9df;
+  --countdown-later: #4a6049;
+  --done: #a9d487;
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.13);
+  --success: #a9d487;
+  --person-blueberry: #9db4f0;
+  --person-berry: #f29ac8;
+  --person-lagoon: #7fd0d6;
+  --person-clay: #f0a57f;
+  --person-iris: #bfa8f5;
+  --person-olive: #d6cf6e;
+  --person-cocoa: #d9ad90;
+  --person-moss: #b5d38f;
+  --shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: var(--brand-night);
+    --surface: #1f1523;
+    --card: #2a1e2d;
+    --card-sunken: #33263a;
+    --ink: #f3eef2;
+    --muted: #b3a6b3;
+    --border: rgba(243, 238, 242, 0.09);
+    --primary: var(--brand-marigold);
+    --on-primary: var(--brand-night);
+    --eyebrow-bg: var(--brand-aubergine-lift);
+    --love: var(--brand-marigold);
+    --time-soon: #2e3f31;
+    --time-soon-chip: #3d5341;
+    --time-soon-edge: #8fb07a;
+    --time-soon-fg: #a9d487;
+    --time-week: #33233a;
+    --time-week-edge: #a877a0;
+    --time-week-fg: #e3c9df;
+    --countdown-later: #4a6049;
+    --done: #a9d487;
+    --danger: #ff6b6b;
+    --danger-soft: rgba(255, 107, 107, 0.13);
+    --success: #a9d487;
+    --person-blueberry: #9db4f0;
+    --person-berry: #f29ac8;
+    --person-lagoon: #7fd0d6;
+    --person-clay: #f0a57f;
+    --person-iris: #bfa8f5;
+    --person-olive: #d6cf6e;
+    --person-cocoa: #d9ad90;
+    --person-moss: #b5d38f;
+    --shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root {
+  --font-display: Rubik, Manrope, system-ui, sans-serif;
+  --font-ui: Manrope, system-ui, sans-serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 28px;
+  --space-7: 36px;
+  --radius-lg: 28px;
+  --radius-md: 22px;
+  --radius-sm: 16px;
+  --tag-radius: 12px;
+  --button-radius: 8px;
+  --header-height: 72px;
+  --footer-height: 50px;
+  --time-edge: 6px;
+  --display-nav-icon-size: 24px;
+  --transition: 560ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.countdown { font-family: var(--font-display); font-size: 7rem; line-height: 1; font-weight: 800; letter-spacing: -0.04em; }
+.hero-number { font-family: var(--font-display); font-size: 5.8rem; line-height: 1; font-weight: 800; letter-spacing: -0.03em; }
+.summary-value { font-family: var(--font-display); font-size: 3.3rem; line-height: 1; font-weight: 800; letter-spacing: -0.02em; }
+.screen-title { font-family: var(--font-display); font-size: 2.8rem; line-height: 1.05; font-weight: 800; letter-spacing: -0.01em; }
+.card-title { font-family: var(--font-display); font-size: 1.15rem; line-height: 1.2; font-weight: 800; }
+.household-name { font-family: var(--font-display); font-size: 0.82rem; line-height: 1; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; }
+.task-title { font-family: var(--font-ui); font-size: 1.15rem; line-height: 1.3; font-weight: 700; }
+.body { font-family: var(--font-ui); font-size: 1rem; line-height: 1.5; font-weight: 500; }
+.meta { font-family: var(--font-ui); font-size: 0.88rem; line-height: 1.3; font-weight: 800; }
+.label { font-family: var(--font-ui); font-size: 0.82rem; line-height: 1.2; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.caption { font-family: var(--font-ui); font-size: 0.72rem; line-height: 1.3; font-weight: 700; }

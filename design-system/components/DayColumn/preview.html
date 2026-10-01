@@ -1,0 +1,20 @@
+<!-- @dsCard group="Time scale" height=300 -->
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--surface);color:var(--ink);font-family:var(--font-ui)}
+.wrap{padding:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+</style></head><body><style>.wk{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;padding:18px}
+.col{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);padding:11px;min-height:230px}
+.dh{font:800 15px var(--font-display);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.tag{font:800 9.5px var(--font-ui);letter-spacing:.08em;padding:3px 6px;border-radius:6px;background:var(--on-time-today);color:var(--time-today)}
+.ev{background:var(--card-sunken);border-radius:10px;padding:8px;margin-bottom:6px;border-left:3px solid transparent}.et{font:700 10px var(--font-ui);color:var(--muted);letter-spacing:.04em}.en{font:700 13px/1.25 var(--font-ui);margin-top:3px}
+.today{background:var(--time-today);color:var(--on-time-today);border-color:transparent}.today .dh{border-color:rgba(42,26,40,.2)}.today .ev{background:rgba(255,255,255,.55)}.today .et{color:var(--on-time-today)}
+.soon{background:var(--time-soon);border-color:transparent;border-top:5px solid var(--time-soon-edge)}.soon .ev{background:var(--time-soon-chip)}
+.none{font-size:13px;color:var(--muted)}</style>
+<div class=wk>
+<div class="col today"><div class=dh>Mon 28<span class=tag>TODAY</span></div><div class=ev style="border-left-color:var(--person-berry)"><div class=et>5:30 PM</div><div class=en>Herc's vet checkup</div></div></div>
+<div class="col soon"><div class=dh>Tue 29</div><div class=ev><div class=et>6:00 PM</div><div class=en>Two Door Cinema Club</div></div></div>
+<div class="col soon"><div class=dh>Wed 30</div><div class=ev style="border-left-color:var(--person-blueberry)"><div class=et>7:00 PM</div><div class=en>Appointment with Elysha</div></div></div>
+<div class="col soon"><div class=dh>Thu 1</div><div class=none>Nothing scheduled</div></div>
+<div class=col><div class=dh>Fri 2</div><div class=ev><div class=et>7:00 PM</div><div class=en>HS Football</div></div></div>
+</div></body></html>

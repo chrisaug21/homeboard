@@ -8,4 +8,5 @@ exclude_paths:
   - "*.md"
   - "**.md"
   - "Claude outputs/**"
+  - "design-system/**"
   - "js/vendor/**"

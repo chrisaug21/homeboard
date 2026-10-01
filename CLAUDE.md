@@ -20,6 +20,7 @@ js/
   shared.js         — Supabase init, VERSION constant, utility functions, shared config
   display.js        — display mode logic (auto-rotate, data fetching, rendering)
   admin.js          — all admin mode logic (screens, modals, event handling)
+design-system/     — reference only (not served): new design system tokens, fonts, logos, component previews. Redesign plan: docs/design-system-implementation-plan.md
 manifest.json       — PWA manifest for display mode (landscape)
 manifest-admin.json — PWA manifest for admin mode (portrait)
 homeboard_logo.svg  — default display-footer logo asset
