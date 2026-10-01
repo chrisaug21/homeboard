@@ -1,7 +1,7 @@
 {
-  "name": "HACC Admin",
-  "short_name": "HACC Admin",
-  "description": "Admin panel for managing the HACC household board.",
+  "name": "Homeboard Admin",
+  "short_name": "Homeboard Admin",
+  "description": "Admin panel for managing your Homeboard display.",
   "start_url": "/admin",
   "display": "standalone",
   "background_color": "#f6f5f0",
