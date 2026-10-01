@@ -1,0 +1,16 @@
+language: en-US
+
+reviews:
+  # Drafts are for work in progress; review only when marked ready.
+  auto_review:
+    drafts: false
+  # Skip docs and notes: no code to review.
+  path_filters:
+    - "!docs/**"
+    - "!**/*.md"
+    - "!Claude outputs/**"
+  path_instructions:
+    - path: "js/**"
+      instructions: |
+        Vanilla JS, no framework or bundler. All interpolated data must go
+        through escapeHtml() before innerHTML.
