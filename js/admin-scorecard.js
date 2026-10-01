@@ -2,8 +2,11 @@
 
     // The six person colors a player can have, as swatches. A saved color that
     // isn't one of them selects the nearest swatch.
+    // Each picker needs its own radio group name; a counter keeps them unique.
+    let scorecardColorPickerCount = 0;
     function buildScorecardColorPickerHTML(selectedColor, index) {
-      const group = `scorecard_color_${index}_${Math.random().toString(36).slice(2, 8)}`;
+      scorecardColorPickerCount += 1;
+      const group = `scorecard_color_${index}_${scorecardColorPickerCount}`;
       const selectedToken = resolvePersonColorToken(selectedColor, SCORECARD_PLAYER_COLOR_PALETTE.length);
       return `
         <div class="admin-scorecard-color-picker" role="radiogroup" aria-label="Player color">
@@ -356,8 +359,8 @@
     function getAdminScorecardLeaderNames(scorecard, session) {
       const scores = (scorecard?.players || []).map((player) =>
         getScorecardPlayerScore(session?.scores, player, scorecard.players));
-      const top = Math.max(...scores, 0);
       if (!scores.length || scores.every((score) => score === 0)) return new Set();
+      const top = Math.max(...scores);
       return new Set(scorecard.players.filter((player, i) => scores[i] === top).map((player) => player.name));
     }
 
