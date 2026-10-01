@@ -3213,7 +3213,7 @@
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 16px;
-      background: var(--panel);
+      background: var(--card);
       color: var(--ink);
       text-align: left;
       cursor: pointer;
@@ -3226,13 +3226,12 @@
     .admin-scorecard-card:hover,
     .admin-scorecard-card:focus-visible {
       transform: translateY(-1px);
-      border-color: var(--color-accent);
-      background: var(--color-accent-subtle);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
     }
 
     .admin-scorecard-card:focus-visible {
-      outline: 3px solid var(--color-accent);
-      outline-offset: 3px;
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-scorecard-card-head,
@@ -3302,7 +3301,7 @@
     .admin-scorecard-modal-section {
       padding: 14px;
       border-radius: 18px;
-      background: var(--panel);
+      background: var(--card);
       border: 1px solid var(--border);
     }
 
@@ -3336,11 +3335,11 @@
     }
 
     .admin-scorecard-log-amount.is-positive {
-      color: var(--sage);
+      color: var(--success);
     }
 
     .admin-scorecard-log-amount.is-negative {
-      color: var(--rose);
+      color: var(--danger);
     }
 
     .admin-scorecard-session-row,
@@ -3362,11 +3361,64 @@
       font-weight: 700;
     }
 
+    /* Players are a dot + name in their person color. */
+    .admin-scorecard-session-row,
+    .admin-scorecard-adjust-player,
+    .admin-scorecard-score-pill,
+    .admin-scorecard-log-player,
+    .admin-scorecard-winner-name {
+      --person: var(--person-color, var(--muted));
+    }
+
+    .admin-scorecard-session-player,
+    .admin-scorecard-adjust-player,
+    .admin-scorecard-score-pill,
+    .admin-scorecard-log-player,
+    .admin-scorecard-winner-name {
+      color: var(--person);
+    }
+
     .admin-scorecard-player-dot {
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
+      background: var(--person);
       flex-shrink: 0;
+    }
+
+    /* Score summary: dot + name + score as text, not a tinted chip. */
+    .admin-scorecard-score-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 12px;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .admin-scorecard-score-pill strong {
+      color: var(--ink);
+    }
+
+    /* The leader's row: a marigold border and a "Leading" tag. */
+    .admin-scorecard-session-row.is-leading {
+      padding: 8px 10px;
+      margin: -9px -11px;
+      border-radius: var(--tag-radius);
+      border: 1px solid var(--time-today);
+      box-shadow: 0 0 0 1px var(--time-today);
+    }
+
+    .admin-scorecard-leading-tag {
+      padding: 3px 8px;
+      border-radius: var(--tag-radius);
+      background: var(--time-today);
+      color: var(--on-time-today);
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .admin-scorecard-toggle-row {
@@ -3413,31 +3465,50 @@
       align-items: center;
     }
 
-    .admin-scorecard-color-input {
-      width: 32px;
-      height: 32px;
-      padding: 0;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: transparent;
-      overflow: hidden;
-      appearance: none;
+    /* Player rows: name stretches, remove button beside it, swatches underneath. */
+    .admin-scorecard-player-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    /* Six person-color swatches; the chosen one gets a ring. */
+    .admin-scorecard-color-picker {
+      display: inline-flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      grid-column: 1 / -1;
+    }
+
+    .admin-color-swatch {
+      position: relative;
+      display: inline-flex;
       cursor: pointer;
-      flex-shrink: 0;
     }
 
-    .admin-scorecard-color-input::-webkit-color-swatch-wrapper {
-      padding: 0;
+    .admin-color-swatch input {
+      position: absolute;
+      opacity: 0;
+      width: 28px;
+      height: 28px;
+      margin: 0;
+      cursor: pointer;
     }
 
-    .admin-scorecard-color-input::-webkit-color-swatch {
-      border: none;
-      border-radius: 999px;
+    .admin-color-swatch span {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--person-color);
+      box-shadow: inset 0 0 0 2px var(--card);
+      border: 2px solid transparent;
     }
 
-    .admin-scorecard-color-input::-moz-color-swatch {
-      border: none;
-      border-radius: 999px;
+    .admin-color-swatch input:checked + span {
+      border-color: var(--ink);
+    }
+
+    .admin-color-swatch input:focus-visible + span {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-scorecard-remove-btn {
@@ -3445,7 +3516,7 @@
       height: 32px;
       border: 1px solid var(--border);
       border-radius: var(--button-radius);
-      background: var(--panel);
+      background: var(--card);
       color: var(--muted);
       display: inline-flex;
       align-items: center;
@@ -3457,13 +3528,12 @@
 
     .admin-scorecard-remove-btn:hover,
     .admin-scorecard-remove-btn:focus-visible {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
+      background: var(--card-sunken);
+      color: var(--danger);
     }
 
     .admin-scorecard-remove-btn:focus-visible {
-      outline: 3px solid var(--color-accent);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
     }
 
@@ -3499,7 +3569,7 @@
       gap: 10px;
       padding: 10px 12px;
       border-radius: 16px;
-      background: color-mix(in srgb, var(--panel-strong) 76%, transparent);
+      background: var(--card);
       color: var(--ink);
       border: 1px solid var(--border);
     }
@@ -3508,7 +3578,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: var(--amber);
+      color: inherit;
     }
 
     .admin-scorecard-history-pill-icon svg {
@@ -3528,8 +3598,9 @@
     }
 
     .admin-scorecard-history-pill.is-winner {
-      background: color-mix(in srgb, var(--amber-soft) 90%, var(--panel));
-      border-color: color-mix(in srgb, var(--amber) 56%, var(--border));
+      background: var(--time-today);
+      border-color: var(--time-today);
+      color: var(--on-time-today);
     }
 
     .admin-scorecard-adjust-player {
@@ -3608,15 +3679,15 @@
     }
 
     .admin-scorecard-bonus-input:not(.is-locked) {
-      border-color: var(--color-accent);
-      background: var(--panel-strong);
+      border-color: var(--primary);
+      background: var(--card);
       color: var(--ink);
     }
 
     .admin-scorecard-bonus-input.is-locked {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
+      background: var(--card-sunken);
+      border-color: var(--primary);
+      color: var(--ink);
       font-weight: 800;
     }
 
@@ -3654,21 +3725,21 @@
       align-items: center;
       justify-content: center;
       border: 1px solid var(--border);
-      background: var(--panel);
+      background: var(--card);
       color: var(--ink);
       flex: 0 0 auto;
     }
 
     .admin-scorecard-lock-icon-btn.is-locked {
-      background: var(--sage-soft);
-      border-color: var(--sage);
-      color: var(--sage);
+      background: color-mix(in srgb, var(--success) 18%, var(--card));
+      border-color: var(--success);
+      color: var(--success);
       cursor: default;
       opacity: 1;
     }
 
     .admin-scorecard-bonus-error {
-      color: var(--rose);
+      color: var(--danger);
       font-size: 0.82rem;
       font-weight: 700;
       line-height: 1.2;
@@ -3689,16 +3760,16 @@
       padding: 6px 10px;
       border-radius: var(--tag-radius);
       border: 1px solid var(--border);
-      background: var(--panel-strong);
+      background: var(--card);
       color: var(--muted);
       font-size: 0.8rem;
       font-weight: 700;
     }
 
     .admin-scorecard-lock-pill.is-locked {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
+      background: var(--card-sunken);
+      border-color: var(--primary);
+      color: var(--ink);
     }
 
     .admin-scorecard-winner-title {
@@ -3720,8 +3791,18 @@
       border-bottom: 1px solid var(--border);
     }
 
+    /* The winner is a marigold row (name and score take its dark text). */
     .admin-scorecard-winner-row.is-winner {
+      padding: 10px 12px;
+      border-radius: var(--tag-radius);
+      border-bottom-color: transparent;
+      background: var(--time-today);
+      color: var(--on-time-today);
       font-weight: 800;
+    }
+
+    .admin-scorecard-winner-row.is-winner .admin-scorecard-winner-name {
+      color: inherit;
     }
 
     .admin-scorecard-winner-name {
@@ -3740,7 +3821,7 @@
     .admin-scorecard-bonus-reveal-card {
       border: 1px solid var(--border);
       border-radius: 18px;
-      background: var(--panel);
+      background: var(--card);
       padding: 18px;
       display: grid;
       gap: 10px;
@@ -3753,11 +3834,11 @@
     }
 
     .admin-scorecard-bonus-reveal-card.is-correct .admin-scorecard-bonus-impact {
-      color: var(--sage);
+      color: var(--success);
     }
 
     .admin-scorecard-bonus-reveal-card.is-incorrect .admin-scorecard-bonus-impact {
-      color: var(--rose);
+      color: var(--danger);
     }
 
     .admin-scorecard-bonus-summary {
@@ -3791,7 +3872,7 @@
       width: 100%;
       padding: 8px 12px;
       border-radius: var(--tag-radius);
-      background: var(--panel);
+      background: var(--card);
       border: 1px solid var(--border);
       font-size: 0.82rem;
       font-weight: 700;
@@ -3800,15 +3881,15 @@
     }
 
     .admin-scorecard-toggle-pill.is-correct input:checked + span {
-      background: var(--sage);
-      border-color: var(--sage);
-      color: #fff;
+      background: color-mix(in srgb, var(--success) 18%, var(--card));
+      border-color: var(--success);
+      color: var(--success);
     }
 
     .admin-scorecard-toggle-pill.is-incorrect input:checked + span {
-      background: var(--rose);
-      border-color: var(--rose);
-      color: var(--color-text-on-accent);
+      background: var(--danger-soft);
+      border-color: var(--danger);
+      color: var(--danger);
     }
 
     .admin-scorecard-toggle-row {
@@ -3819,8 +3900,8 @@
     }
 
     .admin-button[data-action="scorecard-bonus-reveal"]:disabled {
-      background: #e7e5e4;
-      color: #78716c;
+      background: var(--card-sunken);
+      color: var(--muted);
       cursor: default;
       opacity: 1;
       pointer-events: none;
@@ -3946,15 +4027,15 @@
       height: 44px;
       flex-shrink: 0;
       font-size: 1.4rem;
-      color: var(--color-accent);
-      background: var(--color-accent-subtle);
+      color: var(--ink);
+      background: var(--card-sunken);
       border: 1px solid transparent;
       border-radius: var(--button-radius);
       cursor: pointer;
     }
 
     .admin-meal-type-icon-option.is-selected {
-      border-color: var(--color-accent);
+      border-color: var(--primary);
     }
 
     .admin-meal-type-picker {

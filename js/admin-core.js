@@ -205,9 +205,8 @@
       "#3656a8", "#a2306e", "#136670", "#9a4a26",
       "#6848b0", "#63600f", "#7a4f36", "#4a6b2a"
     ];
-    const SCORECARD_PLAYER_COLOR_PALETTE = [
-      "#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c", "#0891b2"
-    ];
+    // Scorecard players use the first six person colors (red is never a player color).
+    const SCORECARD_PLAYER_COLOR_PALETTE = PERSON_COLOR_PALETTE.slice(0, 6);
 
     // Screen definitions for settings UI
     const SCREEN_LABELS = {
