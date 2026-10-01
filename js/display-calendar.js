@@ -126,8 +126,15 @@
         const events = calendarEventsMap.get(formatDateKey(date)) || [];
         const dateKey = formatDateKey(date);
 
+        // Time scale: today is solid marigold, the next 3 days are soft sage,
+        // past days dim. (The "week" tier is skipped here: every column is already this week.)
+        const tier = getTimeTier(dateKey);
+        const isToday = date.toDateString() === todayKey;
         const column = document.createElement("article");
-        column.className = "day-column" + (date.toDateString() === todayKey ? " today" : "");
+        column.className = "day-column"
+          + (isToday ? " today" : "")
+          + (tier === "soon" ? " day-column--soon" : "")
+          + (tier === "overdue" ? " day-column--past" : "");
 
         const eventsMarkup = events.length
           ? events.map((event) => `
@@ -147,6 +154,7 @@
         column.innerHTML = `
           <div class="day-header">
             <div class="day-name">${formatCalendarLabel(date)}</div>
+            ${isToday ? '<span class="day-today-tag">Today</span>' : ""}
           </div>
           <div class="event-list">${eventsMarkup}</div>
         `;
@@ -197,6 +205,17 @@
       return { maxFull, maxWithPill };
     }
 
+    // Month cells use the time scale too: today solid marigold, next 3 days
+    // soft sage, past days dimmed, days from other months faded further.
+    function getMonthDayClasses(dateKey, isToday, isOutsideMonth) {
+      const tier = getTimeTier(dateKey);
+      return "month-day"
+        + (isToday ? " month-day--today" : "")
+        + (!isOutsideMonth && tier === "soon" ? " month-day--soon" : "")
+        + (!isOutsideMonth && tier === "overdue" ? " month-day--past" : "")
+        + (isOutsideMonth ? " month-day--outside" : "");
+    }
+
     function renderMonthCalendarCells(monthGridEl, displayedMonth, start, cellsNeeded, capacity, today) {
       const cells = Array.from({ length: cellsNeeded }, (_, index) => {
         const date = new Date(start);
@@ -231,7 +250,7 @@
           : "";
 
         return `
-          <article class="month-day${isToday ? " month-day--today" : ""}${isOutsideMonth ? " month-day--outside" : ""}">
+          <article class="${getMonthDayClasses(dateKey, isToday, isOutsideMonth)}">
             <div class="month-date">${date.getDate()}</div>
             <div class="month-events">${eventChips}${overflowPill}</div>
           </article>
@@ -263,7 +282,7 @@
         date.setDate(start.getDate() + i);
         const isToday = date.toDateString() === today.toDateString();
         const isOutside = date.getMonth() !== displayedMonth.getMonth();
-        return `<article class="month-day${isToday ? " month-day--today" : ""}${isOutside ? " month-day--outside" : ""}">
+        return `<article class="${getMonthDayClasses(formatDateKey(date), isToday, isOutside)}">
           <div class="month-date">${date.getDate()}</div>
           <div class="month-events"></div>
         </article>`;
