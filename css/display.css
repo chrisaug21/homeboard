@@ -1,3 +1,26 @@
+    /* Brand logos: render the light and dark file, show the one matching the theme. */
+    .brand-logo--dark {
+      display: none !important;
+    }
+
+    html[data-theme="dark"] .brand-logo--light {
+      display: none !important;
+    }
+
+    html[data-theme="dark"] .brand-logo--dark {
+      display: block !important;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme="light"]) .brand-logo--light {
+        display: none !important;
+      }
+
+      html:not([data-theme="light"]) .brand-logo--dark {
+        display: block !important;
+      }
+    }
+
     .app-shell {
       position: relative;
       width: 100vw;
@@ -39,8 +62,6 @@
       max-width: 100%;
       height: auto;
       margin: 0 auto;
-      opacity: 0.92;
-      filter: brightness(0.97);
     }
 
     
@@ -168,8 +189,8 @@
       font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0.13em;
-      color: var(--amber);
-      opacity: 0.52;
+      text-transform: uppercase;
+      color: var(--muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -177,22 +198,18 @@
 
     .household-logo {
       display: block;
-      width: 120px;
-      height: auto;
+      height: 22px;
+      width: auto;
       max-width: 100%;
-      opacity: 0.9;
-      filter: brightness(0.97);
     }
 
     
     
     .version-label {
       text-align: right;
-      font-size: 0.58rem;
+      font-size: 0.72rem;
       font-weight: 700;
-      letter-spacing: 0.06em;
       color: var(--muted);
-      opacity: 0.36;
       pointer-events: none;
       user-select: none;
       white-space: nowrap;
@@ -226,11 +243,9 @@
     }
 
     .last-synced-label {
-      font-size: 0.56rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
+      font-size: 0.72rem;
+      font-weight: 700;
       color: var(--muted);
-      opacity: 0.38;
       white-space: nowrap;
       user-select: none;
     }
@@ -418,15 +433,22 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 12px;
+      padding: 9px 13px;
       border-radius: var(--tag-radius);
-      background: color-mix(in srgb, var(--primary) 10%, transparent);
-      color: var(--amber);
-      font-family: var(--font-display);
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
+      background: var(--eyebrow-bg);
+      color: var(--eyebrow-fg);
+      font-family: var(--font-ui);
+      font-size: 0.75rem;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
+    }
+
+    .eyebrow svg {
+      width: 17px;
+      height: 17px;
+      stroke-width: 2;
     }
 
     h1,
@@ -1537,11 +1559,6 @@
       border-color: color-mix(in srgb, var(--danger) 16%, transparent);
     }
 
-    .rsvp-screen .eyebrow {
-      background: color-mix(in srgb, var(--danger) 12%, transparent);
-      color: var(--rose);
-    }
-
     .rsvp-layout {
       display: grid;
       grid-template-rows: auto auto 1fr;
@@ -1984,24 +2001,23 @@
       padding: 0;
       border-radius: var(--button-radius);
       border: 1px solid var(--border);
-      background: rgba(255, 253, 247, 0.82);
+      background: var(--card);
       color: var(--muted);
       display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+      transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
     }
 
     .progress-bar > .display-nav > .display-nav-button:hover,
     .progress-bar > .display-nav > .display-nav-button:focus-visible {
       transform: translateY(-1px);
-      border-color: var(--color-accent);
       color: var(--ink);
     }
 
     .progress-bar > .display-nav > .display-nav-button:focus-visible {
-      outline: 3px solid rgba(28, 25, 23, 0.2);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
     }
 
@@ -2009,10 +2025,9 @@
       flex-basis: var(--display-nav-button-active-width);
       width: var(--display-nav-button-active-width);
       min-width: var(--display-nav-button-active-width);
-      background: var(--display-nav-active-bg);
-      border-color: var(--display-nav-active-border);
-      color: var(--color-text-on-accent);
-      box-shadow: 0 6px 14px rgba(180, 83, 9, 0.22);
+      background: var(--primary);
+      border-color: transparent;
+      color: var(--on-primary);
     }
 
     .progress-bar > .display-nav > .display-nav-button .display-nav-icon {

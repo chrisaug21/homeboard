@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#F5F0E8">
+  <meta name="theme-color" content="#f6f5f0">
   <meta name="color-scheme" content="light dark">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-CCSFWZBLDH"></script>
   <script>
@@ -13,8 +13,9 @@
     gtag('config', 'G-CCSFWZBLDH');
   </script>
   <title>Homeboard</title>
-  <link rel="stylesheet" href="css/tokens.css?v=2.5.11">
-  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.11">
+  <link rel="icon" type="image/svg+xml" href="/brand/app-icon.svg">
+  <link rel="stylesheet" href="css/tokens.css?v=2.5.13">
+  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.13">
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -39,7 +40,7 @@
         document.head.appendChild(manifestLink);
       }
       if (mode === "admin") {
-        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#B45309");
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f6f5f0");
         var s = document.createElement("style");
         s.textContent = "#admin-app{display:grid!important}#display-app{display:none!important}html,body{overflow:auto}";
         document.head.appendChild(s);
@@ -50,10 +51,10 @@
     :root {
       color-scheme: light;
       --screen-gap: 28px;
-      --display-nav-button-width: 60px;
-      --display-nav-button-active-width: 72px;
-      --display-nav-button-height: 38px;
-      --display-nav-button-gap: 12px;
+      --display-nav-button-width: 52px;
+      --display-nav-button-active-width: 62px;
+      --display-nav-button-height: 34px;
+      --display-nav-button-gap: 7px;
     }
 
     html[data-theme="dark"] {
@@ -660,8 +661,8 @@
     }
 
   </style>
-  <link rel="stylesheet" href="css/display.css?v=2.5.11">
-  <link rel="stylesheet" href="css/admin.css?v=2.5.11">
+  <link rel="stylesheet" href="css/display.css?v=2.5.13">
+  <link rel="stylesheet" href="css/admin.css?v=2.5.13">
   <link rel="stylesheet" href="js/vendor/cropper.min.css">
 </head>
 <body>
@@ -820,7 +821,7 @@
   <div class="app-shell" id="display-app">
     <section class="display-pairing" id="display-pairing-screen" hidden aria-labelledby="display-pairing-title">
       <div class="display-pairing-card">
-        <img class="display-pairing-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
+        <img class="brand-logo brand-logo--light display-pairing-logo" src="brand/logo-stacked.svg" alt="Homeboard" width="160" decoding="async"><img class="brand-logo brand-logo--dark display-pairing-logo" src="brand/logo-stacked-on-dark.svg" alt="" width="160" decoding="async">
         <p class="display-pairing-copy" id="display-pairing-title">Enter the 4-character code from Settings → Display Setup on your phone.</p>
         <form class="display-pairing-form" id="display-pairing-form" novalidate>
           <input
@@ -1053,7 +1054,7 @@
     <div class="admin-auth-loading" id="admin-auth-loading">
       <div class="admin-login-card admin-auth-loading-card" aria-live="polite">
         <div class="admin-login-brand">
-          <img class="admin-login-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
+          <img class="brand-logo brand-logo--light admin-login-logo" src="brand/logo-stacked.svg" alt="Homeboard" width="160" decoding="async"><img class="brand-logo brand-logo--dark admin-login-logo" src="brand/logo-stacked-on-dark.svg" alt="" width="160" decoding="async">
         </div>
         <div class="admin-auth-loading-copy">
           <div class="admin-auth-loading-spinner" aria-hidden="true"></div>
@@ -1071,7 +1072,7 @@
     <div class="admin-login-screen" id="admin-login-screen" hidden>
       <div class="admin-login-card">
         <div class="admin-login-brand">
-          <img class="admin-login-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
+          <img class="brand-logo brand-logo--light admin-login-logo" src="brand/logo-stacked.svg" alt="Homeboard" width="160" decoding="async"><img class="brand-logo brand-logo--dark admin-login-logo" src="brand/logo-stacked-on-dark.svg" alt="" width="160" decoding="async">
         </div>
         <form id="admin-login-form" novalidate>
           <div class="admin-field">
