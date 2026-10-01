@@ -1582,9 +1582,10 @@
       padding: 28px 36px;
       border-radius: var(--radius-lg);
       overflow: hidden;
-      background: var(--card);
-      border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
-      box-shadow: 0 20px 36px rgba(153, 104, 48, 0.12);
+      background: var(--countdown-far);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1607,7 +1608,7 @@
     .countdown-photo-wrap {
       position: relative;
       overflow: hidden;
-      background: color-mix(in srgb, var(--primary) 12%, transparent);
+      background: var(--card-sunken);
     }
 
     .countdown-photo {
@@ -1646,6 +1647,12 @@
       align-self: flex-start;
     }
 
+    /* Without a photo, center everything (icon and number used to hug the left). */
+    .countdown-card:not(.countdown-card--photo) .countdown-copy {
+      align-items: center;
+      text-align: center;
+    }
+
     .countdown-card--photo .countdown-name {
       max-width: 100%;
     }
@@ -1654,19 +1661,33 @@
       max-width: 100%;
     }
 
-    .countdown-card--variant-2 {
-      background: var(--time-soon);
-      border-color: color-mix(in srgb, var(--success) 14%, transparent);
+    /* Countdown ramp (anticipation, not action): it warms as the day nears. */
+    .countdown-card--far {
+      background: var(--countdown-far);
     }
 
-    .countdown-card--variant-3 {
-      background: var(--danger-soft);
-      border-color: color-mix(in srgb, var(--danger) 14%, transparent);
+    .countdown-card--later {
+      background: var(--countdown-later);
     }
 
-    .countdown-card--variant-4 {
-      background: var(--time-week);
-      border-color: rgba(88, 84, 154, 0.14);
+    .countdown-card--soon {
+      background: var(--countdown-soon);
+      color: #ffffff;
+      border-color: var(--countdown-soon);
+    }
+
+    .countdown-card--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .countdown-card--soon .countdown-unit,
+    .countdown-card--soon .countdown-caption,
+    .countdown-card--today .countdown-unit,
+    .countdown-card--today .countdown-caption {
+      color: inherit;
+      opacity: 0.8;
     }
 
     .countdown-icon {
@@ -1676,7 +1697,7 @@
       align-items: center;
       justify-content: center;
       border-radius: var(--tag-radius);
-      background: color-mix(in srgb, var(--card) 62%, transparent);
+      background: color-mix(in srgb, currentColor 12%, transparent);
     }
 
     .countdown-icon svg {
@@ -1711,6 +1732,11 @@
       font-weight: 800;
       line-height: 0.9;
       letter-spacing: -0.05em;
+    }
+
+    .countdown-value--today {
+      font-size: 6rem;
+      letter-spacing: -0.04em;
     }
 
     .countdown-unit {
