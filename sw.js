@@ -1,4 +1,4 @@
-const CACHE_NAME = "homeboard-v2.5.31";
+const CACHE_NAME = "homeboard-v2.5.32";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -13,7 +13,6 @@ const ASSETS_TO_CACHE = [
   "./brand/mark.svg",
   "./brand/app-icon.svg",
   "./css/tokens.css",
-  "./css/legacy-aliases.css",
   "./fonts/Rubik-500.woff2",
   "./fonts/Rubik-700.woff2",
   "./fonts/Rubik-800.woff2",

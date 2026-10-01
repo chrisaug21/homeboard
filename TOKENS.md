@@ -1,138 +1,59 @@
 # TOKENS.md
 
-Canonical reference for CSS design tokens in Homeboard. Any agent should read this file before touching CSS or adding a new styled component.
+Canonical reference for Homeboard's design tokens. Read this before touching CSS or adding a styled component. The source of truth is [css/tokens.css](css/tokens.css) (copied from `design-system/tokens.css`); the full design rules live in `design-system/README.md` and `design-system/components/*/README.md`.
 
-## 1. How color schemes work
+## 1. Themes
 
-Homeboard has three color schemes:
+Two themes, plus "Match device":
 
-- `Warm` is the default scheme defined in `:root` in [index.html](/Users/chrisaugustine/projects/homeboard/index.html).
-- `Dark` is defined in [css/display.css](/Users/chrisaugustine/projects/homeboard/css/display.css) under `html[data-scheme="dark"]`.
-- `Slate` is defined in [css/display.css](/Users/chrisaugustine/projects/homeboard/css/display.css) under `html[data-scheme="slate"]`.
+- `Light` = `:root` / `html[data-theme="light"]`
+- `Dark` = `html[data-theme="dark"]`
+- `Match device` = no `data-theme` attribute; `@media (prefers-color-scheme: dark)` picks Light or Dark.
 
-The active scheme is applied by `applyColorScheme()` in [js/display.js](/Users/chrisaugustine/projects/homeboard/js/display.js). That function sets or removes the `data-scheme` attribute on the `<html>` element:
+Display and admin keep separate choices. Display: `households.color_scheme`; admin: `users.preferences.admin_theme`. Stored values are `light`, `dark` or `auto`. Old saved `warm` / `slate` values are read as `light` by `normalizeTheme()` in `js/display-core.js`; only `light` / `dark` / `auto` are written. Marketing, signup and privacy pages follow the device setting.
 
-- no `data-scheme` attribute = Warm
-- `data-scheme="dark"` = Dark
-- `data-scheme="slate"` = Slate
+Components read tokens only. Never write per-theme override blocks (`html[data-theme="dark"] .foo {...}`), gradients, or one-off hex/`rgba()` colors. If a color is not a token, use `color-mix(in srgb, var(--token) N%, transparent)` for a translucent version.
 
-## 2. Semantic tokens — ALWAYS use these for new components
+## 2. Core tokens
 
-These are the canonical interaction tokens for any new component.
-
-### `--color-accent`
-
-Current values by scheme:
-
-| Scheme | Value | Notes |
-|---|---|---|
-| Warm | `#b45309` | terracotta |
-| Dark | `#f59e0b` | gold |
-| Slate | `#0369a1` | blue |
-
-Use for:
-
-- primary interactive elements
-- active states
-- selected states
-- focus indicators
-- any element that needs to stand out as the primary action or selection
-
-### `--color-accent-subtle`
-
-Current values by scheme:
-
-| Scheme | Value | Notes |
-|---|---|---|
-| Warm | `#f7d9aa` | soft peach |
-| Dark | `rgba(245, 158, 11, 0.18)` | soft gold, low opacity |
-| Slate | `rgba(3, 105, 161, 0.11)` | soft blue, low opacity |
-
-Use for:
-
-- background fills on active or selected elements where a full accent color would be too heavy
-- hover states
-- selected row backgrounds
-- subtle highlights
-
-Note: on light schemes (`Warm`, `Slate`) this is too subtle for nav active states. Use `--color-accent` instead for those.
-
-### `--color-text-on-accent`
-
-Current values by scheme:
-
-| Scheme | Value |
+| Token | Use |
 |---|---|
-| Warm | `#ffffff` |
-| Dark | `#ffffff` |
-| Slate | `#ffffff` |
+| `--bg`, `--surface`, `--card`, `--card-sunken` | page, panels, cards, hover/sunken fills |
+| `--ink`, `--muted`, `--border`, `--shadow` | text, secondary text, hairlines, shadow |
+| `--primary`, `--on-primary` | buttons, active nav, selected controls (aubergine in Light, marigold in Dark) |
+| `--success`, `--danger`, `--danger-soft` | positive / error states |
+| `--love` | wedding pulse accents only |
+| `--eyebrow-bg`, `--eyebrow-fg` | screen title pill on every screen |
+| `--font-display` (Rubik), `--font-ui` (Manrope) | all text; fonts are self-hosted in `fonts/` |
 
-Use for:
+## 3. Time scale (color means "how soon")
 
-- text rendered on top of `--color-accent`
-- icons rendered on top of `--color-accent`
+Anything with a date takes its color from `getTimeTier(dateString)` in `js/shared.js`: `overdue`, `today`, `soon` (1-3 days), `week` (4-7 days), `later`.
 
-## 3. Legacy tokens — do not use for new components
+| Tier | Fill | Text on it | Other |
+|---|---|---|---|
+| overdue | `--time-overdue` | `--on-time-overdue` | solid |
+| today | `--time-today` | `--on-time-today` | solid |
+| soon | `--time-soon` | `--time-soon-fg` | edge `--time-soon-edge`, chip `--time-soon-chip` |
+| week | `--time-week` | `--time-week-fg` | edge `--time-week-edge` |
+| later | `--card` | `--muted` | plain |
 
-Warning: these tokens are legacy and should not be used in any new component.
+Edge width is `--time-edge` (6px). Color is only ever used for time; never color a card for any other reason.
 
-### `--amber` and `--amber-soft`
+Countdowns use their own ramp by distance: `--countdown-far` (31+ days), `--countdown-later` (8-30), `--countdown-soon` (1-7), and `--time-today` for today.
 
-These tokens exist in all three scheme blocks, but the names are misleading. In Slate, `--amber` is blue (`#0369a1`), not amber.
+## 4. Person colors
 
-They predate the semantic token system and are being migrated out. Do not reference them in new components. Use `--color-accent` and `--color-accent-subtle` instead.
+Eight tokens: `--person-blueberry` ... `--person-moss`. Stored member and scorecard colors are raw hex; `resolvePersonColorToken(color, limit)` in `js/shared.js` maps them to the nearest token at render time (no database migration). Set the inline style `--person-color: var(--person-xxx)`; CSS reads `--person: var(--person-color, var(--muted))`. Scorecard players use only the first six (no red, since red means alarm). Palettes live in `js/admin-core.js` (`PERSON_COLOR_PALETTE`, `SCORECARD_PLAYER_COLOR_PALETTE`).
 
-Migration status:
+## 5. Structural tokens
 
-- partially complete
-- `--display-nav-active-bg` has already been migrated
-- all other references are still using legacy tokens and should be updated in the Phase 2 token audit PR
+`--space-*`, radius tokens (`--button-radius`, `--tag-radius`, `--radius-*`), and `--time-edge` live in `css/tokens.css` or the `:root` block of `index.html`. Display footer nav sizing uses `--display-nav-button-width`, `--display-nav-button-active-width`, `--display-nav-button-height`, `--display-nav-button-gap`, `--display-nav-icon-size` (component-scoped, set in `index.html`).
 
-## 4. Component-scoped tokens — use only within their component
+## 6. Naming new tokens
 
-The following RSVP tokens are intentionally component-scoped:
+Use the design-system names (above). Do not reintroduce the removed legacy names: `--amber`, `--amber-soft`, `--color-accent`, `--color-accent-subtle`, `--color-text-on-accent`, `--sage`, `--sage-soft`, `--rose`, `--rose-soft`, `--panel`, `--panel-strong`, `--bg-soft`, `--rsvp-*`, `--marketing-*` (marketing still uses a few local `--marketing-*` aliases inside `.marketing-shell` that point at the tokens above), `--display-nav-active-bg/-border`.
 
-- `--rsvp-pending-bg`
-- `--rsvp-review-bg-flagged`
-- `--rsvp-review-bg-clear`
-- `--rsvp-attending-pill-bg`
-- `--rsvp-attending-pill-color`
-- `--rsvp-undercount-pill-bg`
-- `--rsvp-undercount-pill-color`
-- `--rsvp-clear`
-- `--rsvp-flagged`
+## 7. Logos
 
-These are correct and intentional for RSVP admin components. Do not use them outside RSVP components.
-
-If a non-RSVP component needs a similar color treatment, use `--color-accent` or `--color-accent-subtle` instead.
-
-## 5. Structural tokens — reference freely
-
-These tokens are safe to use anywhere in the project:
-
-- `--bg`, `--bg-soft`: page and surface backgrounds
-- `--panel`, `--panel-strong`: card and panel backgrounds
-- `--ink`: primary text color
-- `--muted`: secondary or muted text
-- `--border`: default border color
-- `--shadow`: box shadow
-- `--radius-lg`, `--radius-md`, `--radius-sm`: border radius for cards and containers
-- `--button-radius`: `8px`, use for all interactive buttons
-- `--tag-radius`: `12px`, use for all tags and pills
-- `--sage`, `--sage-soft`: success and positive states
-- `--rose`, `--rose-soft`: error, negative, and love states
-- `--transition`: standard animation timing
-
-## 6. Token naming convention for new tokens
-
-Any new token added to the project should follow this pattern:
-
-- semantic purpose tokens: `--color-[purpose]` such as `--color-accent` or `--color-accent-subtle`
-- component-scoped tokens: `--[component]-[purpose]` such as `--rsvp-pending-bg` or `--scorecard-active-player-bg`
-- never name a token after a color such as `--amber` or `--blue` unless it is a raw palette entry that is not intended for direct use
-
-## 7. Phase 2 audit — what still needs to be done
-
-- Find all references to `var(--amber)` and `var(--amber-soft)` outside of their token definitions and update them to `--color-accent` or `--color-accent-subtle` as appropriate.
-- Confirm all `--rsvp-*` tokens are only used in RSVP components.
-- Remove `--display-nav-button-radius` if it is still present and unused.
+Light/dark pairs in `brand/` (`logo.svg` / `logo-on-dark.svg`, `logo-stacked*.svg`, `mark*.svg`, `app-icon.svg`). Render both `<img>`s with `.brand-logo--light` / `.brand-logo--dark`; CSS shows the right one for `data-theme` and `prefers-color-scheme`. Never use CSS filters to recolor a logo.

@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.31";
+    const VERSION = "2.5.32";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -423,27 +423,6 @@
       }
 
       return result;
-    }
-
-    // Shared "Sarah · Mike   Due Tomorrow" meta line used on display + admin cards.
-    function buildTodoMetaLineHTML(assignees, duePill, dueText = "") {
-      const names = (assignees || []).map((assignee) => {
-        const color = String(assignee.color || "").trim();
-        return color
-          ? `<span class="todo-assignee-name" style="color:${escapeHtml(color)}">${escapeHtml(assignee.name)}</span>`
-          : `<span class="todo-assignee-name todo-assignee-name--plain">${escapeHtml(assignee.name)}</span>`;
-      }).join('<span class="todo-meta-sep" aria-hidden="true">,</span>');
-
-      let dueMarkup = "";
-      if (duePill) {
-        const label = duePill.label === "Overdue" ? "Overdue" : `Due ${duePill.label}`;
-        dueMarkup = `<span class="todo-due-text ${escapeHtml(duePill.cssClass)}">${escapeHtml(label)}</span>`;
-      } else if (dueText) {
-        dueMarkup = `<span class="todo-due-text todo-due-text--plain">${escapeHtml(dueText)}</span>`;
-      }
-
-      if (!names && !dueMarkup) return "";
-      return `<div class="todo-meta-line">${names ? `<span class="todo-assignees">${names}</span>` : ""}${dueMarkup}</div>`;
     }
 
     function formatLongDate(dateString) {
@@ -1567,39 +1546,6 @@
 
       parsed.setHours(0, 0, 0, 0);
       return parsed < today;
-    }
-
-    // Returns { cssClass, label } for a due date urgency pill, or null if no due date.
-    // Used on both the display and admin views.
-    function getTodoDuePill(dueDate) {
-      if (!dueDate) return null;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const parsed = new Date(dueDate + "T00:00:00");
-
-      if (Number.isNaN(parsed.getTime())) {
-        return null;
-      }
-
-      parsed.setHours(0, 0, 0, 0);
-      const diff = Math.round((parsed - today) / 86400000);
-
-      if (isTodoOverdue(dueDate)) {
-        return { cssClass: "todo-due-text--overdue", label: "Overdue" };
-      }
-      if (diff === 0) {
-        return { cssClass: "todo-due-text--today", label: "Today" };
-      }
-      if (diff <= 3) {
-        const label = diff === 1
-          ? "Tomorrow"
-          : new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed);
-        return { cssClass: "todo-due-text--soon", label };
-      }
-      return {
-        cssClass: "todo-due-text--future",
-        label: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed)
-      };
     }
 
     // ── Time scale (design system) ─────────────────────────────────────────

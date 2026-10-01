@@ -167,13 +167,18 @@ Settings are opened from the gear icon in the admin header, not a bottom-nav tab
 - Netlify
 - Google Calendar API
 - Lucide icons
+- Self-hosted fonts (Rubik, Manrope) and a token-based design system (aubergine / marigold / sage; Light, Dark and Match device themes). See `TOKENS.md`.
 - GSAP and Canvas Confetti for display celebrations
 
 ## Repository Layout
 
 ```text
 index.html                  app shell for both modes
+brand/                      logo, mark and app-icon SVGs (light/dark pairs)
+fonts/                      self-hosted Rubik and Manrope (woff2)
+design-system/              reference only, not served (tokens, fonts, logos, component docs)
 css/
+  tokens.css                design tokens (colors, time scale, person colors, fonts)
   admin.css                 admin-only styles
   display.css               display-only styles
 js/
@@ -199,7 +204,6 @@ js/
   vendor/                   bundled browser libraries
 manifest.json               display PWA manifest
 manifest-admin.json         admin PWA manifest
-homeboard_logo.svg          Homeboard logo asset
 sw.js                       service worker
 netlify.toml                Netlify config and env injection
 rls-policies.sql            reference RLS policies for the Supabase project
@@ -262,4 +266,5 @@ Do not use `file://` or `npx serve .` for local testing. The app depends on inje
 - do not hard-delete todos
 - only add additive columns to the `rsvps` schema that are nullable or have a default; never touch the columns the wedding site writes (`name`, `attending`, `guest_count`)
 - keep `js/shared.js` `VERSION` and `sw.js` `CACHE_NAME` in sync on every push
+- style with design-system tokens only (see `TOKENS.md`); no per-theme overrides, gradients, or hardcoded colors
 - update this README when auth, setup, routes, pairing, environment variables, or architecture change

@@ -23,7 +23,7 @@ js/
 design-system/     — reference only (not served): new design system tokens, fonts, logos, component previews. Redesign plan: docs/design-system-implementation-plan.md
 manifest.json       — PWA manifest for display mode (landscape)
 manifest-admin.json — PWA manifest for admin mode (portrait)
-homeboard_logo.svg  — default display-footer logo asset
+brand/              — logo, mark and app-icon SVGs (light/dark pairs); fonts/ — self-hosted Rubik + Manrope; css/tokens.css — design tokens
 sw.js               — service worker, cache key homeboard-v##
 netlify.toml        — build config, env var injection via sed
 ```
@@ -64,7 +64,7 @@ netlify.toml        — build config, env var injection via sed
 - Homeboard wedding counts must derive from `rsvps` + `invited_parties`, not from hardcoded totals or subtraction from `households.total_invited_guests`
 - `Attending` = matched attending people only; use the linked RSVP guest count, clamped to the invited party count if an RSVP overstates guests so totals stay consistent
 - `Declined` = full declines plus partial declines (`invited_count - guest_count` when a matched attending RSVP brings fewer guests than invited)
-- The display `Declined Guests` modal lists both full declines (`attending = false`) and partial declines (matched attending parties with `guest_count < invited_count`); each row shows a per-party declined-guest count so the rows sum to the `Declined` total, partial rows carry an amber "Partial" badge, and a subheader breaks out the full-vs-partial party counts. Partial under-counts also stay visible in the guest list
+- The display `Declined Guests` modal lists both full declines (`attending = false`) and partial declines (matched attending parties with `guest_count < invited_count`); each row shows a per-party declined-guest count so the rows sum to the `Declined` total, partial rows carry a "Partial" badge, and a subheader breaks out the full-vs-partial party counts. Partial under-counts also stay visible in the guest list
 - `Pending` = sum of `invited_parties.invited_count` where `rsvp_id` is null
 - `Responded` = count of matched `invited_parties`
 - `Review RSVPs` = count of flagged RSVP rows in `Needs Review`
@@ -78,8 +78,8 @@ netlify.toml        — build config, env var injection via sed
 - Display mode and admin mode use the same matching helper. Duplicate detection must score against all `invited_parties`, including already-matched parties. High-confidence matches may auto-link on refresh and should log to the browser console, but only after that all-parties duplicate check passes. If the best match is already linked above the duplicate threshold, flag it as `Duplicate` instead of auto-linking or treating it as `Unmatched`.
 - Duplicate review modals use a single confirm flow: show the linked RSVP plus any number of competing active RSVPs for that party, choose the primary RSVP, edit the guest count, link the primary RSVP to the invited party, and set every other conflict RSVP to `superseded` with `merged_into_party_id`.
 - RSVP review actions live in the shared admin bottom-sheet modal. A resolved issue should disappear from the Needs Review list after the modal action completes.
-- On the display guest list, matched attending parties with `guest_count < invited_count` stay in the list and use an amber guest-count pill to signal the under-count.
-- On the admin RSVP guest list, under-counted attending parties should collapse into one amber status pill that reads `Attending • X of Y`; exact-match attending counts keep the normal green attending pill.
+- On the display guest list, matched attending parties with `guest_count < invited_count` stay in the list with a marigold left edge and a "⚠ x of y" note.
+- On the admin RSVP guest list, under-counted attending parties show a marigold edge and `⚠ X of Y` text; exact-match attending parties use the sage tile with "Attending".
 
 ## display_settings JSONB shape
 ```json
@@ -106,30 +106,24 @@ netlify.toml        — build config, env var injection via sed
 - **Recurring to-dos** are planned for a future PR and will require a schema change to `todos`.
 - Countdown admin supports optional Unsplash photos plus `days_before_visible` timing. Past calendar events are filtered out of the countdown source-event picker, but saved countdown rows are not mutated.
 
-## Color Palette
-- Background: `#F5F0E8` (warm parchment)
-- Surface/cards: `#FFFDF7` (warm white)
-- Primary text: `#1C1917` (warm near-black)
-- Accent: `#B45309` (amber)
-- Secondary accent: `#15803D` (sage green)
-- Muted text: `#78716C` (warm gray)
+## Design System
+Aubergine / marigold / sage, Rubik + Manrope, flat fills (no gradients), two themes (Light, Dark) plus Match device. Tokens live in `css/tokens.css`; read `TOKENS.md` before styling. Color is reserved for time (overdue / today / soon / week / later) and for person identity (`--person-*`); never use it decoratively. Full design rules: `design-system/README.md`.
 
 ## Styling Conventions
-- Before writing any CSS or adding styled components, read `TOKENS.md` for the canonical token reference. Always use semantic tokens (`--color-accent`, `--color-accent-subtle`) for new interactive components. Never use `--amber` or `--amber-soft` in new code.
+- Before writing any CSS or adding styled components, read `TOKENS.md` for the canonical token reference. Use only design-system tokens (`--primary`, `--on-primary`, `--card-sunken`, `--success`, `--danger`, `--time-*`, `--person-*`, ...). Never add per-theme override blocks, gradients, or hardcoded hex/rgba colors; the removed legacy names (`--amber`, `--color-accent`, `--sage`, `--rose`, `--panel`, ...) must not come back.
 - Shared corner-radius tokens live in `:root` in `index.html`: use `--button-radius` for interactive buttons and `--tag-radius` for pills, badges, date chips, and other tag-like UI
 - On admin mobile layouts up to `480px`, single primary actions should run full width and two-button action rows should split evenly across the row
 - The admin nav is a fixed bottom bar pinned flush to the bottom edge of the viewport; keep toast positioning above it so nav actions stay accessible
-- The display footer assistant label (`#household-name`) uses the Google Font `Righteous`, loaded from Google Fonts in `index.html`
-- The display footer assistant label should render the stored `assistant_name` exactly as saved in Supabase; do not re-case it in JS or force uppercase in CSS
-- If `assistant_name` is null, missing, or blank, the display footer should render `homeboard_logo.svg` as an `<img>` at about `120px` wide instead of text; if that SVG fails to load, use the image `onerror` handler to fall back to the Righteous text label `Homeboard`
-- The footer logo should stay scheme-aware: Warm can use a subtle `brightness(0.97)`, Slate should use no filter, and Dark should use `saturate(0) brightness(0) invert(0.93) sepia(0.22) saturate(0.7) brightness(1.02)` so the mark reads as a warm off-white close to the dark scheme ink color instead of orange or gold
+- The display footer assistant label (`#household-name`) uses `--font-display` (Rubik, self-hosted in `fonts/`). Fonts are never loaded from Google Fonts or any other third party.
+- The display footer assistant label renders the stored `assistant_name` exactly as saved in Supabase (never re-case it in JS); the footer CSS displays it uppercase with letter spacing as part of the design, which only affects how it looks.
+- If `assistant_name` is null, missing, or blank, the display footer renders the `brand/logo.svg` / `brand/logo-on-dark.svg` pair (22px tall, `.brand-logo--light` / `.brand-logo--dark`) instead of text; if an image fails to load, fall back to the text label `Homeboard`.
+- Logos swap between light and dark files via CSS (`data-theme` or `prefers-color-scheme`); never recolor a logo with CSS filters.
 - The display footer screen nav uses icon buttons, not dash/notch pagination. Use small rounded-square buttons with muted/outline inactive styling and the primary accent fill for the active screen
 - Display footer nav sizing should be controlled through the shared CSS custom properties `--display-nav-button-width`, `--display-nav-button-active-width`, `--display-nav-button-height`, `--display-nav-button-gap`, and `--display-nav-icon-size`; nav corner radius should use the shared global `--button-radius`
 - The display footer nav should not have an outer capsule/frame; the buttons sit directly in the footer with no shared background, border, or shadow wrapper
-- The display footer nav active colors should be controlled per scheme via `--display-nav-active-bg` and `--display-nav-active-border`; light schemes should use `--color-accent` for the active nav background, while the dark scheme should use `--color-accent-subtle`
-- Semantic interaction tokens are `--color-accent`, `--color-accent-subtle`, and `--color-text-on-accent`; use them for any new interactive, selected, highlighted, or accent-fill UI
-- Scorecard components should follow `TOKENS.md`: use `--color-accent` and `--color-accent-subtle` for interactive/active states, and use `--sage-soft` / `--rose-soft` only for positive or negative score feedback
-- `--amber` and `--amber-soft` are legacy color tokens being deprecated; keep them only for older component references during migration and do not use them directly in new components
+- The display footer nav active button uses `--primary` fill with `--on-primary` text in both themes.
+- Interactive, selected, highlighted, or accent-fill UI uses `--primary` / `--on-primary`, with `--card-sunken` for hover and soft fills.
+- Scorecard components follow `TOKENS.md`: `--primary` for interactive states, `--success` / `--danger` for score feedback, `--person-*` for players (first six only), and a marigold border + "Leading" tag for the leader.
 - The display footer upcoming/month nav buttons should use a custom inline SVG calendar outline with an empty body area so the centered `upcoming_days` / `30` overlay remains readable; do not use a Lucide calendar glyph there
 - Display footer icon mapping: `todos` = `list-todo`, `meals` = `utensils-crossed`, `upcoming_calendar` = calendar icon with centered `display_settings.upcoming_days` overlay (default `7`), `monthly_calendar` = the same calendar icon with centered `30` overlay, `countdowns` = `hourglass`, `scorecards` = `trophy`, `rsvp` = `heart`, fallback = generic layout/grid icon
 - All countdown screens collapse into one footer nav button. Tapping that hourglass always jumps to the first countdown in the current rotation order, and the button remains active across every countdown screen
@@ -148,23 +142,23 @@ netlify.toml        — build config, env var injection via sed
 - The display to-do screen should use vertical scrolling only; avoid column-based layouts that interfere with horizontal swipe navigation between screens
 - The Settings screen sync row should keep visible spacing below its helper copy so the sync button/timestamp do not crowd the paragraph above
 - Admin tabs should use skeleton loaders that approximate the final layout while data is loading, especially on the RSVP screen
-- Todo cards in both admin and display show assignees and due date as plain text (no pills) via the shared `buildTodoMetaLineHTML` / `resolveTodoAssignees` helpers in `js/shared.js`; assignee names are colored from `display_settings.members`. Never duplicate the lookup logic, never hardcode per-person colors, and use the neutral fallback only when no configured color exists
+- Todo cards in both admin and display take the whole-card time tier (`.todo-card--overdue/today/soon/week`) and show assignees as colored names separated by commas, then a bullet and the due date as plain text in the tier color (no pills, no dots), via `buildTodoTierMetaLineHTML` / `resolveTodoAssignees` in `js/shared.js`. Never duplicate the lookup logic or hardcode per-person colors; person colors come from `display_settings.members` mapped to `--person-*` tokens.
 - Todos support multiple assignees via `todos.assignee_member_ids` (uuid[]); `assignee_member_id` / `assignee` mirror the first assignee for legacy fallback. Admin picks them with multi-select chips
 - The admin to-do screen must not fail just because household settings fail; render the todo data first, then re-render for member colors if `display_settings.members` arrives afterward
-- Active incomplete todos with `due_date < today` should show the overdue treatment on both display and admin: red left border, subtle red card tint, and red overdue date-pill text
+- Active incomplete todos with `due_date < today` use the overdue tier (solid `--time-overdue` card with a warning mark) on both display and admin.
 - Todo completion celebration animations are display-view only and must fully clean up any temporary DOM they create
 - Display celebrations load local bundled copies from `js/vendor/confetti.min.js` and `js/vendor/gsap.min.js`; confetti burst, star shower, and fireworks use Canvas Confetti, bubble float / thumbs up bounce / ink splash use GSAP, and ripple rings stay CSS/JS only
 - Every library-backed display celebration must guard calls with runtime `typeof` checks (`confetti` / `gsap`) and silently degrade to a simple pure CSS/JS particle burst if those globals are absent
-- Celebration particle colors should resolve the active scheme accent at runtime from `getComputedStyle(...).getPropertyValue('--amber')` and mix it with white, bright gold, and fresh green so effects stay scheme-aware without hardcoding one palette
+- Celebration particle colors come from the design palette (marigold, sage, fern, aubergine) plus the assignee's person color (`celebrationPersonColorTokens` in `js/display-todos.js`), resolved at runtime from the active theme's tokens via `getComputedStyle`.
 - Display todo completion timing should be: checkmark immediately, item fade/removal starts roughly 10-15% into the celebration with a quick ~200 ms opacity transition, and the celebration continues independently as a send-off
 - Checking off a display todo must reset the auto-rotation timer using the same `resetAutoRotate()` path as other display interactions so the screen does not rotate away mid-celebration
 - Rotation reset root cause: a previously scheduled auto-rotate callback can already be queued when the todo completion happens, so `clearTimeout()` alone is not sufficient; guard auto-rotate with a token/generation check so stale queued callbacks no-op instead of rotating the screen
 - GSAP bubble-float motion should use per-bubble sinusoidal horizontal drift while rising, with randomized amplitude/frequency/phase and slight stagger, so bubbles float organically instead of traveling straight up
 - The celebration pool includes 7 animations total; `ink splash` is a GSAP effect with 6-8 accent/gold/green blobs that burst from the checkbox, pulse slightly larger, then contract away alongside one fast expanding ring
 - The old sparkle-trail celebration is replaced by ripple rings: three concentric accent-color outline rings expand from the checkbox position, staggered by about 120 ms, and fade as they grow to roughly 200-300 px diameter
-- Bubble float and ink splash should not use white in their color mix; use the runtime accent plus visible celebration tones like gold, coral, teal, purple, and green so particles stay readable on light and dark schemes
-- The RSVP display guest-list empty state is a centered neutral waiting state in the pending-blue tone, with a matching zero-count color for the confirmed guest total
-- The admin RSVP `Pending` pill should use the same pending-blue waiting-state styling as the RSVP display, not the amber warning tone
+- Bubble float and ink splash should not use white in their color mix; use visible celebration tones from the palette so particles stay readable in Light and Dark.
+- The RSVP display guest-list empty state is a centered neutral waiting state; pending parties use a dashed neutral border (see the wedding pulse rules in `design-system/guidelines/migration.md`).
+- The admin RSVP `Pending` state uses neutral `--card-sunken` styling like the RSVP display, not a warning color.
 - Hide pre-today Google Calendar events from the admin countdown source-event picker; do not delete or mutate saved countdown rows
 - User-facing error messages must stay non-technical: never mention Supabase, service names, table names, or raw config instructions. Use plain patterns like `Something went wrong loading your data. Please try refreshing.` and `Something went wrong saving your changes. Please try again.`
 - User-facing version labels should always render as lowercase `v${VERSION}` and must not be uppercased by CSS
@@ -201,7 +195,7 @@ The public privacy policy lives at `privacy.html` (served at `/privacy`, linked 
 
 Changes that REQUIRE a policy review/update:
 - Collecting, storing, or logging any new kind of personal data (new columns/tables holding names, emails, locations, photos, device IDs, IP addresses, or free-text users type in)
-- Adding or changing any third-party service, SDK, script, font, CDN, analytics/tracking tool, or API that receives user data or the visitor's IP (current list in the policy: Supabase, Netlify, Google Calendar + Google Analytics + Google Fonts, jsDelivr CDN, Unsplash, Iconify)
+- Adding or changing any third-party service, SDK, script, font, CDN, analytics/tracking tool, or API that receives user data or the visitor's IP (current list in the policy: Supabase, Netlify, Google Calendar + Google Analytics, jsDelivr CDN, Unsplash, Iconify; fonts are self-hosted, not a third party)
 - Sending user data to a new place, or using existing data for a new purpose (especially advertising, profiling, AI/LLM processing, or sharing/selling)
 - Any change to Google OAuth scopes, or to what we do with Google data
 - Changing how long data is kept or how users can delete it or disconnect
