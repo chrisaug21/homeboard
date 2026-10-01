@@ -14,8 +14,8 @@
   </script>
   <title>Homeboard</title>
   <link rel="icon" type="image/svg+xml" href="/brand/app-icon.svg">
-  <link rel="stylesheet" href="css/tokens.css?v=2.5.29">
-  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.29">
+  <link rel="stylesheet" href="css/tokens.css?v=2.5.30">
+  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.30">
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -123,22 +123,7 @@
       min-height: 100dvh;
       padding: 32px 20px 40px;
       color: var(--marketing-text);
-      background:
-        radial-gradient(circle at top left, rgba(180, 83, 9, 0.16), transparent 30%),
-        radial-gradient(circle at top right, rgba(21, 128, 61, 0.12), transparent 28%),
-        linear-gradient(180deg, #fbf7ef 0%, var(--marketing-bg) 42%, #f1ebdf 100%);
-    }
-
-    .marketing-shell::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(28, 25, 23, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(28, 25, 23, 0.02) 1px, transparent 1px);
-      background-size: 24px 24px;
-      pointer-events: none;
-      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 78%);
+      background: var(--marketing-bg);
     }
 
     .marketing-layout {
@@ -164,10 +149,10 @@
       gap: 14px;
       width: fit-content;
       padding: 12px 16px;
-      background: rgba(255, 253, 247, 0.72);
-      border: 1px solid rgba(28, 25, 23, 0.08);
+      background: color-mix(in srgb, var(--surface) 72%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
       border-radius: 999px;
-      box-shadow: 0 10px 24px rgba(28, 25, 23, 0.05);
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--ink) 5%, transparent);
       backdrop-filter: blur(10px);
     }
 
@@ -228,22 +213,22 @@
     .marketing-button:hover,
     .marketing-button:focus-visible {
       transform: translateY(-1px);
-      box-shadow: 0 14px 26px rgba(28, 25, 23, 0.10);
+      box-shadow: 0 14px 26px color-mix(in srgb, var(--ink) 10%, transparent);
     }
 
     .marketing-button:focus-visible {
-      outline: 3px solid rgba(28, 25, 23, 0.20);
+      outline: 3px solid color-mix(in srgb, var(--ink) 20%, transparent);
       outline-offset: 3px;
     }
 
     .marketing-button--primary {
       background: var(--marketing-accent);
-      color: #FFFDF7;
+      color: var(--on-primary);
     }
 
     .marketing-button--secondary {
-      background: rgba(255, 253, 247, 0.72);
-      border-color: rgba(120, 113, 108, 0.40);
+      background: color-mix(in srgb, var(--surface) 72%, transparent);
+      border-color: color-mix(in srgb, var(--muted) 40%, transparent);
       border-width: 2px;
       color: var(--marketing-text);
     }
@@ -349,7 +334,7 @@
       gap: 10px;
       padding: 12px;
       border-radius: 18px;
-      border: 1px solid rgba(28, 25, 23, 0.08);
+      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
       background: var(--card);
     }
 
@@ -366,8 +351,8 @@
       min-height: 58px;
       padding: 10px 8px;
       border-radius: 14px;
-      background: rgba(255, 253, 247, 0.84);
-      border: 1px solid rgba(28, 25, 23, 0.06);
+      background: color-mix(in srgb, var(--surface) 84%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
     }
 
     .marketing-calendar-day strong {
@@ -400,7 +385,7 @@
     }
 
     .marketing-pill--ink {
-      background: rgba(28, 25, 23, 0.08);
+      background: color-mix(in srgb, var(--ink) 8%, transparent);
       color: var(--marketing-text);
     }
 
@@ -411,7 +396,7 @@
       min-height: 196px;
       padding: 12px;
       border-radius: 18px;
-      border: 1px solid rgba(28, 25, 23, 0.08);
+      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
       background: var(--card);
     }
 
@@ -422,8 +407,8 @@
       gap: 12px;
       padding: 12px 14px;
       border-radius: 14px;
-      background: rgba(255, 253, 247, 0.84);
-      border: 1px solid rgba(28, 25, 23, 0.06);
+      background: color-mix(in srgb, var(--surface) 84%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
     }
 
     .marketing-todo-check {
@@ -443,7 +428,7 @@
     .marketing-todo-row.is-done .marketing-todo-check {
       background: var(--marketing-accent);
       border-color: var(--marketing-accent);
-      color: #FFFDF7;
+      color: var(--on-primary);
     }
 
     .marketing-todo-copy {
@@ -456,7 +441,7 @@
     }
 
     .marketing-todo-row.is-done .marketing-todo-copy strong {
-      color: rgba(120, 113, 108, 0.86);
+      color: color-mix(in srgb, var(--muted) 86%, transparent);
       text-decoration: line-through;
       text-decoration-thickness: 1.5px;
     }
@@ -467,7 +452,7 @@
       gap: 0;
       padding: 12px;
       border-radius: 18px;
-      border: 1px solid rgba(28, 25, 23, 0.08);
+      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
       background: var(--card);
       grid-template-columns: 1fr;
       overflow: hidden;
@@ -480,8 +465,8 @@
       align-items: center;
       gap: 16px;
       padding: 12px 10px;
-      background: rgba(255, 253, 247, 0.84);
-      border-top: 1px solid rgba(28, 25, 23, 0.08);
+      background: color-mix(in srgb, var(--surface) 84%, transparent);
+      border-top: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
     }
 
     .marketing-meal-cell:first-child {
@@ -513,7 +498,7 @@
       text-align: center;
       padding: 12px;
       border-radius: 18px;
-      border: 1px solid rgba(28, 25, 23, 0.08);
+      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
       background: var(--card);
     }
 
@@ -541,7 +526,7 @@
     }
 
     .marketing-pill--slate {
-      background: rgba(120, 113, 108, 0.16);
+      background: color-mix(in srgb, var(--muted) 16%, transparent);
       color: var(--marketing-text);
     }
 
@@ -553,12 +538,12 @@
       padding: 24px 32px;
       border-radius: 28px;
       background: var(--marketing-accent);
-      box-shadow: 0 24px 44px rgba(180, 83, 9, 0.24);
+      box-shadow: 0 24px 44px color-mix(in srgb, var(--primary) 24%, transparent);
     }
 
     .marketing-cta-copy {
       max-width: 620px;
-      color: #FFFDF7;
+      color: var(--on-primary);
       font-family: var(--font-display);
       font-size: clamp(1.6rem, 3vw, 2.3rem);
       line-height: 1.08;
@@ -570,7 +555,7 @@
       flex: 0 0 auto;
       background: var(--card);
       color: var(--marketing-accent);
-      border-color: #FFFDF7;
+      border-color: var(--surface);
       min-width: 164px;
     }
 
@@ -661,8 +646,8 @@
     }
 
   </style>
-  <link rel="stylesheet" href="css/display.css?v=2.5.29">
-  <link rel="stylesheet" href="css/admin.css?v=2.5.29">
+  <link rel="stylesheet" href="css/display.css?v=2.5.30">
+  <link rel="stylesheet" href="css/admin.css?v=2.5.30">
   <link rel="stylesheet" href="js/vendor/cropper.min.css">
 </head>
 <body>
@@ -670,7 +655,7 @@
     <div class="marketing-layout">
       <section class="marketing-hero" aria-labelledby="marketing-title">
         <div class="marketing-brand" aria-label="Homeboard">
-          <img src="homeboard_logo.svg" alt="Homeboard" width="144" decoding="async">
+          <img class="brand-logo brand-logo--light" src="brand/logo.svg" alt="Homeboard" width="144" decoding="async"><img class="brand-logo brand-logo--dark" src="brand/logo-on-dark.svg" alt="" width="144" decoding="async">
         </div>
         <div class="marketing-hero-copy">
           <h1 id="marketing-title">A smart dashboard for your home built for the kitchen wall.</h1>
