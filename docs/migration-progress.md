@@ -10,15 +10,14 @@ Update this file in every migration PR.
 - A thread that can't finish its piece pushes a draft PR; the next thread checks out that branch by name.
 
 ## Current phase
-**Phase 0: Inventory** (written, awaiting owner review; see `docs/migration-inventory.md`)
+**Phase 0: Inventory** (not started)
 
 ## Done
 - Spec committed to `docs/backend-migration-spec.md`.
-- Phase 0 inventory drafted in `docs/migration-inventory.md` (2026-09-30). It found 10 spec corrections and some security-relevant items that are tracked privately (not in this public repo) until resolved.
 
 ## Next
-1. Owner reviews `docs/migration-inventory.md`; decide on the privately-tracked security items (fixed in separate PRs, described neutrally).
-2. Apply the 10 corrections in section 5 of the inventory to `docs/backend-migration-spec.md`.
+1. Phase 0: write `docs/migration-inventory.md` (read-only; no code changes).
+2. Review the inventory and correct the spec where reality differs.
 3. Phase 1: adapter layer + local Postgres.
 
 ## Open decisions
