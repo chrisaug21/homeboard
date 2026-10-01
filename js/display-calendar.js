@@ -99,6 +99,7 @@
           icon,
           days,
           caption: formatLongDate(eventDate),
+          location: String(item.location || "").trim(),
           screenKey: item.id
             ? `countdown_calendar_${String(item.id).trim()}`
             : `countdown_calendar_${eventDate}_${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "event"}`

@@ -1696,6 +1696,32 @@
       text-wrap: balance;
     }
 
+    .countdown-location {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: -10px; /* sits closer to the name than the card's normal gap */
+      font-size: 1.15rem;
+      line-height: 1.3;
+      color: var(--muted);
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .countdown-location svg {
+      width: 1.1em;
+      height: 1.1em;
+      flex: none;
+      margin-top: 0.1em;
+    }
+
+    .countdown-location span {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
     .countdown-days {
       display: flex;
       flex-direction: row;

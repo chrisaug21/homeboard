@@ -116,6 +116,7 @@
               <div class="countdown-copy">
                 <div class="countdown-icon"><i data-lucide="${escapeHtml(item.icon || "calendar")}"></i></div>
                 <div class="countdown-name">${escapeHtml(item.name)}</div>
+                ${item.location ? `<div class="countdown-location"><i data-lucide="map-pin"></i><span>${escapeHtml(item.location)}</span></div>` : ""}
                 <div class="countdown-days">
                   ${daysMarkup}
                 </div>
