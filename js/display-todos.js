@@ -8,8 +8,7 @@
         assigneeMemberIds: Array.isArray(todo.assignee_member_ids) ? todo.assignee_member_ids : [],
         description: description || null,
         dueDate: todo.due_date || null,
-        duePill: getTodoDuePill(todo.due_date),
-        isOverdue: isTodoOverdue(todo.due_date),
+        dueInfo: getTodoDueInfo(todo.due_date),
         recurrenceType: todo.recurrence_type || null,
         recurrenceConfig: todo.recurrence_config || null,
         recurrenceTemplateId: todo.recurrence_template_id || null
@@ -113,16 +112,27 @@
       }, 6000);
     }
 
+    // Celebration colors: marigold, sage, fern, aubergine and the assignee's
+    // person color (set while a celebration plays). No red.
+    let celebrationPersonColorToken = "";
+
     function getCelebrationPalette() {
       const styles = getComputedStyle(document.documentElement);
-      const accent = String(styles.getPropertyValue("--color-accent") || "").trim() || "#b45309";
-      return [accent, "#ffffff", "#fbbf24", "#22c55e"];
+      const read = (name, fallback) => String(styles.getPropertyValue(name) || "").trim() || fallback;
+      const palette = [
+        read("--brand-marigold", "#f2b22e"),
+        read("--brand-sage", "#d3dec7"),
+        read("--brand-fern", "#6f9460"),
+        read("--brand-aubergine-lift", "#5a2d55")
+      ];
+      if (celebrationPersonColorToken) {
+        palette.push(read(`--${celebrationPersonColorToken}`, palette[0]));
+      }
+      return palette;
     }
 
     function getCelebrationPaletteNoWhite() {
-      const styles = getComputedStyle(document.documentElement);
-      const accent = String(styles.getPropertyValue("--color-accent") || "").trim() || "#b45309";
-      return [accent, "#fbbf24", "#f97316", "#14b8a6", "#a855f7", "#22c55e"];
+      return getCelebrationPalette();
     }
 
     function createConfettiInstance(layer) {
@@ -303,7 +313,7 @@
       if (!layer) {
         return Promise.resolve();
       }
-      const accent = String(getComputedStyle(document.documentElement).getPropertyValue("--color-accent") || "").trim() || "#b45309";
+      const accent = String(getComputedStyle(document.documentElement).getPropertyValue("--brand-marigold") || "").trim() || "#f2b22e";
       Array.from({ length: 3 }, (_, index) => {
         const ring = document.createElement("span");
         ring.className = "todo-ripple-ring";
@@ -517,8 +527,8 @@
         list.innerHTML = `
           <article class="todo-card todo-card--empty">
             <div class="todo-copy">
-              <div class="todo-title">All clear!</div>
-              <div class="todo-meta">No open household tasks.</div>
+              <div class="todo-title">You're all caught up</div>
+              <div class="todo-meta">Nothing left on the list.</div>
             </div>
           </article>
         `;
@@ -532,8 +542,8 @@
           todo.assigneeMemberId,
           todo.assignee
         );
-        const metaLine = buildTodoMetaLineHTML(assignees, todo.duePill);
-        const overdueClass = todo.isOverdue ? " todo-card--overdue" : "";
+        const metaLine = buildTodoTierMetaLineHTML(assignees, todo.dueInfo);
+        const tierClass = todo.dueInfo ? ` todo-card--${todo.dueInfo.tier}` : "";
         const infoIcon = todo.description
           ? `<span class="todo-detail-indicator" aria-hidden="true"><i data-lucide="info"></i></span>`
           : "";
@@ -551,7 +561,7 @@
           ${metaLine}
         `;
         return `
-          <article class="todo-card${overdueClass}" data-todo-id="${escapeHtml(todo.id)}">
+          <article class="todo-card${tierClass}" data-todo-id="${escapeHtml(todo.id)}">
             <button class="todo-check-btn" type="button" aria-label="Complete ${escapeHtml(todo.title)}">
               <div class="todo-check">
                 <svg class="todo-check-icon" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -602,6 +612,14 @@
 
       const todo = cachedDisplayTodos && cachedDisplayTodos.find((t) => t.id === todoId);
       const isRecurring = !!(todo && todo.recurrenceType);
+
+      const celebrationAssignees = resolveTodoAssignees(
+        getDisplayHouseholdMembers(),
+        todo?.assigneeMemberIds,
+        todo?.assigneeMemberId,
+        todo?.assignee
+      );
+      celebrationPersonColorToken = resolvePersonColorToken(celebrationAssignees[0]?.color);
 
       cardEl.classList.add("is-completing");
       resetAutoRotate("todo-complete");

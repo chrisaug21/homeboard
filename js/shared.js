@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.13";
+    const VERSION = "2.5.14";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -1600,6 +1600,98 @@
         cssClass: "todo-due-text--future",
         label: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed)
       };
+    }
+
+    // ── Time scale (design system) ─────────────────────────────────────────
+    // Anything with a date takes its color from how soon it is:
+    // overdue, today, soon (1-3 days), week (4-7 days), later (8+ days).
+    // Shared by to-dos, calendars, meals and countdowns.
+    function getTimeTier(dateString) {
+      const days = getDaysUntil(dateString);
+      if (days === null) return null;
+      if (days < 0) return "overdue";
+      if (days === 0) return "today";
+      if (days <= 3) return "soon";
+      if (days <= 7) return "week";
+      return "later";
+    }
+
+    // Due-date wording for a to-do. Color is never the only signal, so every
+    // tier also says it in words ("2 days overdue", "Due today", "Wed · in 2 days").
+    function getTodoDueInfo(dueDate) {
+      const tier = getTimeTier(dueDate);
+      if (!tier) return null;
+
+      const days = getDaysUntil(dueDate);
+      const parsed = parseLocalDateString(dueDate);
+      let label;
+
+      if (tier === "overdue") {
+        const late = Math.abs(days);
+        label = `\u26A0 ${late} ${late === 1 ? "day" : "days"} overdue`;
+      } else if (tier === "today") {
+        label = "Due today";
+      } else if (days === 1) {
+        label = "Due tomorrow";
+      } else if (tier === "later") {
+        label = `Due ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed)}`;
+      } else {
+        const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed);
+        label = `Due ${weekday} \u00B7 in ${days} days`;
+      }
+
+      return { tier, label };
+    }
+
+    // Household members store a raw hex color. The design system has eight
+    // person colors that adapt to Light and Dark, so map each stored color to
+    // the nearest one. Returns a token name like "person-blueberry", or "".
+    const PERSON_COLOR_TOKENS = [
+      ["person-blueberry", [54, 86, 168]],
+      ["person-berry", [162, 48, 110]],
+      ["person-lagoon", [19, 102, 112]],
+      ["person-clay", [154, 74, 38]],
+      ["person-iris", [104, 72, 176]],
+      ["person-olive", [99, 96, 15]],
+      ["person-cocoa", [122, 79, 54]],
+      ["person-moss", [74, 107, 42]]
+    ];
+
+    function resolvePersonColorToken(color) {
+      let hex = String(color || "").trim().replace(/^#/, "");
+      if (/^[0-9a-f]{3}$/i.test(hex)) {
+        hex = hex.split("").map((ch) => ch + ch).join("");
+      }
+      if (!/^[0-9a-f]{6}$/i.test(hex)) return "";
+
+      const rgb = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      let best = "";
+      let bestDistance = Infinity;
+      PERSON_COLOR_TOKENS.forEach(([token, ref]) => {
+        const distance = ref.reduce((sum, value, i) => sum + (value - rgb[i]) ** 2, 0);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = token;
+        }
+      });
+      return best;
+    }
+
+    // To-do meta line: a 9px dot in the person's color + their name, then the
+    // due date as plain text in the tier's color. No pills, no tinted chips.
+    function buildTodoTierMetaLineHTML(assignees, dueInfo) {
+      const people = (assignees || []).map((assignee) => {
+        const token = resolvePersonColorToken(assignee.color);
+        const style = token ? ` style="--person-color: var(--${token})"` : "";
+        return `<span class="todo-person"${style}><span class="todo-person-dot" aria-hidden="true"></span><span class="todo-person-name">${escapeHtml(assignee.name)}</span></span>`;
+      }).join("");
+
+      const due = dueInfo
+        ? `<span class="todo-due-text todo-due-text--${escapeHtml(dueInfo.tier)}">${escapeHtml(dueInfo.label)}</span>`
+        : "";
+
+      if (!people && !due) return "";
+      return `<div class="todo-meta-line">${people ? `<span class="todo-assignees">${people}</span>` : ""}${due}</div>`;
     }
 
     function formatOrdinalDay(value) {

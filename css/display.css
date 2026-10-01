@@ -855,18 +855,49 @@
       gap: 12px;
       padding: 16px 18px;
       border-radius: var(--radius-md);
-      background: color-mix(in srgb, var(--card) 56%, transparent);
+      background: var(--card);
+      color: var(--ink);
       border: 1px solid var(--border);
-      border-left: 5px solid transparent;
+      border-left: var(--time-edge) solid transparent;
       min-width: 0;
       transition: opacity 0.2s, transform 0.2s;
       break-inside: avoid;
     }
 
+    /* Time scale: the whole card takes its color from how soon it is due.
+       Act now = solid; coming up = soft fill with a left edge; later = plain. */
     .todo-card--overdue {
-      background: color-mix(in srgb, var(--danger) 8%, transparent);
-      border-left-color: #be123c;
-      box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.06);
+      background: var(--time-overdue);
+      color: var(--on-time-overdue);
+      border-color: var(--time-overdue);
+    }
+
+    .todo-card--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .todo-card--soon {
+      background: var(--time-soon);
+      border-left-color: var(--time-soon-edge);
+    }
+
+    .todo-card--week {
+      background: var(--time-week);
+      border-left-color: var(--time-week-edge);
+    }
+
+    .todo-card .todo-check {
+      border-color: var(--primary);
+    }
+
+    .todo-card--overdue .todo-check {
+      border-color: var(--on-time-overdue);
+    }
+
+    .todo-card--today .todo-check {
+      border-color: var(--on-time-today);
     }
 
     .todo-card.is-completing {
@@ -874,9 +905,9 @@
     }
 
     .todo-card.is-completing .todo-check {
-      background: var(--amber);
-      border-color: var(--amber);
-      color: white;
+      background: var(--done);
+      border-color: var(--done);
+      color: var(--on-primary);
     }
 
     .todo-card.is-completing .todo-check-icon {
@@ -974,8 +1005,8 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      background: var(--color-accent-subtle);
-      color: var(--color-accent);
+      background: color-mix(in srgb, currentColor 12%, transparent);
+      color: inherit;
     }
 
     .todo-detail-indicators {
@@ -985,8 +1016,7 @@
     }
 
     .todo-detail-indicator--muted {
-      background: color-mix(in srgb, var(--muted) 12%, transparent);
-      color: var(--muted);
+      opacity: 0.7;
     }
 
     .todo-detail-indicator svg {
@@ -1047,7 +1077,7 @@
 
     /* Urgency-coded due date text */
     .todo-due-text--overdue {
-      color: #be123c;
+      color: var(--danger);
       font-weight: 700;
     }
 
@@ -1056,13 +1086,64 @@
     }
 
     .todo-due-text--soon {
-      /* distinctly orange — warmer and brighter than the amber used for "today" */
-      color: #ea580c;
+      color: var(--time-soon-fg);
     }
 
     .todo-due-text--future,
     .todo-due-text--plain {
       color: var(--muted);
+    }
+
+    /* Display to-do meta: person dot + name, then tier-colored due text. */
+    .todo-person {
+      --person: var(--person-color, var(--muted));
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 12px;
+      font-weight: 700;
+      color: var(--person);
+      white-space: nowrap;
+    }
+
+    .todo-person-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--person);
+      flex-shrink: 0;
+    }
+
+    .todo-card--overdue .todo-person,
+    .todo-card--today .todo-person {
+      --person: currentColor;
+    }
+
+    .todo-card .todo-due-text {
+      font-family: var(--font-ui);
+      font-weight: 800;
+    }
+
+    .todo-card .todo-due-text--later {
+      color: var(--muted);
+    }
+
+    .todo-card .todo-due-text--week {
+      color: var(--time-week-fg);
+    }
+
+    .todo-card .todo-due-text--soon {
+      color: var(--time-soon-fg);
+    }
+
+    .todo-card .todo-due-text--overdue,
+    .todo-card .todo-due-text--today {
+      color: inherit;
+    }
+
+    /* The legacy bullet separator before due text isn't used with person dots. */
+    .todo-card .todo-assignees + .todo-due-text::before {
+      content: none;
     }
 
     .todo-detail-text {
