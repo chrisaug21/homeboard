@@ -5,7 +5,7 @@
     let adminLastSyncedInterval = null;
 
     function normalizeAdminTheme(theme) {
-      return ["warm", "dark", "slate"].includes(theme) ? theme : "warm";
+      return normalizeTheme(theme);
     }
 
     function applyAdminTheme(theme) {
@@ -96,7 +96,7 @@
       adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
       adminCurrentUser = null;
       resetAdminMealLibraryCache();
-      applyAdminTheme("warm");
+      applyAdminTheme("light");
       setAdminAuthView("login");
       const errorEl = document.getElementById("admin-login-error");
       if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
@@ -240,7 +240,7 @@
     // Loaded from Supabase at admin init; falls back to defaults so todo form always works
     let adminHouseholdSettings = {
       assistant_name: "",
-      color_scheme: "warm",
+      color_scheme: "light",
       google_cal_id: "",
       household_members: [],
       display_settings: {

@@ -649,13 +649,19 @@
       renderFooterBrandLogo();
     }
 
+    // Saved values: "light", "dark", "auto" (match device). Older households
+    // saved "warm" or "slate"; both are the light theme now.
+    function normalizeTheme(theme) {
+      if (theme === "dark" || theme === "auto") return theme;
+      return "light";
+    }
+
     function applyColorScheme(scheme) {
-      const validSchemes = ["warm", "dark", "slate"];
-      const chosen = validSchemes.includes(scheme) ? scheme : "warm";
-      if (chosen === "warm") {
-        document.documentElement.removeAttribute("data-scheme");
+      const chosen = normalizeTheme(scheme);
+      if (chosen === "auto") {
+        document.documentElement.removeAttribute("data-theme");
       } else {
-        document.documentElement.setAttribute("data-scheme", chosen);
+        document.documentElement.setAttribute("data-theme", chosen);
       }
     }
 
@@ -784,7 +790,7 @@
       }
 
       // Apply color scheme
-      applyColorScheme(config.color_scheme || "warm");
+      applyColorScheme(config.color_scheme);
 
       // Apply active screens (must come before screen order)
       const defaultScreens = getConfigurableDisplayScreenKeys();

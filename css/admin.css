@@ -201,7 +201,7 @@
       gap: 8px;
       min-height: 28px;
       color: var(--ink);
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-family: var(--font-display);
       font-size: 0.8rem;
       font-weight: 700;
       letter-spacing: 0.06em;
@@ -2197,7 +2197,7 @@
     }
 
     .admin-display-pairing-code {
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-family: var(--font-display);
       font-size: clamp(2rem, 8vw, 2.8rem);
       font-weight: 800;
       letter-spacing: 0.18em;
@@ -2543,19 +2543,29 @@
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
     }
 
-    .admin-settings-scheme-swatch--warm {
-      background: linear-gradient(135deg, #f5f0e8, #efe7db);
-      border: 2px solid #b45309;
+    .admin-settings-scheme-swatch--light {
+      background: var(--brand-linen);
+      border: 2px solid var(--brand-aubergine);
     }
 
     .admin-settings-scheme-swatch--dark {
-      background: linear-gradient(135deg, #1c1917, #17140f);
-      border: 2px solid #78716c;
+      background: var(--brand-night);
+      border: 2px solid var(--brand-marigold);
     }
 
-    .admin-settings-scheme-swatch--slate {
-      background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-      border: 2px solid #475569;
+    /* Match device: left half light, right half dark. */
+    .admin-settings-scheme-swatch--auto {
+      position: relative;
+      overflow: hidden;
+      background: var(--brand-linen);
+      border: 2px solid var(--brand-fern);
+    }
+
+    .admin-settings-scheme-swatch--auto::after {
+      content: "";
+      position: absolute;
+      inset: 0 0 0 50%;
+      background: var(--brand-night);
     }
 
     .admin-settings-scheme-option span:last-child {
@@ -2681,7 +2691,7 @@
 
     .admin-onboarding-title {
       margin: 0;
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-family: var(--font-display);
       font-size: clamp(1.7rem, 6vw, 2.2rem);
       line-height: 1.05;
       letter-spacing: -0.03em;
@@ -2795,19 +2805,15 @@
       height: 10px;
     }
 
-    .admin-onboarding-theme-card[data-theme="warm"] {
-      --onboarding-theme-bg: #f5f0e8;
-      --onboarding-theme-ink: #30261d;
+    .admin-onboarding-theme-card[data-swatch="light"],
+    .admin-onboarding-theme-card[data-swatch="auto"] {
+      --onboarding-theme-bg: var(--brand-linen);
+      --onboarding-theme-ink: var(--brand-aubergine);
     }
 
-    .admin-onboarding-theme-card[data-theme="dark"] {
-      --onboarding-theme-bg: #241f1c;
-      --onboarding-theme-ink: #f7efe6;
-    }
-
-    .admin-onboarding-theme-card[data-theme="slate"] {
-      --onboarding-theme-bg: #f8fafc;
-      --onboarding-theme-ink: #334155;
+    .admin-onboarding-theme-card[data-swatch="dark"] {
+      --onboarding-theme-bg: var(--brand-night);
+      --onboarding-theme-ink: var(--brand-marigold);
     }
 
     .admin-onboarding-theme-name {
@@ -2907,7 +2913,7 @@
     }
 
     .admin-onboarding-inline-code {
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-family: var(--font-display);
       font-size: 0.92em;
       font-weight: 700;
       color: var(--ink);

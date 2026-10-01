@@ -1,0 +1,33 @@
+/* TEMPORARY. Maps the old token names onto the new design-system tokens so the
+   app keeps working while screens are migrated (design system phases 3-6).
+   Delete this file in phase 8 (#102) once nothing references these names. */
+
+:root {
+  --bg-soft: var(--card-sunken);
+  --panel: var(--surface);
+  --panel-strong: var(--surface);
+
+  --amber: var(--primary);
+  --amber-soft: var(--card-sunken);
+  --color-accent: var(--primary);
+  --color-accent-subtle: var(--card-sunken);
+  --color-text-on-accent: var(--on-primary);
+
+  --sage: var(--success);
+  --sage-soft: var(--time-soon);
+  --rose: var(--danger);
+  --rose-soft: var(--danger-soft);
+
+  --rsvp-clear: var(--success);
+  --rsvp-flagged: var(--time-today);
+  --rsvp-pending-bg: var(--card-sunken);
+  --rsvp-review-bg-clear: var(--time-soon);
+  --rsvp-review-bg-flagged: var(--time-week);
+  --rsvp-attending-pill-bg: var(--time-soon);
+  --rsvp-attending-pill-color: var(--time-soon-fg);
+  --rsvp-undercount-pill-bg: var(--time-today);
+  --rsvp-undercount-pill-color: var(--on-time-today);
+
+  --display-nav-active-bg: var(--primary);
+  --display-nav-active-border: transparent;
+}
