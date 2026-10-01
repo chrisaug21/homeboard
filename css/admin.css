@@ -2016,7 +2016,7 @@
       gap: 14px;
       padding: 16px;
       border-radius: 20px;
-      background: color-mix(in srgb, var(--card) 78%, transparent);
+      background: var(--card);
       border: 1px solid var(--border);
     }
 
@@ -2046,9 +2046,10 @@
     .admin-rsvp-review-row {
       width: 100%;
       border: 1px solid var(--border);
+      border-left: var(--time-edge) solid var(--time-today);
       border-radius: 18px;
       padding: 14px 16px;
-      background: color-mix(in srgb, var(--card) 78%, transparent);
+      background: var(--card);
       color: var(--ink);
       display: flex;
       align-items: center;
@@ -2057,6 +2058,11 @@
       cursor: pointer;
       text-align: left;
       font: inherit;
+    }
+
+    .admin-rsvp-review-row:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-rsvp-review-main,
@@ -2071,15 +2077,10 @@
       padding-top: 10px;
     }
 
+    /* The issue is plain text with a warning mark, not a pill. */
     .admin-rsvp-issue-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 6px 10px;
-      border-radius: var(--tag-radius);
-      background: var(--card-sunken);
-      color: #9a3412;
-      font-size: 0.74rem;
+      color: var(--ink);
+      font-size: 0.82rem;
       font-weight: 800;
       white-space: nowrap;
     }
@@ -2097,7 +2098,7 @@
       gap: 12px;
       padding: 12px 14px;
       border-radius: var(--tag-radius);
-      background: color-mix(in srgb, var(--bg) 76%, transparent);
+      background: var(--card);
       border: 1px solid var(--border);
     }
 
@@ -2109,9 +2110,10 @@
     .admin-rsvp-guest-row {
       width: 100%;
       border: 1px solid var(--border);
+      border-left: var(--time-edge) solid transparent;
       border-radius: 20px;
       padding: 16px;
-      background: color-mix(in srgb, var(--card) 78%, transparent);
+      background: var(--card);
       color: var(--ink);
       display: flex;
       align-items: center;
@@ -2126,12 +2128,44 @@
     .admin-rsvp-guest-row:hover,
     .admin-rsvp-guest-row:focus-visible {
       transform: translateY(-1px);
-      border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
     }
 
     .admin-rsvp-guest-row:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    /* Confirmed parties are sage tiles; a partial party adds a marigold edge. */
+    .admin-rsvp-guest-row--attending,
+    .admin-rsvp-guest-row--under-count {
+      background: var(--countdown-later);
+      border-color: transparent;
+    }
+
+    .admin-rsvp-guest-row--under-count {
+      border-left-color: var(--time-today);
+    }
+
+    .admin-rsvp-guest-row--attending .admin-rsvp-guest-meta,
+    .admin-rsvp-guest-row--under-count .admin-rsvp-guest-meta {
+      color: var(--ink);
+      opacity: 0.7;
+    }
+
+    /* Declined: faded and struck through. Pending: plain with a dashed border. */
+    .admin-rsvp-guest-row--declined {
+      opacity: 0.6;
+    }
+
+    .admin-rsvp-guest-row--declined .admin-rsvp-guest-title {
+      text-decoration: line-through;
+    }
+
+    .admin-rsvp-guest-row--pending {
+      background: transparent;
+      border: 1px dashed var(--border);
+      padding-left: calc(16px + var(--time-edge) - 1px);
     }
 
     .admin-rsvp-guest-main {
@@ -2147,41 +2181,28 @@
       width: fit-content;
       padding: 5px 9px;
       border-radius: var(--tag-radius);
-      background: var(--card-sunken);
-      color: #9a3412;
+      background: var(--time-today);
+      color: var(--on-time-today);
       font-size: 0.72rem;
       font-weight: 800;
     }
 
+    /* Status is plain text (a warning mark for partial parties), not a pill. */
     .admin-rsvp-status {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: var(--tag-radius);
-      padding: 7px 11px;
-      font-size: 0.76rem;
+      font-size: 0.82rem;
       font-weight: 800;
       white-space: nowrap;
+      color: var(--ink);
     }
 
-    .admin-rsvp-status--attending {
-      background: rgba(220, 239, 220, 0.95);
-      color: #166534;
-    }
-
-    .admin-rsvp-status--declined {
-      background: rgba(248, 220, 227, 0.95);
-      color: #9f1239;
-    }
-
-    .admin-rsvp-status--pending {
-      background: var(--rsvp-pending-bg);
-      color: #1e3a5f;
-    }
-
+    .admin-rsvp-status--attending,
     .admin-rsvp-status--under-count {
-      background: var(--card-sunken);
-      color: #9a3412;
+      color: var(--ink);
+    }
+
+    .admin-rsvp-status--declined,
+    .admin-rsvp-status--pending {
+      color: var(--muted);
     }
 
     .admin-rsvp-linked-row {
@@ -2207,7 +2228,7 @@
       border: 1px solid var(--border);
       border-radius: var(--tag-radius);
       padding: 12px 14px;
-      background: color-mix(in srgb, var(--card) 76%, transparent);
+      background: var(--card);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -2219,8 +2240,8 @@
     }
 
     .admin-rsvp-search-result.is-selected {
-      border-color: color-mix(in srgb, var(--primary) 30%, transparent);
-      background: var(--card-sunken);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
     }
 
     .admin-rsvp-compare,
@@ -2234,7 +2255,7 @@
       gap: 4px;
       padding: 12px 14px;
       border-radius: var(--tag-radius);
-      background: color-mix(in srgb, var(--bg) 76%, transparent);
+      background: var(--card);
       border: 1px solid var(--border);
       color: var(--ink);
     }
@@ -2256,7 +2277,7 @@
       gap: 12px;
       padding: 10px 12px;
       border-radius: var(--tag-radius);
-      background: color-mix(in srgb, var(--bg) 76%, transparent);
+      background: var(--card);
       border: 1px solid var(--border);
     }
 
@@ -2276,12 +2297,12 @@
     }
 
     .admin-rsvp-audit-pill--primary {
-      background: rgba(220, 239, 220, 0.95);
-      color: #166534;
+      background: var(--countdown-later);
+      color: var(--ink);
     }
 
     .admin-rsvp-audit-pill--secondary {
-      background: rgba(120, 113, 108, 0.16);
+      background: var(--card-sunken);
       color: var(--muted);
     }
 
