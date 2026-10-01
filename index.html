@@ -14,8 +14,8 @@
   </script>
   <title>Homeboard</title>
   <link rel="icon" type="image/svg+xml" href="/brand/app-icon.svg">
-  <link rel="stylesheet" href="css/tokens.css?v=2.5.22">
-  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.22">
+  <link rel="stylesheet" href="css/tokens.css?v=2.5.23">
+  <link rel="stylesheet" href="css/legacy-aliases.css?v=2.5.23">
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -661,8 +661,8 @@
     }
 
   </style>
-  <link rel="stylesheet" href="css/display.css?v=2.5.22">
-  <link rel="stylesheet" href="css/admin.css?v=2.5.22">
+  <link rel="stylesheet" href="css/display.css?v=2.5.23">
+  <link rel="stylesheet" href="css/admin.css?v=2.5.23">
   <link rel="stylesheet" href="js/vendor/cropper.min.css">
 </head>
 <body>
@@ -1096,8 +1096,9 @@
     <div id="admin-main-content" hidden>
     <div class="admin-header-bar">
       <div class="admin-header-brand">
-        <i data-lucide="sliders-horizontal"></i>
-        <span>Admin Mode</span>
+        <img class="brand-logo brand-logo--light admin-header-mark" src="brand/mark.svg" alt="Homeboard" width="28" height="28" decoding="async">
+        <img class="brand-logo brand-logo--dark admin-header-mark" src="brand/mark-on-dark.svg" alt="" width="28" height="28" decoding="async">
+        <span class="admin-header-pill">Admin</span>
         <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
       </div>
       <button class="admin-header-settings" type="button" id="admin-settings-button" aria-label="Open settings">

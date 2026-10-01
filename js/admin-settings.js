@@ -241,7 +241,7 @@
           </div>
         ` : `
           <div class="admin-settings-member-row" data-member-index="${i}">
-            <span class="admin-settings-member-color" style="background:${escapeHtml(m.color || "#999")}"></span>
+            <span class="admin-settings-member-color"${(() => { const token = resolvePersonColorToken(m.color); return token ? ` style="--person-color: var(--${token})"` : ""; })()}></span>
             <span class="admin-settings-member-name">${escapeHtml(m.display_name)}</span>
             <div class="admin-settings-member-actions">
               <span class="admin-pill${m.has_linked_login ? " admin-pill--member" : ""}">${m.has_linked_login ? "Has login" : "No login"}</span>
