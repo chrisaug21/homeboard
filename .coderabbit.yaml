@@ -9,6 +9,7 @@ reviews:
     - "!docs/**"
     - "!**/*.md"
     - "!Claude outputs/**"
+    - "!design-system/**"
   path_instructions:
     - path: "js/**"
       instructions: |

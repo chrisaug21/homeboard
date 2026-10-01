@@ -1,0 +1,173 @@
+{
+ "v": 3,
+ "assetGroups": {
+  "Logos": {
+   "name": "Logos",
+   "tile": "l",
+   "order": [
+    "logo.svg",
+    "logo-on-dark.svg",
+    "logo-mono.svg",
+    "logo-stacked.svg",
+    "logo-stacked-on-dark.svg",
+    "mark.svg",
+    "mark-on-dark.svg",
+    "mark-mono.svg",
+    "app-icon.svg"
+   ],
+   "files": {
+    "logo.svg": {
+     "name": "logo.svg",
+     "blob": "c3db287a376c3bb3afaed6a41c320a61",
+     "size": 21567,
+     "type": "image/svg+xml"
+    },
+    "logo-on-dark.svg": {
+     "name": "logo-on-dark.svg",
+     "blob": "671ff898198518b896cd3988e56a5691",
+     "size": 21385,
+     "type": "image/svg+xml"
+    },
+    "logo-mono.svg": {
+     "name": "logo-mono.svg",
+     "blob": "c2b03c376abf245ffd1e738a72dc3151",
+     "size": 21753,
+     "type": "image/svg+xml"
+    },
+    "logo-stacked.svg": {
+     "name": "logo-stacked.svg",
+     "blob": "5065a0b216d48b8fc82281d40a2b4007",
+     "size": 12572,
+     "type": "image/svg+xml"
+    },
+    "logo-stacked-on-dark.svg": {
+     "name": "logo-stacked-on-dark.svg",
+     "blob": "d5357cd0dd74f34570b1279a706f7db4",
+     "size": 12472,
+     "type": "image/svg+xml"
+    },
+    "mark.svg": {
+     "name": "mark.svg",
+     "blob": "297e33f38310268d928dacf54d884506",
+     "size": 802,
+     "type": "image/svg+xml"
+    },
+    "mark-on-dark.svg": {
+     "name": "mark-on-dark.svg",
+     "blob": "6519021848714e71011c727005572111",
+     "size": 702,
+     "type": "image/svg+xml"
+    },
+    "mark-mono.svg": {
+     "name": "mark-mono.svg",
+     "blob": "ff3539d318d4a1a546e335de457a5516",
+     "size": 1070,
+     "type": "image/svg+xml"
+    },
+    "app-icon.svg": {
+     "name": "app-icon.svg",
+     "blob": "29ceb2f0e99c73df5e10e0590d8bfaee",
+     "size": 794,
+     "type": "image/svg+xml"
+    }
+   }
+  },
+  "Banners": {
+   "name": "Banners",
+   "tile": "l",
+   "order": [
+    "banner-3x1-light.svg",
+    "banner-3x1-dark.svg",
+    "banner-4x1-light.svg",
+    "banner-4x1-dark.svg",
+    "banner-3x1-light-noname.svg",
+    "banner-3x1-dark-noname.svg"
+   ],
+   "files": {
+    "banner-3x1-light.svg": {
+     "name": "banner-3x1-light.svg",
+     "blob": "8b9deb1ab5c01acf1b134112c9711dfa",
+     "size": 22383,
+     "type": "image/svg+xml"
+    },
+    "banner-3x1-dark.svg": {
+     "name": "banner-3x1-dark.svg",
+     "blob": "0a82e2cc51a03c208c17dcc550c70996",
+     "size": 22383,
+     "type": "image/svg+xml"
+    },
+    "banner-4x1-light.svg": {
+     "name": "banner-4x1-light.svg",
+     "blob": "510177b6c0f22d56cfc5feaf28f553a2",
+     "size": 22606,
+     "type": "image/svg+xml"
+    },
+    "banner-4x1-dark.svg": {
+     "name": "banner-4x1-dark.svg",
+     "blob": "6df0ea31e3cfa50b8c817ab28981eb76",
+     "size": 22606,
+     "type": "image/svg+xml"
+    },
+    "banner-3x1-light-noname.svg": {
+     "name": "banner-3x1-light-noname.svg",
+     "blob": "51853d18fb7ee82cab1bb9d2ec1ac58c",
+     "size": 1172,
+     "type": "image/svg+xml"
+    },
+    "banner-3x1-dark-noname.svg": {
+     "name": "banner-3x1-dark-noname.svg",
+     "blob": "49f407d858af9a91c4df0fb7e826c99d",
+     "size": 1172,
+     "type": "image/svg+xml"
+    }
+   }
+  },
+  "Legacy": {
+   "files": {
+    "homeboard-brandmark-2026.png": {
+     "blob": "1e6313a6771bc51cff809a91a51f146e",
+     "name": "homeboard-brandmark-2026.png",
+     "size": 14072,
+     "type": "image/png"
+    },
+    "homeboard-logo-2026.png": {
+     "blob": "8188ccc97bf5da8df0e0493c302ea6ba",
+     "name": "homeboard-logo-2026.png",
+     "size": 32648,
+     "type": "image/png"
+    }
+   },
+   "name": "Legacy",
+   "order": [
+    "homeboard-logo-2026.png",
+    "homeboard-brandmark-2026.png"
+   ],
+   "tile": "m"
+  }
+ },
+ "blobs": {},
+ "createdOnFiles": {
+  "at": "2026-09-27T23:40:00Z",
+  "v": 1
+ },
+ "docs": {
+  "readme": "project/README.md",
+  "sections": []
+ },
+ "groups": [
+  "Logos",
+  "Banners",
+  "Legacy"
+ ],
+ "lastChange": {
+  "by": "Chris",
+  "at": "2026-09-30T13:00:00Z",
+  "via": "Cowork",
+  "note": "Admin app rules: header, tabs, controls, selection rows, RSVP review, lists mirroring the display time scale."
+ },
+ "layout": "files",
+ "libraries": [],
+ "namespace": "Homeboard",
+ "sections": {},
+ "title": "Homeboard"
+}

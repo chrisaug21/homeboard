@@ -1,0 +1,1 @@
+Brand banners: the roof-over-board mark opened up into flat blocks (aubergine board with the week, sage, marigold, fern). For website headers (3:1, 1500×500) and social covers (4:1, 1584×396), with the name and without, in Light (linen ground) and Dark (night ground). Graphics, not logos: never in app chrome, never recolored.

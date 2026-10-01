@@ -1,0 +1,50 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 288px; background: var(--bg); overflow: hidden; font-family: var(--font-ui), sans-serif; }
+  .cover { position: relative; width: 960px; height: 288px; }
+  svg { position: absolute; left: 0; top: 0; }
+  .board { fill: var(--brand-aubergine); }
+  [data-theme="dark"] .board, html[data-theme="dark"] .board { fill: var(--brand-aubergine-lift); }
+  .mari { fill: var(--brand-marigold); }
+  .fern { fill: var(--brand-fern); }
+  .sage { fill: var(--brand-sage); }
+  .cell { fill: var(--bg); }
+  .roof { fill: none; stroke: var(--brand-marigold); stroke-width: 20px; stroke-linecap: round; stroke-linejoin: round; }
+  .text { position: absolute; left: 40px; bottom: 40px; max-width: 440px; }
+  .name { margin: 0; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 84px; line-height: .92; letter-spacing: -0.03em; color: var(--eyebrow-bg); }
+  html[data-theme="dark"] .name { color: var(--ink); }
+  .tag { margin: 12px 0 0; font-size: 14px; font-weight: 600; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+  <svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+    <!--
+      blocks: brand-aubergine board 216x220, countdown-later (sage) band 220x84, brand-marigold 104x100, brand-fern 104x100, aubergine 120x100
+      arrangement: the logo opened up: the marigold roofline over the board, blocks bleeding off the right and bottom edges
+      pattern: literal motif, the board's week: 3x2 day cells at a space-3 gutter, today lit marigold, the diagonal cell fern (as in the mark)
+      scales: gaps space-3 (12px); slabs radius-lg (28px); cells radius 10 (tag-radius scaled)
+    -->
+    <path class="roof" d="M500 100 L716 28 L970 100"/>
+    <rect class="board" x="512" y="116" width="216" height="220" rx="28"/>
+    <rect class="sage"  x="740" y="116" width="260" height="84" rx="28"/>
+    <rect class="mari"  x="740" y="212" width="104" height="100" rx="28"/>
+    <rect class="fern"  x="856" y="212" width="104" height="100" rx="28"/>
+    <rect class="cell" x="534" y="140" width="52" height="46" rx="10"/>
+    <rect class="cell" x="598" y="140" width="52" height="46" rx="10"/>
+    <rect class="fern" x="662" y="140" width="52" height="46" rx="10"/>
+    <rect class="cell" x="534" y="198" width="52" height="46" rx="10"/>
+    <rect class="mari" x="598" y="198" width="52" height="46" rx="10"/>
+    <rect class="cell" x="662" y="198" width="52" height="46" rx="10"/>
+  </svg>
+  <div class="text">
+    <h1 class="name">Homeboard</h1>
+    <p class="tag">The household command center on your kitchen wall.</p>
+  </div>
+</div>
+</body>
+</html>
