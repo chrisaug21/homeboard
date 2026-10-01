@@ -746,16 +746,79 @@
     .admin-todo-card {
       padding: 11px 13px;
       border-radius: 16px;
-      background: color-mix(in srgb, var(--card) 78%, transparent);
+      background: var(--card);
+      color: var(--ink);
       border: 1px solid var(--border);
-      border-left: 5px solid transparent;
+      border-left: var(--time-edge) solid transparent;
       transition: opacity 0.25s, transform 0.2s;
     }
 
+    /* Time scale (same as the display): the whole card takes its tier. */
     .admin-todo-card--overdue {
-      background: color-mix(in srgb, var(--danger) 8%, transparent);
-      border-left-color: #be123c;
-      box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.06);
+      background: var(--time-overdue);
+      color: var(--on-time-overdue);
+      border-color: var(--time-overdue);
+    }
+
+    .admin-todo-card--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .admin-todo-card--soon {
+      background: var(--time-soon);
+      border-left-color: var(--time-soon-edge);
+    }
+
+    .admin-todo-card--week {
+      background: var(--time-week);
+      border-left-color: var(--time-week-edge);
+    }
+
+    .admin-todo-card--active .todo-check {
+      border-color: var(--primary);
+    }
+
+    .admin-todo-card--overdue .todo-check {
+      border-color: var(--on-time-overdue);
+    }
+
+    .admin-todo-card--today .todo-check {
+      border-color: var(--on-time-today);
+    }
+
+    /* Meta line: due date as tier-colored text; person dots take the card's
+       text color on solid cards. */
+    .admin-todo-card .todo-due-text {
+      font-weight: 800;
+    }
+
+    .admin-todo-card .todo-due-text--later {
+      color: var(--muted);
+    }
+
+    .admin-todo-card .todo-due-text--soon {
+      color: var(--time-soon-fg);
+    }
+
+    .admin-todo-card .todo-due-text--week {
+      color: var(--time-week-fg);
+    }
+
+    .admin-todo-card .todo-due-text--overdue,
+    .admin-todo-card .todo-due-text--today {
+      color: inherit;
+    }
+
+    .admin-todo-card--overdue .todo-person,
+    .admin-todo-card--today .todo-person {
+      --person: currentColor;
+    }
+
+    /* No bullet between the people and the date. */
+    .admin-todo-card .todo-assignees + .todo-due-text::before {
+      content: none;
     }
 
     /* Active cards: checkbox on the left, body on the right */
@@ -785,13 +848,12 @@
     .admin-todo-card--archived:hover,
     .admin-todo-card--archived:focus-visible {
       transform: translateY(-1px);
-      border-color: var(--color-accent-subtle);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
     }
 
     .admin-todo-card--archived:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
-      box-shadow: 0 0 0 3px var(--panel-strong);
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-todo-body {
@@ -828,13 +890,12 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      background: var(--color-accent-subtle);
-      color: var(--color-accent);
+      background: color-mix(in srgb, currentColor 12%, transparent);
+      color: inherit;
     }
 
     .admin-todo-detail-indicator--muted {
-      background: color-mix(in srgb, var(--muted) 12%, transparent);
-      color: var(--muted);
+      opacity: 0.7;
     }
 
     .admin-todo-detail-indicator svg {
@@ -856,7 +917,7 @@
     }
 
     .admin-assignee-chip {
-      --chip-color: var(--muted);
+      --person: var(--person-color, var(--muted));
       display: inline-flex;
       align-items: center;
       cursor: pointer;
@@ -868,32 +929,44 @@
       pointer-events: none;
     }
 
+    /* A dot in the person's color + their name; selected = a primary border
+       and a check, never a tinted fill. */
     .admin-assignee-chip span {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       min-height: 40px;
       padding: 0 14px;
-      border: 1.5px solid var(--border);
+      border: 1px solid var(--border);
       border-radius: var(--button-radius);
-      background: transparent;
-      color: var(--chip-color);
+      background: var(--card);
+      color: var(--person);
       font-size: 0.92rem;
       font-weight: 700;
     }
 
-    .admin-assignee-chip input:checked + span {
-      border-color: var(--chip-color);
-      background: color-mix(in srgb, var(--chip-color) 16%, transparent);
+    .admin-assignee-chip span::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--person);
+      flex-shrink: 0;
     }
 
-    .admin-assignee-chip input:checked + span::before {
-      content: "✓";
+    .admin-assignee-chip input:checked + span {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
+    }
+
+    .admin-assignee-chip input:checked + span::after {
+      content: "\2713";
+      color: var(--primary);
       font-weight: 800;
     }
 
     .admin-assignee-chip input:focus-visible + span {
-      outline: 2px solid var(--color-accent);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
     }
 
@@ -934,9 +1007,9 @@
 
     /* Completion animation on admin todo cards (mirrors display.css .todo-card rules) */
     .admin-todo-card.is-completing .todo-check {
-      background: var(--amber);
-      border-color: var(--amber);
-      color: white;
+      background: var(--done);
+      border-color: var(--done);
+      color: var(--on-primary);
     }
 
     .admin-todo-card.is-completing .todo-check-icon {
@@ -956,15 +1029,15 @@
       gap: 6px;
       padding: 7px 10px;
       border-radius: var(--tag-radius);
-      background: rgba(121, 106, 94, 0.1);
+      background: var(--card-sunken);
       color: var(--muted);
       font-size: 0.82rem;
       font-weight: 800;
     }
 
     .admin-pill--due {
-      background: color-mix(in srgb, var(--primary) 12%, transparent);
-      color: var(--amber);
+      background: var(--card-sunken);
+      color: var(--ink);
     }
 
     .admin-pill--member {
