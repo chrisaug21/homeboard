@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.25";
+    const VERSION = "2.5.26";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -1614,6 +1614,24 @@
       if (days <= 3) return "soon";
       if (days <= 7) return "week";
       return "later";
+    }
+
+    // Relative wording for an event date: inside a week it is relative
+    // ("Today", "Tomorrow", "Wed · in 2 days"); past a week it is "Oct 14".
+    function formatRelativeEventDate(dateString) {
+      const days = getDaysUntil(dateString);
+      const parsed = parseLocalDateString(dateString);
+      if (days === null || !parsed) return "";
+      if (days === 0) return "Today";
+      if (days === 1) return "Tomorrow";
+      if (days > 1 && days <= 7) {
+        const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed);
+        return `${weekday} \u00B7 in ${days} days`;
+      }
+      const sameYear = parsed.getFullYear() === new Date().getFullYear();
+      return new Intl.DateTimeFormat("en-US", sameYear
+        ? { month: "short", day: "numeric" }
+        : { month: "short", day: "numeric", year: "numeric" }).format(parsed);
     }
 
     // Due-date wording for a to-do. Color is never the only signal, so every
