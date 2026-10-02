@@ -160,6 +160,7 @@
       if (unsplashCurrent) unsplashCurrent.hidden = state !== "unsplash";
       if (customCurrent) customCurrent.hidden = state !== "custom";
       form.setAttribute("data-countdown-photo-state", state);
+      syncCountdownFocalPicker(form);
     }
 
     function setPendingCountdownPhoto(key, nextPhoto) {
@@ -363,7 +364,9 @@
       adminCropperImage.onload = () => {
         destroyCountdownPhotoCropper();
         adminCountdownCropper = new window.Cropper(adminCropperImage, {
-          aspectRatio: COUNTDOWN_PHOTO_ASPECT_RATIO,
+          // Free crop: the photo is stored whole-ish and each card template crops it
+          // to its own shape using the focal point.
+          aspectRatio: NaN,
           viewMode: 1,
           dragMode: "move",
           guides: false,
@@ -503,7 +506,7 @@
 
       const { error: updateError } = await client
         .from("countdowns")
-        .update({ custom_image_url: publicUrl })
+        .update({ custom_image_url: publicUrl, unsplash_image_url: null })
         .eq("id", countdownId)
         .eq("household_id", getAdminHouseholdId());
       if (updateError) {
@@ -524,6 +527,120 @@
       return publicUrl;
     }
 
+    // Splits a Google "location" string. A Maps-style place such as
+    // "Place Name, 123 Street, City, ST 00000, USA" becomes a name plus detail
+    // (country dropped); anything else stays one freeform line.
+    function parseCountdownLocation(raw) {
+      const text = String(raw || "").trim();
+      if (!text) return { name: "", detail: "" };
+      const parts = text.split(",").map((part) => part.trim()).filter(Boolean);
+      const rest = parts.slice(1);
+      if (parts.length >= 3 && /\d/.test(rest.join(" "))) {
+        if (/^(usa|us|united states( of america)?)$/i.test(rest[rest.length - 1])) rest.pop();
+        return { name: parts[0], detail: rest.join(", ") };
+      }
+      return { name: text, detail: "" };
+    }
+
+    // "HH:MM" in the browser's local time for a timed Google event; null for all-day.
+    function getCalendarEventStartTime(item) {
+      const dateTime = item?.start?.dateTime;
+      if (!dateTime) return null;
+      const date = new Date(dateTime);
+      if (Number.isNaN(date.getTime())) return null;
+      return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    }
+
+    // Reads the new card fields from the add/edit form into database columns.
+    function collectCountdownCardFields(formData) {
+      const clean = (key) => String(formData.get(key) || "").trim();
+      const locationName = clean("location_name");
+      const locationDetail = locationName ? clean("location_detail") : "";
+      const allDay = formData.get("all_day") === "1";
+      const startTime = !allDay && /^\d{2}:\d{2}/.test(clean("start_time")) ? clean("start_time") : null;
+      const focal = (key) => {
+        const raw = clean(key);
+        const value = raw === "" ? NaN : Number(raw);
+        return Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 50;
+      };
+      const template = ["ticket", "postcard"].includes(clean("template")) ? clean("template") : "auto";
+      return {
+        location_name: locationName || null,
+        location_detail: locationDetail || null,
+        location_source: locationName ? (locationDetail ? "maps" : "freeform") : null,
+        description: clean("description").slice(0, 140) || null,
+        start_time: startTime,
+        all_day: allDay,
+        photo_focal_x: focal("photo_focal_x"),
+        photo_focal_y: focal("photo_focal_y"),
+        template
+      };
+    }
+
+    // Photo focal point: click the photo to choose which part stays in view when
+    // it is cropped. Shows both crops (tall Ticket strip, 3:2 Postcard frame).
+    function getCountdownFocalPhotoUrl(form) {
+      // The photo the display will actually use: an uploaded photo wins over Unsplash.
+      const state = getCountdownPhotoUiState(form);
+      if (state === "empty") return "";
+      const pendingImg = form.querySelector(`.admin-modal-photo-pending[data-photo-kind='${state}']:not([hidden]) img`);
+      if (pendingImg?.getAttribute("src")) return pendingImg.getAttribute("src");
+      const savedBtn = form.querySelector(`.admin-edit-photo-preview[data-photo-source='${state}']:not([hidden]) [data-action='view-photo']`);
+      return savedBtn?.getAttribute("data-full-url") || "";
+    }
+
+    function updateCountdownFocalPreviews(form) {
+      const picker = form.querySelector("[data-countdown-focal]");
+      if (!picker) return;
+      const x = Number(form.querySelector("[name='photo_focal_x']")?.value ?? 50);
+      const y = Number(form.querySelector("[name='photo_focal_y']")?.value ?? 50);
+      const position = `${x}% ${y}%`;
+      picker.querySelectorAll("[data-focal-crop]").forEach((el) => { el.style.backgroundPosition = position; });
+      const dot = picker.querySelector(".admin-focal-dot");
+      if (dot) { dot.style.left = `${x}%`; dot.style.top = `${y}%`; }
+    }
+
+    function syncCountdownFocalPicker(form) {
+      const picker = form?.querySelector("[data-countdown-focal]");
+      if (!picker) return;
+      const url = getCountdownFocalPhotoUrl(form);
+      picker.hidden = !url;
+      if (!url) return;
+      // A different photo starts back at the center.
+      if (form.dataset.focalSrc !== undefined && form.dataset.focalSrc !== url) {
+        form.querySelector("[name='photo_focal_x']").value = "50";
+        form.querySelector("[name='photo_focal_y']").value = "50";
+      }
+      form.dataset.focalSrc = url;
+      const image = picker.querySelector(".admin-focal-image");
+      if (image.getAttribute("src") !== url) image.setAttribute("src", url);
+      picker.querySelectorAll("[data-focal-crop]").forEach((el) => { el.style.backgroundImage = `url("${url.replace(/"/g, "%22")}")`; });
+      image.onclick = (event) => {
+        const rect = image.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const x = Math.round(Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100)));
+        const y = Math.round(Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100)));
+        form.querySelector("[name='photo_focal_x']").value = String(x);
+        form.querySelector("[name='photo_focal_y']").value = String(y);
+        updateCountdownFocalPreviews(form);
+      };
+      updateCountdownFocalPreviews(form);
+    }
+
+    // Live "n/140" counter and the all-day checkbox disabling the time field.
+    function syncCountdownFormExtras(form) {
+      if (!form) return;
+      const description = form.querySelector("[name='description']");
+      const counter = form.querySelector("[data-description-counter]");
+      if (description && counter) counter.textContent = `${description.value.length}/140`;
+      const allDay = form.querySelector("[name='all_day']");
+      const startTime = form.querySelector("[name='start_time']");
+      if (allDay && startTime) {
+        startTime.disabled = allDay.checked;
+        if (allDay.checked) startTime.value = "";
+      }
+    }
+
     async function saveAdminCountdown(formData) {
       const client = getSupabaseClient();
 
@@ -538,13 +655,15 @@
       const daysBeforeRaw = String(formData.get("days_before_visible") || "").trim();
       const daysBeforeVisible = daysBeforeRaw !== "" ? parseInt(daysBeforeRaw, 10) || null : null;
       const photoKeyword = String(formData.get("photo_keyword") || "").trim();
+      const cardFields = collectCountdownCardFields(formData);
+      const calendarEventId = String(formData.get("calendar_event_id") || "").trim();
       const pendingPhotos = adminPendingPhotos.get("modal-create") || {};
 
       if (!name || !eventDate || adminCountdownWritePending) {
         return;
       }
 
-      if (isCountdownAlreadySaved(name, eventDate)) {
+      if (isCountdownAlreadySaved(name, eventDate, calendarEventId)) {
         showToast("Already saved.");
         return;
       }
@@ -561,7 +680,9 @@
           icon,
           event_date: eventDate,
           days_before_visible: daysBeforeVisible,
-          photo_keyword: photoKeyword || null
+          photo_keyword: photoKeyword || null,
+          ...cardFields,
+          calendar_event_id: calendarEventId || null
         })
         .select("id")
         .single();
@@ -588,7 +709,9 @@
         }
       }
 
-      if (pendingPhotos.unsplash?.kind === "unsplash") {
+      if (pendingPhotos.custom?.kind === "custom") {
+        // An uploaded photo is the countdown's photo; don't also attach an Unsplash one.
+      } else if (pendingPhotos.unsplash?.kind === "unsplash") {
         try {
           await updateCountdownPhoto(insertedRow.id, {
           url: pendingPhotos.unsplash.imageUrl,
@@ -598,16 +721,9 @@
         } catch (error) {
           console.warn("Background photo save failed:", error);
         }
-      } else {
-        try {
-          const photo = await fetchUnsplashPhoto(photoKeyword || name);
-          if (photo) {
-            await updateCountdownPhoto(insertedRow.id, photo);
-          }
-        } catch (error) {
-          console.warn("Background photo fetch failed:", error);
-        }
       }
+      // No photo chosen = no photo. Unsplash photos are only fetched when the
+      // user taps "Get photo" or "Refresh photo".
 
       closeAdminModal();
       await loadAdminCountdowns();
@@ -627,8 +743,11 @@
         submitBtn.textContent = "Saving\u2026";
       }
 
-      const updatePayload = { name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null };
-      if (options.removeUnsplashPhoto) updatePayload.unsplash_image_url = null;
+      const updatePayload = { name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null, ...options.cardFields };
+      // One photo per countdown: while an uploaded photo is kept (or being added),
+      // any Unsplash photo is dropped. The display uses the uploaded one anyway.
+      const keepsCustomPhoto = (options.hadCustomPhoto && !options.removeCustomPhoto) || adminPendingPhotos.get(id)?.custom?.kind === "custom";
+      if (options.removeUnsplashPhoto || keepsCustomPhoto) updatePayload.unsplash_image_url = null;
       if (options.removeCustomPhoto) updatePayload.custom_image_url = null;
 
       const { error } = await client
@@ -667,7 +786,7 @@
         }
       }
 
-      if (!options.removeUnsplashPhoto) {
+      if (!options.removeUnsplashPhoto && !keepsCustomPhoto) {
         if (pendingPhotos.unsplash?.kind === "unsplash") {
           try {
             await updateCountdownPhoto(id, {
@@ -677,15 +796,6 @@
             });
           } catch (error) {
             console.warn("Background photo save failed:", error);
-          }
-        } else if (photoKeyword || name !== originalName || !options.hadUnsplashPhoto) {
-          try {
-            const photo = await fetchUnsplashPhoto(photoKeyword || name);
-            if (photo) {
-              await updateCountdownPhoto(id, photo);
-            }
-          } catch (error) {
-            console.warn("Background photo fetch failed:", error);
           }
         }
       }
@@ -778,11 +888,17 @@
       loadAdminCalendarMonth();
     }
 
-    function isCountdownAlreadySaved(name, date) {
+    // A calendar event counts as saved when a countdown holds its event id (this
+    // survives renaming the countdown). Countdowns made before ids were stored
+    // fall back to the old name + date match.
+    function isCountdownAlreadySaved(name, date, calendarEventId) {
+      const eventId = String(calendarEventId || "").trim();
       const normalizedName = String(name).toLowerCase().trim();
-      return adminSavedCountdowns.some(
-        (c) => c.name.toLowerCase().trim() === normalizedName && c.event_date === date
-      );
+      return adminSavedCountdowns.some((c) => {
+        if (eventId && c.calendar_event_id === eventId) return true;
+        if (c.calendar_event_id) return false;
+        return c.name.toLowerCase().trim() === normalizedName && c.event_date === date;
+      });
     }
 
     function getVisibleAdminCalendarEvents() {
@@ -810,7 +926,8 @@
           ? item.start.date
           : (startRaw ? startRaw.slice(0, 10) : "");
         const name = item.summary || "Untitled event";
-        const saved = isCountdownAlreadySaved(name, eventDate);
+        const eventId = String(item.id || "").trim();
+        const saved = isCountdownAlreadySaved(name, eventDate, eventId);
         // Rows are tinted by the time scale, with a relative date in the tier's color.
         const tier = getTimeTier(eventDate);
         const tierClass = tier && tier !== "later" && tier !== "overdue" ? ` admin-cal-event-card--${tier}` : "";
@@ -822,6 +939,10 @@
             type="button"
             data-cal-name="${escapeHtml(name)}"
             data-cal-date="${escapeHtml(eventDate)}"
+            data-cal-id="${escapeHtml(eventId)}"
+            data-cal-location="${escapeHtml(String(item.location || "").trim())}"
+            data-cal-start-time="${escapeHtml(getCalendarEventStartTime(item) || "")}"
+            data-cal-all-day="${item.start && item.start.date ? "1" : "0"}"
             aria-pressed="${saved ? "true" : "false"}"
           >
             <div class="admin-cal-event-name">${escapeHtml(name)}</div>
@@ -846,7 +967,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible, photo_keyword")
+        .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible, photo_keyword, location_name, location_detail, location_source, description, start_time, all_day, photo_focal_x, photo_focal_y, template, calendar_event_id")
         .eq("household_id", getAdminHouseholdId())
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
@@ -1039,6 +1160,20 @@
       const eventDate = isEdit ? escapeHtml(countdown.event_date || "") : escapeHtml(p.date || "");
       const daysBeforeValue = isEdit && countdown.days_before_visible != null ? String(countdown.days_before_visible) : "";
       const photoKeyword = isEdit ? escapeHtml(countdown.photo_keyword || "") : "";
+      const parsedLocation = parseCountdownLocation(p.location);
+      const locationName = isEdit ? escapeHtml(countdown.location_name || "") : escapeHtml(parsedLocation.name);
+      const locationDetail = isEdit ? escapeHtml(countdown.location_detail || "") : escapeHtml(parsedLocation.detail);
+      const description = isEdit ? escapeHtml(countdown.description || "") : "";
+      const startTimeValue = isEdit
+        ? String(countdown.start_time || "").slice(0, 5)
+        : String(p.startTime || "").slice(0, 5);
+      const allDayChecked = isEdit ? !!countdown.all_day : !!p.allDay;
+      const focalX = isEdit && countdown.photo_focal_x != null ? Number(countdown.photo_focal_x) : 50;
+      const focalY = isEdit && countdown.photo_focal_y != null ? Number(countdown.photo_focal_y) : 50;
+      const templateValue = isEdit ? (countdown.template || "auto") : "auto";
+      const calendarEventIdField = !isEdit && p.calendarEventId
+        ? `<input type="hidden" name="calendar_event_id" value="${escapeHtml(p.calendarEventId)}">`
+        : "";
       const icon = isEdit ? escapeHtml(countdown.icon || "") : "";
 
       let existingUnsplashPhotoHTML = "";
@@ -1086,16 +1221,32 @@
       }
 
       const formAttrs = isEdit
-        ? `data-countdown-id="${id}" data-original-name="${name}" data-had-unsplash-photo="${countdown.unsplash_image_url ? "1" : "0"}"`
+        ? `data-countdown-id="${id}" data-original-name="${name}" data-had-unsplash-photo="${countdown.unsplash_image_url ? "1" : "0"}" data-had-custom-photo="${countdown.custom_image_url ? "1" : "0"}"`
         : "";
       const submitLabel = isEdit ? "Save Changes" : "Save Countdown";
 
       return `
         <form data-modal-form="countdown" ${formAttrs} novalidate>
+          ${calendarEventIdField}
           <div class="admin-field">
             <label for="modal-cd-name">Name</label>
             <input id="modal-cd-name" name="name" type="text" maxlength="140" required
               value="${name}" placeholder="e.g. Portugal trip" autocomplete="off">
+          </div>
+          <div class="admin-field">
+            <label for="modal-cd-location">Location</label>
+            <input id="modal-cd-location" name="location_name" type="text" maxlength="200"
+              value="${locationName}" placeholder="e.g. El Dorado Hotel" autocomplete="off">
+            <input id="modal-cd-location-detail" name="location_detail" type="text" maxlength="200"
+              value="${locationDetail}" placeholder="Second line (optional), e.g. Sonoma, CA" autocomplete="off"
+              aria-label="Location second line" style="margin-top:8px">
+            <p class="admin-field-hint">Optional. Only changes how it looks in Homeboard &mdash; your Google Calendar event isn't touched.</p>
+          </div>
+          <div class="admin-field">
+            <label for="modal-cd-description">Description <span class="admin-field-counter" data-description-counter>0/140</span></label>
+            <textarea id="modal-cd-description" name="description" rows="3" maxlength="140"
+              placeholder="e.g. Flying out of Boston, staying at the El Dorado">${description}</textarea>
+            <p class="admin-field-hint">Optional. Shown on the countdown card. Type it here &mdash; it isn't copied from your calendar.</p>
           </div>
           <div class="admin-form-row">
             <div class="admin-field">
@@ -1107,6 +1258,18 @@
               <input id="modal-cd-days" name="days_before_visible" type="number" min="1" max="365"
                 value="${daysBeforeValue}" placeholder="e.g. 30">
               <p class="admin-field-hint">Days before event. Optional.</p>
+            </div>
+          </div>
+          <div class="admin-form-row">
+            <div class="admin-field">
+              <label for="modal-cd-time">Start time</label>
+              <input id="modal-cd-time" name="start_time" type="time" value="${startTimeValue}">
+              <p class="admin-field-hint">Optional. Shown on the card.</p>
+            </div>
+            <div class="admin-field admin-field--check">
+              <label class="admin-check-label">
+                <input type="checkbox" name="all_day" value="1"${allDayChecked ? " checked" : ""}> All day
+              </label>
             </div>
           </div>
           <section class="admin-countdown-photo-panel" aria-labelledby="modal-cd-photo-label">
@@ -1147,6 +1310,29 @@
               <div class="admin-modal-photo-pending" data-photo-kind="custom" hidden></div>
             </div>
           </section>
+          <input type="hidden" name="photo_focal_x" value="${focalX}">
+          <input type="hidden" name="photo_focal_y" value="${focalY}">
+          <section class="admin-focal-picker" data-countdown-focal hidden>
+            <label class="admin-countdown-photo-title">Photo focus</label>
+            <p class="admin-field-hint">Tap the part of the photo that should stay in view when it's cropped.</p>
+            <div class="admin-focal-frame">
+              <img class="admin-focal-image" alt="Tap to set the focus point" src="">
+              <span class="admin-focal-dot" aria-hidden="true"></span>
+            </div>
+            <div class="admin-focal-crops">
+              <figure><div class="admin-focal-crop admin-focal-crop--tall" data-focal-crop></div><figcaption>Ticket</figcaption></figure>
+              <figure><div class="admin-focal-crop admin-focal-crop--wide" data-focal-crop></div><figcaption>Postcard</figcaption></figure>
+            </div>
+          </section>
+          <div class="admin-field">
+            <label for="modal-cd-template">Card style</label>
+            <select id="modal-cd-template" name="template">
+              <option value="auto"${templateValue === "auto" ? " selected" : ""}>Auto (alternate)</option>
+              <option value="ticket"${templateValue === "ticket" ? " selected" : ""}>Ticket</option>
+              <option value="postcard"${templateValue === "postcard" ? " selected" : ""}>Postcard</option>
+            </select>
+            <p class="admin-field-hint">Auto alternates Ticket and Postcard as slides rotate.</p>
+          </div>
           <div class="admin-field admin-countdown-icon-field">
             <label for="modal-cd-icon">Icon &mdash; <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" class="admin-icon-link">Browse ↗</a></label>
             <input id="modal-cd-icon" name="icon" type="text" maxlength="60"
@@ -1165,14 +1351,18 @@
       adminModalType = "add-countdown";
       adminModalContext = null;
       openAdminModal("Add Countdown", buildCountdownFormHTML(null, prefill));
-      syncCountdownPhotoUi(document.querySelector("#admin-modal-body form[data-modal-form='countdown']"));
+      const addForm = document.querySelector("#admin-modal-body form[data-modal-form='countdown']");
+      syncCountdownPhotoUi(addForm);
+      syncCountdownFormExtras(addForm);
     }
 
     function openEditCountdownModal(countdown) {
       adminModalType = "edit-countdown";
       adminModalContext = { id: countdown.id };
       openAdminModal("Edit Countdown", buildCountdownFormHTML(countdown));
-      syncCountdownPhotoUi(document.querySelector("#admin-modal-body form[data-modal-form='countdown']"));
+      const editForm = document.querySelector("#admin-modal-body form[data-modal-form='countdown']");
+      syncCountdownPhotoUi(editForm);
+      syncCountdownFormExtras(editForm);
     }
 
     function handleAdminCountdownCalListClick(event) {
@@ -1180,7 +1370,11 @@
       if (!card) return;
       openAddCountdownModal({
         name: card.getAttribute("data-cal-name"),
-        date: card.getAttribute("data-cal-date")
+        date: card.getAttribute("data-cal-date"),
+        calendarEventId: card.getAttribute("data-cal-id"),
+        location: card.getAttribute("data-cal-location"),
+        startTime: card.getAttribute("data-cal-start-time") || "",
+        allDay: card.getAttribute("data-cal-all-day") === "1"
       });
     }
 

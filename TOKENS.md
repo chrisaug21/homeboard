@@ -40,7 +40,7 @@ Anything with a date takes its color from `getTimeTier(dateString)` in `js/share
 
 Edge width is `--time-edge` (6px). Color is only ever used for time; never color a card for any other reason.
 
-Countdowns use their own ramp by distance: `--countdown-far` (31+ days), `--countdown-later` (8-30), `--countdown-soon` (1-7), and `--time-today` for today.
+Countdowns use their own ramp by distance: `--countdown-far` (31+ days), `--countdown-later` (8-30), `--countdown-soon` (1-7), and `--time-today` for today. Card slide tokens: `--on-countdown-soon` (white text on fern), `--countdown-later-sub` (secondary text on the sage fill, lighter in Dark for contrast), `--on-time-today-sub` (secondary text on marigold), `--countdown-stamp-bg`/`--countdown-stamp-fg` (no-photo aubergine block), `--countdown-frame`/`--countdown-frame-on-far` (Postcard frame), `--countdown-far-postcard` (tinted slide fill so the white Postcard frame stands out on 31+ day countdowns), `--countdown-frame-shadow`, `--countdown-perf`/`--countdown-perf-on-today` (Ticket perforation line), `--countdown-credit-bg`/`--countdown-credit-fg` (photo credit chip).
 
 ## 4. Person colors
 

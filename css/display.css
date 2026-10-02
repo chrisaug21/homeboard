@@ -1544,194 +1544,444 @@
       font-style: italic;
     }
 
+    /* Countdown-to-countdown crossfade: gentle symmetric ease-in-out; duration set from JS */
+    .countdown-crossfade-ghost {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      animation: countdown-fade-out var(--countdown-fade-ms, 900ms) cubic-bezier(0.45, 0, 0.55, 1) forwards;
+    }
+
+    .countdown-crossfade-ghost .screen {
+      width: 100%;
+      min-width: 0;
+      flex: none;
+    }
+
+    .countdown-screen--fade-in {
+      animation: countdown-fade-in var(--countdown-fade-ms, 900ms) cubic-bezier(0.45, 0, 0.55, 1);
+    }
+
+    @keyframes countdown-fade-out {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    @keyframes countdown-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* ── Countdown slides: Ticket (A) and Postcard (B) ──
+       Sizes are written in --cd-u, one spec pixel at a 1280x780 display, and
+       scale with the screen. */
     .countdown-layout {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
       flex: 1;
       min-height: 0;
     }
 
     .countdown-card {
+      --cd-u: min(calc(100vw / 1280), calc(100vh / 780));
+      --cd-fill: var(--countdown-far);
+      --cd-fg: var(--ink);
+      --cd-sub: var(--muted);
+      --cd-perf: var(--countdown-perf);
+      --cd-frame: var(--countdown-frame-on-far);
       position: relative;
       width: 100%;
       height: 100%;
-      padding: 28px 36px;
       border-radius: var(--radius-lg);
-      overflow: hidden;
-      background: var(--countdown-far);
-      color: var(--ink);
+      background: var(--cd-fill);
+      color: var(--cd-fg);
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    /* A white postcard frame needs a tinted slide behind it to stand out. */
+    .countdown-card--postcard.countdown-card--far {
+      --cd-fill: var(--countdown-far-postcard);
+    }
+
+    .countdown-card--later {
+      --cd-fill: var(--countdown-later);
+      --cd-sub: var(--countdown-later-sub);
+      --cd-frame: var(--countdown-frame);
+    }
+
+    .countdown-card--soon {
+      --cd-fill: var(--countdown-soon);
+      --cd-fg: var(--on-countdown-soon);
+      --cd-sub: var(--on-countdown-soon);
+      --cd-frame: var(--countdown-frame);
+      border-color: var(--countdown-soon);
+    }
+
+    .countdown-card--today {
+      --cd-fill: var(--time-today);
+      --cd-fg: var(--on-time-today);
+      --cd-sub: var(--on-time-today-sub);
+      --cd-perf: var(--countdown-perf-on-today);
+      --cd-frame: var(--countdown-frame);
+      border-color: var(--time-today);
+    }
+
+    /* Shared pieces */
+    .cd-number-block {
+      display: flex;
+      align-items: flex-end;
+      gap: calc(16 * var(--cd-u));
+    }
+
+    .cd-number {
+      font-family: var(--font-display);
+      font-size: calc(200 * var(--cd-u));
+      font-weight: 800;
+      line-height: 0.85;
+      letter-spacing: -0.05em;
+    }
+
+    .cd-label {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      min-width: 0;
-      text-align: center;
+      line-height: 1;
+      padding-bottom: calc(6 * var(--cd-u));
     }
 
-    .countdown-card--photo {
-      display: grid;
-      grid-template-columns: minmax(260px, 40%) 1fr;
-      padding: 0;
-      gap: 0;
-      align-items: stretch;
+    .cd-label-days {
+      font-family: var(--font-display);
+      font-size: calc(34 * var(--cd-u));
+      font-weight: 800;
+    }
+
+    .cd-label-togo {
+      font-family: var(--font-display);
+      font-size: calc(20 * var(--cd-u));
+      font-weight: 700;
+      color: var(--cd-sub);
+      margin-top: calc(4 * var(--cd-u));
+    }
+
+    .cd-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: calc(42 * var(--cd-u));
+      font-weight: 800;
+      line-height: 1.05;
+      max-width: 100%;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .cd-description {
+      margin: 0;
+      font-size: calc(19 * var(--cd-u));
+      font-weight: 500;
+      line-height: 1.5;
+      max-width: calc(540 * var(--cd-u));
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      white-space: pre-line;
+    }
+
+    .cd-detail {
+      display: flex;
+      align-items: flex-start;
+      gap: calc(12 * var(--cd-u));
       text-align: left;
-      overflow: hidden;
+      min-width: 0;
     }
 
-    .countdown-photo-wrap {
-      position: relative;
-      overflow: hidden;
-      background: var(--card-sunken);
+    .cd-detail svg {
+      width: calc(22 * var(--cd-u));
+      height: calc(22 * var(--cd-u));
+      stroke-width: 2;
+      flex: none;
+      margin-top: calc(1 * var(--cd-u));
     }
 
-    .countdown-photo {
+    .cd-detail-primary {
+      font-size: calc(18 * var(--cd-u));
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .cd-detail-secondary {
+      font-size: calc(15 * var(--cd-u));
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--cd-sub);
+    }
+
+    /* On fern, body text must be at least 19px and bold to hold contrast. */
+    .countdown-card--soon .cd-description {
+      font-size: calc(19 * var(--cd-u));
+      font-weight: 700;
+    }
+
+    .countdown-card--soon .cd-detail-primary,
+    .countdown-card--soon .cd-detail-secondary {
+      font-size: calc(19 * var(--cd-u));
+      font-weight: 700;
+    }
+
+    .cd-photo {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
     }
 
-    .countdown-photo-credit {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 20px 10px 8px;
-      font-size: 0.58rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      color: rgba(255, 255, 255, 0.82);
-      background: linear-gradient(transparent, rgba(0, 0, 0, 0.36));
-      pointer-events: none;
-    }
-
-    .countdown-copy {
-      padding: 36px 40px;
+    .cd-stamp {
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      gap: 20px;
-      min-width: 0;
-      width: 100%;
-    }
-
-    .countdown-card--photo .countdown-icon,
-    .countdown-card--photo .countdown-days {
-      align-self: flex-start;
-    }
-
-    /* Without a photo, center everything (icon and number used to hug the left). */
-    .countdown-card:not(.countdown-card--photo) .countdown-copy {
-      align-items: center;
-      text-align: center;
-    }
-
-    .countdown-card--photo .countdown-name {
-      max-width: 100%;
-    }
-
-    .countdown-card--photo .countdown-caption {
-      max-width: 100%;
-    }
-
-    /* Countdown ramp (anticipation, not action): it warms as the day nears. */
-    .countdown-card--far {
-      background: var(--countdown-far);
-    }
-
-    .countdown-card--later {
-      background: var(--countdown-later);
-    }
-
-    .countdown-card--soon {
-      background: var(--countdown-soon);
-      color: #ffffff;
-      border-color: var(--countdown-soon);
-    }
-
-    .countdown-card--today {
-      background: var(--time-today);
-      color: var(--on-time-today);
-      border-color: var(--time-today);
-    }
-
-    .countdown-card--soon .countdown-unit,
-    .countdown-card--soon .countdown-caption,
-    .countdown-card--today .countdown-unit,
-    .countdown-card--today .countdown-caption {
-      color: inherit;
-      opacity: 0.8;
-    }
-
-    .countdown-icon {
-      width: 96px;
-      height: 96px;
-      display: inline-flex;
       align-items: center;
       justify-content: center;
-      border-radius: var(--tag-radius);
-      background: color-mix(in srgb, currentColor 12%, transparent);
+      gap: calc(14 * var(--cd-u));
+      background: var(--countdown-stamp-bg);
+      color: var(--countdown-stamp-fg);
     }
 
-    .countdown-icon svg {
-      width: 64px;
-      height: 64px;
-      stroke-width: 2;
+    .cd-stamp svg {
+      width: calc(145 * var(--cd-u));
+      height: calc(145 * var(--cd-u));
+      stroke-width: 1.1;
+      color: var(--brand-marigold);
     }
 
-    .countdown-name {
-      font-family: var(--font-display);
-      font-size: 2.6rem;
-      font-weight: 800;
-      line-height: 1.1;
-      min-height: 0;
-      max-width: 100%;
-      overflow: visible;
-      display: block;
-      white-space: normal;
-      text-wrap: balance;
-    }
-
-    .countdown-days {
+    .cd-stamp-date {
       display: flex;
-      flex-direction: row;
-      align-items: baseline;
-      gap: 10px;
-    }
-
-    .countdown-value {
+      flex-direction: column;
+      align-items: center;
       font-family: var(--font-display);
-      font-size: 7rem;
       font-weight: 800;
-      line-height: 0.9;
-      letter-spacing: -0.05em;
-    }
-
-    .countdown-value--today {
-      font-size: 6rem;
-      letter-spacing: -0.04em;
-    }
-
-    .countdown-unit {
-      align-self: baseline;
-      font-size: 0.95rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
       line-height: 1;
     }
 
-    .countdown-caption {
-      font-size: 1.05rem;
-      line-height: 1.35;
-      color: var(--muted);
+    .cd-stamp-month {
+      font-size: calc(21 * var(--cd-u));
+      letter-spacing: 0.12em;
+    }
+
+    .cd-stamp-day {
+      font-size: calc(60 * var(--cd-u));
+    }
+
+    .cd-today-pill {
+      align-self: flex-start;
+      font-family: var(--font-display);
+      font-size: calc(22 * var(--cd-u));
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--time-today);
+      background: var(--on-time-today);
+      border-radius: var(--tag-radius);
+      padding: calc(10 * var(--cd-u)) calc(16 * var(--cd-u));
+    }
+
+    .cd-title--xl { font-size: calc(96 * var(--cd-u)); letter-spacing: -0.02em; line-height: 1; }
+    .cd-title--l { font-size: calc(72 * var(--cd-u)); letter-spacing: -0.02em; line-height: 1; }
+    .cd-title--m { font-size: calc(56 * var(--cd-u)); letter-spacing: -0.02em; line-height: 1; }
+
+    .countdown-card--today .cd-description {
+      font-size: calc(20 * var(--cd-u));
+      margin-top: calc(4 * var(--cd-u));
+    }
+
+    /* Ticket: photo (40%) | perforation | info */
+    .countdown-card--ticket {
+      display: grid;
+      grid-template-columns: 40% 1fr;
+    }
+
+    .countdown-card--ticket .cd-art {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+      background: var(--card-sunken);
+    }
+
+    .cd-credit-chip {
+      position: absolute;
+      left: calc(14 * var(--cd-u));
+      bottom: calc(14 * var(--cd-u));
+      max-width: calc(100% - 28 * var(--cd-u));
+      padding: calc(4 * var(--cd-u)) calc(9 * var(--cd-u));
+      border-radius: 6px;
+      font-size: calc(12 * var(--cd-u));
+      font-weight: 600;
+      color: var(--countdown-credit-fg);
+      background: var(--countdown-credit-bg);
+      pointer-events: none;
+    }
+
+    .cd-perf {
+      position: absolute;
+      left: 40%;
+      top: calc(18 * var(--cd-u));
+      bottom: calc(18 * var(--cd-u));
+      border-left: 2px dashed var(--cd-perf);
+      transform: translateX(-1px);
+      pointer-events: none;
+    }
+
+    .cd-notch {
+      position: absolute;
+      left: 40%;
+      width: calc(32 * var(--cd-u));
+      height: calc(32 * var(--cd-u));
+      margin-left: calc(-16 * var(--cd-u));
+      border-radius: 50%;
+      background: var(--surface);
+      pointer-events: none;
+    }
+
+    .cd-notch--top { top: calc(-16 * var(--cd-u)); }
+    .cd-notch--bottom { bottom: calc(-16 * var(--cd-u)); }
+
+    .cd-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: right;
+      min-width: 0;
+      padding: calc(36 * var(--cd-u)) calc(40 * var(--cd-u)) 0 calc(56 * var(--cd-u));
+    }
+
+    .cd-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
       max-width: 100%;
-      white-space: nowrap;
+    }
+
+    .countdown-card--ticket .cd-text {
+      align-items: flex-end;
+      gap: calc(12 * var(--cd-u));
+    }
+
+    .countdown-card--ticket .cd-text .cd-number-block + .cd-title {
+      margin-top: calc(6 * var(--cd-u));
+    }
+
+    /* On the day: pill, title and description sit vertically centered. */
+    .countdown-card--ticket .cd-text--today {
+      flex: 1;
+      justify-content: center;
+    }
+
+    .countdown-card--ticket .cd-text--today .cd-today-pill {
+      align-self: flex-end;
+    }
+
+    .countdown-card--ticket .cd-text:not(.cd-text--today) {
+      flex: 1;
+    }
+
+    .cd-details {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: calc(12 * var(--cd-u)) calc(40 * var(--cd-u));
+      width: 100%;
+      margin-top: auto;
+      border-top: 2px dashed var(--cd-perf);
+      padding: calc(22 * var(--cd-u)) 0 calc(30 * var(--cd-u));
+    }
+
+    /* Postcard: text column | tilted photo frame on a full colored slide */
+    .countdown-card--postcard {
+      display: flex;
+      align-items: center;
+      gap: calc(48 * var(--cd-u));
+      padding: calc(36 * var(--cd-u)) calc(68 * var(--cd-u)) calc(36 * var(--cd-u)) calc(56 * var(--cd-u));
+    }
+
+    .cd-text--postcard {
+      flex: 1;
+      align-items: flex-start;
+      text-align: left;
+      gap: calc(12 * var(--cd-u));
+    }
+
+    .countdown-card--postcard .cd-number-block {
+      flex-direction: row-reverse;
+      align-items: flex-end;
+    }
+
+    .countdown-card--postcard .cd-number-block + .cd-title {
+      margin-top: calc(2 * var(--cd-u));
+    }
+
+    .cd-details--postcard {
+      border-top: 0;
+      margin-top: calc(10 * var(--cd-u));
+      padding: 0;
+      justify-content: flex-start;
+      width: auto;
+    }
+
+    .cd-postcard {
+      flex: none;
+      width: calc(470 * var(--cd-u));
+      margin: 0;
+      padding: calc(14 * var(--cd-u)) calc(14 * var(--cd-u)) 0;
+      border-radius: calc(16 * var(--cd-u));
+      background: var(--cd-frame);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      box-shadow: var(--countdown-frame-shadow);
+      transform: rotate(var(--cd-tilt, -2deg));
+      --cd-sub: var(--muted);
+    }
+
+    .cd-postcard--portrait {
+      width: calc(360 * var(--cd-u));
+    }
+
+    .cd-postcard .cd-art {
+      height: calc(300 * var(--cd-u));
+      border-radius: calc(8 * var(--cd-u));
+      overflow: hidden;
+      background: var(--card-sunken);
+    }
+
+    .cd-postcard--portrait .cd-art {
+      height: calc(380 * var(--cd-u));
+    }
+
+    .countdown-card--nophoto .cd-postcard .cd-art {
+      height: calc(340 * var(--cd-u));
+    }
+
+    .cd-caption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: calc(12 * var(--cd-u));
+      padding: calc(14 * var(--cd-u)) calc(6 * var(--cd-u)) calc(16 * var(--cd-u));
+    }
+
+    .cd-caption--empty {
+      padding: 0 0 calc(14 * var(--cd-u));
+    }
+
+    .cd-credit {
+      margin-left: auto;
+      font-size: calc(12 * var(--cd-u));
+      font-weight: 600;
+      color: var(--muted);
+      text-align: right;
     }
 
     .rsvp-layout {

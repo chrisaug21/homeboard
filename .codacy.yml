@@ -10,3 +10,6 @@ exclude_paths:
   - "Claude outputs/**"
   - "design-system/**"
   - "js/vendor/**"
+  # Postgres migrations: Codacy's SQL rules are SQL Server (T-SQL) ones
+  # (SET ANSI_NULLS, NOCOUNT, ...), which don't apply to Postgres.
+  - "supabase/migrations/**"
