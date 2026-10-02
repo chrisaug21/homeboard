@@ -61,55 +61,6 @@
       return map;
     }
 
-    function extractCalendarCountdowns(items) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const results = [];
-
-      items.forEach((item) => {
-        const summary = item.summary || "";
-        const description = item.description || "";
-        const combinedText = summary + " " + description;
-
-        // Match #countdown optionally followed by a Lucide icon name token.
-        const match = combinedText.match(/#countdown(?:\s+([a-z][a-z0-9-]*))?/i);
-        if (!match) {
-          return;
-        }
-
-        const icon = match[1] ? match[1].toLowerCase() : "calendar";
-        const startRaw = item.start && (item.start.dateTime || item.start.date);
-
-        if (!startRaw) {
-          return;
-        }
-
-        const eventDate = item.start.date || startRaw.slice(0, 10);
-        const days = getDaysUntil(eventDate);
-
-        if (days === null || days < 0) {
-          return;
-        }
-
-        // Strip the #countdown tag (and optional icon token) from the display name.
-        const name = summary.replace(/#countdown(?:\s+[a-z][a-z0-9-]*)?/i, "").trim() || "Upcoming Event";
-
-        results.push({
-          name,
-          icon,
-          days,
-          caption: formatLongDate(eventDate),
-          location: String(item.location || "").trim(),
-          calendarEventId: String(item.id || "").trim(),
-          screenKey: item.id
-            ? `countdown_calendar_${String(item.id).trim()}`
-            : `countdown_calendar_${eventDate}_${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "event"}`
-        });
-      });
-
-      return results;
-    }
-
     function renderCalendar() {
       const grid = document.getElementById("calendar-grid");
       const today = new Date();
@@ -347,12 +298,10 @@
       if (wide) {
         // Complete replacement — wide fetch is the source of truth
         calendarEventsMap = freshMap;
-        cachedCalendarCountdowns = extractCalendarCountdowns(items);
         lastWideFetch = Date.now(); // stamp only after successful completion
       } else {
         // Merge: overwrite keys from freshMap, then delete stale keys within the
         // refreshed window that are no longer present (days that became empty).
-        // Countdowns intentionally not updated — wide fetch (every 24h) keeps them fresh.
         freshMap.forEach((events, key) => {
           calendarEventsMap.set(key, events);
         });
@@ -370,11 +319,7 @@
       renderMonthCalendar();
 
       const base = cachedSupabaseCountdowns !== null ? cachedSupabaseCountdowns : [];
-      // A calendar event already saved as a countdown (linked by event id) is
-      // shown from the saved copy, so its #countdown tag doesn't duplicate it.
-      const savedEventIds = new Set(base.map((item) => item.calendarEventId).filter(Boolean));
-      const calendarOnly = cachedCalendarCountdowns.filter((item) => !item.calendarEventId || !savedEventIds.has(item.calendarEventId));
-      const merged = [...base, ...calendarOnly]
+      const merged = [...base]
         .sort((a, b) => (a.days ?? Infinity) - (b.days ?? Infinity));
 
       if (merged.length > 0) {

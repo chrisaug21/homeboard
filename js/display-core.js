@@ -27,7 +27,6 @@
     let cachedDisplayHouseholdMembers = null;
     let cachedDisplayTodos = null;
     let cachedSupabaseCountdowns = null;
-    let cachedCalendarCountdowns = [];
     let cachedWeddingSnapshot = null;
     let cachedScorecards = [];
     let cachedScorecardSessionsById = new Map();
@@ -284,7 +283,7 @@
       }
 
       const base = cachedSupabaseCountdowns !== null ? cachedSupabaseCountdowns : [];
-      const merged = [...base, ...cachedCalendarCountdowns]
+      const merged = [...base]
         .sort((a, b) => (a.days ?? Infinity) - (b.days ?? Infinity));
 
       if (merged.length > 0) {
