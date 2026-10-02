@@ -21,6 +21,7 @@
         days: getDaysUntil(countdown.event_date),
         caption: formatLongDate(countdown.event_date),
         location: String(countdown.location || "").trim(),
+        description: String(countdown.description || "").trim(),
         image_url: customImageUrl || imageUrl,
         image_credit: customImageUrl ? null : imageCredit,
         daysBeforeVisible: countdown.days_before_visible ?? null,
@@ -40,7 +41,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible, location")
+        .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible, location, description")
         .eq("household_id", getDisplayHouseholdId())
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
@@ -122,6 +123,7 @@
                   ${daysMarkup}
                 </div>
                 <div class="countdown-caption">${escapeHtml(item.caption)}</div>
+                ${item.description ? `<div class="countdown-description">${escapeHtml(item.description)}</div>` : ""}
               </div>
             </article>
           </div>

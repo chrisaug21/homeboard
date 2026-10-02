@@ -1760,6 +1760,19 @@
       white-space: nowrap;
     }
 
+    .countdown-description {
+      font-size: 1.05rem;
+      line-height: 1.4;
+      color: var(--muted);
+      max-width: 100%;
+      min-width: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: pre-line;
+    }
+
     .rsvp-layout {
       display: grid;
       grid-template-rows: auto auto 1fr;

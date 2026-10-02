@@ -539,6 +539,7 @@
       const daysBeforeVisible = daysBeforeRaw !== "" ? parseInt(daysBeforeRaw, 10) || null : null;
       const photoKeyword = String(formData.get("photo_keyword") || "").trim();
       const location = String(formData.get("location") || "").trim();
+      const description = String(formData.get("description") || "").trim();
       const calendarEventId = String(formData.get("calendar_event_id") || "").trim();
       const pendingPhotos = adminPendingPhotos.get("modal-create") || {};
 
@@ -565,6 +566,7 @@
           days_before_visible: daysBeforeVisible,
           photo_keyword: photoKeyword || null,
           location: location || null,
+          description: description || null,
           calendar_event_id: calendarEventId || null
         })
         .select("id")
@@ -631,7 +633,7 @@
         submitBtn.textContent = "Saving\u2026";
       }
 
-      const updatePayload = { name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null, location: options.location || null };
+      const updatePayload = { name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null, location: options.location || null, description: options.description || null };
       if (options.removeUnsplashPhoto) updatePayload.unsplash_image_url = null;
       if (options.removeCustomPhoto) updatePayload.custom_image_url = null;
 
@@ -859,7 +861,7 @@
 
       const { data, error } = await client
         .from("countdowns")
-        .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible, photo_keyword, location, calendar_event_id")
+        .select("id, name, icon, event_date, unsplash_image_url, custom_image_url, days_before_visible, photo_keyword, location, description, calendar_event_id")
         .eq("household_id", getAdminHouseholdId())
         .gte("event_date", formatDateKey(today))
         .order("event_date", { ascending: true });
@@ -1053,6 +1055,7 @@
       const daysBeforeValue = isEdit && countdown.days_before_visible != null ? String(countdown.days_before_visible) : "";
       const photoKeyword = isEdit ? escapeHtml(countdown.photo_keyword || "") : "";
       const location = isEdit ? escapeHtml(countdown.location || "") : escapeHtml(p.location || "");
+      const description = isEdit ? escapeHtml(countdown.description || "") : "";
       const calendarEventIdField = !isEdit && p.calendarEventId
         ? `<input type="hidden" name="calendar_event_id" value="${escapeHtml(p.calendarEventId)}">`
         : "";
@@ -1120,6 +1123,12 @@
             <input id="modal-cd-location" name="location" type="text" maxlength="200"
               value="${location}" placeholder="e.g. Sonoma, California" autocomplete="off">
             <p class="admin-field-hint">Optional. Only changes how it looks in Homeboard &mdash; your Google Calendar event isn't touched.</p>
+          </div>
+          <div class="admin-field">
+            <label for="modal-cd-description">Description</label>
+            <textarea id="modal-cd-description" name="description" rows="3" maxlength="500"
+              placeholder="e.g. Flying out of Boston, staying at the El Dorado">${description}</textarea>
+            <p class="admin-field-hint">Optional. Shown on the countdown card. Type it here &mdash; it isn't copied from your calendar.</p>
           </div>
           <div class="admin-form-row">
             <div class="admin-field">
