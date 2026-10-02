@@ -222,7 +222,7 @@ Core tables used by Homeboard:
 | `meal_plan` | weekly meal entries |
 | `meal_plan_notes` | one note per household per week |
 | `meal_library` | saved meal names per household, each tagged with the cooking-style type last used (`meal_type`) and the meal it was saved under (`meal_slot`: breakfast/lunch/dinner), used to power the Meal Plan typeahead (filtered by both) and the Meal Library cleanup screen; independent of `meal_plan` rows so removing a name never touches past or current planned meals |
-| `countdowns` | countdown definitions, photo metadata, optional `location` and user-typed `description` (display-only, never synced to Google), and `calendar_event_id` (the Google event it was created from) |
+| `countdowns` | countdown definitions, photo metadata, card content (location name/detail, user-typed `description`, start time, photo focal point, `template`; display-only, never synced to Google), and `calendar_event_id` (the Google event it was created from) |
 | `scorecards` | scorecard definitions |
 | `scorecard_sessions` | active and completed scorecard sessions |
 | `display_pairings` | temporary pairing codes for display setup |

@@ -1761,6 +1761,97 @@
       display: none;
     }
 
+    .admin-field-counter {
+      float: right;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .admin-field--check {
+      align-self: end;
+      padding-bottom: 10px;
+    }
+
+    .admin-check-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .admin-focal-picker {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: var(--tag-radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .admin-focal-picker[hidden] {
+      display: none;
+    }
+
+    .admin-focal-frame {
+      position: relative;
+      width: fit-content;
+      max-width: 100%;
+      cursor: crosshair;
+      line-height: 0;
+    }
+
+    .admin-focal-image {
+      display: block;
+      max-width: 100%;
+      max-height: 220px;
+      border-radius: 8px;
+    }
+
+    .admin-focal-dot {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      margin: -11px 0 0 -11px;
+      border-radius: 50%;
+      border: 3px solid var(--on-primary);
+      background: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary);
+      pointer-events: none;
+    }
+
+    .admin-focal-crops {
+      display: flex;
+      gap: 14px;
+      align-items: flex-end;
+    }
+
+    .admin-focal-crops figure {
+      margin: 0;
+      display: grid;
+      gap: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .admin-focal-crop {
+      background-size: cover;
+      background-repeat: no-repeat;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .admin-focal-crop--tall {
+      width: 72px;
+      aspect-ratio: 40 / 56;
+    }
+
+    .admin-focal-crop--wide {
+      width: 120px;
+      aspect-ratio: 3 / 2;
+    }
+
     .admin-countdown-photo-option--secondary {
       background: var(--card-sunken);
     }

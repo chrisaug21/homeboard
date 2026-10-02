@@ -220,12 +220,11 @@
             <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
           </div>
           <div class="countdown-layout">
-            <article class="countdown-card">
-              <div class="countdown-copy">
-                <div class="sk" style="width:96px;height:96px;border-radius:28px;margin:0 auto 20px;"></div>
-                <div class="sk" style="width:55%;height:22px;margin:0 auto 16px;"></div>
-                <div class="sk" style="width:30%;height:72px;margin:0 auto 14px;border-radius:12px;"></div>
-                <div class="sk" style="width:42%;height:14px;margin:0 auto;"></div>
+            <article class="countdown-card countdown-card--ticket">
+              <div class="cd-art sk"></div>
+              <div class="cd-info">
+                <div class="sk" style="width:62%;height:120px;border-radius:12px;"></div>
+                <div class="sk" style="width:48%;height:26px;margin-top:18px;"></div>
               </div>
             </article>
           </div>
@@ -553,9 +552,9 @@
     function refreshIcons() {
       if (window.lucide && typeof window.lucide.createIcons === "function") {
         window.lucide.createIcons();
-        // Fallback: any icon inside .countdown-icon that wasn't recognized → use "calendar"
+        // Fallback: any no-photo stamp icon that wasn't recognized → use "calendar"
         let needsRetry = false;
-        document.querySelectorAll(".countdown-icon i[data-lucide]").forEach((el) => {
+        document.querySelectorAll(".cd-stamp i[data-lucide]").forEach((el) => {
           if (!el.querySelector("svg")) {
             el.setAttribute("data-lucide", "calendar");
             needsRetry = true;

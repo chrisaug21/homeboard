@@ -34,6 +34,10 @@
         // screen's scroll animation otherwise keeps running while off-screen in the track.
         startRsvpAutoScroll();
       }
+      const shownScreen = entries[currentIndex]?.screen;
+      if (shownScreen?.classList.contains("countdown-screen") && typeof prepareCountdownSlideForShow === "function") {
+        prepareCountdownSlideForShow(shownScreen);
+      }
       beginScreenTransition();
       track.style.transform = "translateX(-" + (currentIndex * 100) + "%)";
       renderProgress();
