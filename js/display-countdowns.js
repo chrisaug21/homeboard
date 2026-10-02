@@ -333,6 +333,9 @@
     // sliding. The track jumps to the new slide with no animation, while a copy
     // of the old slide sits on top and fades out as the new one fades in.
     // Returns false (so the normal slide runs) if the effect can't be used.
+    // Tune the feel here (CSS reads the duration from --countdown-fade-ms).
+    const COUNTDOWN_CROSSFADE_MS = 900;
+
     function crossfadeCountdownSlides(fromScreen, toScreen, targetTransform) {
       const viewportEl = track.parentElement;
       if (!viewportEl || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
@@ -342,6 +345,8 @@
       const ghost = document.createElement("div");
       ghost.className = "countdown-crossfade-ghost";
       ghost.setAttribute("aria-hidden", "true");
+      ghost.style.setProperty("--countdown-fade-ms", `${COUNTDOWN_CROSSFADE_MS}ms`);
+      toScreen.style.setProperty("--countdown-fade-ms", `${COUNTDOWN_CROSSFADE_MS}ms`);
       const copy = fromScreen.cloneNode(true);
       copy.removeAttribute("data-screen-key");
       ghost.appendChild(copy);
@@ -353,10 +358,14 @@
       track.style.transition = "";
 
       toScreen.classList.add("countdown-screen--fade-in");
+      // The default transition safety timer is shorter than the fade; re-arm it.
+      clearScreenTransitionFallback();
+      screenTransitionFallbackId = window.setTimeout(finishScreenTransition, COUNTDOWN_CROSSFADE_MS + 300);
       window.setTimeout(() => {
         ghost.remove();
         toScreen.classList.remove("countdown-screen--fade-in");
+        toScreen.style.removeProperty("--countdown-fade-ms");
         finishScreenTransition();
-      }, 580);
+      }, COUNTDOWN_CROSSFADE_MS + 20);
       return true;
     }
