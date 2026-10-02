@@ -27,6 +27,7 @@
         track.style.transition = "";
       }
 
+      const previousScreen = entries[currentIndex]?.screen;
       currentIndex = (index + screenCount) % screenCount;
       activeScreenKey = entries[currentIndex]?.key || activeScreenKey;
       if (activeScreenKey === "rsvp" && typeof startRsvpAutoScroll === "function") {
@@ -39,7 +40,17 @@
         prepareCountdownSlideForShow(shownScreen);
       }
       beginScreenTransition();
-      track.style.transform = "translateX(-" + (currentIndex * 100) + "%)";
+      const targetTransform = "translateX(-" + (currentIndex * 100) + "%)";
+      const isCountdownToCountdown = !isForwardWrap && !isBackwardWrap
+        && previousScreen && shownScreen && previousScreen !== shownScreen
+        && previousScreen.classList.contains("countdown-screen")
+        && shownScreen.classList.contains("countdown-screen");
+      if (isCountdownToCountdown && typeof crossfadeCountdownSlides === "function"
+        && crossfadeCountdownSlides(previousScreen, shownScreen, targetTransform)) {
+        renderProgress();
+        return true;
+      }
+      track.style.transform = targetTransform;
       renderProgress();
       return true;
     }

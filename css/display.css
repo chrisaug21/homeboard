@@ -1544,6 +1544,35 @@
       font-style: italic;
     }
 
+    /* Countdown-to-countdown crossfade (system motion curve, 560ms) */
+    .countdown-crossfade-ghost {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      animation: countdown-fade-out 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .countdown-crossfade-ghost .screen {
+      width: 100%;
+      min-width: 0;
+      flex: none;
+    }
+
+    .countdown-screen--fade-in {
+      animation: countdown-fade-in 560ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes countdown-fade-out {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    @keyframes countdown-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
     /* ── Countdown slides: Ticket (A) and Postcard (B) ──
        Sizes are written in --cd-u, one spec pixel at a 1280x780 display, and
        scale with the screen. */

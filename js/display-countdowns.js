@@ -328,3 +328,35 @@
       applyScreenOrder(screenOrder);
       reconcileRotationState();
     }
+
+    // Moving between two countdown slides fades them into each other instead of
+    // sliding. The track jumps to the new slide with no animation, while a copy
+    // of the old slide sits on top and fades out as the new one fades in.
+    // Returns false (so the normal slide runs) if the effect can't be used.
+    function crossfadeCountdownSlides(fromScreen, toScreen, targetTransform) {
+      const viewportEl = track.parentElement;
+      if (!viewportEl || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+        return false;
+      }
+
+      const ghost = document.createElement("div");
+      ghost.className = "countdown-crossfade-ghost";
+      ghost.setAttribute("aria-hidden", "true");
+      const copy = fromScreen.cloneNode(true);
+      copy.removeAttribute("data-screen-key");
+      ghost.appendChild(copy);
+      viewportEl.appendChild(ghost);
+
+      track.style.transition = "none";
+      track.style.transform = targetTransform;
+      void track.getBoundingClientRect();
+      track.style.transition = "";
+
+      toScreen.classList.add("countdown-screen--fade-in");
+      window.setTimeout(() => {
+        ghost.remove();
+        toScreen.classList.remove("countdown-screen--fade-in");
+        finishScreenTransition();
+      }, 580);
+      return true;
+    }
