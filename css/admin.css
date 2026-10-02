@@ -1356,12 +1356,6 @@
       outline-offset: 2px;
     }
 
-    /* Saved (selected) = a primary border, never a tinted fill. */
-    .admin-cal-event-card.is-saved {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 0.5px var(--primary);
-    }
-
     .admin-cal-event-date,
     .admin-cal-saved {
       font-size: 0.82rem;
@@ -1370,8 +1364,13 @@
       color: var(--muted);
     }
 
+    /* Saved = a solid chip. It reads the same on every row; the row's own
+       background and left edge stay reserved for how soon the event is. */
     .admin-cal-saved {
-      color: var(--ink);
+      padding: 3px 9px;
+      border-radius: var(--tag-radius);
+      background: var(--primary);
+      color: var(--on-primary);
     }
 
     .admin-cal-event-card--soon .admin-cal-event-date {
@@ -1382,8 +1381,7 @@
       color: var(--time-week-fg);
     }
 
-    .admin-cal-event-card--today .admin-cal-event-date,
-    .admin-cal-event-card--today .admin-cal-saved {
+    .admin-cal-event-card--today .admin-cal-event-date {
       color: inherit;
     }
 

@@ -301,7 +301,6 @@
     const refreshingCountdowns = new Set();
     const COUNTDOWN_CUSTOM_PHOTO_BUCKET = "countdown-photos";
     const COUNTDOWN_CUSTOM_PHOTO_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
-    const COUNTDOWN_PHOTO_ASPECT_RATIO = 3 / 4;
     const COUNTDOWN_UPLOAD_MAX_SIDE = 1200;
     const COUNTDOWN_UPLOAD_QUALITY = 0.85;
     let adminCountdownCropper = null;
@@ -969,12 +968,14 @@
           const removeUnsplashPhoto = formData.get("remove_unsplash_photo") === "1";
           const removeCustomPhoto = formData.get("remove_custom_photo") === "1";
           const hadUnsplashPhoto = form.getAttribute("data-had-unsplash-photo") === "1";
+          const hadCustomPhoto = form.getAttribute("data-had-custom-photo") === "1";
           if (!name || !eventDate || adminCountdownEditPending) return;
           updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, {
             cardFields: collectCountdownCardFields(formData),
             removeUnsplashPhoto,
             removeCustomPhoto,
-            hadUnsplashPhoto
+            hadUnsplashPhoto,
+            hadCustomPhoto
           });
         } else {
           saveAdminCountdown(formData);

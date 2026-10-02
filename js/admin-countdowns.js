@@ -364,7 +364,9 @@
       adminCropperImage.onload = () => {
         destroyCountdownPhotoCropper();
         adminCountdownCropper = new window.Cropper(adminCropperImage, {
-          aspectRatio: COUNTDOWN_PHOTO_ASPECT_RATIO,
+          // Free crop: the photo is stored whole-ish and each card template crops it
+          // to its own shape using the focal point.
+          aspectRatio: NaN,
           viewMode: 1,
           dragMode: "move",
           guides: false,
@@ -504,7 +506,7 @@
 
       const { error: updateError } = await client
         .from("countdowns")
-        .update({ custom_image_url: publicUrl })
+        .update({ custom_image_url: publicUrl, unsplash_image_url: null })
         .eq("id", countdownId)
         .eq("household_id", getAdminHouseholdId());
       if (updateError) {
@@ -578,9 +580,12 @@
     // Photo focal point: click the photo to choose which part stays in view when
     // it is cropped. Shows both crops (tall Ticket strip, 3:2 Postcard frame).
     function getCountdownFocalPhotoUrl(form) {
-      const pendingImg = form.querySelector(".admin-modal-photo-pending:not([hidden]) img");
+      // The photo the display will actually use: an uploaded photo wins over Unsplash.
+      const state = getCountdownPhotoUiState(form);
+      if (state === "empty") return "";
+      const pendingImg = form.querySelector(`.admin-modal-photo-pending[data-photo-kind='${state}']:not([hidden]) img`);
       if (pendingImg?.getAttribute("src")) return pendingImg.getAttribute("src");
-      const savedBtn = Array.from(form.querySelectorAll(".admin-edit-photo-preview:not([hidden]) [data-action='view-photo']"))[0];
+      const savedBtn = form.querySelector(`.admin-edit-photo-preview[data-photo-source='${state}']:not([hidden]) [data-action='view-photo']`);
       return savedBtn?.getAttribute("data-full-url") || "";
     }
 
@@ -704,7 +709,9 @@
         }
       }
 
-      if (pendingPhotos.unsplash?.kind === "unsplash") {
+      if (pendingPhotos.custom?.kind === "custom") {
+        // An uploaded photo is the countdown's photo; don't also attach an Unsplash one.
+      } else if (pendingPhotos.unsplash?.kind === "unsplash") {
         try {
           await updateCountdownPhoto(insertedRow.id, {
           url: pendingPhotos.unsplash.imageUrl,
@@ -744,7 +751,10 @@
       }
 
       const updatePayload = { name, event_date: eventDate, icon, days_before_visible: daysBeforeVisible, photo_keyword: photoKeyword || null, ...options.cardFields };
-      if (options.removeUnsplashPhoto) updatePayload.unsplash_image_url = null;
+      // One photo per countdown: while an uploaded photo is kept (or being added),
+      // any Unsplash photo is dropped. The display uses the uploaded one anyway.
+      const keepsCustomPhoto = (options.hadCustomPhoto && !options.removeCustomPhoto) || adminPendingPhotos.get(id)?.custom?.kind === "custom";
+      if (options.removeUnsplashPhoto || keepsCustomPhoto) updatePayload.unsplash_image_url = null;
       if (options.removeCustomPhoto) updatePayload.custom_image_url = null;
 
       const { error } = await client
@@ -783,7 +793,7 @@
         }
       }
 
-      if (!options.removeUnsplashPhoto) {
+      if (!options.removeUnsplashPhoto && !keepsCustomPhoto) {
         if (pendingPhotos.unsplash?.kind === "unsplash") {
           try {
             await updateCountdownPhoto(id, {
@@ -1227,7 +1237,7 @@
       }
 
       const formAttrs = isEdit
-        ? `data-countdown-id="${id}" data-original-name="${name}" data-had-unsplash-photo="${countdown.unsplash_image_url ? "1" : "0"}"`
+        ? `data-countdown-id="${id}" data-original-name="${name}" data-had-unsplash-photo="${countdown.unsplash_image_url ? "1" : "0"}" data-had-custom-photo="${countdown.custom_image_url ? "1" : "0"}"`
         : "";
       const submitLabel = isEdit ? "Save Changes" : "Save Countdown";
 

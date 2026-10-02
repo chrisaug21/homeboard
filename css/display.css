@@ -1573,6 +1573,11 @@
       min-width: 0;
     }
 
+    /* A white postcard frame needs a tinted slide behind it to stand out. */
+    .countdown-card--postcard.countdown-card--far {
+      --cd-fill: var(--countdown-far-postcard);
+    }
+
     .countdown-card--later {
       --cd-fill: var(--countdown-later);
       --cd-sub: var(--countdown-later-sub);
@@ -1905,7 +1910,8 @@
       border-radius: calc(16 * var(--cd-u));
       background: var(--cd-frame);
       color: var(--ink);
-      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      box-shadow: var(--countdown-frame-shadow);
       transform: rotate(var(--cd-tilt, -2deg));
       --cd-sub: var(--muted);
     }
