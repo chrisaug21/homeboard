@@ -1,6 +1,6 @@
 {
-  "name": "Homeboard Admin",
-  "short_name": "Homeboard Admin",
+  "name": "Homeboard",
+  "short_name": "Homeboard",
   "description": "Admin panel for managing your Homeboard display.",
   "start_url": "/admin",
   "display": "standalone",
