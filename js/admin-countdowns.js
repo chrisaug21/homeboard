@@ -721,16 +721,9 @@
         } catch (error) {
           console.warn("Background photo save failed:", error);
         }
-      } else {
-        try {
-          const photo = await fetchUnsplashPhoto(photoKeyword || name);
-          if (photo) {
-            await updateCountdownPhoto(insertedRow.id, photo);
-          }
-        } catch (error) {
-          console.warn("Background photo fetch failed:", error);
-        }
       }
+      // No photo chosen = no photo. Unsplash photos are only fetched when the
+      // user taps "Get photo" or "Refresh photo".
 
       closeAdminModal();
       await loadAdminCountdowns();
@@ -803,15 +796,6 @@
             });
           } catch (error) {
             console.warn("Background photo save failed:", error);
-          }
-        } else if (photoKeyword || name !== originalName || !options.hadUnsplashPhoto) {
-          try {
-            const photo = await fetchUnsplashPhoto(photoKeyword || name);
-            if (photo) {
-              await updateCountdownPhoto(id, photo);
-            }
-          } catch (error) {
-            console.warn("Background photo fetch failed:", error);
           }
         }
       }
