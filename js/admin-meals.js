@@ -93,12 +93,19 @@
       const dayLabel = escapeHtml(formatAdminMealCardDayLabel(date));
       const mealType = meal ? getMealTypePresentation(meal.mealType) : null;
 
+      // Time scale: today is solid marigold, the next 3 days soft sage, past days dim.
+      const tier = getTimeTier(formatDateKey(date));
+      const tierClass = tier === "today" ? " admin-meal-card--today"
+        : tier === "soon" ? " admin-meal-card--soon"
+        : tier === "overdue" ? " admin-meal-card--past"
+        : "";
+
       return `
         <div class="admin-meal-day-card">
-          <button class="admin-meal-card" type="button" data-admin-meal-day="${index}">
+          <button class="admin-meal-card${tierClass}" type="button" data-admin-meal-day="${index}">
             <div class="admin-meal-card-top">
               <div class="admin-meal-day">${dayLabel}</div>
-              <span class="admin-pill admin-pill--due admin-pill--icon">${mealType ? buildMealTypeLabelHTML(mealType) : "Tap to add"}</span>
+              <span class="admin-meal-type">${mealType ? buildMealTypeLabelHTML(mealType) : "Tap to add"}</span>
             </div>
             <div class="admin-meal-name${meal && meal.mealName ? "" : " admin-meal-name--empty"}">${escapeHtml(meal && meal.mealName ? meal.mealName : `No ${resolveMealSlotLabel(adminCurrentMealSlot, mealSlotLabels).toLowerCase()} set yet.`)}</div>
           </button>
@@ -217,7 +224,7 @@
           <span class="admin-settings-member-name">${escapeHtml(entry.name)}</span>
           <div class="admin-settings-member-actions">
             ${slotLabel ? `<span class="admin-pill admin-pill--member">${escapeHtml(slotLabel)}</span>` : ""}
-            ${typePresentation ? `<span class="admin-pill admin-pill--due admin-pill--icon">${buildMealTypeLabelHTML(typePresentation)}</span>` : ""}
+            ${typePresentation ? `<span class="admin-meal-type">${buildMealTypeLabelHTML(typePresentation)}</span>` : ""}
             <button type="button" class="admin-settings-member-remove" data-meal-library-remove="${entry.id}" aria-label="Remove ${escapeHtml(entry.name)}">
               <i data-lucide="trash-2"></i>
             </button>
@@ -423,7 +430,7 @@
     function renderAdminMealNote() {
       if (!adminMealNoteWrap) return;
       adminMealNoteWrap.innerHTML = `
-        <button class="admin-meal-card" type="button" data-action="edit-meal-note">
+        <button class="admin-meal-card admin-meal-card--note" type="button" data-action="edit-meal-note">
           <div class="admin-meal-day">Weekly Note</div>
           <div class="admin-meal-name${adminCurrentNote ? "" : " admin-meal-name--empty"}">${escapeHtml(adminCurrentNote || "No note this week.")}</div>
         </button>

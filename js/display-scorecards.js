@@ -151,8 +151,8 @@
       return {
         leaders,
         isTie,
-        heroLabel: isTie ? "It's a tie! 🤝" : `${leaders[0] || session?.winner || "Winner"} wins!`,
-        accentColor: accentPlayer?.color || "var(--color-accent)"
+        heroLabel: isTie ? "It's a tie!" : `${leaders[0] || session?.winner || "Winner"} wins!`,
+        accentColor: accentPlayer?.color || "var(--primary)"
       };
     }
 
@@ -313,6 +313,13 @@
       return ordered;
     }
 
+    // Players are identified by one of the first six person colors (dot + name).
+    // Stored hex colors are mapped to the nearest one at render time.
+    function getScorecardPersonStyle(player) {
+      const token = resolvePersonColorToken(player?.color, 6);
+      return token ? ` style="--person-color: var(--${token})"` : "";
+    }
+
     function getScorecardSelection(scorecard) {
       const selected = scorecardSelectionById.get(scorecard.id);
       if (selected && scorecard.players.some((player) => player.name === selected)) {
@@ -399,7 +406,11 @@
             const isLeader = score === topScore && !allZero;
             return `
               <article class="scorecard-player-card${isLeader ? " is-leading" : ""}" data-scorecard-player-card="${escapeHtml(player.name)}">
-                <div class="scorecard-player-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</div>
+                <div class="scorecard-player-name"${getScorecardPersonStyle(player)}>
+                  <span class="scorecard-person-dot" aria-hidden="true"></span>
+                  <span class="scorecard-player-label">${escapeHtml(player.name)}</span>
+                  ${isLeader ? '<span class="scorecard-leading-tag">Leading</span>' : ""}
+                </div>
                 <div class="scorecard-player-score" data-scorecard-score="${escapeHtml(scorecard.id)}:${escapeHtml(player.name)}">${escapeHtml(formatScorecardScore(score))}</div>
                 <div class="scorecard-button-grid">
                   ${buildDisplayScorecardIncrementControls(scorecard, (increment) => `
@@ -424,8 +435,8 @@
               const isSelected = player.name === selectedPlayer;
               return `
                 <button class="scorecard-player-row${isSelected ? " is-selected" : ""}" type="button" data-action="scorecard-select-player" data-scorecard-id="${escapeHtml(scorecard.id)}" data-player-name="${escapeHtml(player.name)}">
-                  <span class="scorecard-player-row-name">
-                    <span class="scorecard-player-dot" style="background:${escapeHtml(player.color)}"></span>
+                  <span class="scorecard-player-row-name"${getScorecardPersonStyle(player)}>
+                    <span class="scorecard-person-dot" aria-hidden="true"></span>
                     ${escapeHtml(player.name)}
                   </span>
                   <strong data-scorecard-score="${escapeHtml(scorecard.id)}:${escapeHtml(player.name)}">${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session.scores, player, scorecard.players)))}</strong>
@@ -688,13 +699,12 @@
       overlay.hidden = false;
       pauseAutoRotate("scorecard-celebration-overlay");
       overlay.dataset.scorecardId = scorecard.id;
-      overlay.style.setProperty("--scorecard-celebration-accent", winnerSummary.accentColor);
       titleEl.textContent = winnerSummary.heroLabel;
       iconEl.innerHTML = '<i data-lucide="trophy"></i>';
       archiveButtonEl.textContent = displayScorecardArchiveConfirmId === scorecard.id ? "Confirm archive" : "Archive scorecard";
       scoresEl.innerHTML = scorecard.players.map((player) => `
         <div class="scorecard-celebration-score-row${highlightedLeaders.has(player.name) ? " is-winner" : ""}">
-          <span class="scorecard-celebration-score-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</span>
+          <span class="scorecard-celebration-score-name"${getScorecardPersonStyle(player)}>${escapeHtml(player.name)}</span>
           <strong>${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session.scores, player, scorecard.players)))}</strong>
         </div>
       `).join("");
@@ -703,6 +713,8 @@
         overlay.dataset.sessionId = session.id;
         clearDisplayScorecardArchiveConfirm();
         if (shouldCelebrate) {
+          // Confetti uses the house colors plus every player's person color.
+          celebrationPersonColorTokens = scorecard.players.map((player) => resolvePersonColorToken(player.color, 6));
           startScorecardCelebrationEffects();
         } else {
           stopScorecardCelebrationEffects();

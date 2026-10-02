@@ -1,15 +1,37 @@
     // ── Scorecards ───────────────────────────────────────────────────────────
 
+    // The six person colors a player can have, as swatches. A saved color that
+    // isn't one of them selects the nearest swatch.
+    // Each picker needs its own radio group name; a counter keeps them unique.
+    let scorecardColorPickerCount = 0;
+    function buildScorecardColorPickerHTML(selectedColor, index) {
+      scorecardColorPickerCount += 1;
+      const group = `scorecard_color_${index}_${scorecardColorPickerCount}`;
+      const selectedToken = resolvePersonColorToken(selectedColor, SCORECARD_PLAYER_COLOR_PALETTE.length);
+      return `
+        <div class="admin-scorecard-color-picker" role="radiogroup" aria-label="Player color">
+          ${SCORECARD_PLAYER_COLOR_PALETTE.map((hex) => {
+            const token = resolvePersonColorToken(hex, SCORECARD_PLAYER_COLOR_PALETTE.length);
+            return `
+              <label class="admin-color-swatch" style="--person-color: var(--${token})">
+                <input type="radio" name="${group}" value="${escapeHtml(hex)}"${token === selectedToken ? " checked" : ""} aria-label="${escapeHtml(token.replace("person-", ""))}">
+                <span></span>
+              </label>`;
+          }).join("")}
+        </div>
+      `;
+    }
+
     function buildScorecardPlayerRowHTML(player = {}, index = 0) {
       const color = player.color || SCORECARD_PLAYER_COLOR_PALETTE[index % SCORECARD_PLAYER_COLOR_PALETTE.length];
       return `
         <div class="admin-scorecard-player-row" data-scorecard-player-row="${index}">
           <input type="hidden" name="scorecard_player_id" value="${escapeHtml(player.id || "")}">
-          <input class="admin-scorecard-color-input" type="color" name="scorecard_player_color" value="${escapeHtml(color)}" aria-label="Player color">
           <input class="admin-input" type="text" name="scorecard_player_name" maxlength="40" placeholder="Player name" value="${escapeHtml(player.name || "")}">
           <button class="admin-scorecard-remove-btn" type="button" data-action="remove-scorecard-player" aria-label="Remove player">
             <i data-lucide="x"></i>
           </button>
+          ${buildScorecardColorPickerHTML(color, index)}
         </div>
       `;
     }
@@ -333,14 +355,24 @@
       return nextMap;
     }
 
+    // Names of the player(s) in front, for the "Leading" tag. Nobody leads at 0-0.
+    function getAdminScorecardLeaderNames(scorecard, session) {
+      const scores = (scorecard?.players || []).map((player) =>
+        getScorecardPlayerScore(session?.scores, player, scorecard.players));
+      if (!scores.length || scores.every((score) => score === 0)) return new Set();
+      const top = Math.max(...scores);
+      return new Set(scorecard.players.filter((player, i) => scores[i] === top).map((player) => player.name));
+    }
+
     function buildAdminScoreSummary(scorecard, session) {
       if (!session) {
         return '<span class="admin-scorecard-summary-empty">No game yet</span>';
       }
 
       return scorecard.players.map((player) => `
-        <span class="admin-scorecard-score-pill" style="background:${escapeHtml(hexToRgba(player.color, 0.14))};color:${escapeHtml(player.color)}">
-          ${escapeHtml(player.name)} ${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session.scores, player, scorecard.players)))}
+        <span class="admin-scorecard-score-pill"${getScorecardPersonStyle(player)}>
+          <span class="admin-scorecard-player-dot" aria-hidden="true"></span>
+          ${escapeHtml(player.name)} <strong>${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session.scores, player, scorecard.players)))}</strong>
         </span>
       `).join("");
     }
@@ -350,11 +382,13 @@
         return '<div class="admin-scorecard-summary-empty">No game yet</div>';
       }
 
+      const leaders = getAdminScorecardLeaderNames(scorecard, session);
       return scorecard.players.map((player) => `
-        <div class="admin-scorecard-session-row">
+        <div class="admin-scorecard-session-row${leaders.has(player.name) ? " is-leading" : ""}"${getScorecardPersonStyle(player)}>
           <div class="admin-scorecard-session-player">
-            <span class="admin-scorecard-player-dot" style="background:${escapeHtml(player.color)}"></span>
+            <span class="admin-scorecard-player-dot" aria-hidden="true"></span>
             <span>${escapeHtml(player.name)}</span>
+            ${leaders.has(player.name) ? '<span class="admin-scorecard-leading-tag">Leading</span>' : ""}
           </div>
           <strong class="admin-scorecard-session-score">${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session.scores, player, scorecard.players)))}</strong>
         </div>
@@ -443,11 +477,13 @@
     }
 
     function buildScorecardSessionRowsHTML(scorecard, session) {
+      const leaders = getAdminScorecardLeaderNames(scorecard, session);
       return scorecard.players.map((player) => `
-        <div class="admin-scorecard-session-row">
+        <div class="admin-scorecard-session-row${leaders.has(player.name) ? " is-leading" : ""}"${getScorecardPersonStyle(player)}>
           <div class="admin-scorecard-session-player">
-            <span class="admin-scorecard-player-dot" style="background:${escapeHtml(player.color)}"></span>
+            <span class="admin-scorecard-player-dot" aria-hidden="true"></span>
             <span>${escapeHtml(player.name)}</span>
+            ${leaders.has(player.name) ? '<span class="admin-scorecard-leading-tag">Leading</span>' : ""}
           </div>
           <strong class="admin-scorecard-session-score">${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session?.scores, player, scorecard.players)))}</strong>
         </div>
@@ -530,7 +566,7 @@
               ${events.length ? events.map((event) => `
                 <article class="admin-scorecard-log-card">
                   <div class="admin-scorecard-log-head">
-                    <strong class="admin-scorecard-log-player" style="color:${escapeHtml(playerById.get(event.playerId)?.color || "var(--ink)")}">
+                    <strong class="admin-scorecard-log-player"${getScorecardPersonStyle(playerById.get(event.playerId))}>
                       ${escapeHtml(playerById.get(event.playerId)?.name || "Unknown player")}
                     </strong>
                     <span class="admin-panel-note">${escapeHtml(formatScoreEventTime(event.timestamp))}</span>
@@ -688,11 +724,11 @@
       return `
         <div class="admin-scorecard-modal-stack">
           <section class="admin-scorecard-modal-section admin-scorecard-winner-panel">
-            <div class="admin-scorecard-winner-title">${escapeHtml(isTie ? "🤝 It's a tie!" : `🏆 ${leaders[0] || session.winner || "Winner"} wins!`)}</div>
+            <div class="admin-scorecard-winner-title">${escapeHtml(isTie ? "It's a tie!" : `${leaders[0] || session.winner || "Winner"} wins!`)}</div>
             <div class="admin-scorecard-winner-board">
               ${scorecard.players.map((player) => `
                 <div class="admin-scorecard-winner-row${highlightedLeaders.has(player.name) ? " is-winner" : ""}">
-                  <span class="admin-scorecard-winner-name" style="color:${escapeHtml(player.color)}">${escapeHtml(player.name)}</span>
+                  <span class="admin-scorecard-winner-name"${getScorecardPersonStyle(player)}>${escapeHtml(player.name)}</span>
                   <strong>${escapeHtml(formatScorecardScore(getScorecardPlayerScore(session.scores, player, scorecard.players)))}</strong>
                 </div>
               `).join("")}
@@ -739,8 +775,8 @@
               <div class="admin-scorecard-adjust-grid">
                 ${scorecard.players.map((player) => `
                   <div class="admin-scorecard-adjust-card">
-                    <div class="admin-scorecard-adjust-player">
-                      <span class="admin-scorecard-player-dot" style="background:${escapeHtml(player.color)}"></span>
+                    <div class="admin-scorecard-adjust-player"${getScorecardPersonStyle(player)}>
+                      <span class="admin-scorecard-player-dot" aria-hidden="true"></span>
                       <span>${escapeHtml(player.name)}</span>
                     </div>
                     ${buildScorecardAdjustButtonsHTML(scorecard, player.name)}
@@ -931,7 +967,7 @@
       const players = Array.from(form.querySelectorAll(".admin-scorecard-player-row")).map((row) => ({
         id: String(row.querySelector("[name='scorecard_player_id']")?.value || "").trim(),
         name: String(row.querySelector("[name='scorecard_player_name']")?.value || "").trim(),
-        color: String(row.querySelector("[name='scorecard_player_color']")?.value || "").trim()
+        color: String(row.querySelector(".admin-color-swatch input:checked")?.value || "").trim()
       })).filter((player) => player.name);
       const increments = Array.from(form.querySelectorAll("[name='scorecard_increment']")).map((input) =>
         Number(String(input.value || "").trim())

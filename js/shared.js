@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.8";
+    const VERSION = "2.5.33";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -142,13 +142,13 @@
     // meal_plan.meal_type / meal_library.meal_type and must never change. `icon` is an
     // Iconify name ("prefix:name") that a household may override per type.
     const STANDARD_MEAL_TYPES = [
-      { value: "cooking", label: "Cooking", icon: "lucide:chef-hat", className: "meal-type--cooking", defaultEnabled: true },
+      { value: "cooking", label: "Cooking", icon: "lucide:cooking-pot", className: "meal-type--cooking", defaultEnabled: true },
       { value: "hellofresh", label: "HelloFresh", icon: "lucide:package", className: "meal-type--hellofresh", defaultEnabled: false },
-      { value: "going_out", label: "Going Out", icon: "lucide:utensils", className: "meal-type--going-out", defaultEnabled: true },
+      { value: "going_out", label: "Going Out", icon: "lucide:store", className: "meal-type--going-out", defaultEnabled: true },
       { value: "delivery", label: "Delivery", icon: "lucide:bike", className: "meal-type--delivery", defaultEnabled: true },
       { value: "pick_up", label: "Pick Up", icon: "lucide:shopping-bag", className: "meal-type--pick-up", defaultEnabled: true },
-      { value: "fend_for_yourself", label: "Fend for Yourself", icon: "lucide:sandwich", className: "meal-type--fend-for-yourself", defaultEnabled: true },
-      { value: "date_night", label: "Date Night", icon: "lucide:sparkles", className: "meal-type--date-night", defaultEnabled: true }
+      { value: "fend_for_yourself", label: "Fend for Yourself", icon: "lucide:leaf", className: "meal-type--fend-for-yourself", defaultEnabled: true },
+      { value: "date_night", label: "Date Night", icon: "lucide:heart", className: "meal-type--date-night", defaultEnabled: true }
     ];
     const MEAL_TYPE_CUSTOM_PREFIX = "custom_";
     const MEAL_TYPE_CUSTOM_LABEL_MAX = 24;
@@ -423,27 +423,6 @@
       }
 
       return result;
-    }
-
-    // Shared "Sarah · Mike   Due Tomorrow" meta line used on display + admin cards.
-    function buildTodoMetaLineHTML(assignees, duePill, dueText = "") {
-      const names = (assignees || []).map((assignee) => {
-        const color = String(assignee.color || "").trim();
-        return color
-          ? `<span class="todo-assignee-name" style="color:${escapeHtml(color)}">${escapeHtml(assignee.name)}</span>`
-          : `<span class="todo-assignee-name todo-assignee-name--plain">${escapeHtml(assignee.name)}</span>`;
-      }).join('<span class="todo-meta-sep" aria-hidden="true">,</span>');
-
-      let dueMarkup = "";
-      if (duePill) {
-        const label = duePill.label === "Overdue" ? "Overdue" : `Due ${duePill.label}`;
-        dueMarkup = `<span class="todo-due-text ${escapeHtml(duePill.cssClass)}">${escapeHtml(label)}</span>`;
-      } else if (dueText) {
-        dueMarkup = `<span class="todo-due-text todo-due-text--plain">${escapeHtml(dueText)}</span>`;
-      }
-
-      if (!names && !dueMarkup) return "";
-      return `<div class="todo-meta-line">${names ? `<span class="todo-assignees">${names}</span>` : ""}${dueMarkup}</div>`;
     }
 
     function formatLongDate(dateString) {
@@ -1569,37 +1548,116 @@
       return parsed < today;
     }
 
-    // Returns { cssClass, label } for a due date urgency pill, or null if no due date.
-    // Used on both the display and admin views.
-    function getTodoDuePill(dueDate) {
-      if (!dueDate) return null;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const parsed = new Date(dueDate + "T00:00:00");
+    // ── Time scale (design system) ─────────────────────────────────────────
+    // Anything with a date takes its color from how soon it is:
+    // overdue, today, soon (1-3 days), week (4-7 days), later (8+ days).
+    // Shared by to-dos, calendars, meals and countdowns.
+    function getTimeTier(dateString) {
+      const days = getDaysUntil(dateString);
+      if (days === null) return null;
+      if (days < 0) return "overdue";
+      if (days === 0) return "today";
+      if (days <= 3) return "soon";
+      if (days <= 7) return "week";
+      return "later";
+    }
 
-      if (Number.isNaN(parsed.getTime())) {
-        return null;
+    // Relative wording for an event date: inside a week it is relative
+    // ("Today", "Tomorrow", "Wed · in 2 days"); past a week it is "Oct 14".
+    function formatRelativeEventDate(dateString) {
+      const days = getDaysUntil(dateString);
+      const parsed = parseLocalDateString(dateString);
+      if (days === null || !parsed) return "";
+      if (days === 0) return "Today";
+      if (days === 1) return "Tomorrow";
+      if (days > 1 && days <= 7) {
+        const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed);
+        return `${weekday} \u00B7 in ${days} days`;
+      }
+      const sameYear = parsed.getFullYear() === new Date().getFullYear();
+      return new Intl.DateTimeFormat("en-US", sameYear
+        ? { month: "short", day: "numeric" }
+        : { month: "short", day: "numeric", year: "numeric" }).format(parsed);
+    }
+
+    // Due-date wording for a to-do. Color is never the only signal, so every
+    // tier also says it in words ("2 days overdue", "Due today", "Wed · in 2 days").
+    function getTodoDueInfo(dueDate) {
+      const tier = getTimeTier(dueDate);
+      if (!tier) return null;
+
+      const days = getDaysUntil(dueDate);
+      const parsed = parseLocalDateString(dueDate);
+      let label;
+
+      if (tier === "overdue") {
+        const late = Math.abs(days);
+        label = `\u26A0 ${late} ${late === 1 ? "day" : "days"} overdue`;
+      } else if (tier === "today") {
+        label = "Due today";
+      } else if (days === 1) {
+        label = "Due tomorrow";
+      } else if (tier === "later") {
+        label = `Due ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed)}`;
+      } else {
+        const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed);
+        label = `Due ${weekday} \u00B7 in ${days} days`;
       }
 
-      parsed.setHours(0, 0, 0, 0);
-      const diff = Math.round((parsed - today) / 86400000);
+      return { tier, label };
+    }
 
-      if (isTodoOverdue(dueDate)) {
-        return { cssClass: "todo-due-text--overdue", label: "Overdue" };
+    // Household members store a raw hex color. The design system has eight
+    // person colors that adapt to Light and Dark, so map each stored color to
+    // the nearest one. Returns a token name like "person-blueberry", or "".
+    const PERSON_COLOR_TOKENS = [
+      ["person-blueberry", [54, 86, 168]],
+      ["person-berry", [162, 48, 110]],
+      ["person-lagoon", [19, 102, 112]],
+      ["person-clay", [154, 74, 38]],
+      ["person-iris", [104, 72, 176]],
+      ["person-olive", [99, 96, 15]],
+      ["person-cocoa", [122, 79, 54]],
+      ["person-moss", [74, 107, 42]]
+    ];
+
+    // `limit` restricts the match to the first N person colors (scorecard
+    // players use the first six).
+    function resolvePersonColorToken(color, limit = PERSON_COLOR_TOKENS.length) {
+      let hex = String(color || "").trim().replace(/^#/, "");
+      if (/^[0-9a-f]{3}$/i.test(hex)) {
+        hex = hex.split("").map((ch) => ch + ch).join("");
       }
-      if (diff === 0) {
-        return { cssClass: "todo-due-text--today", label: "Today" };
-      }
-      if (diff <= 3) {
-        const label = diff === 1
-          ? "Tomorrow"
-          : new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed);
-        return { cssClass: "todo-due-text--soon", label };
-      }
-      return {
-        cssClass: "todo-due-text--future",
-        label: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed)
-      };
+      if (!/^[0-9a-f]{6}$/i.test(hex)) return "";
+
+      const rgb = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      let best = "";
+      let bestDistance = Infinity;
+      PERSON_COLOR_TOKENS.slice(0, limit).forEach(([token, ref]) => {
+        const distance = ref.reduce((sum, value, i) => sum + (value - rgb[i]) ** 2, 0);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = token;
+        }
+      });
+      return best;
+    }
+
+    // To-do meta line: a 9px dot in the person's color + their name, then the
+    // due date as plain text in the tier's color. No pills, no tinted chips.
+    function buildTodoTierMetaLineHTML(assignees, dueInfo) {
+      const people = (assignees || []).map((assignee) => {
+        const token = resolvePersonColorToken(assignee.color);
+        const style = token ? ` style="--person-color: var(--${token})"` : "";
+        return `<span class="todo-person"${style}><span class="todo-person-name">${escapeHtml(assignee.name)}</span></span>`;
+      }).join("");
+
+      const due = dueInfo
+        ? `<span class="todo-due-text todo-due-text--${escapeHtml(dueInfo.tier)}">${escapeHtml(dueInfo.label)}</span>`
+        : "";
+
+      if (!people && !due) return "";
+      return `<div class="todo-meta-line">${people ? `<span class="todo-assignees">${people}</span>` : ""}${due}</div>`;
     }
 
     function formatOrdinalDay(value) {

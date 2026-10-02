@@ -158,12 +158,15 @@
         ? todo.assignee_member_ids.map((id) => String(id))
         : (isEdit && todo.assignee_member_id ? [String(todo.assignee_member_id)] : []));
 
-      const chip = (value, label, color, checked) => `
-        <label class="admin-assignee-chip"${color ? ` style="--chip-color:${escapeHtml(color)}"` : ""}>
+      const chip = (value, label, color, checked) => {
+        const token = resolvePersonColorToken(color);
+        return `
+        <label class="admin-assignee-chip"${token ? ` style="--person-color: var(--${token})"` : ""}>
           <input type="checkbox" name="assignee" value="${escapeHtml(value)}"${checked ? " checked" : ""}>
           <span>${escapeHtml(label)}</span>
         </label>
       `;
+      };
 
       const chips = members
         .filter((member) => member.is_active !== false || selectedIds.has(member.id))
@@ -291,14 +294,15 @@
       const title = escapeHtml(todo.title || "Untitled task");
       const assignees = getAdminTodoAssignees(todo);
       const hasDescription = !!String(todo.description || "").trim();
-      const overdueClass = options.showComplete && isTodoOverdue(todo.due_date)
-        ? " admin-todo-card--overdue"
-        : "";
-
-      // Active cards use urgency-coded due text; archived use the plain date.
+      // Active cards take the time scale (the whole card is colored by how soon it is
+      // due, like the display); archived cards show the plain date.
+      const dueInfo = options.showComplete ? getTodoDueInfo(todo.due_date) : null;
+      const tierClass = dueInfo ? ` admin-todo-card--${dueInfo.tier}` : "";
       const metaLine = options.showComplete
-        ? buildTodoMetaLineHTML(assignees, getTodoDuePill(todo.due_date))
-        : buildTodoMetaLineHTML(assignees, null, todo.due_date ? `Due ${formatAdminTodoDate(todo.due_date)}` : "");
+        ? buildTodoTierMetaLineHTML(assignees, dueInfo)
+        : buildTodoTierMetaLineHTML(assignees, todo.due_date
+          ? { tier: "later", label: `Due ${formatAdminTodoDate(todo.due_date)}` }
+          : null);
 
       const completionLabel = !options.showComplete
         ? formatAdminTodoCompletionLabel(todo)
@@ -333,7 +337,7 @@
 
       if (options.showComplete) {
         return `
-          <article class="admin-todo-card admin-todo-card--active${overdueClass}" data-todo-id="${escapeHtml(todo.id)}" role="button" tabindex="0" aria-label="Edit: ${title}">
+          <article class="admin-todo-card admin-todo-card--active${tierClass}" data-todo-id="${escapeHtml(todo.id)}" role="button" tabindex="0" aria-label="Edit: ${title}">
             <button class="todo-check-btn" type="button" data-action="archive-todo" data-todo-id="${escapeHtml(todo.id)}" aria-label="Complete ${title}">
               <div class="todo-check">
                 <svg class="todo-check-icon" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

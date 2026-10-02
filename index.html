@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#F5F0E8">
+  <meta name="theme-color" content="#f6f5f0">
   <meta name="color-scheme" content="light dark">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-CCSFWZBLDH"></script>
   <script>
@@ -13,9 +13,8 @@
     gtag('config', 'G-CCSFWZBLDH');
   </script>
   <title>Homeboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=Righteous&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/brand/app-icon.svg">
+  <link rel="stylesheet" href="css/tokens.css?v=2.5.33">
   <script>
     (function() {
       var pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -37,7 +36,7 @@
         document.head.appendChild(manifestLink);
       }
       if (mode === "admin") {
-        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#B45309");
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f6f5f0");
         var s = document.createElement("style");
         s.textContent = "#admin-app{display:grid!important}#display-app{display:none!important}html,body{overflow:auto}";
         document.head.appendChild(s);
@@ -47,50 +46,21 @@
   <style>
     :root {
       color-scheme: light;
-      --bg: #f5f0e8;
-      --bg-soft: #fbf7f1;
-      --panel: rgba(255, 252, 246, 0.86);
-      --panel-strong: rgba(255, 250, 242, 0.96);
-      --ink: #30261d;
-      --muted: #796a5e;
-      --border: rgba(124, 96, 69, 0.18);
-      /* Legacy color tokens — being migrated to --color-accent and --color-accent-subtle. Do not use for new components. */
-      --amber: #b45309;
-      --amber-soft: #f7d9aa;
-      /* Semantic interaction tokens — use these for any new interactive/active states. See design token audit ticket for full migration plan. */
-      --color-accent: #b45309;
-      --color-accent-subtle: #f7d9aa;
-      --color-text-on-accent: #ffffff;
-      --sage: #15803d;
-      --sage-soft: #dcefdc;
-      --rsvp-clear: #15803d;
-      --rsvp-flagged: #b45309;
-      --rsvp-pending-bg: rgba(191, 219, 254, 0.42);
-      --rsvp-review-bg-clear: rgba(220, 239, 220, 0.72);
-      --rsvp-review-bg-flagged: rgba(247, 217, 170, 0.45);
-      --rsvp-attending-pill-bg: rgba(21, 128, 61, 0.16);
-      --rsvp-attending-pill-color: #15803d;
-      --rsvp-undercount-pill-bg: rgba(245, 158, 11, 0.18);
-      --rsvp-undercount-pill-color: #b45309;
-      --rose: #a64c63;
-      --rose-soft: #f8dce3;
-      --shadow: 0 18px 44px rgba(98, 73, 46, 0.12);
-      --radius-lg: 28px;
-      --radius-md: 22px;
-      --radius-sm: 16px;
-      --button-radius: 8px;
-      --tag-radius: 12px;
-      --display-nav-button-width: 60px;
-      --display-nav-button-active-width: 72px;
-      --display-nav-button-height: 38px;
-      --display-nav-button-gap: 12px;
-      --display-nav-icon-size: 24px;
-      --display-nav-active-bg: var(--color-accent);
-      --display-nav-active-border: transparent;
-      --header-height: 72px;
-      --footer-height: 34px;
       --screen-gap: 28px;
-      --transition: 560ms cubic-bezier(0.22, 1, 0.36, 1);
+      --display-nav-button-width: 52px;
+      --display-nav-button-active-width: 62px;
+      --display-nav-button-height: 34px;
+      --display-nav-button-gap: 7px;
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme="light"]) {
+        color-scheme: dark;
+      }
     }
 
     * {
@@ -105,14 +75,7 @@
       overflow: hidden;
       background: var(--bg);
       color: var(--ink);
-      font-family: "Manrope", sans-serif;
-    }
-
-    body {
-      background-image:
-        radial-gradient(circle at top left, rgba(244, 196, 125, 0.26), transparent 28%),
-        radial-gradient(circle at top right, rgba(21, 128, 61, 0.12), transparent 30%),
-        linear-gradient(135deg, #f8f4ed 0%, #f5f0e8 44%, #efe7db 100%);
+      font-family: var(--font-ui);
     }
 
     body.admin-mode {
@@ -142,36 +105,21 @@
     }
 
     .marketing-shell {
-      --marketing-bg: #F5F0E8;
-      --marketing-surface: #FFFDF7;
-      --marketing-text: #1C1917;
-      --marketing-accent: #B45309;
-      --marketing-accent-soft: rgba(180, 83, 9, 0.12);
-      --marketing-secondary: #15803D;
-      --marketing-secondary-soft: rgba(21, 128, 61, 0.12);
-      --marketing-muted: #78716C;
-      --marketing-border: rgba(28, 25, 23, 0.10);
-      --marketing-shadow: 0 24px 60px rgba(28, 25, 23, 0.08);
+      --marketing-bg: var(--bg);
+      --marketing-surface: var(--surface);
+      --marketing-text: var(--ink);
+      --marketing-accent: var(--primary);
+      --marketing-accent-soft: var(--card-sunken);
+      --marketing-secondary: var(--brand-fern);
+      --marketing-secondary-soft: var(--time-soon);
+      --marketing-muted: var(--muted);
+      --marketing-border: var(--border);
+      --marketing-shadow: var(--shadow);
       position: relative;
       min-height: 100dvh;
       padding: 32px 20px 40px;
       color: var(--marketing-text);
-      background:
-        radial-gradient(circle at top left, rgba(180, 83, 9, 0.16), transparent 30%),
-        radial-gradient(circle at top right, rgba(21, 128, 61, 0.12), transparent 28%),
-        linear-gradient(180deg, #fbf7ef 0%, var(--marketing-bg) 42%, #f1ebdf 100%);
-    }
-
-    .marketing-shell::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(28, 25, 23, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(28, 25, 23, 0.02) 1px, transparent 1px);
-      background-size: 24px 24px;
-      pointer-events: none;
-      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 78%);
+      background: var(--marketing-bg);
     }
 
     .marketing-layout {
@@ -196,12 +144,7 @@
       align-items: center;
       gap: 14px;
       width: fit-content;
-      padding: 12px 16px;
-      background: rgba(255, 253, 247, 0.72);
-      border: 1px solid rgba(28, 25, 23, 0.08);
-      border-radius: 999px;
-      box-shadow: 0 10px 24px rgba(28, 25, 23, 0.05);
-      backdrop-filter: blur(10px);
+      padding: 4px 0;
     }
 
     .marketing-brand img {
@@ -220,7 +163,7 @@
 
     .marketing-hero-copy h1 {
       margin: 0;
-      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      font-family: var(--font-display);
       font-size: clamp(2.75rem, 4.2vw, 4.2rem);
       line-height: 1.02;
       letter-spacing: -0.05em;
@@ -261,22 +204,22 @@
     .marketing-button:hover,
     .marketing-button:focus-visible {
       transform: translateY(-1px);
-      box-shadow: 0 14px 26px rgba(28, 25, 23, 0.10);
+      box-shadow: 0 14px 26px color-mix(in srgb, var(--ink) 10%, transparent);
     }
 
     .marketing-button:focus-visible {
-      outline: 3px solid rgba(28, 25, 23, 0.20);
+      outline: 3px solid color-mix(in srgb, var(--ink) 20%, transparent);
       outline-offset: 3px;
     }
 
     .marketing-button--primary {
       background: var(--marketing-accent);
-      color: #FFFDF7;
+      color: var(--on-primary);
     }
 
     .marketing-button--secondary {
-      background: rgba(255, 253, 247, 0.72);
-      border-color: rgba(120, 113, 108, 0.40);
+      background: color-mix(in srgb, var(--surface) 72%, transparent);
+      border-color: color-mix(in srgb, var(--muted) 40%, transparent);
       border-width: 2px;
       color: var(--marketing-text);
     }
@@ -382,8 +325,8 @@
       gap: 10px;
       padding: 12px;
       border-radius: 18px;
-      border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #FFFDF7;
+      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+      background: var(--card);
     }
 
     .marketing-calendar-days {
@@ -399,8 +342,8 @@
       min-height: 58px;
       padding: 10px 8px;
       border-radius: 14px;
-      background: rgba(255, 253, 247, 0.84);
-      border: 1px solid rgba(28, 25, 23, 0.06);
+      background: color-mix(in srgb, var(--surface) 84%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
     }
 
     .marketing-calendar-day strong {
@@ -422,18 +365,18 @@
       white-space: nowrap;
     }
 
-    .marketing-pill--amber {
-      background: rgba(180, 83, 9, 0.14);
+    .marketing-pill--primary {
+      background: color-mix(in srgb, var(--primary) 14%, transparent);
       color: var(--marketing-accent);
     }
 
     .marketing-pill--green {
-      background: rgba(21, 128, 61, 0.14);
+      background: color-mix(in srgb, var(--success) 14%, transparent);
       color: var(--marketing-secondary);
     }
 
     .marketing-pill--ink {
-      background: rgba(28, 25, 23, 0.08);
+      background: color-mix(in srgb, var(--ink) 8%, transparent);
       color: var(--marketing-text);
     }
 
@@ -444,8 +387,8 @@
       min-height: 196px;
       padding: 12px;
       border-radius: 18px;
-      border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #FFFDF7;
+      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+      background: var(--card);
     }
 
     .marketing-todo-row {
@@ -455,15 +398,15 @@
       gap: 12px;
       padding: 12px 14px;
       border-radius: 14px;
-      background: rgba(255, 253, 247, 0.84);
-      border: 1px solid rgba(28, 25, 23, 0.06);
+      background: color-mix(in srgb, var(--surface) 84%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
     }
 
     .marketing-todo-check {
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      border: 2px solid rgba(180, 83, 9, 0.42);
+      border: 2px solid color-mix(in srgb, var(--primary) 42%, transparent);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -476,7 +419,7 @@
     .marketing-todo-row.is-done .marketing-todo-check {
       background: var(--marketing-accent);
       border-color: var(--marketing-accent);
-      color: #FFFDF7;
+      color: var(--on-primary);
     }
 
     .marketing-todo-copy {
@@ -489,7 +432,7 @@
     }
 
     .marketing-todo-row.is-done .marketing-todo-copy strong {
-      color: rgba(120, 113, 108, 0.86);
+      color: color-mix(in srgb, var(--muted) 86%, transparent);
       text-decoration: line-through;
       text-decoration-thickness: 1.5px;
     }
@@ -500,8 +443,8 @@
       gap: 0;
       padding: 12px;
       border-radius: 18px;
-      border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #FFFDF7;
+      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+      background: var(--card);
       grid-template-columns: 1fr;
       overflow: hidden;
     }
@@ -513,8 +456,8 @@
       align-items: center;
       gap: 16px;
       padding: 12px 10px;
-      background: rgba(255, 253, 247, 0.84);
-      border-top: 1px solid rgba(28, 25, 23, 0.08);
+      background: color-mix(in srgb, var(--surface) 84%, transparent);
+      border-top: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
     }
 
     .marketing-meal-cell:first-child {
@@ -546,19 +489,19 @@
       text-align: center;
       padding: 12px;
       border-radius: 18px;
-      border: 1px solid rgba(28, 25, 23, 0.08);
-      background: #FFFDF7;
+      border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+      background: var(--card);
     }
 
     .marketing-countdown-title {
-      font-family: "Fraunces", serif;
+      font-family: var(--font-display);
       font-size: clamp(0.92rem, 1.2vw, 1.1rem);
       line-height: 1.1;
       white-space: nowrap;
     }
 
     .marketing-countdown-number {
-      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      font-family: var(--font-display);
       font-size: clamp(2.7rem, 4.6vw, 3.5rem);
       line-height: 0.9;
       letter-spacing: -0.05em;
@@ -574,7 +517,7 @@
     }
 
     .marketing-pill--slate {
-      background: rgba(120, 113, 108, 0.16);
+      background: color-mix(in srgb, var(--muted) 16%, transparent);
       color: var(--marketing-text);
     }
 
@@ -586,13 +529,13 @@
       padding: 24px 32px;
       border-radius: 28px;
       background: var(--marketing-accent);
-      box-shadow: 0 24px 44px rgba(180, 83, 9, 0.24);
+      box-shadow: 0 24px 44px color-mix(in srgb, var(--primary) 24%, transparent);
     }
 
     .marketing-cta-copy {
       max-width: 620px;
-      color: #FFFDF7;
-      font-family: "Bricolage Grotesque", "Manrope", sans-serif;
+      color: var(--on-primary);
+      font-family: var(--font-display);
       font-size: clamp(1.6rem, 3vw, 2.3rem);
       line-height: 1.08;
       letter-spacing: -0.04em;
@@ -601,9 +544,9 @@
 
     .marketing-button--inverse {
       flex: 0 0 auto;
-      background: #FFFDF7;
+      background: var(--card);
       color: var(--marketing-accent);
-      border-color: #FFFDF7;
+      border-color: var(--surface);
       min-width: 164px;
     }
 
@@ -694,8 +637,8 @@
     }
 
   </style>
-  <link rel="stylesheet" href="css/display.css?v=2.3.1">
-  <link rel="stylesheet" href="css/admin.css?v=2.3.1">
+  <link rel="stylesheet" href="css/display.css?v=2.5.33">
+  <link rel="stylesheet" href="css/admin.css?v=2.5.33">
   <link rel="stylesheet" href="js/vendor/cropper.min.css">
 </head>
 <body>
@@ -703,7 +646,7 @@
     <div class="marketing-layout">
       <section class="marketing-hero" aria-labelledby="marketing-title">
         <div class="marketing-brand" aria-label="Homeboard">
-          <img src="homeboard_logo.svg" alt="Homeboard" width="144" decoding="async">
+          <img class="brand-logo brand-logo--light" src="brand/logo.svg" alt="Homeboard" width="144" decoding="async"><img class="brand-logo brand-logo--dark" src="brand/logo-on-dark.svg" alt="" width="144" decoding="async">
         </div>
         <div class="marketing-hero-copy">
           <h1 id="marketing-title">A smart dashboard for your home built for the kitchen wall.</h1>
@@ -729,7 +672,7 @@
                   </div>
                   <div class="marketing-calendar-day">
                     <strong>15</strong>
-                    <span class="marketing-pill marketing-pill--amber">Dinner</span>
+                    <span class="marketing-pill marketing-pill--primary">Dinner</span>
                   </div>
                   <div class="marketing-calendar-day">
                     <strong>16</strong>
@@ -854,7 +797,7 @@
   <div class="app-shell" id="display-app">
     <section class="display-pairing" id="display-pairing-screen" hidden aria-labelledby="display-pairing-title">
       <div class="display-pairing-card">
-        <img class="display-pairing-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
+        <img class="brand-logo brand-logo--light display-pairing-logo" src="brand/logo-stacked.svg" alt="Homeboard" width="160" decoding="async"><img class="brand-logo brand-logo--dark display-pairing-logo" src="brand/logo-stacked-on-dark.svg" alt="" width="160" decoding="async">
         <p class="display-pairing-copy" id="display-pairing-title">Enter the 4-character code from Settings → Display Setup on your phone.</p>
         <form class="display-pairing-form" id="display-pairing-form" novalidate>
           <input
@@ -951,7 +894,7 @@
             <div class="rsvp-layout">
               <div class="hero-card">
                 <div class="hero-card-main">
-                  <div class="summary-label" style="color:var(--rose);">Confirmed Guests</div>
+                  <div class="summary-label">Confirmed Guests</div>
                   <div class="hero-number" id="rsvp-total">34</div>
                   <div class="hero-label" id="rsvp-total-label">attending so far</div>
                 </div>
@@ -1087,7 +1030,7 @@
     <div class="admin-auth-loading" id="admin-auth-loading">
       <div class="admin-login-card admin-auth-loading-card" aria-live="polite">
         <div class="admin-login-brand">
-          <img class="admin-login-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
+          <img class="brand-logo brand-logo--light admin-login-logo" src="brand/logo-stacked.svg" alt="Homeboard" width="160" decoding="async"><img class="brand-logo brand-logo--dark admin-login-logo" src="brand/logo-stacked-on-dark.svg" alt="" width="160" decoding="async">
         </div>
         <div class="admin-auth-loading-copy">
           <div class="admin-auth-loading-spinner" aria-hidden="true"></div>
@@ -1105,7 +1048,7 @@
     <div class="admin-login-screen" id="admin-login-screen" hidden>
       <div class="admin-login-card">
         <div class="admin-login-brand">
-          <img class="admin-login-logo" src="homeboard_logo.svg" alt="Homeboard" width="160" decoding="async">
+          <img class="brand-logo brand-logo--light admin-login-logo" src="brand/logo-stacked.svg" alt="Homeboard" width="160" decoding="async"><img class="brand-logo brand-logo--dark admin-login-logo" src="brand/logo-stacked-on-dark.svg" alt="" width="160" decoding="async">
         </div>
         <form id="admin-login-form" novalidate>
           <div class="admin-field">
@@ -1129,8 +1072,9 @@
     <div id="admin-main-content" hidden>
     <div class="admin-header-bar">
       <div class="admin-header-brand">
-        <i data-lucide="sliders-horizontal"></i>
-        <span>Admin Mode</span>
+        <img class="brand-logo brand-logo--light admin-header-mark" src="brand/mark.svg" alt="Homeboard" width="28" height="28" decoding="async">
+        <img class="brand-logo brand-logo--dark admin-header-mark" src="brand/mark-on-dark.svg" alt="" width="28" height="28" decoding="async">
+        <span class="admin-header-pill">Admin</span>
         <div id="admin-version-label" class="admin-version-label" aria-hidden="true"></div>
       </div>
       <button class="admin-header-settings" type="button" id="admin-settings-button" aria-label="Open settings">
@@ -1372,9 +1316,9 @@
               <label>Display color scheme</label>
               <div class="admin-settings-scheme-list" id="settings-color-scheme">
                 <label class="admin-settings-scheme-option">
-                  <input type="radio" name="color_scheme" value="warm">
-                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--warm"></span>
-                  <span>Warm</span>
+                  <input type="radio" name="color_scheme" value="light">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--light"></span>
+                  <span>Light</span>
                 </label>
                 <label class="admin-settings-scheme-option">
                   <input type="radio" name="color_scheme" value="dark">
@@ -1382,9 +1326,9 @@
                   <span>Dark</span>
                 </label>
                 <label class="admin-settings-scheme-option">
-                  <input type="radio" name="color_scheme" value="slate">
-                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--slate"></span>
-                  <span>Slate</span>
+                  <input type="radio" name="color_scheme" value="auto">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--auto"></span>
+                  <span>Match device</span>
                 </label>
               </div>
             </div>
@@ -1499,9 +1443,9 @@
               <p class="admin-field-hint">This only changes the look of your admin app.</p>
               <div class="admin-settings-scheme-list" id="settings-admin-theme">
                 <label class="admin-settings-scheme-option">
-                  <input type="radio" name="admin_theme" value="warm">
-                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--warm"></span>
-                  <span>Warm</span>
+                  <input type="radio" name="admin_theme" value="light">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--light"></span>
+                  <span>Light</span>
                 </label>
                 <label class="admin-settings-scheme-option">
                   <input type="radio" name="admin_theme" value="dark">
@@ -1509,9 +1453,9 @@
                   <span>Dark</span>
                 </label>
                 <label class="admin-settings-scheme-option">
-                  <input type="radio" name="admin_theme" value="slate">
-                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--slate"></span>
-                  <span>Slate</span>
+                  <input type="radio" name="admin_theme" value="auto">
+                  <span class="admin-settings-scheme-swatch admin-settings-scheme-swatch--auto"></span>
+                  <span>Match device</span>
                 </label>
               </div>
             </div>

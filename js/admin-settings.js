@@ -38,7 +38,7 @@
 
       adminHouseholdSettings = {
         assistant_name: data.assistant_name || "",
-        color_scheme: data.color_scheme || "warm",
+        color_scheme: normalizeTheme(data.color_scheme),
         google_cal_id: data.google_cal_id || "",
         household_members: householdMembers,
         display_settings: ds
@@ -241,7 +241,7 @@
           </div>
         ` : `
           <div class="admin-settings-member-row" data-member-index="${i}">
-            <span class="admin-settings-member-color" style="background:${escapeHtml(m.color || "#999")}"></span>
+            <span class="admin-settings-member-color"${(() => { const token = resolvePersonColorToken(m.color); return token ? ` style="--person-color: var(--${token})"` : ""; })()}></span>
             <span class="admin-settings-member-name">${escapeHtml(m.display_name)}</span>
             <div class="admin-settings-member-actions">
               <span class="admin-pill${m.has_linked_login ? " admin-pill--member" : ""}">${m.has_linked_login ? "Has login" : "No login"}</span>
@@ -399,7 +399,7 @@
       if (daysSelect) daysSelect.value = String(upcomingDays);
 
       // Color scheme
-      const schemeRadio = document.querySelector(`[name="color_scheme"][value="${adminHouseholdSettings.color_scheme || "warm"}"]`);
+      const schemeRadio = document.querySelector(`[name="color_scheme"][value="${normalizeTheme(adminHouseholdSettings.color_scheme)}"]`);
       if (schemeRadio) schemeRadio.checked = true;
 
       // Google Cal ID
@@ -608,7 +608,7 @@
         const upcomingDays = daysSelect ? Number(daysSelect.value) : 5;
 
         const schemeRadio = document.querySelector("[name='color_scheme']:checked");
-        const colorScheme = schemeRadio ? schemeRadio.value : "warm";
+        const colorScheme = schemeRadio ? normalizeTheme(schemeRadio.value) : "light";
 
         // Meal Plan types
         const mealSlots = MEAL_SLOT_ORDER.filter((slot) => {
@@ -1033,7 +1033,7 @@
         const displayNameInput = document.getElementById("settings-display-name");
         const nextDisplayName = displayNameInput ? displayNameInput.value.trim() : "";
         const adminThemeRadio = document.querySelector("[name='admin_theme']:checked");
-        const nextAdminTheme = normalizeAdminTheme(adminThemeRadio ? adminThemeRadio.value : "warm");
+        const nextAdminTheme = normalizeAdminTheme(adminThemeRadio ? adminThemeRadio.value : "light");
         const nextPreferences = {
           ...(adminCurrentUser?.preferences || {}),
           admin_theme: nextAdminTheme

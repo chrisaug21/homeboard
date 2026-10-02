@@ -623,17 +623,24 @@
     function renderFooterBrandLogo() {
       if (!householdNameEl) return;
 
-      const img = document.createElement("img");
-      img.className = "household-logo";
-      img.src = "homeboard_logo.svg";
-      img.alt = "Homeboard";
-      img.width = 120;
-      img.decoding = "async";
-      img.onerror = () => {
-        renderFooterBrandText("Homeboard");
+      // Two files, one per theme (CSS shows the right one); no filters needed.
+      const buildLogo = (src, themeClass, alt) => {
+        const img = document.createElement("img");
+        img.className = `brand-logo ${themeClass} household-logo`;
+        img.src = src;
+        img.alt = alt;
+        img.height = 22;
+        img.decoding = "async";
+        img.onerror = () => {
+          renderFooterBrandText("Homeboard");
+        };
+        return img;
       };
 
-      householdNameEl.replaceChildren(img);
+      householdNameEl.replaceChildren(
+        buildLogo("brand/logo.svg", "brand-logo--light", "Homeboard"),
+        buildLogo("brand/logo-on-dark.svg", "brand-logo--dark", "")
+      );
     }
 
     function updateHouseholdName(config) {
@@ -649,13 +656,19 @@
       renderFooterBrandLogo();
     }
 
+    // Saved values: "light", "dark", "auto" (match device). Older households
+    // saved "warm" or "slate"; both are the light theme now.
+    function normalizeTheme(theme) {
+      if (theme === "dark" || theme === "auto") return theme;
+      return "light";
+    }
+
     function applyColorScheme(scheme) {
-      const validSchemes = ["warm", "dark", "slate"];
-      const chosen = validSchemes.includes(scheme) ? scheme : "warm";
-      if (chosen === "warm") {
-        document.documentElement.removeAttribute("data-scheme");
+      const chosen = normalizeTheme(scheme);
+      if (chosen === "auto") {
+        document.documentElement.removeAttribute("data-theme");
       } else {
-        document.documentElement.setAttribute("data-scheme", chosen);
+        document.documentElement.setAttribute("data-theme", chosen);
       }
     }
 
@@ -784,7 +797,7 @@
       }
 
       // Apply color scheme
-      applyColorScheme(config.color_scheme || "warm");
+      applyColorScheme(config.color_scheme);
 
       // Apply active screens (must come before screen order)
       const defaultScreens = getConfigurableDisplayScreenKeys();

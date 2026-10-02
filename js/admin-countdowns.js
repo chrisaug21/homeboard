@@ -811,15 +811,14 @@
           : (startRaw ? startRaw.slice(0, 10) : "");
         const name = item.summary || "Untitled event";
         const saved = isCountdownAlreadySaved(name, eventDate);
-        const dateLabel = eventDate
-          ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
-              new Date(eventDate + "T00:00:00")
-            )
-          : "";
+        // Rows are tinted by the time scale, with a relative date in the tier's color.
+        const tier = getTimeTier(eventDate);
+        const tierClass = tier && tier !== "later" && tier !== "overdue" ? ` admin-cal-event-card--${tier}` : "";
+        const dateLabel = formatRelativeEventDate(eventDate);
 
         return `
           <button
-            class="admin-cal-event-card${saved ? " is-saved" : ""}"
+            class="admin-cal-event-card${tierClass}${saved ? " is-saved" : ""}"
             type="button"
             data-cal-name="${escapeHtml(name)}"
             data-cal-date="${escapeHtml(eventDate)}"
@@ -827,8 +826,8 @@
           >
             <div class="admin-cal-event-name">${escapeHtml(name)}</div>
             <div class="admin-cal-event-meta">
-              ${saved ? '<span class="admin-pill admin-pill--due">Saved</span>' : ""}
-              <span class="admin-pill">${escapeHtml(dateLabel)}</span>
+              ${saved ? '<span class="admin-cal-saved">\u2713 Saved</span>' : ""}
+              <span class="admin-cal-event-date">${escapeHtml(dateLabel)}</span>
             </div>
           </button>
         `;
@@ -857,6 +856,16 @@
       }
 
       return data;
+    }
+
+    // Small distance tag in the countdown ramp color: sage 8-30 days, fern 1-7,
+    // marigold on the day, plain text past 30.
+    function buildAdminCountdownDistanceHTML(eventDate) {
+      const days = getDaysUntil(eventDate);
+      if (days === null || days < 0) return "";
+      const tier = days === 0 ? "today" : days <= 7 ? "soon" : days <= 30 ? "later" : "far";
+      const label = days === 0 ? "Today!" : `${days} ${days === 1 ? "day" : "days"}`;
+      return `<span class="admin-countdown-distance admin-countdown-distance--${tier}">${escapeHtml(label)}</span>`;
     }
 
     function renderAdminSavedCountdowns() {
@@ -892,6 +901,7 @@
               </button>` : ""}
               <div class="admin-countdown-card-body">
                 <div class="admin-saved-countdown-name">${escapeHtml(c.name)}</div>
+                ${buildAdminCountdownDistanceHTML(c.event_date)}
                 <div class="admin-countdown-card-meta">
                   <span class="admin-countdown-meta-item">${escapeHtml(dateLabel)}</span>
                   <span class="admin-countdown-meta-item"><i data-lucide="${escapeHtml(c.icon || "calendar")}" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;"></i>${escapeHtml(c.icon || "calendar")}</span>

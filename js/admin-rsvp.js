@@ -9,7 +9,7 @@
         const isUnderCount = guestCount < party.invitedCount;
         return {
           label: isUnderCount
-            ? `Attending • ${guestCount} of ${party.invitedCount}`
+            ? `\u26A0 ${guestCount} of ${party.invitedCount}`
             : `Attending • ${formatAdminGuestCount(guestCount)}`,
           tone: isUnderCount ? "admin-rsvp-status--under-count" : "admin-rsvp-status--attending",
           rank: 0
@@ -63,7 +63,7 @@
     }
 
     function buildReviewIssueBadge(issueLabel) {
-      return `<span class="admin-rsvp-issue-badge">${escapeHtml(issueLabel)}</span>`;
+      return `<span class="admin-rsvp-issue-badge">\u26A0 ${escapeHtml(issueLabel)}</span>`;
     }
 
     function buildManualPartySearchResultsHTML(matches, rsvpId) {
@@ -454,8 +454,11 @@
 
     function buildAdminRsvpGuestRowHTML(party) {
       const status = getAdminRsvpStatusMeta(party);
+      // Row look follows the status: sage = attending, + marigold edge = partial,
+      // faded = declined, dashed = pending.
+      const rowTone = status.tone.replace("admin-rsvp-status--", "");
       return `
-        <button class="admin-rsvp-guest-row" type="button" data-party-id="${escapeHtml(party.id)}">
+        <button class="admin-rsvp-guest-row admin-rsvp-guest-row--${escapeHtml(rowTone)}" type="button" data-party-id="${escapeHtml(party.id)}">
           <div class="admin-rsvp-guest-main">
             <div class="admin-rsvp-guest-title">${escapeHtml(party.name)}</div>
             <div class="admin-rsvp-guest-meta">${escapeHtml(formatAdminGuestCount(party.invitedCount))}</div>

@@ -5,7 +5,7 @@
     let adminLastSyncedInterval = null;
 
     function normalizeAdminTheme(theme) {
-      return ["warm", "dark", "slate"].includes(theme) ? theme : "warm";
+      return normalizeTheme(theme);
     }
 
     function applyAdminTheme(theme) {
@@ -96,7 +96,7 @@
       adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
       adminCurrentUser = null;
       resetAdminMealLibraryCache();
-      applyAdminTheme("warm");
+      applyAdminTheme("light");
       setAdminAuthView("login");
       const errorEl = document.getElementById("admin-login-error");
       if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
@@ -199,14 +199,14 @@
     const adminCropperImage = document.getElementById("admin-cropper-image");
     const adminCropperConfirmButton = document.getElementById("admin-cropper-confirm");
 
-    // Person color palette — distinct from status colors (amber, sage, rose)
+    // Person color palette: the eight design-system person colors (light values).
+    // Anything saved with an older color maps to the nearest one when it is shown.
     const PERSON_COLOR_PALETTE = [
-      "#2563eb", "#9333ea", "#0891b2", "#be123c",
-      "#c2410c", "#0f766e", "#6d28d9", "#16a34a"
+      "#3656a8", "#a2306e", "#136670", "#9a4a26",
+      "#6848b0", "#63600f", "#7a4f36", "#4a6b2a"
     ];
-    const SCORECARD_PLAYER_COLOR_PALETTE = [
-      "#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c", "#0891b2"
-    ];
+    // Scorecard players use the first six person colors (red is never a player color).
+    const SCORECARD_PLAYER_COLOR_PALETTE = PERSON_COLOR_PALETTE.slice(0, 6);
 
     // Screen definitions for settings UI
     const SCREEN_LABELS = {
@@ -240,7 +240,7 @@
     // Loaded from Supabase at admin init; falls back to defaults so todo form always works
     let adminHouseholdSettings = {
       assistant_name: "",
-      color_scheme: "warm",
+      color_scheme: "light",
       google_cal_id: "",
       household_members: [],
       display_settings: {
@@ -498,7 +498,7 @@
       if (!input) return;
       clearFieldError(input);
       input.setAttribute("aria-invalid", "true");
-      input.style.borderColor = "var(--rose)";
+      input.style.borderColor = "var(--danger)";
       const field = input.closest(".admin-field");
       if (!field) return;
       const errorEl = document.createElement("div");
@@ -924,7 +924,7 @@
         if (!todoTitle) {
           const titleInput = form.querySelector("[name='title']");
           if (titleInput) {
-            titleInput.style.borderColor = "var(--rose)";
+            titleInput.style.borderColor = "var(--danger)";
             titleInput.focus();
             titleInput.addEventListener("input", () => { titleInput.style.borderColor = ""; }, { once: true });
           }

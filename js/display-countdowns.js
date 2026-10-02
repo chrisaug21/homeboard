@@ -89,9 +89,17 @@
       }
       const countdownTemplate = (item, index) => {
         const hasImage = Boolean(item.image_url);
-        const variantIndex = index % 4;
-        const variantClass = variantIndex > 0 ? ` countdown-card--variant-${variantIndex + 1}` : "";
-        const daysLabel = item.days === 1 ? "day" : "days";
+        // The ramp warms as the day nears: 31+ days neutral, 8-30 sage,
+        // 1-7 fern, and on the day a full marigold panel that reads "Today!".
+        const days = Number(item.days);
+        const rampClass = days <= 0 ? " countdown-card--today"
+          : days <= 7 ? " countdown-card--soon"
+          : days <= 30 ? " countdown-card--later"
+          : " countdown-card--far";
+        const daysMarkup = days <= 0
+          ? `<span class="countdown-value countdown-value--today">Today!</span>`
+          : `<span class="countdown-value">${escapeHtml(item.days)}</span>
+                  <span class="countdown-unit">${days === 1 ? "day" : "days"}</span>`;
 
         return `
         <div class="panel">
@@ -99,7 +107,7 @@
             <div class="eyebrow"><i data-lucide="sparkles"></i> Looking Forward</div>
           </div>
           <div class="countdown-layout">
-            <article class="countdown-card${variantClass}${hasImage ? " countdown-card--photo" : ""}">
+            <article class="countdown-card${rampClass}${hasImage ? " countdown-card--photo" : ""}">
               ${hasImage ? `
               <div class="countdown-photo-wrap">
                 <img class="countdown-photo" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" onerror="this.closest('.countdown-card').classList.remove('countdown-card--photo'); this.closest('.countdown-photo-wrap').remove();">
@@ -109,8 +117,7 @@
                 <div class="countdown-icon"><i data-lucide="${escapeHtml(item.icon || "calendar")}"></i></div>
                 <div class="countdown-name">${escapeHtml(item.name)}</div>
                 <div class="countdown-days">
-                  <span class="countdown-value">${escapeHtml(item.days)}</span>
-                  <span class="countdown-unit">${daysLabel}</span>
+                  ${daysMarkup}
                 </div>
                 <div class="countdown-caption">${escapeHtml(item.caption)}</div>
               </div>

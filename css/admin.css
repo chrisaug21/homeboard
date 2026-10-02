@@ -42,7 +42,7 @@
     }
 
     .admin-login-card {
-      background: var(--panel);
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       padding: 32px 24px 28px;
@@ -70,18 +70,10 @@
       width: 160px;
       max-width: 100%;
       height: auto;
-      opacity: 0.92;
-      filter: brightness(0.97);
     }
 
-    html[data-scheme="slate"] .admin-login-logo {
-      filter: none;
-    }
-
-    html[data-scheme="dark"] .admin-login-logo {
-      filter: saturate(0) brightness(0) invert(0.93) sepia(0.22) saturate(0.7) brightness(1.02);
-    }
-
+    
+    
     #admin-login-form {
       display: flex;
       flex-direction: column;
@@ -89,10 +81,10 @@
     }
 
     .admin-login-error {
-      background: rgba(166, 76, 99, 0.12);
-      border: 1px solid rgba(166, 76, 99, 0.28);
+      background: color-mix(in srgb, var(--danger) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
       border-radius: var(--button-radius);
-      color: var(--rose);
+      color: var(--danger);
       font-size: 0.82rem;
       padding: 10px 12px;
       line-height: 1.45;
@@ -114,8 +106,8 @@
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      border: 3px solid color-mix(in srgb, var(--color-accent-subtle) 70%, transparent);
-      border-top-color: var(--color-accent);
+      border: 3px solid var(--card-sunken);
+      border-top-color: var(--primary);
       animation: admin-auth-spin 0.9s linear infinite;
     }
 
@@ -136,14 +128,8 @@
       display: block;
       height: 10px;
       border-radius: 999px;
-      background: linear-gradient(
-        90deg,
-        rgba(124, 96, 69, 0.1) 0%,
-        rgba(124, 96, 69, 0.2) 50%,
-        rgba(124, 96, 69, 0.1) 100%
-      );
-      background-size: 220% 100%;
-      animation: admin-auth-shimmer 1.2s ease-in-out infinite;
+      background: var(--card-sunken);
+      animation: admin-skeleton-pulse 1.4s ease-in-out infinite;
     }
 
     .admin-auth-loading-bar--wide {
@@ -174,14 +160,6 @@
       }
     }
 
-    @keyframes admin-auth-shimmer {
-      0% {
-        background-position: 100% 0;
-      }
-      100% {
-        background-position: -100% 0;
-      }
-    }
 
     .admin-header-bar {
       min-height: 48px;
@@ -191,29 +169,37 @@
       gap: 12px;
       padding: 10px 14px;
       border-radius: var(--radius-sm);
-      background: var(--panel);
+      background: var(--surface);
       border: 1px solid var(--border);
     }
 
     .admin-header-brand {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       min-height: 28px;
       color: var(--ink);
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
       min-width: 0;
     }
 
-    .admin-header-brand svg {
-      width: 18px;
-      height: 18px;
-      color: var(--muted);
+    .admin-header-mark {
+      width: 28px;
+      height: 28px;
       flex-shrink: 0;
+    }
+
+    /* "Admin" tag: styled like the display eyebrow. */
+    .admin-header-pill {
+      padding: 6px 10px;
+      border-radius: var(--tag-radius);
+      background: var(--eyebrow-bg);
+      color: var(--eyebrow-fg);
+      font-family: var(--font-ui);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .admin-header-settings {
@@ -234,13 +220,13 @@
     .admin-header-settings:hover,
     .admin-header-settings:focus-visible,
     .admin-header-settings.is-active {
-      background: var(--color-accent-subtle);
-      color: var(--color-accent);
+      background: var(--card-sunken);
+      color: var(--ink);
       transform: translateY(-1px);
     }
 
     .admin-header-settings:focus-visible {
-      outline: 3px solid var(--color-accent);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
     }
 
@@ -266,13 +252,13 @@
     .admin-panel {
       padding: 18px;
       border-radius: 24px;
-      background: rgba(255, 252, 246, 0.86);
-      border: 1px solid rgba(124, 96, 69, 0.12);
-      box-shadow: 0 12px 26px rgba(98, 73, 46, 0.08);
-      backdrop-filter: blur(14px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
     }
 
     .admin-panel-title {
+      font-family: var(--font-display);
       font-size: 1.15rem;
       font-weight: 800;
     }
@@ -304,10 +290,10 @@
     .admin-field input {
       width: 100%;
       min-width: 0;
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 14px 16px;
-      background: rgba(255, 255, 255, 0.84);
+      background: var(--card);
       color: var(--ink);
       font: inherit;
     }
@@ -320,9 +306,9 @@
       gap: 2px;
       max-height: 220px;
       overflow-y: auto;
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       border-radius: 16px;
-      background: var(--panel-strong);
+      background: var(--card);
     }
 
     .admin-typeahead-list[hidden] {
@@ -344,7 +330,7 @@
 
     .admin-typeahead-option:hover,
     .admin-typeahead-option:focus-visible {
-      background: var(--color-accent-subtle);
+      background: var(--card-sunken);
     }
 
     .admin-field textarea {
@@ -354,7 +340,7 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 14px 16px;
-      background: var(--panel-strong);
+      background: var(--card);
       color: var(--ink);
       font: inherit;
       resize: vertical;
@@ -364,30 +350,20 @@
     .admin-input {
       width: 100%;
       min-width: 0;
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 14px 16px;
-      background: rgba(255, 255, 255, 0.84);
+      background: color-mix(in srgb, var(--card) 84%, transparent);
       color: var(--ink);
       font: inherit;
     }
 
-    .admin-field input:focus-visible {
-      outline: 2px solid rgba(180, 83, 9, 0.22);
-      outline-offset: 2px;
-      border-color: rgba(180, 83, 9, 0.3);
-    }
-
-    .admin-field textarea:focus-visible {
-      outline: 2px solid var(--color-accent-subtle);
-      outline-offset: 2px;
-      border-color: var(--color-accent);
-    }
-
+    .admin-field input:focus-visible,
+    .admin-field textarea:focus-visible,
     .admin-input:focus-visible {
-      outline: 2px solid rgba(180, 83, 9, 0.22);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
-      border-color: rgba(180, 83, 9, 0.3);
+      border-color: var(--focus);
     }
 
     .admin-form-row {
@@ -435,9 +411,8 @@
     }
 
     .admin-button:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
-      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-button:disabled {
@@ -452,18 +427,18 @@
     }
 
     .admin-button--primary {
-      background: var(--amber);
-      color: white;
+      background: var(--primary);
+      color: var(--on-primary);
     }
 
     .admin-button--secondary {
-      background: rgba(121, 106, 94, 0.12);
+      background: var(--card-sunken);
       color: var(--ink);
     }
 
     .admin-button--danger {
-      background: rgba(166, 76, 99, 0.12);
-      color: var(--rose);
+      background: var(--danger-soft);
+      color: var(--danger);
     }
 
     .admin-list {
@@ -490,9 +465,9 @@
     .admin-week-nav-btn {
       width: 34px;
       height: 34px;
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       border-radius: var(--button-radius);
-      background: rgba(255, 255, 255, 0.78);
+      background: color-mix(in srgb, var(--card) 78%, transparent);
       color: var(--ink);
       display: inline-flex;
       align-items: center;
@@ -528,7 +503,7 @@
       margin: 2px 0 0;
       font-size: 0.75rem;
       font-weight: 700;
-      color: var(--rose);
+      color: var(--danger);
       line-height: 1.4;
     }
 
@@ -549,10 +524,10 @@
     }
 
     .admin-meal-inline-form {
-      border: 1px solid rgba(180, 83, 9, 0.22);
+      border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
       border-radius: 20px;
       padding: 14px;
-      background: rgba(247, 217, 170, 0.14);
+      background: var(--card-sunken);
       display: grid;
       gap: 10px;
       break-inside: avoid;
@@ -585,9 +560,9 @@
       min-height: 80px;
       padding: 12px 14px;
       border-radius: 16px;
-      border: 1px solid rgba(124, 96, 69, 0.22);
-      background: rgba(255, 255, 255, 0.9);
-      font-family: Manrope, sans-serif;
+      border: 1px solid var(--border);
+      background: var(--card);
+      font-family: var(--font-ui);
       font-size: 0.95rem;
       font-weight: 500;
       color: var(--ink);
@@ -596,16 +571,18 @@
     }
 
     .admin-meal-note-textarea:focus {
-      outline: none;
-      border-color: var(--amber);
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+      border-color: var(--focus);
     }
 
     .admin-meal-card {
       width: 100%;
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      border: 1px solid var(--border);
       border-radius: 20px;
+      border-left: var(--time-edge) solid transparent;
       padding: 16px;
-      background: rgba(255, 255, 255, 0.78);
+      background: var(--card);
       color: var(--ink);
       text-align: left;
       cursor: pointer;
@@ -616,22 +593,48 @@
       margin-bottom: 10px;
     }
 
+    /* Time scale: today solid marigold, next 3 days soft sage with an edge. */
+    .admin-meal-card--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .admin-meal-card--soon {
+      background: var(--time-soon);
+      border-left-color: var(--time-soon-edge);
+    }
+
+    .admin-meal-card--past {
+      opacity: 0.7;
+    }
+
+    /* The weekly note matches the display's lilac note card. */
+    .admin-meal-card--note {
+      background: var(--time-week);
+      border-left-color: var(--time-week-edge);
+    }
+
     .admin-meal-card:hover,
     .admin-meal-card:focus-visible {
       transform: translateY(-1px);
-      border-color: rgba(180, 83, 9, 0.28);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
+    }
+
+    .admin-meal-card--today:hover,
+    .admin-meal-card--today:focus-visible {
+      border-color: var(--time-today);
+      filter: brightness(0.97);
     }
 
     .admin-meal-card:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
-      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-meal-card.is-selected {
-      background: rgba(247, 217, 170, 0.34);
-      border-color: rgba(180, 83, 9, 0.24);
-      box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
     }
 
     .admin-meal-card-top {
@@ -649,10 +652,42 @@
       color: var(--muted);
     }
 
+    .admin-meal-card--today .admin-meal-day {
+      color: inherit;
+    }
+
+    .admin-meal-card--note .admin-meal-day {
+      color: var(--time-week-fg);
+    }
+
     .admin-meal-name {
       font-size: 1.05rem;
       font-weight: 700;
       line-height: 1.35;
+    }
+
+    /* Meal type: an icon + a word in the card's tier color, not a pill. */
+    .admin-meal-type {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .admin-meal-type .meal-type-icon {
+      font-size: 1.3em;
+      flex-shrink: 0;
+    }
+
+    .admin-meal-card--soon .admin-meal-type {
+      color: var(--time-soon-fg);
+    }
+
+    .admin-meal-card--today .admin-meal-type {
+      color: inherit;
     }
 
     .admin-meal-name--empty {
@@ -683,9 +718,9 @@
     .admin-meal-card-arrow-btn {
       width: 28px;
       height: 28px;
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       border-radius: var(--button-radius);
-      background: rgba(255, 255, 255, 0.8);
+      background: var(--card);
       color: var(--muted);
       cursor: pointer;
       display: flex;
@@ -697,9 +732,8 @@
     }
 
     .admin-meal-card-arrow-btn:hover:not(:disabled) {
-      background: var(--color-accent-subtle);
-      color: var(--color-accent);
-      border-color: var(--color-accent);
+      background: var(--card-sunken);
+      color: var(--ink);
     }
 
     .admin-meal-card-arrow-btn:disabled {
@@ -720,9 +754,9 @@
     }
 
     .admin-meal-slot-tab {
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.8);
+      background: var(--card);
       color: var(--muted);
       padding: 6px 14px;
       font: inherit;
@@ -732,31 +766,31 @@
     }
 
     .admin-meal-slot-tab:hover {
-      border-color: var(--color-accent);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
     }
 
     .admin-meal-slot-tab.is-active {
-      background: var(--color-accent);
-      color: var(--color-text-on-accent);
-      border-color: var(--color-accent);
+      background: var(--primary);
+      color: var(--on-primary);
+      border-color: var(--primary);
     }
 
     .admin-field select {
       width: 100%;
       min-width: 0;
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 14px 16px;
-      background: rgba(255, 255, 255, 0.84);
+      background: var(--card);
       color: var(--ink);
       font: inherit;
       appearance: none;
     }
 
     .admin-field select:focus-visible {
-      outline: 2px solid rgba(180, 83, 9, 0.22);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
-      border-color: rgba(180, 83, 9, 0.3);
+      border-color: var(--focus);
     }
 
     /* Responsive 2-column grid for active and archived todo lists */
@@ -771,16 +805,74 @@
     .admin-todo-card {
       padding: 11px 13px;
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid rgba(124, 96, 69, 0.12);
-      border-left: 5px solid transparent;
+      background: var(--card);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-left: var(--time-edge) solid transparent;
       transition: opacity 0.25s, transform 0.2s;
     }
 
+    /* Time scale (same as the display): the whole card takes its tier. */
     .admin-todo-card--overdue {
-      background: rgba(190, 18, 60, 0.08);
-      border-left-color: #be123c;
-      box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.06);
+      background: var(--time-overdue);
+      color: var(--on-time-overdue);
+      border-color: var(--time-overdue);
+    }
+
+    .admin-todo-card--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .admin-todo-card--soon {
+      background: var(--time-soon);
+      border-left-color: var(--time-soon-edge);
+    }
+
+    .admin-todo-card--week {
+      background: var(--time-week);
+      border-left-color: var(--time-week-edge);
+    }
+
+    .admin-todo-card--active .todo-check {
+      border-color: var(--primary);
+    }
+
+    .admin-todo-card--overdue .todo-check {
+      border-color: var(--on-time-overdue);
+    }
+
+    .admin-todo-card--today .todo-check {
+      border-color: var(--on-time-today);
+    }
+
+    /* Meta line: due date as tier-colored text; person dots take the card's
+       text color on solid cards. */
+    .admin-todo-card .todo-due-text {
+      font-weight: 800;
+    }
+
+    .admin-todo-card .todo-due-text--later {
+      color: var(--muted);
+    }
+
+    .admin-todo-card .todo-due-text--soon {
+      color: var(--time-soon-fg);
+    }
+
+    .admin-todo-card .todo-due-text--week {
+      color: var(--time-week-fg);
+    }
+
+    .admin-todo-card .todo-due-text--overdue,
+    .admin-todo-card .todo-due-text--today {
+      color: inherit;
+    }
+
+    .admin-todo-card--overdue .todo-person,
+    .admin-todo-card--today .todo-person {
+      --person: currentColor;
     }
 
     /* Active cards: checkbox on the left, body on the right */
@@ -810,13 +902,12 @@
     .admin-todo-card--archived:hover,
     .admin-todo-card--archived:focus-visible {
       transform: translateY(-1px);
-      border-color: var(--color-accent-subtle);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
     }
 
     .admin-todo-card--archived:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
-      box-shadow: 0 0 0 3px var(--panel-strong);
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-todo-body {
@@ -853,13 +944,12 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      background: var(--color-accent-subtle);
-      color: var(--color-accent);
+      background: color-mix(in srgb, currentColor 12%, transparent);
+      color: inherit;
     }
 
     .admin-todo-detail-indicator--muted {
-      background: color-mix(in srgb, var(--muted) 12%, transparent);
-      color: var(--muted);
+      opacity: 0.7;
     }
 
     .admin-todo-detail-indicator svg {
@@ -881,7 +971,7 @@
     }
 
     .admin-assignee-chip {
-      --chip-color: var(--muted);
+      --person: var(--person-color, var(--muted));
       display: inline-flex;
       align-items: center;
       cursor: pointer;
@@ -893,32 +983,44 @@
       pointer-events: none;
     }
 
+    /* A dot in the person's color + their name; selected = a primary border
+       and a check, never a tinted fill. */
     .admin-assignee-chip span {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       min-height: 40px;
       padding: 0 14px;
-      border: 1.5px solid var(--border);
+      border: 1px solid var(--border);
       border-radius: var(--button-radius);
-      background: transparent;
-      color: var(--chip-color);
+      background: var(--card);
+      color: var(--person);
       font-size: 0.92rem;
       font-weight: 700;
     }
 
-    .admin-assignee-chip input:checked + span {
-      border-color: var(--chip-color);
-      background: color-mix(in srgb, var(--chip-color) 16%, transparent);
+    .admin-assignee-chip span::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--person);
+      flex-shrink: 0;
     }
 
-    .admin-assignee-chip input:checked + span::before {
-      content: "✓";
+    .admin-assignee-chip input:checked + span {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
+    }
+
+    .admin-assignee-chip input:checked + span::after {
+      content: "\2713";
+      color: var(--primary);
       font-weight: 800;
     }
 
     .admin-assignee-chip input:focus-visible + span {
-      outline: 2px solid var(--color-accent);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
     }
 
@@ -959,9 +1061,9 @@
 
     /* Completion animation on admin todo cards (mirrors display.css .todo-card rules) */
     .admin-todo-card.is-completing .todo-check {
-      background: var(--amber);
-      border-color: var(--amber);
-      color: white;
+      background: var(--done);
+      border-color: var(--done);
+      color: var(--on-primary);
     }
 
     .admin-todo-card.is-completing .todo-check-icon {
@@ -981,19 +1083,19 @@
       gap: 6px;
       padding: 7px 10px;
       border-radius: var(--tag-radius);
-      background: rgba(121, 106, 94, 0.1);
+      background: var(--card-sunken);
       color: var(--muted);
       font-size: 0.82rem;
       font-weight: 800;
     }
 
     .admin-pill--due {
-      background: rgba(180, 83, 9, 0.12);
-      color: var(--amber);
+      background: var(--card-sunken);
+      color: var(--ink);
     }
 
     .admin-pill--member {
-      border: 1px solid rgba(124, 96, 69, 0.08);
+      border: 1px solid var(--border);
     }
 
     .admin-todo-completed-at {
@@ -1013,10 +1115,10 @@
     .admin-empty {
       padding: 18px;
       border-radius: 20px;
-      border: 1px dashed rgba(124, 96, 69, 0.2);
+      border: 1px dashed var(--border);
       color: var(--muted);
       text-align: center;
-      background: rgba(255, 255, 255, 0.4);
+      background: transparent;
     }
 
     .admin-skeleton-card {
@@ -1027,15 +1129,14 @@
       color: transparent !important;
       caret-color: transparent;
       border-color: transparent !important;
-      background:
-        linear-gradient(90deg, rgba(124, 96, 69, 0.08), rgba(124, 96, 69, 0.18), rgba(124, 96, 69, 0.08));
-      background-size: 200% 100%;
-      animation: admin-skeleton-shimmer 1.6s linear infinite;
+      background: var(--card-sunken);
+      animation: admin-skeleton-pulse 1.4s ease-in-out infinite;
     }
 
-    @keyframes admin-skeleton-shimmer {
-      from { background-position: 200% 0; }
-      to { background-position: -200% 0; }
+    /* Loading skeletons pulse instead of sweeping a gradient (flat fills only). */
+    @keyframes admin-skeleton-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
 
     .admin-placeholder {
@@ -1054,7 +1155,7 @@
       align-items: center;
       justify-content: center;
       border-radius: 20px;
-      background: rgba(121, 106, 94, 0.1);
+      background: var(--card-sunken);
       color: var(--muted);
     }
 
@@ -1125,9 +1226,9 @@
       max-width: 92vw;
       padding: 14px 16px;
       border-radius: var(--tag-radius);
-      background: rgba(82, 35, 46, 0.96);
-      color: white;
-      box-shadow: 0 14px 30px rgba(82, 35, 46, 0.22);
+      background: var(--ink);
+      color: var(--bg);
+      box-shadow: var(--shadow);
       opacity: 0;
       pointer-events: none;
       transition: opacity 180ms ease, transform 180ms ease;
@@ -1148,8 +1249,8 @@
       display: flex;
       gap: 8px;
       padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-      background: rgb(255, 250, 243);
-      border-top: 1px solid rgba(124, 96, 69, 0.14);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
     }
 
     .admin-nav-button {
@@ -1188,13 +1289,14 @@
     }
 
     .admin-nav-button:focus-visible {
-      outline: 3px solid var(--ink);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
     }
 
+    /* Active tab: a primary pill. */
     .admin-nav-button.is-active {
-      background: var(--color-accent-subtle);
-      color: var(--color-accent);
+      background: var(--primary);
+      color: var(--on-primary);
     }
 
     .admin-nav-button svg {
@@ -1204,10 +1306,11 @@
 
     .admin-cal-event-card {
       width: 100%;
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      border: 1px solid var(--border);
       border-radius: 20px;
+      border-left: var(--time-edge) solid transparent;
       padding: 16px;
-      background: rgba(255, 255, 255, 0.78);
+      background: var(--card);
       color: var(--ink);
       text-align: left;
       cursor: pointer;
@@ -1219,22 +1322,69 @@
       font: inherit;
     }
 
+    /* Rows are tinted by the time scale; the date is relative text. */
+    .admin-cal-event-card--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
+      border-color: var(--time-today);
+    }
+
+    .admin-cal-event-card--soon {
+      background: var(--time-soon);
+      border-left-color: var(--time-soon-edge);
+    }
+
+    .admin-cal-event-card--week {
+      background: var(--time-week);
+      border-left-color: var(--time-week-edge);
+    }
+
     .admin-cal-event-card:hover,
     .admin-cal-event-card:focus-visible {
       transform: translateY(-1px);
-      border-color: rgba(180, 83, 9, 0.28);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
+    }
+
+    .admin-cal-event-card--today:hover,
+    .admin-cal-event-card--today:focus-visible {
+      border-color: var(--time-today);
+      filter: brightness(0.97);
     }
 
     .admin-cal-event-card:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
-      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
+    /* Saved (selected) = a primary border, never a tinted fill. */
     .admin-cal-event-card.is-saved {
-      background: rgba(247, 217, 170, 0.34);
-      border-color: rgba(180, 83, 9, 0.24);
-      box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.08);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
+    }
+
+    .admin-cal-event-date,
+    .admin-cal-saved {
+      font-size: 0.82rem;
+      font-weight: 800;
+      white-space: nowrap;
+      color: var(--muted);
+    }
+
+    .admin-cal-saved {
+      color: var(--ink);
+    }
+
+    .admin-cal-event-card--soon .admin-cal-event-date {
+      color: var(--time-soon-fg);
+    }
+
+    .admin-cal-event-card--week .admin-cal-event-date {
+      color: var(--time-week-fg);
+    }
+
+    .admin-cal-event-card--today .admin-cal-event-date,
+    .admin-cal-event-card--today .admin-cal-saved {
+      color: inherit;
     }
 
     .admin-cal-event-name {
@@ -1265,7 +1415,7 @@
     .admin-icon-link {
       font-size: 0.82rem;
       font-weight: 700;
-      color: var(--amber);
+      color: var(--primary);
       text-decoration: none;
       white-space: nowrap;
     }
@@ -1311,13 +1461,44 @@
       gap: 12px;
       padding: 16px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: var(--card);
+      border: 1px solid var(--border);
     }
 
     .admin-saved-countdown-card--editing {
-      background: rgba(247, 217, 170, 0.18);
-      border-color: rgba(180, 83, 9, 0.22);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
+    }
+
+    /* Distance tag in the countdown ramp color (plain text past 30 days). */
+    .admin-countdown-distance {
+      align-self: flex-start;
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--muted);
+    }
+
+    .admin-countdown-distance--later,
+    .admin-countdown-distance--soon,
+    .admin-countdown-distance--today {
+      padding: 5px 9px;
+      border-radius: var(--tag-radius);
+    }
+
+    .admin-countdown-distance--later {
+      background: var(--countdown-later);
+      color: var(--ink);
+    }
+
+    .admin-countdown-distance--soon {
+      background: var(--countdown-soon);
+      color: #ffffff;
+    }
+
+    .admin-countdown-distance--today {
+      background: var(--time-today);
+      color: var(--on-time-today);
     }
 
     .admin-countdown-card-main {
@@ -1360,14 +1541,14 @@
       object-fit: cover;
       border-radius: var(--button-radius);
       flex-shrink: 0;
-      background: rgba(124, 96, 69, 0.08);
+      background: color-mix(in srgb, var(--ink) 8%, transparent);
     }
 
     .admin-countdown-actions {
       display: flex;
       align-items: center;
       gap: 8px;
-      border-top: 1px solid rgba(124, 96, 69, 0.1);
+      border-top: 1px solid var(--border);
       padding-top: 10px;
     }
 
@@ -1378,7 +1559,7 @@
 
     .admin-button--ghost-danger {
       background: none;
-      color: var(--rose);
+      color: var(--danger);
       padding: 6px 10px;
       font-size: 0.82rem;
       margin-left: auto;
@@ -1386,7 +1567,7 @@
 
     .admin-button--ghost-danger:hover,
     .admin-button--ghost-danger:focus-visible {
-      background: rgba(166, 76, 99, 0.08);
+      background: color-mix(in srgb, var(--danger) 8%, transparent);
     }
 
     .admin-countdown-card--refreshing .admin-countdown-actions button {
@@ -1406,7 +1587,7 @@
     }
 
     .admin-countdown-preview-btn:focus-visible {
-      outline: 3px solid var(--amber);
+      outline: 3px solid var(--primary);
       outline-offset: 2px;
     }
 
@@ -1415,7 +1596,7 @@
       gap: 12px;
       align-items: flex-start;
       padding: 12px;
-      background: rgba(124, 96, 69, 0.06);
+      background: color-mix(in srgb, var(--ink) 6%, transparent);
       border-radius: var(--tag-radius);
     }
 
@@ -1425,7 +1606,7 @@
       object-fit: cover;
       border-radius: var(--button-radius);
       flex-shrink: 0;
-      background: rgba(124, 96, 69, 0.08);
+      background: color-mix(in srgb, var(--ink) 8%, transparent);
     }
 
     .admin-edit-photo-meta {
@@ -1451,7 +1632,7 @@
       gap: 12px;
       align-items: flex-start;
       padding: 12px;
-      background: rgba(124, 96, 69, 0.06);
+      background: color-mix(in srgb, var(--ink) 6%, transparent);
       border-radius: var(--tag-radius);
     }
 
@@ -1461,7 +1642,7 @@
       object-fit: cover;
       border-radius: var(--button-radius);
       flex-shrink: 0;
-      background: rgba(124, 96, 69, 0.08);
+      background: color-mix(in srgb, var(--ink) 8%, transparent);
     }
 
     .admin-form-photo-preview-meta {
@@ -1545,7 +1726,7 @@
       padding: 14px;
       border-radius: var(--tag-radius);
       border: 1px solid var(--border);
-      background: var(--panel);
+      background: var(--surface);
     }
 
     .admin-countdown-photo-heading {
@@ -1569,7 +1750,7 @@
       gap: 10px;
       padding: 12px;
       border-radius: var(--tag-radius);
-      background: var(--panel-strong);
+      background: var(--surface);
       border: 1px solid var(--border);
     }
 
@@ -1581,7 +1762,7 @@
     }
 
     .admin-countdown-photo-option--secondary {
-      background: var(--bg-soft);
+      background: var(--card-sunken);
     }
 
     .admin-countdown-photo-replace {
@@ -1628,7 +1809,7 @@
     .admin-cropper-backdrop {
       position: absolute;
       inset: 0;
-      background: rgba(30, 20, 12, 0.52);
+      background: color-mix(in srgb, var(--brand-night) 55%, transparent);
       backdrop-filter: blur(2px);
     }
 
@@ -1641,7 +1822,7 @@
       gap: 16px;
       padding: 20px;
       border-radius: 24px;
-      background: var(--bg-soft);
+      background: var(--surface);
       box-shadow: var(--shadow);
     }
 
@@ -1657,7 +1838,7 @@
       overflow: hidden;
       border-radius: var(--tag-radius);
       border: 1px solid var(--border);
-      background: var(--panel);
+      background: var(--card);
     }
 
     .admin-cropper-stage img {
@@ -1667,12 +1848,10 @@
 
 
     .admin-version-label {
-      font-size: 0.65rem;
+      font-size: 0.72rem;
       font-weight: 700;
-      letter-spacing: 0.08em;
       color: var(--muted);
-      opacity: 0.55;
-      margin-left: auto;
+      margin-left: 2px;
       pointer-events: none;
       user-select: none;
     }
@@ -1725,7 +1904,7 @@
     .admin-modal-backdrop {
       position: absolute;
       inset: 0;
-      background: rgba(30, 20, 12, 0.52);
+      background: color-mix(in srgb, var(--brand-night) 55%, transparent);
       backdrop-filter: blur(2px);
       cursor: pointer;
     }
@@ -1736,11 +1915,11 @@
       max-height: 92dvh;
       overflow-y: auto;
       border-radius: 28px 28px 0 0;
-      background: var(--bg-soft);
+      background: var(--surface);
       padding: 20px 20px 44px;
       display: grid;
       gap: 16px;
-      box-shadow: 0 -8px 40px rgba(98, 73, 46, 0.18);
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.22);
     }
 
     .admin-modal-header {
@@ -1760,7 +1939,7 @@
       gap: 4px;
       padding: 12px 14px;
       border-radius: var(--tag-radius);
-      background: var(--panel);
+      background: var(--card);
       border: 1px solid var(--border);
     }
 
@@ -1792,7 +1971,7 @@
       height: 36px;
       border: 0;
       border-radius: var(--button-radius);
-      background: rgba(121, 106, 94, 0.12);
+      background: var(--card-sunken);
       color: var(--muted);
       display: inline-flex;
       align-items: center;
@@ -1804,12 +1983,12 @@
 
     .admin-modal-close:hover,
     .admin-modal-close:focus-visible {
-      background: rgba(121, 106, 94, 0.2);
+      background: color-mix(in srgb, var(--ink) 10%, var(--card-sunken));
     }
 
     .admin-modal-close:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-modal-close svg {
@@ -1832,8 +2011,8 @@
       gap: 14px;
       padding: 16px;
       border-radius: 20px;
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: var(--card);
+      border: 1px solid var(--border);
     }
 
     .admin-rsvp-card-header {
@@ -1861,10 +2040,11 @@
 
     .admin-rsvp-review-row {
       width: 100%;
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      border: 1px solid var(--border);
+      border-left: var(--time-edge) solid var(--time-today);
       border-radius: 18px;
       padding: 14px 16px;
-      background: rgba(255, 255, 255, 0.78);
+      background: var(--card);
       color: var(--ink);
       display: flex;
       align-items: center;
@@ -1873,6 +2053,11 @@
       cursor: pointer;
       text-align: left;
       font: inherit;
+    }
+
+    .admin-rsvp-review-row:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-rsvp-review-main,
@@ -1887,15 +2072,10 @@
       padding-top: 10px;
     }
 
+    /* The issue is plain text with a warning mark, not a pill. */
     .admin-rsvp-issue-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 6px 10px;
-      border-radius: var(--tag-radius);
-      background: rgba(247, 217, 170, 0.42);
-      color: #9a3412;
-      font-size: 0.74rem;
+      color: var(--ink);
+      font-size: 0.82rem;
       font-weight: 800;
       white-space: nowrap;
     }
@@ -1913,8 +2093,8 @@
       gap: 12px;
       padding: 12px 14px;
       border-radius: var(--tag-radius);
-      background: rgba(245, 240, 232, 0.76);
-      border: 1px solid rgba(124, 96, 69, 0.1);
+      background: var(--card);
+      border: 1px solid var(--border);
     }
 
     .admin-rsvp-search-block {
@@ -1924,10 +2104,11 @@
 
     .admin-rsvp-guest-row {
       width: 100%;
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      border: 1px solid var(--border);
+      border-left: var(--time-edge) solid transparent;
       border-radius: 20px;
       padding: 16px;
-      background: rgba(255, 255, 255, 0.78);
+      background: var(--card);
       color: var(--ink);
       display: flex;
       align-items: center;
@@ -1942,12 +2123,44 @@
     .admin-rsvp-guest-row:hover,
     .admin-rsvp-guest-row:focus-visible {
       transform: translateY(-1px);
-      border-color: rgba(180, 83, 9, 0.28);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
     }
 
     .admin-rsvp-guest-row:focus-visible {
-      outline: 3px solid var(--ink);
-      outline-offset: 3px;
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    /* Confirmed parties are sage tiles; a partial party adds a marigold edge. */
+    .admin-rsvp-guest-row--attending,
+    .admin-rsvp-guest-row--under-count {
+      background: var(--countdown-later);
+      border-color: transparent;
+    }
+
+    .admin-rsvp-guest-row--under-count {
+      border-left-color: var(--time-today);
+    }
+
+    .admin-rsvp-guest-row--attending .admin-rsvp-guest-meta,
+    .admin-rsvp-guest-row--under-count .admin-rsvp-guest-meta {
+      color: var(--ink);
+      opacity: 0.7;
+    }
+
+    /* Declined: faded and struck through. Pending: plain with a dashed border. */
+    .admin-rsvp-guest-row--declined {
+      opacity: 0.6;
+    }
+
+    .admin-rsvp-guest-row--declined .admin-rsvp-guest-title {
+      text-decoration: line-through;
+    }
+
+    .admin-rsvp-guest-row--pending {
+      background: transparent;
+      border: 1px dashed var(--border);
+      padding-left: calc(16px + var(--time-edge) - 1px);
     }
 
     .admin-rsvp-guest-main {
@@ -1963,41 +2176,28 @@
       width: fit-content;
       padding: 5px 9px;
       border-radius: var(--tag-radius);
-      background: rgba(247, 217, 170, 0.42);
-      color: #9a3412;
+      background: var(--time-today);
+      color: var(--on-time-today);
       font-size: 0.72rem;
       font-weight: 800;
     }
 
+    /* Status is plain text (a warning mark for partial parties), not a pill. */
     .admin-rsvp-status {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: var(--tag-radius);
-      padding: 7px 11px;
-      font-size: 0.76rem;
+      font-size: 0.82rem;
       font-weight: 800;
       white-space: nowrap;
+      color: var(--ink);
     }
 
-    .admin-rsvp-status--attending {
-      background: rgba(220, 239, 220, 0.95);
-      color: #166534;
-    }
-
-    .admin-rsvp-status--declined {
-      background: rgba(248, 220, 227, 0.95);
-      color: #9f1239;
-    }
-
-    .admin-rsvp-status--pending {
-      background: var(--rsvp-pending-bg);
-      color: #1e3a5f;
-    }
-
+    .admin-rsvp-status--attending,
     .admin-rsvp-status--under-count {
-      background: rgba(247, 217, 170, 0.45);
-      color: #9a3412;
+      color: var(--ink);
+    }
+
+    .admin-rsvp-status--declined,
+    .admin-rsvp-status--pending {
+      color: var(--muted);
     }
 
     .admin-rsvp-linked-row {
@@ -2020,10 +2220,10 @@
 
     .admin-rsvp-search-result {
       width: 100%;
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      border: 1px solid var(--border);
       border-radius: var(--tag-radius);
       padding: 12px 14px;
-      background: rgba(255, 255, 255, 0.76);
+      background: var(--card);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -2035,8 +2235,8 @@
     }
 
     .admin-rsvp-search-result.is-selected {
-      border-color: rgba(180, 83, 9, 0.3);
-      background: rgba(247, 217, 170, 0.34);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
     }
 
     .admin-rsvp-compare,
@@ -2050,8 +2250,8 @@
       gap: 4px;
       padding: 12px 14px;
       border-radius: var(--tag-radius);
-      background: rgba(245, 240, 232, 0.76);
-      border: 1px solid rgba(124, 96, 69, 0.1);
+      background: var(--card);
+      border: 1px solid var(--border);
       color: var(--ink);
     }
 
@@ -2072,8 +2272,8 @@
       gap: 12px;
       padding: 10px 12px;
       border-radius: var(--tag-radius);
-      background: rgba(245, 240, 232, 0.76);
-      border: 1px solid rgba(124, 96, 69, 0.1);
+      background: var(--card);
+      border: 1px solid var(--border);
     }
 
     .admin-rsvp-linked-item--muted {
@@ -2092,12 +2292,12 @@
     }
 
     .admin-rsvp-audit-pill--primary {
-      background: rgba(220, 239, 220, 0.95);
-      color: #166534;
+      background: var(--countdown-later);
+      color: var(--ink);
     }
 
     .admin-rsvp-audit-pill--secondary {
-      background: rgba(120, 113, 108, 0.16);
+      background: var(--card-sunken);
       color: var(--muted);
     }
 
@@ -2110,7 +2310,7 @@
       gap: 12px;
       align-items: flex-start;
       padding: 12px;
-      background: rgba(124, 96, 69, 0.06);
+      background: color-mix(in srgb, var(--ink) 6%, transparent);
       border-radius: var(--tag-radius);
     }
 
@@ -2120,7 +2320,7 @@
       object-fit: cover;
       border-radius: var(--button-radius);
       flex-shrink: 0;
-      background: rgba(124, 96, 69, 0.08);
+      background: color-mix(in srgb, var(--ink) 8%, transparent);
     }
 
     .admin-modal-photo-pending-meta {
@@ -2174,7 +2374,7 @@
     .admin-settings-divider {
       height: 1px;
       width: 100%;
-      background: rgba(124, 96, 69, 0.14);
+      background: color-mix(in srgb, var(--ink) 14%, transparent);
       margin: -2px 0 2px;
     }
 
@@ -2183,8 +2383,8 @@
       gap: 8px;
       padding: 16px;
       border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: var(--card);
+      border: 1px dashed var(--border);
       text-align: center;
     }
 
@@ -2197,11 +2397,11 @@
     }
 
     .admin-display-pairing-code {
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-family: var(--font-display);
       font-size: clamp(2rem, 8vw, 2.8rem);
       font-weight: 800;
       letter-spacing: 0.18em;
-      color: var(--color-accent);
+      color: var(--ink);
       line-height: 1;
       padding-left: 0.18em;
     }
@@ -2224,8 +2424,8 @@
       gap: 10px;
       padding: 10px 12px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: var(--card);
+      border: 1px solid var(--border);
     }
 
     .admin-settings-member-row--confirm {
@@ -2234,13 +2434,13 @@
       gap: 12px;
     }
 
+    /* A 9px dot in the member's person color (adapts to Light and Dark). */
     .admin-settings-member-color {
-      width: 13px;
-      height: 13px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
       flex-shrink: 0;
-      border: 1.5px solid rgba(255, 255, 255, 0.6);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+      background: var(--person-color, var(--muted));
     }
 
     .admin-settings-member-name {
@@ -2278,7 +2478,7 @@
 
     .admin-settings-member-remove:hover {
       opacity: 1;
-      color: var(--rose);
+      color: var(--danger);
     }
 
     .admin-settings-member-remove svg {
@@ -2310,20 +2510,21 @@
       cursor: pointer;
       padding: 11px 14px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(124, 96, 69, 0.12);
-      transition: background-color 120ms ease;
+      background: var(--card);
+      border: 1px solid var(--border);
+      transition: border-color 120ms ease, box-shadow 120ms ease;
     }
 
+    /* Selected rows: a 1.5px primary border and a filled control, never a tint. */
     .admin-settings-toggle:has(input:checked) {
-      background: rgba(247, 217, 170, 0.18);
-      border-color: rgba(180, 83, 9, 0.22);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
     }
 
     .admin-settings-toggle input[type="checkbox"] {
       width: 18px;
       height: 18px;
-      accent-color: var(--amber);
+      accent-color: var(--primary);
       flex-shrink: 0;
       cursor: pointer;
     }
@@ -2347,21 +2548,21 @@
       cursor: pointer;
       padding: 11px 14px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(124, 96, 69, 0.12);
-      transition: background-color 120ms ease;
+      background: var(--card);
+      border: 1px solid var(--border);
+      transition: border-color 120ms ease, box-shadow 120ms ease;
     }
 
     .admin-settings-source-option:has(input:checked) {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
     }
 
     .admin-settings-source-option input[type="radio"] {
       width: 18px;
       height: 18px;
       margin-top: 2px;
-      accent-color: var(--color-accent);
+      accent-color: var(--primary);
       flex-shrink: 0;
       cursor: pointer;
     }
@@ -2397,8 +2598,8 @@
       gap: 10px;
       padding: 10px 12px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: var(--card);
+      border: 1px solid var(--border);
       transition: opacity 120ms ease;
     }
 
@@ -2420,9 +2621,9 @@
     .admin-settings-order-btn {
       width: 28px;
       height: 28px;
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       border-radius: var(--button-radius);
-      background: rgba(255, 255, 255, 0.8);
+      background: color-mix(in srgb, var(--card) 80%, transparent);
       color: var(--muted);
       cursor: pointer;
       display: flex;
@@ -2434,9 +2635,8 @@
     }
 
     .admin-settings-order-btn:hover:not(:disabled) {
-      background: rgba(247, 217, 170, 0.5);
-      color: var(--amber);
-      border-color: rgba(180, 83, 9, 0.28);
+      background: var(--card-sunken);
+      color: var(--ink);
     }
 
     .admin-settings-order-btn:disabled {
@@ -2461,8 +2661,8 @@
       gap: 12px;
       padding: 10px 12px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: color-mix(in srgb, var(--card) 70%, transparent);
+      border: 1px solid var(--border);
     }
 
     .admin-settings-timer-label {
@@ -2474,19 +2674,19 @@
     .admin-settings-timer-input {
       width: 68px;
       text-align: right;
-      border: 1px solid rgba(124, 96, 69, 0.16);
+      border: 1px solid var(--border);
       border-radius: var(--button-radius);
       padding: 6px 10px;
-      background: rgba(255, 255, 255, 0.84);
+      background: var(--card);
       font: inherit;
       font-weight: 700;
       color: var(--ink);
     }
 
     .admin-settings-timer-input:focus-visible {
-      outline: 2px solid rgba(180, 83, 9, 0.22);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
-      border-color: rgba(180, 83, 9, 0.3);
+      border-color: var(--focus);
     }
 
     .admin-settings-timer-unit {
@@ -2497,35 +2697,40 @@
     }
 
     /* Color scheme selector */
+    /* Light / Dark / Match device: a three-way segmented control. */
     .admin-settings-scheme-list {
       display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
       margin-top: 6px;
+      border: 1px solid var(--border);
+      border-radius: var(--button-radius);
+      background: var(--card);
+      overflow: hidden;
     }
 
     .admin-settings-scheme-option {
+      position: relative;
+      flex: 1 1 0;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
       cursor: pointer;
-      padding: 8px 14px 8px 10px;
-      border-radius: var(--tag-radius);
-      border: 2px solid transparent;
-      background: rgba(255, 255, 255, 0.7);
-      border-color: rgba(124, 96, 69, 0.12);
-      transition: border-color 120ms ease, background-color 120ms ease;
+      padding: 10px 8px;
+      color: var(--ink);
+      transition: background-color 120ms ease, color 120ms ease;
+    }
+
+    .admin-settings-scheme-option + .admin-settings-scheme-option {
+      border-left: 1px solid var(--border);
     }
 
     .admin-settings-scheme-option:has(input:checked) {
-      border-color: var(--amber);
-      background: rgba(247, 217, 170, 0.20);
+      background: var(--primary);
+      color: var(--on-primary);
     }
 
     .admin-settings-scheme-option:has(input:focus-visible) {
-      outline: 3px solid rgba(180, 83, 9, 0.28);
-      outline-offset: 2px;
-      box-shadow: 0 0 0 3px rgba(255, 252, 246, 0.96);
+      outline: 3px solid var(--focus);
+      outline-offset: -3px;
     }
 
     .admin-settings-scheme-option input[type="radio"] {
@@ -2536,31 +2741,13 @@
     }
 
     .admin-settings-scheme-swatch {
-      width: 22px;
-      height: 22px;
-      border-radius: var(--tag-radius);
-      flex-shrink: 0;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
-    }
-
-    .admin-settings-scheme-swatch--warm {
-      background: linear-gradient(135deg, #f5f0e8, #efe7db);
-      border: 2px solid #b45309;
-    }
-
-    .admin-settings-scheme-swatch--dark {
-      background: linear-gradient(135deg, #1c1917, #17140f);
-      border: 2px solid #78716c;
-    }
-
-    .admin-settings-scheme-swatch--slate {
-      background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-      border: 2px solid #475569;
+      display: none;
     }
 
     .admin-settings-scheme-option span:last-child {
-      font-weight: 600;
+      font-weight: 700;
       font-size: 0.9rem;
+      text-align: center;
     }
 
     .admin-settings-footer-sync {
@@ -2622,9 +2809,7 @@
     .admin-onboarding-backdrop {
       position: absolute;
       inset: 0;
-      background:
-        linear-gradient(180deg, rgba(48, 38, 29, 0.08), rgba(48, 38, 29, 0.22)),
-        rgba(245, 240, 232, 0.82);
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
       backdrop-filter: blur(16px);
     }
 
@@ -2641,7 +2826,7 @@
       display: grid;
       gap: 20px;
       padding: 24px;
-      background: var(--panel-strong);
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       box-shadow: var(--shadow);
@@ -2681,7 +2866,7 @@
 
     .admin-onboarding-title {
       margin: 0;
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-family: var(--font-display);
       font-size: clamp(1.7rem, 6vw, 2.2rem);
       line-height: 1.05;
       letter-spacing: -0.03em;
@@ -2721,7 +2906,7 @@
       padding: 0 14px;
       border-radius: var(--button-radius);
       border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.72);
+      background: color-mix(in srgb, var(--card) 72%, transparent);
       color: var(--muted);
       font-size: 0.84rem;
       font-weight: 700;
@@ -2744,8 +2929,8 @@
       padding: 14px;
       text-align: left;
       border-radius: var(--tag-radius);
-      border: 2px solid rgba(124, 96, 69, 0.12);
-      background: rgba(255, 255, 255, 0.74);
+      border: 2px solid var(--border);
+      background: color-mix(in srgb, var(--card) 74%, transparent);
       color: inherit;
       cursor: pointer;
       transition: border-color 120ms ease, transform 120ms ease, background-color 120ms ease;
@@ -2757,13 +2942,13 @@
     }
 
     .admin-onboarding-theme-card:focus-visible {
-      outline: 3px solid rgba(180, 83, 9, 0.28);
+      outline: 3px solid color-mix(in srgb, var(--primary) 28%, transparent);
       outline-offset: 2px;
     }
 
     .admin-onboarding-theme-card.is-selected {
-      border-color: var(--color-accent);
-      background: color-mix(in srgb, var(--color-accent-subtle) 54%, transparent);
+      border-color: var(--primary);
+      background: color-mix(in srgb, var(--card-sunken) 54%, transparent);
     }
 
     .admin-onboarding-theme-preview {
@@ -2795,19 +2980,15 @@
       height: 10px;
     }
 
-    .admin-onboarding-theme-card[data-theme="warm"] {
-      --onboarding-theme-bg: #f5f0e8;
-      --onboarding-theme-ink: #30261d;
+    .admin-onboarding-theme-card[data-swatch="light"],
+    .admin-onboarding-theme-card[data-swatch="auto"] {
+      --onboarding-theme-bg: var(--brand-linen);
+      --onboarding-theme-ink: var(--brand-aubergine);
     }
 
-    .admin-onboarding-theme-card[data-theme="dark"] {
-      --onboarding-theme-bg: #241f1c;
-      --onboarding-theme-ink: #f7efe6;
-    }
-
-    .admin-onboarding-theme-card[data-theme="slate"] {
-      --onboarding-theme-bg: #f8fafc;
-      --onboarding-theme-ink: #334155;
+    .admin-onboarding-theme-card[data-swatch="dark"] {
+      --onboarding-theme-bg: var(--brand-night);
+      --onboarding-theme-ink: var(--brand-marigold);
     }
 
     .admin-onboarding-theme-name {
@@ -2826,8 +3007,8 @@
       gap: 10px;
       padding: 14px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: color-mix(in srgb, var(--card) 72%, transparent);
+      border: 1px solid var(--border);
     }
 
     .admin-onboarding-feature-icon {
@@ -2837,8 +3018,8 @@
       align-items: center;
       justify-content: center;
       border-radius: var(--button-radius);
-      background: color-mix(in srgb, var(--color-accent-subtle) 64%, transparent);
-      color: var(--color-accent);
+      background: color-mix(in srgb, var(--card-sunken) 64%, transparent);
+      color: var(--primary);
     }
 
     .admin-onboarding-feature-icon svg {
@@ -2907,7 +3088,7 @@
     }
 
     .admin-onboarding-inline-code {
-      font-family: "Bricolage Grotesque", Manrope, sans-serif;
+      font-family: var(--font-display);
       font-size: 0.92em;
       font-weight: 700;
       color: var(--ink);
@@ -2921,9 +3102,9 @@
       margin: 0;
       padding: 10px 12px;
       border-radius: var(--button-radius);
-      background: rgba(166, 76, 99, 0.12);
-      border: 1px solid rgba(166, 76, 99, 0.2);
-      color: var(--rose);
+      background: color-mix(in srgb, var(--danger) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--danger) 20%, transparent);
+      color: var(--danger);
       font-size: 0.82rem;
       line-height: 1.45;
     }
@@ -2993,212 +3174,30 @@
       }
     }
 
-    html[data-scheme="dark"] .admin-header-bar,
-    html[data-scheme="dark"] .admin-panel,
-    html[data-scheme="dark"] .admin-drawer,
-    html[data-scheme="dark"] .admin-nav,
-    html[data-scheme="dark"] .admin-modal-sheet {
-      background: rgba(36, 31, 28, 0.94);
-      border-color: rgba(255, 240, 220, 0.11);
-      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
-    }
-
-    html[data-scheme="dark"] .admin-display-pairing-card {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 240, 220, 0.11);
-    }
-
-    html[data-scheme="dark"] .admin-onboarding-backdrop {
-      background:
-        linear-gradient(180deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.46)),
-        rgba(23, 20, 15, 0.74);
-    }
-
-    html[data-scheme="dark"] .admin-onboarding-card,
-    html[data-scheme="dark"] .admin-onboarding-feature-card,
-    html[data-scheme="dark"] .admin-onboarding-theme-card,
-    html[data-scheme="dark"] .admin-onboarding-member-lock {
-      background: rgba(36, 31, 28, 0.94);
-      border-color: rgba(255, 240, 220, 0.11);
-      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
-    }
-
-    html[data-scheme="dark"] .admin-onboarding-title,
-    html[data-scheme="dark"] .admin-onboarding-theme-name,
-    html[data-scheme="dark"] .admin-onboarding-feature-title {
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-onboarding-note,
-    html[data-scheme="dark"] .admin-onboarding-step,
-    html[data-scheme="dark"] .admin-onboarding-feature-copy,
-    html[data-scheme="dark"] .admin-onboarding-member-lock,
-    html[data-scheme="dark"] .admin-onboarding-instruction-item span {
-      color: #cbbeb3;
-    }
-
-    html[data-scheme="dark"] .admin-header-brand {
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-nav {
-      background: rgb(36, 31, 28);
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-
-    html[data-scheme="dark"] .admin-panel-title,
-    html[data-scheme="dark"] .admin-drawer-title,
-    html[data-scheme="dark"] .admin-settings-member-confirm-text,
-    html[data-scheme="dark"] .admin-settings-order-item-name,
-    html[data-scheme="dark"] .admin-settings-timer-label,
-    html[data-scheme="dark"] .admin-settings-toggle span,
-    html[data-scheme="dark"] .admin-settings-source-title,
-    html[data-scheme="dark"] .admin-settings-scheme-option span:last-child,
-    html[data-scheme="dark"] .admin-version-label {
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-panel-note,
-    html[data-scheme="dark"] .admin-field label,
-    html[data-scheme="dark"] .admin-field-hint,
-    html[data-scheme="dark"] .admin-drawer-note,
-    html[data-scheme="dark"] .admin-week-nav-label,
-    html[data-scheme="dark"] .admin-settings-subsection-label,
-    html[data-scheme="dark"] .admin-settings-timer-unit,
-    html[data-scheme="dark"] .admin-countdown-meta-item,
-    html[data-scheme="dark"] .admin-edit-photo-credit,
-    html[data-scheme="dark"] .admin-form-photo-preview-meta,
-    html[data-scheme="dark"] .admin-modal-photo-pending-meta,
-    html[data-scheme="dark"] .admin-nav-button,
-    html[data-scheme="dark"] .admin-icon-link {
-      color: #cbbeb3;
-    }
-
-    html[data-scheme="dark"] .admin-field input,
-    html[data-scheme="dark"] .admin-field textarea,
-    html[data-scheme="dark"] .admin-field select,
-    html[data-scheme="dark"] .admin-input,
-    html[data-scheme="dark"] .admin-settings-timer-input,
-    html[data-scheme="dark"] .admin-meal-note-textarea,
-    html[data-scheme="dark"] .admin-typeahead-list {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 240, 220, 0.14);
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-button--secondary,
-    html[data-scheme="dark"] .admin-week-nav-btn,
-    html[data-scheme="dark"] .admin-drawer-icon,
-    html[data-scheme="dark"] .admin-modal-close,
-    html[data-scheme="dark"] .admin-settings-order-btn,
-    html[data-scheme="dark"] .admin-meal-card-arrow-btn,
-    html[data-scheme="dark"] .admin-meal-slot-tab:not(.is-active) {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--ink);
-      border-color: rgba(255, 240, 220, 0.12);
-    }
-
-    html[data-scheme="dark"] .admin-button--ghost-danger:hover,
-    html[data-scheme="dark"] .admin-button--ghost-danger:focus-visible,
-    html[data-scheme="dark"] .admin-nav-button.is-active,
-    html[data-scheme="dark"] .admin-settings-toggle:has(input:checked),
-    html[data-scheme="dark"] .admin-settings-source-option:has(input:checked),
-    html[data-scheme="dark"] .admin-settings-scheme-option:has(input:checked),
-    html[data-scheme="dark"] .admin-settings-order-btn:hover:not(:disabled),
-    html[data-scheme="dark"] .admin-meal-card-arrow-btn:hover:not(:disabled),
-    html[data-scheme="dark"] .admin-meal-slot-tab:hover:not(.is-active) {
-      background: rgba(245, 158, 11, 0.16);
-    }
-
-    html[data-scheme="dark"] .admin-todo-card,
-    html[data-scheme="dark"] .admin-meal-card,
-    html[data-scheme="dark"] .admin-cal-event-card,
-    html[data-scheme="dark"] .admin-saved-countdown-card,
-    html[data-scheme="dark"] .admin-settings-member-row,
-    html[data-scheme="dark"] .admin-settings-toggle,
-    html[data-scheme="dark"] .admin-settings-source-option,
-    html[data-scheme="dark"] .admin-settings-order-item,
-    html[data-scheme="dark"] .admin-settings-timer-row,
-    html[data-scheme="dark"] .admin-settings-scheme-option,
-    html[data-scheme="dark"] .admin-empty,
-    html[data-scheme="dark"] .admin-edit-photo-preview,
-    html[data-scheme="dark"] .admin-form-photo-preview,
-    html[data-scheme="dark"] .admin-modal-photo-pending {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 240, 220, 0.11);
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-todo-card--overdue {
-      background: rgba(251, 113, 133, 0.12);
-      border-left-color: #fb7185;
-      box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.08);
-    }
-
-    html[data-scheme="dark"] .admin-rsvp-card,
-    html[data-scheme="dark"] .admin-rsvp-review-row,
-    html[data-scheme="dark"] .admin-rsvp-suggestion,
-    html[data-scheme="dark"] .admin-rsvp-guest-row,
-    html[data-scheme="dark"] .admin-rsvp-search-result,
-    html[data-scheme="dark"] .admin-rsvp-compare-card,
-    html[data-scheme="dark"] .admin-rsvp-suggestion-list,
-    html[data-scheme="dark"] .admin-rsvp-search-results {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 240, 220, 0.11);
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-rsvp-review-row:hover,
-    html[data-scheme="dark"] .admin-rsvp-review-row:focus-visible,
-    html[data-scheme="dark"] .admin-rsvp-guest-row:hover,
-    html[data-scheme="dark"] .admin-rsvp-guest-row:focus-visible,
-    html[data-scheme="dark"] .admin-rsvp-search-result.is-selected {
-      background: rgba(245, 158, 11, 0.14);
-      border-color: rgba(245, 158, 11, 0.22);
-    }
-
-    html[data-scheme="dark"] .admin-rsvp-card-title,
-    html[data-scheme="dark"] .admin-rsvp-guest-title,
-    html[data-scheme="dark"] .admin-rsvp-suggestion-title,
-    html[data-scheme="dark"] .admin-rsvp-linked-label {
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-rsvp-card-meta,
-    html[data-scheme="dark"] .admin-rsvp-guest-meta,
-    html[data-scheme="dark"] .admin-rsvp-suggestion-meta,
-    html[data-scheme="dark"] .admin-rsvp-search-label,
-    html[data-scheme="dark"] .admin-rsvp-no-match {
-      color: var(--muted);
-    }
-
-    html[data-scheme="dark"] .admin-rsvp-status--attending {
-      background: rgba(34, 197, 94, 0.18);
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-rsvp-status--declined {
-      background: rgba(244, 114, 182, 0.18);
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-rsvp-status--pending {
-      background: var(--rsvp-pending-bg);
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-rsvp-status--under-count {
-      background: rgba(245, 158, 11, 0.18);
-      color: var(--ink);
-    }
-
-    html[data-scheme="dark"] .admin-rsvp-issue-badge,
-    html[data-scheme="dark"] .admin-rsvp-under-count-pill {
-      background: rgba(245, 158, 11, 0.18);
-      color: var(--ink);
-    }
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     .admin-settings-toggle--block {
       width: 100%;
       justify-content: flex-start;
@@ -3209,7 +3208,7 @@
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 16px;
-      background: var(--panel);
+      background: var(--card);
       color: var(--ink);
       text-align: left;
       cursor: pointer;
@@ -3222,13 +3221,12 @@
     .admin-scorecard-card:hover,
     .admin-scorecard-card:focus-visible {
       transform: translateY(-1px);
-      border-color: var(--color-accent);
-      background: var(--color-accent-subtle);
+      border-color: color-mix(in srgb, var(--ink) 24%, transparent);
     }
 
     .admin-scorecard-card:focus-visible {
-      outline: 3px solid var(--color-accent);
-      outline-offset: 3px;
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-scorecard-card-head,
@@ -3298,7 +3296,7 @@
     .admin-scorecard-modal-section {
       padding: 14px;
       border-radius: 18px;
-      background: var(--panel);
+      background: var(--card);
       border: 1px solid var(--border);
     }
 
@@ -3332,11 +3330,11 @@
     }
 
     .admin-scorecard-log-amount.is-positive {
-      color: var(--sage);
+      color: var(--success);
     }
 
     .admin-scorecard-log-amount.is-negative {
-      color: var(--rose);
+      color: var(--danger);
     }
 
     .admin-scorecard-session-row,
@@ -3358,11 +3356,64 @@
       font-weight: 700;
     }
 
+    /* Players are a dot + name in their person color. */
+    .admin-scorecard-session-row,
+    .admin-scorecard-adjust-player,
+    .admin-scorecard-score-pill,
+    .admin-scorecard-log-player,
+    .admin-scorecard-winner-name {
+      --person: var(--person-color, var(--muted));
+    }
+
+    .admin-scorecard-session-player,
+    .admin-scorecard-adjust-player,
+    .admin-scorecard-score-pill,
+    .admin-scorecard-log-player,
+    .admin-scorecard-winner-name {
+      color: var(--person);
+    }
+
     .admin-scorecard-player-dot {
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
+      background: var(--person);
       flex-shrink: 0;
+    }
+
+    /* Score summary: dot + name + score as text, not a tinted chip. */
+    .admin-scorecard-score-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 12px;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .admin-scorecard-score-pill strong {
+      color: var(--ink);
+    }
+
+    /* The leader's row: a marigold border and a "Leading" tag. */
+    .admin-scorecard-session-row.is-leading {
+      padding: 8px 10px;
+      margin: -9px -11px;
+      border-radius: var(--tag-radius);
+      border: 1px solid var(--time-today);
+      box-shadow: 0 0 0 1px var(--time-today);
+    }
+
+    .admin-scorecard-leading-tag {
+      padding: 3px 8px;
+      border-radius: var(--tag-radius);
+      background: var(--time-today);
+      color: var(--on-time-today);
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .admin-scorecard-toggle-row {
@@ -3409,31 +3460,50 @@
       align-items: center;
     }
 
-    .admin-scorecard-color-input {
-      width: 32px;
-      height: 32px;
-      padding: 0;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: transparent;
-      overflow: hidden;
-      appearance: none;
+    /* Player rows: name stretches, remove button beside it, swatches underneath. */
+    .admin-scorecard-player-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    /* Six person-color swatches; the chosen one gets a ring. */
+    .admin-scorecard-color-picker {
+      display: inline-flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      grid-column: 1 / -1;
+    }
+
+    .admin-color-swatch {
+      position: relative;
+      display: inline-flex;
       cursor: pointer;
-      flex-shrink: 0;
     }
 
-    .admin-scorecard-color-input::-webkit-color-swatch-wrapper {
-      padding: 0;
+    .admin-color-swatch input {
+      position: absolute;
+      opacity: 0;
+      width: 28px;
+      height: 28px;
+      margin: 0;
+      cursor: pointer;
     }
 
-    .admin-scorecard-color-input::-webkit-color-swatch {
-      border: none;
-      border-radius: 999px;
+    .admin-color-swatch span {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--person-color);
+      box-shadow: inset 0 0 0 2px var(--card);
+      border: 2px solid transparent;
     }
 
-    .admin-scorecard-color-input::-moz-color-swatch {
-      border: none;
-      border-radius: 999px;
+    .admin-color-swatch input:checked + span {
+      border-color: var(--ink);
+    }
+
+    .admin-color-swatch input:focus-visible + span {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .admin-scorecard-remove-btn {
@@ -3441,7 +3511,7 @@
       height: 32px;
       border: 1px solid var(--border);
       border-radius: var(--button-radius);
-      background: var(--panel);
+      background: var(--card);
       color: var(--muted);
       display: inline-flex;
       align-items: center;
@@ -3453,13 +3523,12 @@
 
     .admin-scorecard-remove-btn:hover,
     .admin-scorecard-remove-btn:focus-visible {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
+      background: var(--card-sunken);
+      color: var(--danger);
     }
 
     .admin-scorecard-remove-btn:focus-visible {
-      outline: 3px solid var(--color-accent);
+      outline: 3px solid var(--focus);
       outline-offset: 2px;
     }
 
@@ -3495,7 +3564,7 @@
       gap: 10px;
       padding: 10px 12px;
       border-radius: 16px;
-      background: color-mix(in srgb, var(--panel-strong) 76%, transparent);
+      background: var(--card);
       color: var(--ink);
       border: 1px solid var(--border);
     }
@@ -3504,7 +3573,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: var(--amber);
+      color: inherit;
     }
 
     .admin-scorecard-history-pill-icon svg {
@@ -3524,8 +3593,9 @@
     }
 
     .admin-scorecard-history-pill.is-winner {
-      background: color-mix(in srgb, var(--amber-soft) 90%, var(--panel));
-      border-color: color-mix(in srgb, var(--amber) 56%, var(--border));
+      background: var(--time-today);
+      border-color: var(--time-today);
+      color: var(--on-time-today);
     }
 
     .admin-scorecard-adjust-player {
@@ -3604,15 +3674,15 @@
     }
 
     .admin-scorecard-bonus-input:not(.is-locked) {
-      border-color: var(--color-accent);
-      background: var(--panel-strong);
+      border-color: var(--primary);
+      background: var(--card);
       color: var(--ink);
     }
 
     .admin-scorecard-bonus-input.is-locked {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
+      background: var(--card-sunken);
+      border-color: var(--primary);
+      color: var(--ink);
       font-weight: 800;
     }
 
@@ -3650,21 +3720,21 @@
       align-items: center;
       justify-content: center;
       border: 1px solid var(--border);
-      background: var(--panel);
+      background: var(--card);
       color: var(--ink);
       flex: 0 0 auto;
     }
 
     .admin-scorecard-lock-icon-btn.is-locked {
-      background: var(--sage-soft);
-      border-color: var(--sage);
-      color: var(--sage);
+      background: color-mix(in srgb, var(--success) 18%, var(--card));
+      border-color: var(--success);
+      color: var(--success);
       cursor: default;
       opacity: 1;
     }
 
     .admin-scorecard-bonus-error {
-      color: var(--rose);
+      color: var(--danger);
       font-size: 0.82rem;
       font-weight: 700;
       line-height: 1.2;
@@ -3685,16 +3755,16 @@
       padding: 6px 10px;
       border-radius: var(--tag-radius);
       border: 1px solid var(--border);
-      background: var(--panel-strong);
+      background: var(--card);
       color: var(--muted);
       font-size: 0.8rem;
       font-weight: 700;
     }
 
     .admin-scorecard-lock-pill.is-locked {
-      background: var(--color-accent-subtle);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
+      background: var(--card-sunken);
+      border-color: var(--primary);
+      color: var(--ink);
     }
 
     .admin-scorecard-winner-title {
@@ -3716,8 +3786,18 @@
       border-bottom: 1px solid var(--border);
     }
 
+    /* The winner is a marigold row (name and score take its dark text). */
     .admin-scorecard-winner-row.is-winner {
+      padding: 10px 12px;
+      border-radius: var(--tag-radius);
+      border-bottom-color: transparent;
+      background: var(--time-today);
+      color: var(--on-time-today);
       font-weight: 800;
+    }
+
+    .admin-scorecard-winner-row.is-winner .admin-scorecard-winner-name {
+      color: inherit;
     }
 
     .admin-scorecard-winner-name {
@@ -3736,7 +3816,7 @@
     .admin-scorecard-bonus-reveal-card {
       border: 1px solid var(--border);
       border-radius: 18px;
-      background: var(--panel);
+      background: var(--card);
       padding: 18px;
       display: grid;
       gap: 10px;
@@ -3749,11 +3829,11 @@
     }
 
     .admin-scorecard-bonus-reveal-card.is-correct .admin-scorecard-bonus-impact {
-      color: var(--sage);
+      color: var(--success);
     }
 
     .admin-scorecard-bonus-reveal-card.is-incorrect .admin-scorecard-bonus-impact {
-      color: var(--rose);
+      color: var(--danger);
     }
 
     .admin-scorecard-bonus-summary {
@@ -3787,7 +3867,7 @@
       width: 100%;
       padding: 8px 12px;
       border-radius: var(--tag-radius);
-      background: var(--panel);
+      background: var(--card);
       border: 1px solid var(--border);
       font-size: 0.82rem;
       font-weight: 700;
@@ -3796,15 +3876,15 @@
     }
 
     .admin-scorecard-toggle-pill.is-correct input:checked + span {
-      background: var(--sage);
-      border-color: var(--sage);
-      color: #fff;
+      background: color-mix(in srgb, var(--success) 18%, var(--card));
+      border-color: var(--success);
+      color: var(--success);
     }
 
     .admin-scorecard-toggle-pill.is-incorrect input:checked + span {
-      background: var(--rose);
-      border-color: var(--rose);
-      color: var(--color-text-on-accent);
+      background: var(--danger-soft);
+      border-color: var(--danger);
+      color: var(--danger);
     }
 
     .admin-scorecard-toggle-row {
@@ -3815,8 +3895,8 @@
     }
 
     .admin-button[data-action="scorecard-bonus-reveal"]:disabled {
-      background: #e7e5e4;
-      color: #78716c;
+      background: var(--card-sunken);
+      color: var(--muted);
       cursor: default;
       opacity: 1;
       pointer-events: none;
@@ -3913,8 +3993,8 @@
       gap: 10px;
       padding: 8px 12px;
       border-radius: var(--tag-radius);
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(124, 96, 69, 0.12);
+      background: color-mix(in srgb, var(--card) 70%, transparent);
+      border: 1px solid var(--border);
     }
 
     .admin-meal-type-row--input {
@@ -3942,15 +4022,15 @@
       height: 44px;
       flex-shrink: 0;
       font-size: 1.4rem;
-      color: var(--color-accent);
-      background: var(--color-accent-subtle);
+      color: var(--ink);
+      background: var(--card-sunken);
       border: 1px solid transparent;
       border-radius: var(--button-radius);
       cursor: pointer;
     }
 
     .admin-meal-type-icon-option.is-selected {
-      border-color: var(--color-accent);
+      border-color: var(--primary);
     }
 
     .admin-meal-type-picker {
