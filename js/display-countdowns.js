@@ -29,6 +29,12 @@
       return Boolean(match) && Number(match[1]) >= 17;
     }
 
+    // Focal point is a 0-100 percentage; anything else falls back to the center.
+    function clampCountdownFocal(value) {
+      const number = Number(value);
+      return Number.isFinite(number) ? Math.min(100, Math.max(0, number)) : 50;
+    }
+
     function mapSupabaseCountdown(countdown) {
       const { imageUrl, imageCredit } = parseUnsplashData(countdown.unsplash_image_url);
       const safeId = String(countdown.id || "").trim();
@@ -47,8 +53,8 @@
         description: String(countdown.description || "").trim(),
         startTime: countdown.start_time || null,
         allDay: Boolean(countdown.all_day),
-        focalX: Number.isFinite(Number(countdown.photo_focal_x)) ? Number(countdown.photo_focal_x) : 50,
-        focalY: Number.isFinite(Number(countdown.photo_focal_y)) ? Number(countdown.photo_focal_y) : 50,
+        focalX: clampCountdownFocal(countdown.photo_focal_x),
+        focalY: clampCountdownFocal(countdown.photo_focal_y),
         template,
         image_url: customImageUrl || imageUrl,
         image_credit: customImageUrl ? null : imageCredit,
@@ -225,7 +231,9 @@
         </figure>`;
     }
 
-    function renderCountdownSlide(screen, item, template) {
+    function renderCountdownSlide(screen, item, requestedTemplate) {
+      // Only ever one of two known values reaches the markup below.
+      const template = requestedTemplate === "postcard" ? "postcard" : "ticket";
       const hasImage = Boolean(item.image_url);
       // The ramp warms as the day nears: 31+ days neutral, 8-30 sage,
       // 1-7 fern, and on the day a full marigold panel.
