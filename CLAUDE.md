@@ -42,7 +42,7 @@ netlify.toml        — build config, env var injection via sed
 6. RSVP Live Board (Chris & Bailey only — reads `rsvps` table, **hardcoded to this household, hidden starting Oct 11, 2026**; intentionally excluded from active-screen toggles; remove via code change after that date)
 
 ## Supabase Tables
-- `households` — `assistant_name`, `color_scheme`, `google_cal_id`, `google_cal_key`, `display_settings` (JSONB), `total_invited_guests`, admin PIN
+- `households` — `assistant_name`, `color_scheme`, `google_cal_id`, `google_cal_key`, `display_settings` (JSONB), `total_invited_guests`, admin PIN. The anon role (wall display) has column-level SELECT only on the display-facing columns — never `admin_pin` or `google_cal_key` — so display code must select explicit columns, never `*`; `google_cal_key` is unused by the app (the legacy public-calendar path uses the `GOOGLE_CAL_KEY` env var)
 - `users` — linked to `auth.users`, household membership, role (admin/member)
 - `todos` — soft delete via `archived_at`, never hard delete
 - `meal_plan` — `user_id` nullable: null = shared/household, uuid = personal; `meal_slot` is `breakfast`/`lunch`/`dinner`, gated for display by `display_settings.meal_slots`
@@ -53,6 +53,7 @@ netlify.toml        — build config, env var injection via sed
 - `rsvps` — pre-existing wedding table owned by the separate wedding site repo, which only ever inserts `name`, `attending`, `guest_count`. Homeboard may add its own additive, nullable-or-defaulted bookkeeping columns (existing precedent: `status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never rename, drop, or add a non-defaulted NOT NULL constraint to a column the wedding site writes
 - `invited_parties` — wedding invite list with `name`, `invited_count`, nullable `rsvp_id`, and `created_at`; this is the source of truth for matched vs pending invite parties
 - `google_calendar_connections` — one row per household's connected Google account (RLS on, no policies — service-role only, via edge functions): `google_account_email`, `refresh_token_secret_id` (a Supabase Vault secret id, never the token itself), `status` (`active`/`needs_reauth`), `selected_calendars` (JSONB `{id,summary}` array), `private_events_mode` (`busy` default/`full`)
+- `display_pairings` — short-lived 4-character pairing codes; no anon access, written only by the `generate-pairing-code` edge function, consumed by `validate-pairing-code`. `pairing_attempts` (service-role only, timestamps only) throttles failed guesses globally (20 per 10 min)
 - `display_devices` — one row per paired wall display (RLS on, no policies — service-role only): `household_id`, `token_hash` (SHA-256 of the device's own secret token, never the raw token), `revoked_at`. The device token is a paired display's only credential and is what proves it may read a private Google Calendar — a bare `household_id` isn't proof of anything, since `households` is readable with just the app's public key
 
 ## Wedding RSVP Logic

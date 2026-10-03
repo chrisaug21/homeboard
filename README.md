@@ -225,7 +225,8 @@ Core tables used by Homeboard:
 | `countdowns` | countdown definitions, photo metadata, card content (location name/detail, user-typed `description`, start time, photo focal point, `template`; display-only, never synced to Google), and `calendar_event_id` (the Google event it was created from) |
 | `scorecards` | scorecard definitions |
 | `scorecard_sessions` | active and completed scorecard sessions |
-| `display_pairings` | temporary pairing codes for display setup |
+| `display_pairings` | temporary pairing codes for display setup (created and consumed only by edge functions; admins can read/delete their own household's) |
+| `pairing_attempts` | timestamps of failed pairing-code guesses, used to throttle brute force (service-role only, no personal data) |
 | `display_devices` | one row per paired wall display; stores only a hash of its device token, used to prove a display belongs to a household when reading a private Google Calendar. `revoked_at` marks it unpaired (see `manage-display-devices`) |
 | `google_calendar_connections` | one row per household's connected Google account: account email, selected calendars, private-events display mode, connection status; the refresh token itself lives in Supabase Vault, referenced by id, never in this table |
 | `invite_codes` | self-serve household signup codes with active state and usage limits |
