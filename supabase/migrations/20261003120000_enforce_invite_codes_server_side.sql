@@ -63,6 +63,10 @@ $$;
 revoke all on function public.check_invite_code(text) from public;
 revoke all on function public.consume_invite_code(text) from public;
 revoke all on function public.release_invite_code(uuid) from public;
+-- Supabase grants EXECUTE on new functions to anon/authenticated directly, so
+-- "revoke ... from public" alone does not remove it; revoke explicitly.
+revoke execute on function public.consume_invite_code(text) from anon, authenticated;
+revoke execute on function public.release_invite_code(uuid) from anon, authenticated;
 grant execute on function public.check_invite_code(text) to anon, authenticated;
 grant execute on function public.consume_invite_code(text) to service_role;
 grant execute on function public.release_invite_code(uuid) to service_role;
