@@ -127,16 +127,27 @@ Deno.serve(async (request) => {
   // Undo a half-finished setup so a failed signup doesn't burn an invite use
   // or leave orphaned rows behind. Best effort: failures here are only logged.
   const rollback = async (ids: { householdId?: string; memberId?: string }) => {
-    try {
-      if (ids.memberId) {
-        await supabase.from("household_members").delete().eq("id", ids.memberId);
+    // supabase-js doesn't throw on query errors, it returns { error }, so every
+    // step's result is checked. One failed step must not stop the later ones.
+    const steps: Array<[string, () => PromiseLike<{ error: unknown }>]> = [];
+    if (ids.memberId) {
+      steps.push(["delete household member", () => supabase.from("household_members").delete().eq("id", ids.memberId!)]);
+    }
+    if (ids.householdId) {
+      steps.push(["delete household", () => supabase.from("households").delete().eq("id", ids.householdId!)]);
+    }
+    steps.push(["release invite code", () => supabase.rpc("release_invite_code", { p_id: inviteCodeId })]);
+
+    for (const [label, run] of steps) {
+      try {
+        const { error } = await run();
+        if (error) {
+          // inviteCodeId is logged so an operator can restore the use count by hand.
+          console.error(`create-household-on-signup: rollback step failed (${label})`, { inviteCodeId, ...ids, error });
+        }
+      } catch (rollbackError) {
+        console.error(`create-household-on-signup: rollback step threw (${label})`, { inviteCodeId, ...ids, rollbackError });
       }
-      if (ids.householdId) {
-        await supabase.from("households").delete().eq("id", ids.householdId);
-      }
-      await supabase.rpc("release_invite_code", { p_id: inviteCodeId });
-    } catch (rollbackError) {
-      console.error("create-household-on-signup: rollback failed", rollbackError);
     }
   };
 
