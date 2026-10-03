@@ -358,59 +358,31 @@
       return "Something went wrong. Please try again.";
     }
 
-    async function loadInviteCodeRecord(client, code) {
-      const { data, error } = await client
-        .from("invite_codes")
-        .select("code, use_count, max_uses")
-        .eq("code", code)
-        .eq("is_active", true)
-        .maybeSingle();
+    async function checkInviteCode(client, code) {
+      const { data, error } = await client.rpc("check_invite_code", { p_code: code });
 
       if (error) {
         throw error;
       }
 
-      if (!data) {
-        return null;
-      }
-
-      const useCount = Number(data.use_count || 0);
-      const maxUses = Number(data.max_uses);
-
-      if (!Number.isFinite(maxUses) || useCount >= maxUses) {
-        return null;
-      }
-
-      return {
-        code: data.code,
-        useCount,
-        maxUses
-      };
+      return data === true;
     }
 
-    async function createHousehold(accessToken, displayName) {
+    async function createHousehold(accessToken, displayName, inviteCode) {
       const response = await fetch(`${SUPABASE_URL}/functions/v1/create-household-on-signup`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ display_name: displayName })
+        body: JSON.stringify({ display_name: displayName, invite_code: inviteCode })
       });
 
       if (!response.ok) {
-        throw new Error("create-household-failed");
-      }
-    }
-
-    async function incrementInviteCodeUseCount(client, inviteCode, currentUseCount) {
-      const { error } = await client
-        .from("invite_codes")
-        .update({ use_count: currentUseCount + 1 })
-        .eq("code", inviteCode);
-
-      if (error) {
-        throw error;
+        const data = await response.json().catch(() => null);
+        const failure = new Error("create-household-failed");
+        failure.inviteCodeRejected = data?.error === "invalid_invite_code";
+        throw failure;
       }
     }
 
@@ -481,8 +453,8 @@
       setSubmitting(true);
 
       try {
-        const inviteRecord = await loadInviteCodeRecord(client, inviteCode);
-        if (!inviteRecord) {
+        const inviteCodeIsValid = await checkInviteCode(client, inviteCode);
+        if (!inviteCodeIsValid) {
           showError("This invite code isn't valid or has already been used.");
           return;
         }
@@ -504,17 +476,15 @@
         }
 
         try {
-          await createHousehold(accessToken, displayName);
+          await createHousehold(accessToken, displayName, inviteCode);
         } catch (error) {
           console.error("Household setup failed.", error);
+          if (error?.inviteCodeRejected) {
+            showError("This invite code isn't valid or has already been used.");
+            return;
+          }
           showError("Something went wrong setting up your household. Please contact support.");
           return;
-        }
-
-        try {
-          await incrementInviteCodeUseCount(client, inviteCode, inviteRecord.useCount);
-        } catch (error) {
-          console.error("Invite code use_count update failed.", error);
         }
 
         window.location.replace("/admin?onboarding=true");

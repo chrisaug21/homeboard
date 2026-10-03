@@ -54,10 +54,10 @@ If a valid Supabase auth user exists but there is no matching row in `public.use
 
 Signup mode is public and uses invite codes to create a new household.
 
-- the browser validates the uppercase invite code against `invite_codes`
+- the browser does a yes/no check of the uppercase invite code through the `check_invite_code()` database function (the `invite_codes` table itself is not readable by the browser)
 - it creates the auth account through `supabase.auth.signUp()`
-- it calls the `create-household-on-signup` Edge Function with the new session access token
-- after setup succeeds, it increments `invite_codes.use_count`
+- it calls the `create-household-on-signup` Edge Function with the new session access token and the invite code
+- the Edge Function verifies the token with Supabase Auth, then atomically consumes the invite code (`consume_invite_code()`) before creating anything; if setup fails it hands the use back (`release_invite_code()`)
 - the user is redirected into `/admin?onboarding=true`
 - the first admin session opens a 3-step onboarding overlay that adds household members, picks a display theme, and marks `users.preferences.onboarding_complete`
 
@@ -229,7 +229,7 @@ Core tables used by Homeboard:
 | `pairing_attempts` | timestamps of failed pairing-code guesses, used to throttle brute force (service-role only, no personal data) |
 | `display_devices` | one row per paired wall display; stores only a hash of its device token, used to prove a display belongs to a household when reading a private Google Calendar. `revoked_at` marks it unpaired (see `manage-display-devices`) |
 | `google_calendar_connections` | one row per household's connected Google account: account email, selected calendars, private-events display mode, connection status; the refresh token itself lives in Supabase Vault, referenced by id, never in this table |
-| `invite_codes` | self-serve household signup codes with active state and usage limits |
+| `invite_codes` | self-serve household signup codes with active state and usage limits (no browser access; managed in the Supabase SQL editor, consumed by the signup Edge Function) |
 | `rsvps` | wedding RSVP data owned by the wedding site repo; homeboard may add its own additive bookkeeping columns that are nullable or have a default (`status`, `merged_into_party_id`, `excluded_from_auto_match`) but must never touch columns the wedding site writes (`name`, `attending`, `guest_count`); `status` values are `active`, `superseded` (merged into another party as a duplicate), and `dismissed` (soft-deleted from admin Needs Review) — all RSVP reads filter to `status = 'active'` |
 | `invited_parties` | wedding invite list and RSVP matching source of truth |
 
