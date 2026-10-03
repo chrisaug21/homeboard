@@ -3,7 +3,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 // Source was previously deployed without being committed; kept here so it
 // isn't lost. Changes vs. the deployed v5: codes now come from a
-// cryptographically secure RNG instead of Math.random().
+// cryptographically secure RNG instead of Math.random(), and the caller's
+// token is verified with auth.getUser() instead of just base64-decoded.
 
 const CHARSET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -21,19 +22,6 @@ function generateCode(length = 4): string {
     }
   }
   return code;
-}
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = parts[1];
-    const padded = payload + '=='.slice((payload.length + 2) % 4 % 4 || 0);
-    const decoded = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -55,30 +43,25 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const payload = decodeJwtPayload(token);
+    const token = authHeader.slice('Bearer '.length);
 
-    if (!payload || !payload.sub || payload.role !== 'authenticated') {
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Verify the token with Supabase Auth (checks the signature and expiry).
+    // Never trust claims decoded from the token ourselves: verify_jwt is off for
+    // this project, so nothing else checks it.
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !authData?.user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    // Check expiry
-    if (payload.exp && typeof payload.exp === 'number' && payload.exp < Math.floor(Date.now() / 1000)) {
-      return new Response(JSON.stringify({ error: 'Token expired' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
-    }
-
-    const userId = payload.sub as string;
-
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const userId = authData.user.id;
 
     const { data: userRow, error: userRowError } = await supabaseAdmin
       .from('users')
