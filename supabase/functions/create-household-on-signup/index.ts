@@ -20,44 +20,11 @@ const defaultDisplaySettings = {
   },
 };
 
-type JwtPayload = {
-  sub?: string;
-  email?: string;
-};
-
 function jsonResponse(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
     status,
     headers: corsHeaders,
   });
-}
-
-function decodeBase64Url(value: string) {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
-  const decoded = atob(normalized + padding);
-  const bytes = Uint8Array.from(decoded, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
-function decodeJwtFromHeader(authorizationHeader: string | null): JwtPayload | null {
-  if (!authorizationHeader?.startsWith("Bearer ")) {
-    return null;
-  }
-
-  const token = authorizationHeader.slice("Bearer ".length).trim();
-  const segments = token.split(".");
-
-  if (segments.length !== 3 || !segments[1]) {
-    return null;
-  }
-
-  try {
-    const payload = JSON.parse(decodeBase64Url(segments[1]));
-    return typeof payload === "object" && payload ? payload : null;
-  } catch (_error) {
-    return null;
-  }
 }
 
 function isUuid(value: string) {
@@ -73,15 +40,13 @@ Deno.serve(async (request) => {
     return jsonResponse(405, { error: "Method not allowed" });
   }
 
-  const jwtPayload = decodeJwtFromHeader(request.headers.get("Authorization"));
-  const userId = jwtPayload?.sub?.trim();
-  const email = jwtPayload?.email?.trim();
-
-  if (!userId || !email || !isUuid(userId)) {
+  const authorizationHeader = request.headers.get("Authorization");
+  if (!authorizationHeader?.startsWith("Bearer ")) {
     return jsonResponse(401, { error: "Unauthorized" });
   }
+  const accessToken = authorizationHeader.slice("Bearer ".length).trim();
 
-  let requestBody: { display_name?: unknown };
+  let requestBody: { display_name?: unknown; invite_code?: unknown };
 
   try {
     requestBody = await request.json();
@@ -96,6 +61,10 @@ Deno.serve(async (request) => {
   if (!displayName) {
     return jsonResponse(400, { error: "display_name is required" });
   }
+
+  const inviteCode = typeof requestBody.invite_code === "string"
+    ? requestBody.invite_code.trim().toUpperCase()
+    : "";
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -112,6 +81,17 @@ Deno.serve(async (request) => {
     },
   });
 
+  // Verify the token with Supabase Auth (checks the signature and expiry).
+  // verify_jwt is off for this project, and the previous version only
+  // base64-decoded the token, so a forged token for a known user id was accepted.
+  const { data: authData, error: authError } = await supabase.auth.getUser(accessToken);
+  const userId = authData?.user?.id;
+  const email = authData?.user?.email;
+
+  if (authError || !userId || !email || !isUuid(userId)) {
+    return jsonResponse(401, { error: "Unauthorized" });
+  }
+
   const { data: existingUser } = await supabase
     .from("users")
     .select("household_id, member_id")
@@ -124,6 +104,52 @@ Deno.serve(async (request) => {
       member_id: existingUser.member_id,
     });
   }
+
+  // Invite codes are enforced here, not in the browser. Consume one atomically
+  // before creating anything; it's handed back below if setup fails.
+  if (!inviteCode) {
+    return jsonResponse(400, { error: "invalid_invite_code" });
+  }
+
+  const { data: inviteCodeId, error: inviteError } = await supabase.rpc("consume_invite_code", {
+    p_code: inviteCode,
+  });
+
+  if (inviteError) {
+    console.error("create-household-on-signup: failed to consume invite code", inviteError);
+    return jsonResponse(500, { error: "Something went wrong creating your household." });
+  }
+
+  if (!inviteCodeId) {
+    return jsonResponse(400, { error: "invalid_invite_code" });
+  }
+
+  // Undo a half-finished setup so a failed signup doesn't burn an invite use
+  // or leave orphaned rows behind. Best effort: failures here are only logged.
+  const rollback = async (ids: { householdId?: string; memberId?: string }) => {
+    // supabase-js doesn't throw on query errors, it returns { error }, so every
+    // step's result is checked. One failed step must not stop the later ones.
+    const steps: Array<[string, () => PromiseLike<{ error: unknown }>]> = [];
+    if (ids.memberId) {
+      steps.push(["delete household member", () => supabase.from("household_members").delete().eq("id", ids.memberId!)]);
+    }
+    if (ids.householdId) {
+      steps.push(["delete household", () => supabase.from("households").delete().eq("id", ids.householdId!)]);
+    }
+    steps.push(["release invite code", () => supabase.rpc("release_invite_code", { p_id: inviteCodeId })]);
+
+    for (const [label, run] of steps) {
+      try {
+        const { error } = await run();
+        if (error) {
+          // inviteCodeId is logged so an operator can restore the use count by hand.
+          console.error(`create-household-on-signup: rollback step failed (${label})`, { inviteCodeId, ...ids, error });
+        }
+      } catch (rollbackError) {
+        console.error(`create-household-on-signup: rollback step threw (${label})`, { inviteCodeId, ...ids, rollbackError });
+      }
+    }
+  };
 
   const householdName = `${displayName}'s Household`;
 
@@ -143,6 +169,7 @@ Deno.serve(async (request) => {
       email,
       householdError,
     });
+    await rollback({});
     return jsonResponse(500, { error: "Something went wrong creating your household." });
   }
 
@@ -163,6 +190,7 @@ Deno.serve(async (request) => {
       householdId: household.id,
       memberError,
     });
+    await rollback({ householdId: household.id });
     return jsonResponse(500, { error: "Something went wrong creating your household." });
   }
 
@@ -187,6 +215,7 @@ Deno.serve(async (request) => {
       memberId: member.id,
       userError,
     });
+    await rollback({ householdId: household.id, memberId: member.id });
     return jsonResponse(500, { error: "Something went wrong creating your household." });
   }
 
