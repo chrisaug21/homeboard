@@ -109,6 +109,11 @@
           return;
         }
 
+        if (response.status === 429) {
+          setDisplayPairingError("Too many attempts. Please wait a few minutes and try again.");
+          return;
+        }
+
         if (!response.ok || !data?.household_id) {
           setDisplayPairingError("Something went wrong. Please try again.");
           return;

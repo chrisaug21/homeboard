@@ -36,7 +36,7 @@
       return sb || initSupabaseClient();
     }
 
-    const VERSION = "2.5.40";
+    const VERSION = "2.5.41";
     const rotationIntervalMs = 30000;
     const marketingApp = document.getElementById("marketing-app");
     const displayApp = document.getElementById("display-app");
@@ -1821,7 +1821,7 @@
 
       const { data, error } = await client
         .from("households")
-        .select("google_cal_id, google_cal_key, total_invited_guests, assistant_name, display_settings, color_scheme")
+        .select("google_cal_id, total_invited_guests, assistant_name, display_settings, color_scheme")
         .eq("id", id)
         .single();
 
@@ -1975,7 +1975,7 @@
         return null;
       }
 
-      const apiKey = householdConfig.google_cal_key || GOOGLE_CAL_KEY;
+      const apiKey = GOOGLE_CAL_KEY;
       if (!apiKey || apiKey.startsWith("%%")) {
         return null;
       }
