@@ -970,6 +970,7 @@
           const hadUnsplashPhoto = form.getAttribute("data-had-unsplash-photo") === "1";
           const hadCustomPhoto = form.getAttribute("data-had-custom-photo") === "1";
           if (!name || !eventDate || adminCountdownEditPending) return;
+          if (!validateCountdownLengths(form)) return;
           updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, {
             cardFields: collectCountdownCardFields(formData),
             removeUnsplashPhoto,
@@ -978,6 +979,7 @@
             hadCustomPhoto
           });
         } else {
+          if (!validateCountdownLengths(form)) return;
           saveAdminCountdown(formData);
         }
       } else if (formType === "rsvp-party") {
@@ -1046,7 +1048,7 @@
 
     function handleAdminModalInput(event) {
       const countdownForm = event.target.closest("form[data-modal-form='countdown']");
-      if (countdownForm && ["description", "all_day"].includes(event.target.name)) {
+      if (countdownForm && ["name", "location_name", "location_detail", "description", "all_day"].includes(event.target.name)) {
         syncCountdownFormExtras(countdownForm);
         return;
       }

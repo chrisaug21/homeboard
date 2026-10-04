@@ -627,18 +627,39 @@
       updateCountdownFocalPreviews(form);
     }
 
-    // Live "n/140" counter and the all-day checkbox disabling the time field.
+    // Live character counters and the all-day checkbox disabling the time field.
     function syncCountdownFormExtras(form) {
       if (!form) return;
-      const description = form.querySelector("[name='description']");
-      const counter = form.querySelector("[data-description-counter]");
-      if (description && counter) counter.textContent = `${description.value.length}/140`;
+      form.querySelectorAll("[data-char-counter]").forEach((counter) => {
+        const input = form.querySelector(`[name='${counter.getAttribute("data-char-counter")}']`);
+        const limit = Number(counter.getAttribute("data-limit"));
+        if (!input) return;
+        const length = input.value.length;
+        counter.textContent = `${length}/${limit}`;
+        counter.classList.toggle("admin-field-counter--over", length > limit);
+        if (length <= limit) clearFieldError(input);
+      });
       const allDay = form.querySelector("[name='all_day']");
       const startTime = form.querySelector("[name='start_time']");
       if (allDay && startTime) {
         startTime.disabled = allDay.checked;
         if (allDay.checked) startTime.value = "";
       }
+    }
+
+    // Fields may be typed past their limit so the counter can show how far over
+    // they are; saving is blocked with an inline error until they fit.
+    function validateCountdownLengths(form) {
+      let ok = true;
+      [["name", 140, "Name"], ["location_name", 200, "Location"], ["location_detail", 200, "Location second line"], ["description", 140, "Description"]].forEach(([field, limit, label]) => {
+        const input = form.querySelector(`[name='${field}']`);
+        if (!input) return;
+        if (input.value.trim().length > limit) {
+          setFieldError(input, `${label} must be ${limit} characters or fewer.`);
+          ok = false;
+        }
+      });
+      return ok;
     }
 
     async function saveAdminCountdown(formData) {
@@ -1229,22 +1250,22 @@
         <form data-modal-form="countdown" ${formAttrs} novalidate>
           ${calendarEventIdField}
           <div class="admin-field">
-            <label for="modal-cd-name">Name</label>
-            <input id="modal-cd-name" name="name" type="text" maxlength="140" required
+            <label for="modal-cd-name">Name <span class="admin-field-counter" data-char-counter="name" data-limit="140">0/140</span></label>
+            <input id="modal-cd-name" name="name" type="text" required
               value="${name}" placeholder="e.g. Portugal trip" autocomplete="off">
           </div>
           <div class="admin-field">
-            <label for="modal-cd-location">Location</label>
-            <input id="modal-cd-location" name="location_name" type="text" maxlength="200"
+            <label for="modal-cd-location">Location <span class="admin-field-counter" data-char-counter="location_name" data-limit="200">0/200</span></label>
+            <input id="modal-cd-location" name="location_name" type="text"
               value="${locationName}" placeholder="e.g. El Dorado Hotel" autocomplete="off">
-            <input id="modal-cd-location-detail" name="location_detail" type="text" maxlength="200"
+            <input id="modal-cd-location-detail" name="location_detail" type="text"
               value="${locationDetail}" placeholder="Second line (optional), e.g. Sonoma, CA" autocomplete="off"
               aria-label="Location second line" style="margin-top:8px">
             <p class="admin-field-hint">Optional. Only changes how it looks in Homeboard &mdash; your Google Calendar event isn't touched.</p>
           </div>
           <div class="admin-field">
-            <label for="modal-cd-description">Description <span class="admin-field-counter" data-description-counter>0/140</span></label>
-            <textarea id="modal-cd-description" name="description" rows="3" maxlength="140"
+            <label for="modal-cd-description">Description <span class="admin-field-counter" data-char-counter="description" data-limit="140">0/140</span></label>
+            <textarea id="modal-cd-description" name="description" rows="3"
               placeholder="e.g. Flying out of Boston, staying at the El Dorado">${description}</textarea>
             <p class="admin-field-hint">Optional. Shown on the countdown card. Type it here &mdash; it isn't copied from your calendar.</p>
           </div>
