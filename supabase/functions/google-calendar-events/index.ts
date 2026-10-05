@@ -213,9 +213,14 @@ Deno.serve(async (req: Request) => {
         .from("google_calendar_connections")
         .update({ last_success_at: new Date().toISOString() })
         .eq("household_id", householdId)
-        .then(() => {}, () => {});
-      // deno-lint-ignore no-explicit-any
-      const runtime = (globalThis as any).EdgeRuntime;
+        .then(
+          ({ error }) => {
+            if (error) console.error("Could not record calendar success time");
+          },
+          () => console.error("Could not record calendar success time"),
+        );
+      const runtime = (globalThis as { EdgeRuntime?: { waitUntil(promise: Promise<unknown>): void } })
+        .EdgeRuntime;
       if (runtime?.waitUntil) runtime.waitUntil(recordSuccess);
     }
 
