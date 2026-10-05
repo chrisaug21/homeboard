@@ -634,7 +634,8 @@
         const input = form.querySelector(`[name='${counter.getAttribute("data-char-counter")}']`);
         const limit = Number(counter.getAttribute("data-limit"));
         if (!input) return;
-        const length = input.value.length;
+        // Same basis as validation and saving: surrounding spaces are trimmed off.
+        const length = input.value.trim().length;
         counter.textContent = `${length}/${limit}`;
         counter.classList.toggle("admin-field-counter--over", length > limit);
         if (length <= limit) clearFieldError(input);
