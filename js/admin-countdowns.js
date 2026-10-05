@@ -1333,10 +1333,10 @@
             <label for="modal-cd-location">Location <span class="admin-field-counter" data-char-counter="location_name" data-limit="80">0/80</span></label>
             <input id="modal-cd-location" name="location_name" type="text"
               value="${locationName}" placeholder="e.g. El Dorado Hotel" autocomplete="off">
+            <span class="admin-field-counter admin-field-counter--block" data-char-counter="location_detail" data-limit="80">0/80</span>
             <input id="modal-cd-location-detail" name="location_detail" type="text"
               value="${locationDetail}" placeholder="Second line (optional), e.g. Sonoma, CA" autocomplete="off"
               aria-label="Location second line" style="margin-top:8px">
-            <span class="admin-field-counter admin-field-counter--block" data-char-counter="location_detail" data-limit="80">0/80</span>
             <p class="admin-field-hint">Optional. Only changes how it looks in Homeboard &mdash; your Google Calendar event isn't touched.</p>
           </div>
           <div class="admin-field">
