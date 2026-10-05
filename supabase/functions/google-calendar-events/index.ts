@@ -221,9 +221,7 @@ Deno.serve(async (req: Request) => {
             console.error("Could not record calendar success time");
           },
         );
-      const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (...args: [Promise<unknown>]) => void } })
-        .EdgeRuntime;
-      runtime?.waitUntil?.(recordSuccess);
+      EdgeRuntime.waitUntil(recordSuccess);
     }
 
     return jsonResponse(200, {
