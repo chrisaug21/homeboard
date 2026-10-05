@@ -643,7 +643,6 @@
       const startTime = form.querySelector("[name='start_time']");
       if (allDay && startTime) {
         startTime.disabled = allDay.checked;
-        if (allDay.checked) startTime.value = "";
       }
     }
 
@@ -659,6 +658,8 @@
           ok = false;
         }
       });
+      // Bring the first problem into view so it isn't hidden off-screen on a phone.
+      if (!ok) form.querySelector("[aria-invalid='true']")?.scrollIntoView({ block: "center", behavior: "smooth" });
       return ok;
     }
 
@@ -1282,16 +1283,15 @@
             </div>
           </div>
           <div class="admin-form-row">
-            <div class="admin-field">
-              <label for="modal-cd-time">Start time</label>
+          <div class="admin-field">
+            <label for="modal-cd-time">Start time</label>
+            <div class="admin-time-row">
               <input id="modal-cd-time" name="start_time" type="time" value="${startTimeValue}">
-              <p class="admin-field-hint">Optional. Shown on the card.</p>
-            </div>
-            <div class="admin-field admin-field--check">
               <label class="admin-check-label">
                 <input type="checkbox" name="all_day" value="1"${allDayChecked ? " checked" : ""}> All day
               </label>
             </div>
+            <p class="admin-field-hint">Optional. Shown on the card. Check All day to leave the time off &mdash; your time is kept if you uncheck it.</p>
           </div>
           <section class="admin-countdown-photo-panel" aria-labelledby="modal-cd-photo-label">
             <div class="admin-countdown-photo-heading">
