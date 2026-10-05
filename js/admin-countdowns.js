@@ -627,18 +627,41 @@
       updateCountdownFocalPreviews(form);
     }
 
-    // Live "n/140" counter and the all-day checkbox disabling the time field.
+    // Live character counters and the all-day checkbox disabling the time field.
     function syncCountdownFormExtras(form) {
       if (!form) return;
-      const description = form.querySelector("[name='description']");
-      const counter = form.querySelector("[data-description-counter]");
-      if (description && counter) counter.textContent = `${description.value.length}/140`;
+      form.querySelectorAll("[data-char-counter]").forEach((counter) => {
+        const input = form.querySelector(`[name='${counter.getAttribute("data-char-counter")}']`);
+        const limit = Number(counter.getAttribute("data-limit"));
+        if (!input) return;
+        // Same basis as validation and saving: surrounding spaces are trimmed off.
+        const length = input.value.trim().length;
+        counter.textContent = `${length}/${limit}`;
+        counter.classList.toggle("admin-field-counter--over", length > limit);
+        if (length <= limit) clearFieldError(input);
+      });
       const allDay = form.querySelector("[name='all_day']");
       const startTime = form.querySelector("[name='start_time']");
       if (allDay && startTime) {
         startTime.disabled = allDay.checked;
-        if (allDay.checked) startTime.value = "";
       }
+    }
+
+    // Fields may be typed past their limit so the counter can show how far over
+    // they are; saving is blocked with an inline error until they fit.
+    function validateCountdownLengths(form) {
+      let ok = true;
+      [["name", 140, "Name"], ["location_name", 80, "Location"], ["location_detail", 80, "Location second line"], ["description", 140, "Description"]].forEach(([field, limit, label]) => {
+        const input = form.querySelector(`[name='${field}']`);
+        if (!input) return;
+        if (input.value.trim().length > limit) {
+          setFieldError(input, `${label} must be ${limit} characters or fewer.`);
+          ok = false;
+        }
+      });
+      // Bring the first problem into view so it isn't hidden off-screen on a phone.
+      if (!ok) form.querySelector("[aria-invalid='true']")?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return ok;
     }
 
     async function saveAdminCountdown(formData) {
@@ -862,20 +885,102 @@
       }
     }
 
-    async function loadAdminCalendarMonth() {
-      adminCalEventsNote.textContent = "Loading\u2026";
-      adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
-      updateAdminCalMonthLabel();
-      const calItems = await fetchAdminCalendarEvents();
-      adminCalEvents = calItems || [];
-      if (!calItems) {
+    // Calendar events are cached on this device (localStorage) so the Events tab
+    // can show something right away, then refreshed in the background once the
+    // cached copy is older than ADMIN_CAL_CACHE_TTL_MS. Only the fields this tab
+    // uses are kept (never descriptions or attendees). Private events are already
+    // masked by the server before they reach the browser.
+    const ADMIN_CAL_CACHE_PREFIX = "homeboard-admin-cal:";
+    const ADMIN_CAL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+    function adminCalCacheKey() {
+      const month = `${adminCalMonthDate.getFullYear()}-${String(adminCalMonthDate.getMonth() + 1).padStart(2, "0")}`;
+      return `${ADMIN_CAL_CACHE_PREFIX}${getAdminHouseholdId()}:${month}`;
+    }
+
+    function readAdminCalCache() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(adminCalCacheKey()) || "null");
+        if (parsed && Array.isArray(parsed.items) && typeof parsed.fetchedAt === "number") return parsed;
+      } catch {}
+      return null;
+    }
+
+    function writeAdminCalCache(items) {
+      try {
+        const slim = items.map((item) => ({
+          id: item.id,
+          summary: item.summary,
+          location: item.location,
+          start: item.start
+        }));
+        localStorage.setItem(adminCalCacheKey(), JSON.stringify({ fetchedAt: Date.now(), items: slim }));
+      } catch {}
+    }
+
+    // Called when the calendar connection changes or the admin signs out.
+    function clearAdminCalCache() {
+      try {
+        Object.keys(localStorage)
+          .filter((key) => key.startsWith(ADMIN_CAL_CACHE_PREFIX))
+          .forEach((key) => localStorage.removeItem(key));
+      } catch {}
+    }
+
+    function formatCalCacheAge(fetchedAt) {
+      const minutes = Math.round((Date.now() - fetchedAt) / 60000);
+      if (minutes < 1) return "just now";
+      if (minutes < 60) return `${minutes} min ago`;
+      const hours = Math.round(minutes / 60);
+      return `${hours} hr ago`;
+    }
+
+    function renderAdminCalendarEvents(items, fetchedAt) {
+      adminCalEvents = items || [];
+      if (!items) {
         adminCalEventsNote.textContent = "Add a calendar in Settings to see events here.";
         adminCalEventList.innerHTML = '<div class="admin-empty">Add a calendar in Settings to see events here.</div>';
       } else {
-        adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
+        const hasEvents = getVisibleAdminCalendarEvents().length > 0;
+        const updated = fetchedAt ? ` Updated ${formatCalCacheAge(fetchedAt)}.` : "";
+        adminCalEventsNote.textContent = hasEvents
+          ? `Tap an event to flag it as a countdown.${updated}`
+          : "No upcoming calendar events this month.";
         renderAdminCalEventList();
       }
       refreshIcons();
+    }
+
+    // Shows cached events first when there are any, then fetches fresh ones if
+    // the cache is missing, stale, or `force` is set (the Refresh button).
+    async function loadAdminCalendarMonth({ force = false } = {}) {
+      updateAdminCalMonthLabel();
+      const cached = readAdminCalCache();
+      const isFresh = cached && Date.now() - cached.fetchedAt < ADMIN_CAL_CACHE_TTL_MS;
+
+      if (cached) {
+        renderAdminCalendarEvents(cached.items, cached.fetchedAt);
+        if (isFresh && !force) return;
+        adminCalEventsNote.textContent = "Refreshing\u2026";
+      } else {
+        adminCalEventsNote.textContent = "Loading calendar events\u2026";
+        adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
+      }
+
+      const requestedKey = adminCalCacheKey();
+      const calItems = await fetchAdminCalendarEvents();
+      // The admin may have paged to another month while this was loading.
+      if (requestedKey !== adminCalCacheKey()) return;
+
+      if (calItems) {
+        writeAdminCalCache(calItems);
+        renderAdminCalendarEvents(calItems, Date.now());
+      } else if (!cached) {
+        renderAdminCalendarEvents(null);
+      } else {
+        // Keep showing the cached events rather than replacing them with an error.
+        renderAdminCalendarEvents(cached.items, cached.fetchedAt);
+      }
     }
 
     function handleAdminCalPrev() {
@@ -1060,29 +1165,17 @@
       document.body.style.overflow = "";
     }
 
-    async function loadAdminCountdowns({ preserveScroll = false } = {}) {
+    // Saved countdowns and calendar events load independently, so the (fast)
+    // saved list never waits on the (slower) calendar call. Saved countdowns sit
+    // above the calendar list, so events filling in never push them down.
+    async function loadAdminCountdowns({ preserveScroll = false, forceCalendar = false } = {}) {
       const savedScrollY = preserveScroll ? window.scrollY : 0;
-      updateAdminCalMonthLabel();
-      adminCalEventsNote.textContent = "Loading calendar events\u2026";
-      adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
       adminSavedCountdownsNote.textContent = "Loading\u2026";
       adminSavedCountdownList.innerHTML = buildAdminCountdownSkeletonHTML();
 
-      const [calItems, savedRows] = await Promise.all([
-        fetchAdminCalendarEvents(),
-        fetchAdminSavedCountdowns()
-      ]);
-
-      adminCalEvents = calItems || [];
+      const calendarPromise = loadAdminCalendarMonth({ force: forceCalendar });
+      const savedRows = await fetchAdminSavedCountdowns();
       adminSavedCountdowns = savedRows || [];
-
-      if (!calItems) {
-        adminCalEventsNote.textContent = "Add a calendar in Settings to see events here.";
-        adminCalEventList.innerHTML = '<div class="admin-empty">Add a calendar in Settings to see events here.</div>';
-      } else {
-        adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
-        renderAdminCalEventList();
-      }
 
       if (!savedRows) {
         adminSavedCountdownsNote.textContent = "Couldn\u2019t load saved countdowns.";
@@ -1091,11 +1184,15 @@
         renderAdminSavedCountdowns();
       }
 
+      // The "Saved" marks on calendar events depend on the saved list.
+      if (adminCalEvents.length) renderAdminCalEventList();
       refreshIcons();
 
       if (preserveScroll) {
         requestAnimationFrame(() => window.scrollTo({ top: savedScrollY, behavior: "instant" }));
       }
+
+      await calendarPromise;
     }
 
     async function handleGetPhotoModal() {
@@ -1229,22 +1326,23 @@
         <form data-modal-form="countdown" ${formAttrs} novalidate>
           ${calendarEventIdField}
           <div class="admin-field">
-            <label for="modal-cd-name">Name</label>
-            <input id="modal-cd-name" name="name" type="text" maxlength="140" required
+            <label for="modal-cd-name">Name <span class="admin-field-counter" data-char-counter="name" data-limit="140">0/140</span></label>
+            <input id="modal-cd-name" name="name" type="text" required
               value="${name}" placeholder="e.g. Portugal trip" autocomplete="off">
           </div>
           <div class="admin-field">
-            <label for="modal-cd-location">Location</label>
-            <input id="modal-cd-location" name="location_name" type="text" maxlength="200"
+            <label for="modal-cd-location">Location <span class="admin-field-counter" data-char-counter="location_name" data-limit="80">0/80</span></label>
+            <input id="modal-cd-location" name="location_name" type="text"
               value="${locationName}" placeholder="e.g. El Dorado Hotel" autocomplete="off">
-            <input id="modal-cd-location-detail" name="location_detail" type="text" maxlength="200"
+            <span class="admin-field-counter admin-field-counter--block" data-char-counter="location_detail" data-limit="80">0/80</span>
+            <input id="modal-cd-location-detail" name="location_detail" type="text"
               value="${locationDetail}" placeholder="Second line (optional), e.g. Sonoma, CA" autocomplete="off"
               aria-label="Location second line" style="margin-top:8px">
             <p class="admin-field-hint">Optional. Only changes how it looks in Homeboard &mdash; your Google Calendar event isn't touched.</p>
           </div>
           <div class="admin-field">
-            <label for="modal-cd-description">Description <span class="admin-field-counter" data-description-counter>0/140</span></label>
-            <textarea id="modal-cd-description" name="description" rows="3" maxlength="140"
+            <label for="modal-cd-description">Description <span class="admin-field-counter" data-char-counter="description" data-limit="140">0/140</span></label>
+            <textarea id="modal-cd-description" name="description" rows="3"
               placeholder="e.g. Flying out of Boston, staying at the El Dorado">${description}</textarea>
             <p class="admin-field-hint">Optional. Shown on the countdown card. Type it here &mdash; it isn't copied from your calendar.</p>
           </div>
@@ -1261,16 +1359,15 @@
             </div>
           </div>
           <div class="admin-form-row">
-            <div class="admin-field">
-              <label for="modal-cd-time">Start time</label>
+          <div class="admin-field">
+            <label for="modal-cd-time">Start time</label>
+            <div class="admin-time-row">
               <input id="modal-cd-time" name="start_time" type="time" value="${startTimeValue}">
-              <p class="admin-field-hint">Optional. Shown on the card.</p>
-            </div>
-            <div class="admin-field admin-field--check">
               <label class="admin-check-label">
                 <input type="checkbox" name="all_day" value="1"${allDayChecked ? " checked" : ""}> All day
               </label>
             </div>
+            <p class="admin-field-hint">Optional. Shown on the card. Check All day to leave the time off &mdash; your time is kept if you uncheck it.</p>
           </div>
           <section class="admin-countdown-photo-panel" aria-labelledby="modal-cd-photo-label">
             <div class="admin-countdown-photo-heading">

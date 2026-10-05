@@ -1766,16 +1766,65 @@
       color: var(--muted);
     }
 
-    .admin-field--check {
-      align-self: end;
-      padding-bottom: 10px;
+    .admin-field-counter--over {
+      color: var(--danger);
+      font-weight: 800;
     }
 
-    .admin-check-label {
+    .admin-time-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
+    }
+
+    .admin-time-row input[type="time"] {
+      flex: 1 1 0;
+    }
+
+    .admin-field input[type="date"],
+    .admin-field input[type="time"] {
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+      max-width: 100%;
+      min-height: 52px;
+      text-align: left;
+    }
+
+    .admin-field input:disabled {
+      opacity: 0.5;
+    }
+
+    .admin-field .admin-check-label {
+      display: flex;
+      align-items: center;
+      flex: none;
+      gap: 10px;
+      min-height: 52px;
+      padding: 0 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--card);
+      color: var(--ink);
+      font-size: 0.95rem;
       font-weight: 600;
+      cursor: pointer;
+    }
+
+    .admin-check-label:has(input:checked) {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.5px var(--primary);
+    }
+
+    .admin-field .admin-check-label input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      padding: 0;
+      border: 0;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+      cursor: pointer;
     }
 
     .admin-focal-picker {
@@ -4132,4 +4181,43 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
       gap: 8px;
+    }
+
+    .admin-jump-nav {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 8px;
+      padding: 8px 0;
+      background: var(--bg);
+    }
+
+    .admin-jump-link {
+      flex: 1;
+      min-height: 40px;
+      border: 1px solid var(--border);
+      border-radius: var(--button-radius);
+      background: var(--card);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .admin-jump-link:hover,
+    .admin-jump-link:focus-visible {
+      background: var(--card-sunken);
+    }
+
+    #admin-saved-countdowns-section,
+    #admin-cal-events-section {
+      scroll-margin-top: 64px;
+    }
+
+    .admin-field-counter--block {
+      float: none;
+      display: block;
+      text-align: right;
     }

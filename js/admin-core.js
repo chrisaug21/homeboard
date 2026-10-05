@@ -96,6 +96,7 @@
       adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
       adminCurrentUser = null;
       resetAdminMealLibraryCache();
+      clearAdminCalCache();
       applyAdminTheme("light");
       setAdminAuthView("login");
       const errorEl = document.getElementById("admin-login-error");
@@ -970,6 +971,7 @@
           const hadUnsplashPhoto = form.getAttribute("data-had-unsplash-photo") === "1";
           const hadCustomPhoto = form.getAttribute("data-had-custom-photo") === "1";
           if (!name || !eventDate || adminCountdownEditPending) return;
+          if (!validateCountdownLengths(form)) return;
           updateAdminCountdown(id, name, eventDate, icon, daysBeforeVisible, photoKeyword, originalName, {
             cardFields: collectCountdownCardFields(formData),
             removeUnsplashPhoto,
@@ -978,6 +980,7 @@
             hadCustomPhoto
           });
         } else {
+          if (!validateCountdownLengths(form)) return;
           saveAdminCountdown(formData);
         }
       } else if (formType === "rsvp-party") {
@@ -1046,7 +1049,7 @@
 
     function handleAdminModalInput(event) {
       const countdownForm = event.target.closest("form[data-modal-form='countdown']");
-      if (countdownForm && ["description", "all_day"].includes(event.target.name)) {
+      if (countdownForm && ["name", "location_name", "location_detail", "description", "all_day"].includes(event.target.name)) {
         syncCountdownFormExtras(countdownForm);
         return;
       }
@@ -1372,6 +1375,12 @@
       const adminCalNextBtn = document.getElementById("admin-cal-next");
       if (adminCalPrevBtn) adminCalPrevBtn.addEventListener("click", handleAdminCalPrev);
       if (adminCalNextBtn) adminCalNextBtn.addEventListener("click", handleAdminCalNext);
+      document.getElementById("admin-cal-refresh-button")?.addEventListener("click", () => loadAdminCalendarMonth({ force: true }));
+      document.querySelectorAll("[data-jump-to]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.getElementById(button.getAttribute("data-jump-to"))?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
       const adminVersionEl = document.getElementById("admin-version-label");
       if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
       setAdminConfigDependentUiDisabled(true);
