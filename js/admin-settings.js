@@ -658,6 +658,9 @@
     let adminCalendarSourceOverride = null;
 
     async function callGoogleCalendarConnect(action, payload = {}) {
+      // Anything that changes the connection or which calendars are used makes
+      // the cached Events-tab calendar list out of date.
+      if (action !== "status" && action !== "list_calendars") clearAdminCalCache();
       const client = getSupabaseClient();
       if (!client) return { error: friendlySaveMessage() };
 

@@ -4182,3 +4182,42 @@
       grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
       gap: 8px;
     }
+
+    .admin-jump-nav {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 8px;
+      padding: 8px 0;
+      background: var(--bg);
+    }
+
+    .admin-jump-link {
+      flex: 1;
+      min-height: 40px;
+      border: 1px solid var(--border);
+      border-radius: var(--button-radius);
+      background: var(--card);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .admin-jump-link:hover,
+    .admin-jump-link:focus-visible {
+      background: var(--card-sunken);
+    }
+
+    #admin-saved-countdowns-section,
+    #admin-cal-events-section {
+      scroll-margin-top: 64px;
+    }
+
+    .admin-field-counter--block {
+      float: none;
+      display: block;
+      text-align: right;
+    }

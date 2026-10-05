@@ -96,6 +96,7 @@
       adminCurrentHouseholdId = DISPLAY_HOUSEHOLD_ID;
       adminCurrentUser = null;
       resetAdminMealLibraryCache();
+      clearAdminCalCache();
       applyAdminTheme("light");
       setAdminAuthView("login");
       const errorEl = document.getElementById("admin-login-error");
@@ -1374,6 +1375,12 @@
       const adminCalNextBtn = document.getElementById("admin-cal-next");
       if (adminCalPrevBtn) adminCalPrevBtn.addEventListener("click", handleAdminCalPrev);
       if (adminCalNextBtn) adminCalNextBtn.addEventListener("click", handleAdminCalNext);
+      document.getElementById("admin-cal-refresh-button")?.addEventListener("click", () => loadAdminCalendarMonth({ force: true }));
+      document.querySelectorAll("[data-jump-to]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.getElementById(button.getAttribute("data-jump-to"))?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
       const adminVersionEl = document.getElementById("admin-version-label");
       if (adminVersionEl) adminVersionEl.textContent = `v${VERSION}`;
       setAdminConfigDependentUiDisabled(true);

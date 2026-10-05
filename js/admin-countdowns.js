@@ -884,20 +884,102 @@
       }
     }
 
-    async function loadAdminCalendarMonth() {
-      adminCalEventsNote.textContent = "Loading\u2026";
-      adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
-      updateAdminCalMonthLabel();
-      const calItems = await fetchAdminCalendarEvents();
-      adminCalEvents = calItems || [];
-      if (!calItems) {
+    // Calendar events are cached on this device (localStorage) so the Events tab
+    // can show something right away, then refreshed in the background once the
+    // cached copy is older than ADMIN_CAL_CACHE_TTL_MS. Only the fields this tab
+    // uses are kept (never descriptions or attendees). Private events are already
+    // masked by the server before they reach the browser.
+    const ADMIN_CAL_CACHE_PREFIX = "homeboard-admin-cal:";
+    const ADMIN_CAL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+    function adminCalCacheKey() {
+      const month = `${adminCalMonthDate.getFullYear()}-${String(adminCalMonthDate.getMonth() + 1).padStart(2, "0")}`;
+      return `${ADMIN_CAL_CACHE_PREFIX}${getAdminHouseholdId()}:${month}`;
+    }
+
+    function readAdminCalCache() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(adminCalCacheKey()) || "null");
+        if (parsed && Array.isArray(parsed.items) && typeof parsed.fetchedAt === "number") return parsed;
+      } catch {}
+      return null;
+    }
+
+    function writeAdminCalCache(items) {
+      try {
+        const slim = items.map((item) => ({
+          id: item.id,
+          summary: item.summary,
+          location: item.location,
+          start: item.start
+        }));
+        localStorage.setItem(adminCalCacheKey(), JSON.stringify({ fetchedAt: Date.now(), items: slim }));
+      } catch {}
+    }
+
+    // Called when the calendar connection changes or the admin signs out.
+    function clearAdminCalCache() {
+      try {
+        Object.keys(localStorage)
+          .filter((key) => key.startsWith(ADMIN_CAL_CACHE_PREFIX))
+          .forEach((key) => localStorage.removeItem(key));
+      } catch {}
+    }
+
+    function formatCalCacheAge(fetchedAt) {
+      const minutes = Math.round((Date.now() - fetchedAt) / 60000);
+      if (minutes < 1) return "just now";
+      if (minutes < 60) return `${minutes} min ago`;
+      const hours = Math.round(minutes / 60);
+      return `${hours} hr ago`;
+    }
+
+    function renderAdminCalendarEvents(items, fetchedAt) {
+      adminCalEvents = items || [];
+      if (!items) {
         adminCalEventsNote.textContent = "Add a calendar in Settings to see events here.";
         adminCalEventList.innerHTML = '<div class="admin-empty">Add a calendar in Settings to see events here.</div>';
       } else {
-        adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
+        const hasEvents = getVisibleAdminCalendarEvents().length > 0;
+        const updated = fetchedAt ? ` Updated ${formatCalCacheAge(fetchedAt)}.` : "";
+        adminCalEventsNote.textContent = hasEvents
+          ? `Tap an event to flag it as a countdown.${updated}`
+          : "No upcoming calendar events this month.";
         renderAdminCalEventList();
       }
       refreshIcons();
+    }
+
+    // Shows cached events first when there are any, then fetches fresh ones if
+    // the cache is missing, stale, or `force` is set (the Refresh button).
+    async function loadAdminCalendarMonth({ force = false } = {}) {
+      updateAdminCalMonthLabel();
+      const cached = readAdminCalCache();
+      const isFresh = cached && Date.now() - cached.fetchedAt < ADMIN_CAL_CACHE_TTL_MS;
+
+      if (cached) {
+        renderAdminCalendarEvents(cached.items, cached.fetchedAt);
+        if (isFresh && !force) return;
+        adminCalEventsNote.textContent = "Refreshing\u2026";
+      } else {
+        adminCalEventsNote.textContent = "Loading calendar events\u2026";
+        adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
+      }
+
+      const requestedKey = adminCalCacheKey();
+      const calItems = await fetchAdminCalendarEvents();
+      // The admin may have paged to another month while this was loading.
+      if (requestedKey !== adminCalCacheKey()) return;
+
+      if (calItems) {
+        writeAdminCalCache(calItems);
+        renderAdminCalendarEvents(calItems, Date.now());
+      } else if (!cached) {
+        renderAdminCalendarEvents(null);
+      } else {
+        // Keep showing the cached events rather than replacing them with an error.
+        renderAdminCalendarEvents(cached.items, cached.fetchedAt);
+      }
     }
 
     function handleAdminCalPrev() {
@@ -1082,29 +1164,17 @@
       document.body.style.overflow = "";
     }
 
-    async function loadAdminCountdowns({ preserveScroll = false } = {}) {
+    // Saved countdowns and calendar events load independently, so the (fast)
+    // saved list never waits on the (slower) calendar call. Saved countdowns sit
+    // above the calendar list, so events filling in never push them down.
+    async function loadAdminCountdowns({ preserveScroll = false, forceCalendar = false } = {}) {
       const savedScrollY = preserveScroll ? window.scrollY : 0;
-      updateAdminCalMonthLabel();
-      adminCalEventsNote.textContent = "Loading calendar events\u2026";
-      adminCalEventList.innerHTML = buildAdminCalendarSkeletonHTML();
       adminSavedCountdownsNote.textContent = "Loading\u2026";
       adminSavedCountdownList.innerHTML = buildAdminCountdownSkeletonHTML();
 
-      const [calItems, savedRows] = await Promise.all([
-        fetchAdminCalendarEvents(),
-        fetchAdminSavedCountdowns()
-      ]);
-
-      adminCalEvents = calItems || [];
+      const calendarPromise = loadAdminCalendarMonth({ force: forceCalendar });
+      const savedRows = await fetchAdminSavedCountdowns();
       adminSavedCountdowns = savedRows || [];
-
-      if (!calItems) {
-        adminCalEventsNote.textContent = "Add a calendar in Settings to see events here.";
-        adminCalEventList.innerHTML = '<div class="admin-empty">Add a calendar in Settings to see events here.</div>';
-      } else {
-        adminCalEventsNote.textContent = getVisibleAdminCalendarEvents().length ? "Tap an event to flag it as a countdown." : "No upcoming calendar events this month.";
-        renderAdminCalEventList();
-      }
 
       if (!savedRows) {
         adminSavedCountdownsNote.textContent = "Couldn\u2019t load saved countdowns.";
@@ -1113,11 +1183,15 @@
         renderAdminSavedCountdowns();
       }
 
+      // The "Saved" marks on calendar events depend on the saved list.
+      if (adminCalEvents.length) renderAdminCalEventList();
       refreshIcons();
 
       if (preserveScroll) {
         requestAnimationFrame(() => window.scrollTo({ top: savedScrollY, behavior: "instant" }));
       }
+
+      await calendarPromise;
     }
 
     async function handleGetPhotoModal() {
@@ -1262,6 +1336,7 @@
             <input id="modal-cd-location-detail" name="location_detail" type="text"
               value="${locationDetail}" placeholder="Second line (optional), e.g. Sonoma, CA" autocomplete="off"
               aria-label="Location second line" style="margin-top:8px">
+            <span class="admin-field-counter admin-field-counter--block" data-char-counter="location_detail" data-limit="80">0/80</span>
             <p class="admin-field-hint">Optional. Only changes how it looks in Homeboard &mdash; your Google Calendar event isn't touched.</p>
           </div>
           <div class="admin-field">

@@ -1141,8 +1141,26 @@
 
       <section class="admin-screen" id="admin-screen-countdowns" data-admin-screen="countdowns" hidden>
 
-        <section class="admin-panel" aria-labelledby="admin-cal-events-title">
-          <h2 class="admin-panel-title" id="admin-cal-events-title">Calendar Events</h2>
+        <nav class="admin-jump-nav" aria-label="Jump to section">
+          <button type="button" class="admin-jump-link" data-jump-to="admin-saved-countdowns-section">Saved countdowns</button>
+          <button type="button" class="admin-jump-link" data-jump-to="admin-cal-events-section">Calendar events</button>
+        </nav>
+
+        <section class="admin-panel" id="admin-saved-countdowns-section" aria-labelledby="admin-saved-countdowns-title">
+          <div class="admin-panel-header-row">
+            <h2 class="admin-panel-title" id="admin-saved-countdowns-title">Saved Countdowns</h2>
+            <button class="admin-button admin-button--primary admin-add-button" type="button" id="admin-countdown-add-button">+ Add</button>
+          </div>
+          <p class="admin-panel-note" id="admin-saved-countdowns-note">Loading…</p>
+          <div class="admin-list" id="admin-saved-countdown-list"></div>
+        </section>
+
+
+        <section class="admin-panel" id="admin-cal-events-section" aria-labelledby="admin-cal-events-title">
+          <div class="admin-panel-header-row">
+            <h2 class="admin-panel-title" id="admin-cal-events-title">Calendar Events</h2>
+            <button class="admin-button admin-button--secondary admin-add-button" type="button" id="admin-cal-refresh-button">Refresh</button>
+          </div>
           <div class="admin-week-nav admin-cal-nav" id="admin-cal-nav">
             <button class="admin-week-nav-btn" id="admin-cal-prev" type="button" aria-label="Previous month">
               <i data-lucide="chevron-left"></i>
@@ -1154,15 +1172,6 @@
           </div>
           <p class="admin-panel-note" id="admin-cal-events-note">Tap an event to flag it as a countdown.</p>
           <div class="admin-list" id="admin-cal-event-list"></div>
-        </section>
-
-        <section class="admin-panel" aria-labelledby="admin-saved-countdowns-title">
-          <div class="admin-panel-header-row">
-            <h2 class="admin-panel-title" id="admin-saved-countdowns-title">Saved Countdowns</h2>
-            <button class="admin-button admin-button--primary admin-add-button" type="button" id="admin-countdown-add-button">+ Add</button>
-          </div>
-          <p class="admin-panel-note" id="admin-saved-countdowns-note">Loading…</p>
-          <div class="admin-list" id="admin-saved-countdown-list"></div>
         </section>
 
       </section>

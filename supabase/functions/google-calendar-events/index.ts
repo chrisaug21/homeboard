@@ -207,10 +207,16 @@ Deno.serve(async (req: Request) => {
     // loaded — a partial result (e.g. one calendar unshared/revoked) shouldn't
     // reset the success timestamp as if nothing were wrong.
     if (incompleteCalendarIds.length === 0) {
-      await supabaseAdmin
+      // Not awaited: the caller shouldn't wait on this bookkeeping write.
+      // waitUntil keeps the function alive long enough for it to finish.
+      const recordSuccess = supabaseAdmin
         .from("google_calendar_connections")
         .update({ last_success_at: new Date().toISOString() })
-        .eq("household_id", householdId);
+        .eq("household_id", householdId)
+        .then(() => {}, () => {});
+      // deno-lint-ignore no-explicit-any
+      const runtime = (globalThis as any).EdgeRuntime;
+      if (runtime?.waitUntil) runtime.waitUntil(recordSuccess);
     }
 
     return jsonResponse(200, {
