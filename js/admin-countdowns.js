@@ -650,7 +650,7 @@
     // they are; saving is blocked with an inline error until they fit.
     function validateCountdownLengths(form) {
       let ok = true;
-      [["name", 140, "Name"], ["location_name", 200, "Location"], ["location_detail", 200, "Location second line"], ["description", 140, "Description"]].forEach(([field, limit, label]) => {
+      [["name", 140, "Name"], ["location_name", 80, "Location"], ["location_detail", 80, "Location second line"], ["description", 140, "Description"]].forEach(([field, limit, label]) => {
         const input = form.querySelector(`[name='${field}']`);
         if (!input) return;
         if (input.value.trim().length > limit) {
@@ -1256,7 +1256,7 @@
               value="${name}" placeholder="e.g. Portugal trip" autocomplete="off">
           </div>
           <div class="admin-field">
-            <label for="modal-cd-location">Location <span class="admin-field-counter" data-char-counter="location_name" data-limit="200">0/200</span></label>
+            <label for="modal-cd-location">Location <span class="admin-field-counter" data-char-counter="location_name" data-limit="80">0/80</span></label>
             <input id="modal-cd-location" name="location_name" type="text"
               value="${locationName}" placeholder="e.g. El Dorado Hotel" autocomplete="off">
             <input id="modal-cd-location-detail" name="location_detail" type="text"
